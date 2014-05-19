@@ -1,0 +1,44 @@
+headset.icns + headset.ico
+---------------------------------------
+Icon Author: Iconshock - Icon Sets
+
+HomePage: http://www.iconshock.com
+License: Commercial usage: Not allowed
+
+clear_left.png + database.png + settings.png
+------------------------------------------
+Artist: Oxygen Team
+Iconset: Oxygen Icons
+License: GNU Lesser General Public License
+
+folder.png
+------------------------------------------
+License:	 Free for commercial use
+By:	Media Design - http://mediadesign.deviantart.com
+Icon set:	Hydro Pro
+
+vinyl.png
+------------------------------------------
+Artist: Nando Design Studio
+Iconset: Be the DJ Icons
+License: Free for personal desktop use only.
+Commercial usage: Not allowe
+
+DJ.png
+------------------------------------------
+Artist: TurboMilk
+Iconset: Gadgets Icons
+License: Free for non-commercial use.
+Commercial usage: Not allowed
+
+search.png
+------------------------------------------
+Icon Pack:Batch
+Designer:adamwhitcroft.com
+License:Freeware
+
+shuffle.png
+------------------------------------------
+Icon Pack:The Clean Desk
+Designer:Alfred Pereira
+License:Freeware
