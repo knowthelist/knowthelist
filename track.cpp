@@ -294,7 +294,7 @@ QString Track::album()   { return p->album; }
 QString Track::year()     { return p->year; }
 QString Track::comment()  { return p->comment; }
 QString Track::genre()    { return p->genre; }
-QString Track::tracknumber() { return p->tracknumber; }
+QString Track::tracknumber() { return p->tracknumber > 0 ? p->tracknumber : "0"; }
 QString Track::prettyLength()  { return prettyLength( p->length ); }
 
 void Track::setUrl(QUrl url) { p->url = url; }

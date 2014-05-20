@@ -226,7 +226,7 @@ bool CollectionDB::executeSql( const QString& statement )
 
 QList<QStringList> CollectionDB::selectSql( const QString& statement)
 {
-    qDebug() << __FUNCTION__<< " SQL-query: " << statement;
+    //qDebug() << __FUNCTION__<< " SQL-query: " << statement;
 
     QList<QStringList> tags;
     tags.clear();
