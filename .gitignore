@@ -2,3 +2,8 @@ knowthelist.pro.user
 *.o
 moc_*.h
 moc_*.cpp
+ui_*.h
+Info.plist
+Makefile
+knowthelist.app*
+qrc_icons.cpp
