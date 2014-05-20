@@ -27,6 +27,6 @@ Needed packages:
 
 Versions:
 ----------
-2.1		2014-05		without qt3support
-2.0		2011	    qt-only + gstreamer version for multiple OS support
-1.x     2005        only for KDE Linux	with arts sound framework
+- 2.1		2014-05		without qt3support
+- 2.0		2011	    qt-only + gstreamer version for multiple OS support
+- 1.x 	    2005        only for KDE Linux	with arts sound framework
