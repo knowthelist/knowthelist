@@ -26,12 +26,12 @@ Needed packages:
 
 Build:
 ----------
-cd ~/src
-git clone https://github.com/knowthelist/knowthelist.git
-cd knowthelist
-qmake (for MacOS: qmake -spec macx-g++)
-make
-./knowthelist
+- cd ~/src
+- git clone https://github.com/knowthelist/knowthelist.git
+- cd knowthelist
+- qmake (for MacOS: qmake -spec macx-g++)
+- make
+- ./knowthelist
 
 Versions:
 ----------
