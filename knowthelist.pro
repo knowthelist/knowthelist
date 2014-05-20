@@ -103,7 +103,7 @@ unix:!macx {
     CONFIG += link_pkgconfig \
         gstreamer
     PKGCONFIG += gstreamer-0.10 \
-        taglib
+        taglib alsa
 }
 RESOURCES += icons.qrc
 ICON = headset.icns

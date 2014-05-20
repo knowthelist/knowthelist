@@ -22,8 +22,16 @@ Needed packages:
 - taglib            http://taglib.github.io 
 - gstreamer-0.10    http://gstreamer.freedesktop.org 
 					http://docs.gstreamer.com/display/GstSDK/Home 
+- alsa				(Linux only)
 
-
+Build:
+----------
+cd ~/src
+git clone https://github.com/knowthelist/knowthelist.git
+cd knowthelist
+qmake
+make
+./knowthelist
 
 Versions:
 ----------
