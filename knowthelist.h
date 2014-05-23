@@ -27,6 +27,7 @@
 #include "monitorplayer.h"
 #include "djsession.h"
 #include "filebrowser.h"
+#include "settingsdialog.h"
 
 #include <QMainWindow>
 
@@ -88,24 +89,9 @@ private Q_SLOTS:
      bool initMonitorPlayer();
      void editSettings();
      void loadDj();
-
-/*
-     void potStereo_valueChanged(int);
-     void potLow_valueChanged(int);
-     void potMid_valueChanged(int);
-     void potHigh_valueChanged(int);
-     void potStereo2_valueChanged(int);
-     void potLow_2_valueChanged(int);
-     void potMid_2_valueChanged(int);
-     void potHigh_2_valueChanged(int);
-
-     void slotConfigChanged();
-
-
- */
-
      void on_cmdOptions_clicked();
-
+     void showCollectionSetup();
+    void onWantLoad(QList<Track*>,QString);
      void on_lblSoundcard_linkActivated(const QString &link);
 
      void on_sliMonitor_actionTriggered(int action);
@@ -140,6 +126,7 @@ private:
     PlayerWidget* player2;
     FileBrowser* filetree;
 
+    SettingsDialog *preferences;
 
     bool autoFadeOn;
 

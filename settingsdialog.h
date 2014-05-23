@@ -28,10 +28,16 @@ public:
 	SettingsDialog(QWidget * parent = 0);
 	~SettingsDialog();
 	int exec();
+    int execCollection();
 
 public slots:
 	void accept();
-        void tableSelectionChanged();
+    void tableSelectionChanged();
+
+signals:
+      void  scanNowPressed();
+
+
 
 protected:
 	bool loadSettings();
@@ -39,16 +45,14 @@ private slots:
         void on_faderEndSlider_sliderMoved(int position);
         void on_faderTimeSlider_sliderMoved(int position);
         void on_pushButton_clicked();
-protected slots:
-
+        void onScanNow();
 
 
 protected:
 
 private:
 	enum ItemRole { ItemRoleId = Qt::UserRole+1 };
-	struct Private;
-    Private* p;
+    class SettingsDialogPrivate *p;
 };
 
 #endif /* SETTINGSDIALOG_H_ */

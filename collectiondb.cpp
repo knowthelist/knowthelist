@@ -395,7 +395,7 @@ CollectionDB::dropStatsTable()
 void
 CollectionDB::purgeDirCache()
 {
-    executeSql( "DELETE FROM directories;" );
+    executeSql( QString( "DELETE FROM directories;") );
 }
 
 

@@ -34,7 +34,7 @@ class CollectionUpdater : public QObject
         CollectionUpdater();
         ~CollectionUpdater();
         void setDoMonitor(bool);
-        void setDirectoryList(QStringList dirs);
+        void setDirectoryList(QStringList dirs, bool force=false);
 
         QStringList getRandomEntry(QString);
 
@@ -43,7 +43,6 @@ class CollectionUpdater : public QObject
 
         void scan();
         void monitor();
-        void asynchronScan(QStringList dirs);
         void stop();
 
     signals:
@@ -54,7 +53,7 @@ class CollectionUpdater : public QObject
     private:
         void readDir( const QString& dir, QStringList& entries );
         void readTags( const QStringList& entries );
-
+        void asynchronScan(QStringList dirs);
         class CollectionUpdaterPrivate *p;
 
 };

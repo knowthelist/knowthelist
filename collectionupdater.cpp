@@ -88,9 +88,9 @@ void CollectionUpdater::stop()
     p->isStoped = true;
 }
 
-void CollectionUpdater::setDirectoryList(QStringList dirs)
+void CollectionUpdater::setDirectoryList(QStringList dirs, bool force)
 {
-    if ( p->dirs != dirs ){
+    if ( p->dirs != dirs || force ){
          p->dirs = dirs;
          scan();
     }

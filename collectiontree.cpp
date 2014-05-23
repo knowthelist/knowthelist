@@ -89,7 +89,8 @@ CollectionTree::createTrunk()
                 CollectionTreeItem* item = new CollectionTreeItem( this );
                 item->setGenre(tag[0]);
             }
-            headerItem()->setText(0, "Genre");
+            headerItem()->setText(0, QString("Genres  (%1)").arg(tags.count()));
+                    break;
             break;
         case MODEYEAR:
             tags = p->database->selectYears();
@@ -97,7 +98,8 @@ CollectionTree::createTrunk()
                 CollectionTreeItem* item = new CollectionTreeItem( this );
                 item->setYear(tag[0]);
             }
-            headerItem()->setText(0, "Year");
+            headerItem()->setText(0, QString("Years  (%1)").arg(tags.count()));
+                    break;
             break;
         default:
             tags = p->database->selectArtists( "","" );
@@ -105,7 +107,7 @@ CollectionTree::createTrunk()
                 CollectionTreeItem* item = new CollectionTreeItem( this );
                 item->setArtist(tag[0]);
             }
-            headerItem()->setText(0, "Artist");
+            headerItem()->setText(0, QString("Artists  (%1)").arg(tags.count()));
             break;
     }
 }
@@ -305,25 +307,28 @@ void CollectionTree::showContextMenu( QTreeWidgetItem *&item, int col )
     QMenu popup( this );
 
     popup.setTitle( item->text(0) );
-        popup.addAction( style()->standardPixmap(QStyle::SP_MediaPlay), tr( "Add to PlayList&1" ),0,0, Qt::Key_1 );//, LOAD1
-        popup.addAction( style()->standardPixmap(QStyle::SP_MediaPlay), tr( "Add to PlayList&2" ), 0, 0, Qt::Key_2 );//, LOAD2
+    popup.addAction( style()->standardPixmap(QStyle::SP_MediaPlay), tr( "Add to PlayList&1" ),0,0, Qt::Key_1 );//, LOAD1
+    popup.addAction( style()->standardPixmap(QStyle::SP_MediaPlay), tr( "Add to PlayList&2" ), 0, 0, Qt::Key_2 );//, LOAD2
+    popup.addSeparator();
+    popup.addAction( style()->standardPixmap(QStyle::SP_BrowserReload), tr( "Re-scan collection" ),0,0,Qt::Key_R );
+
 
         QAction *a = popup.exec( QCursor::pos());
     if (!a)
         return;
     switch( a->shortcut() )
     {
-
         case Qt::Key_1:
-            Q_EMIT wantLoad(item,"Left" );
+            Q_EMIT wantLoad(p->tracks,"Left" );
             break;
 
         case Qt::Key_2:
-            Q_EMIT wantLoad(item,"Right" );
+            Q_EMIT wantLoad(p->tracks,"Right" );
             break;
 
-
-
+        case Qt::Key_R:
+            Q_EMIT rescan();
+            break;
     }
 
 }

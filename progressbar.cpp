@@ -58,6 +58,11 @@ void ProgressBar::setValue(int value)
         this->hide();
 }
 
+int ProgressBar::value()
+{
+    return bar->value();
+}
+
 void ProgressBar::resizeEvent(QResizeEvent *ev)
    {
         qDebug() << "size " << ev->size().width();

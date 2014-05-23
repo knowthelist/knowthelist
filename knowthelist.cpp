@@ -18,15 +18,16 @@
 #include "knowthelist.h"
 #include "ui_knowthelist.h"
 #include "playerwidget.h"
-#include "settingsdialog.h"
 #include "qled.h"
+#include "dj.h"
+#include "djwidget.h"
+#include "djfilterwidget.h"
+
 #include <QtGui/QBoxLayout>
 #include <QSettings>
 #include <QtConcurrentRun>
 #include <QMetaType>
-#include "dj.h"
-#include "djwidget.h"
-#include "djfilterwidget.h"
+
 
 
 Knowthelist::Knowthelist(QWidget *parent) :
@@ -39,8 +40,6 @@ Knowthelist::Knowthelist(QWidget *parent) :
     //create the UI
     createUI();
 }
-
-
 
 Knowthelist::~Knowthelist()
 {
@@ -177,7 +176,8 @@ void Knowthelist::createUI()
     ui->sideTab->AddTab(splitter,QIcon(pixmap1),"Collection");
 
     connect( collectionBrowser, SIGNAL(selectionChanged(QList<Track*>)),trackList,SLOT(changeTracks(QList<Track*>)));
-
+    connect( collectionBrowser,SIGNAL(setupDirs()),this,SLOT(showCollectionSetup()));
+    connect( collectionBrowser,SIGNAL(wantLoad(QList<Track*>,QString)),this,SLOT(onWantLoad(QList<Track*>,QString)));
 
     connect( trackList, SIGNAL(wantSearch( QString )),collectionBrowser,SLOT(setFilterText(QString)));
     connect( playList1, SIGNAL(wantSearch( QString )),collectionBrowser,SLOT(setFilterText(QString)));
@@ -244,19 +244,24 @@ void Knowthelist::createUI()
     QPixmap pixmap3(":images/folder.png");
     ui->sideTab->AddTab(filetree,QIcon(pixmap3),"Folder");
 
+    //SettingsDialog
+    preferences = new SettingsDialog(this);
+    connect(preferences,SIGNAL(scanNowPressed()), collectionBrowser,SLOT(scan()));
+
 
     loadStartSettings();
-
-    //First use -> show directorylist
-    if ( !collectionBrowser->hasItems() )
-    {
-      this->show();
-      collectionBrowser->setupDirs();
-    }
 
     //ToDo: load from Settings
     ui->sideTab->SetCurrentIndex(0);
     ui->sideTab->SetMode(FancyTabWidget::Mode_LargeSidebar);
+
+    //Collection ready?
+    if ( !collectionBrowser->hasItems() )
+    {
+          this->show();
+          showCollectionSetup();
+    }
+
 
 }
 
@@ -403,6 +408,9 @@ void Knowthelist::loadCurrentSettings()
     setFaderModeToPlayer();
     isFading=false;
 
+    //CollectionFolders
+    collectionBrowser->loadSettings();
+
     //File Browser
     filetree->setRootPath(settings.value("editBrowerRoot","").toString());
 
@@ -474,6 +482,12 @@ void Knowthelist::closeEvent(QCloseEvent* event)
     settings.setValue("mainWindowState", saveState());
 
     event->accept();
+}
+
+void Knowthelist::showCollectionSetup()
+{
+    if ( preferences->execCollection() != QDialog::Rejected )
+             loadCurrentSettings();
 }
 
 void Knowthelist::loadDj()
@@ -733,6 +747,15 @@ void Knowthelist::trackList_wantLoad(PlaylistItem *pli, QString source)
       playList1->appendSong( pli->track() );
 }
 
+//ToDo: find a better name
+void Knowthelist::onWantLoad(QList<Track*> trackList, QString target)
+{
+    if ( target == "Right" )
+      playList2->appendTracks(trackList);
+    else if ( target ==  "Left" )
+      playList1->appendTracks(trackList);
+}
+
 void Knowthelist::setFaderModeToPlayer()
 {
     if ( autoFadeOn ) {
@@ -757,7 +780,6 @@ void Knowthelist::editSettings()
     QSettings settings;
     settings.setValue("MonitorOutputDevices", monitorPlayer->outputDevices());
 
-    SettingsDialog *preferences = new SettingsDialog(this);
     if ( preferences->exec() != QDialog::Rejected )
          loadCurrentSettings();
 }

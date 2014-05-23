@@ -31,6 +31,8 @@ class ProgressBar:public QWidget
     QToolButton*  clearButton;
     QProgressBar* bar;
 
+    int value();
+
     public slots:
     void setValue(int value);
 

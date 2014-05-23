@@ -32,8 +32,7 @@ SOURCES += main.cpp \
     collectionupdater.cpp \
     collectiontreeitem.cpp \
     monitorplayer.cpp \
-    collectionsetupmodel.cpp \
-    collectionsetup.cpp
+    collectionsetupmodel.cpp
 HEADERS += knowthelist.h \
     vumeter.h \
     qvumeter.h \
@@ -60,7 +59,6 @@ HEADERS += knowthelist.h \
     collectionupdater.h \
     collectiontreeitem.h \
     monitorplayer.h \
-    collectionsetup.h \
     collectionsetupmodel.h
 FORMS += \
     settingsdialog.ui \

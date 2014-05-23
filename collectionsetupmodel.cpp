@@ -89,6 +89,20 @@ bool CollectionSetupModel::setData(const QModelIndex& index, const QVariant& val
         return QDirModel::setData(index, value, role);
 }
 
+QVariant CollectionSetupModel::headerData(int section, Qt::Orientation orientation, int role) const
+{
+    if (orientation == Qt::Horizontal) {
+        if (role != Qt::DisplayRole)
+            return QVariant();
+        switch (section) {
+        case 0: return tr("Select folders for music collection");
+        default: return QVariant();
+        }
+    }
+    return QAbstractItemModel::headerData(section, orientation, role);
+
+}
+
 QStringList CollectionSetupModel::dirsChecked()
 {
      QStringList list;

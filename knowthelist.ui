@@ -4899,7 +4899,7 @@ min-height: 16px;
           <widget class="QLabel" name="label">
            <property name="geometry">
             <rect>
-             <x>3</x>
+             <x>7</x>
              <y>89</y>
              <width>24</width>
              <height>16</height>
@@ -5577,7 +5577,7 @@ min-height: 16px;
           <widget class="QLabel" name="label_5">
            <property name="geometry">
             <rect>
-             <x>140</x>
+             <x>141</x>
              <y>89</y>
              <width>24</width>
              <height>16</height>
@@ -5598,7 +5598,7 @@ min-height: 16px;
           <widget class="QLabel" name="label_2">
            <property name="geometry">
             <rect>
-             <x>4</x>
+             <x>8</x>
              <y>64</y>
              <width>24</width>
              <height>16</height>
@@ -5619,7 +5619,7 @@ min-height: 16px;
           <widget class="QLabel" name="label_3">
            <property name="geometry">
             <rect>
-             <x>142</x>
+             <x>143</x>
              <y>64</y>
              <width>24</width>
              <height>16</height>
@@ -5640,7 +5640,7 @@ min-height: 16px;
           <widget class="QLabel" name="label_4">
            <property name="geometry">
             <rect>
-             <x>4</x>
+             <x>8</x>
              <y>36</y>
              <width>24</width>
              <height>16</height>
@@ -5661,7 +5661,7 @@ min-height: 16px;
           <widget class="QLabel" name="label_6">
            <property name="geometry">
             <rect>
-             <x>142</x>
+             <x>143</x>
              <y>36</y>
              <width>24</width>
              <height>16</height>
@@ -5682,7 +5682,7 @@ min-height: 16px;
           <widget class="QLabel" name="label_7">
            <property name="geometry">
             <rect>
-             <x>3</x>
+             <x>7</x>
              <y>10</y>
              <width>24</width>
              <height>16</height>
@@ -5703,7 +5703,7 @@ min-height: 16px;
           <widget class="QLabel" name="label_8">
            <property name="geometry">
             <rect>
-             <x>140</x>
+             <x>141</x>
              <y>10</y>
              <width>24</width>
              <height>16</height>

@@ -38,7 +38,8 @@ public:
     
 Q_SIGNALS:
     void  selectionChanged(QList<Track*>);
-    void  wantLoad(QTreeWidgetItem*, QString);
+    void  wantLoad(QList<Track*>, QString);
+    void rescan();
     
 public slots:
 void on_currentItemChanged( QTreeWidgetItem* item );

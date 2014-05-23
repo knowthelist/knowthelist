@@ -15,24 +15,28 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include "collectionsetupmodel.h"
+#include "settingsdialog.h"
+#include "ui_settingsdialog.h"
+
 #include <QtDebug>
 #include <QtGui>
 #include <QtSql>
 
-#include "settingsdialog.h"
-#include "ui_settingsdialog.h"
 
-struct SettingsDialog::Private
+
+class SettingsDialogPrivate
 {
-	Ui::SettingsDialog ui;
+   public:
+        Ui::SettingsDialog ui;
         QWidget *parent;
-
+        CollectionSetupModel *model;
 };
 
 SettingsDialog::SettingsDialog(QWidget * parent)
 	: QDialog(parent)
 {
-	p = new Private;
+    p = new SettingsDialogPrivate;
 	p->ui.setupUi(this);
         p->parent=parent;
 
@@ -80,6 +84,14 @@ SettingsDialog::SettingsDialog(QWidget * parent)
 	// select first page
 	p->ui.pages->setCurrentIndex(0);
 
+    //Collection folder setup
+    p->model = new CollectionSetupModel(this);
+
+    p->ui.collectionsTreeView->setModel(p->model);
+    p->ui.collectionsTreeView->setColumnHidden(1, true);
+    p->ui.collectionsTreeView->setColumnHidden(2, true);
+    p->ui.collectionsTreeView->setColumnHidden(3, true);
+    p->ui.collectionsTreeView->expandToDepth(0);
 
     connect(p->ui.settingsGroupsTable, SIGNAL(itemSelectionChanged()),
             this, SLOT(tableSelectionChanged()));
@@ -88,11 +100,21 @@ SettingsDialog::SettingsDialog(QWidget * parent)
                     this, SLOT(on_faderEndSlider_sliderMoved(int)));
     connect(p->ui.faderTimeSlider, SIGNAL(sliderMoved(int)),
                     this, SLOT(on_faderTimeSlider_sliderMoved(int)));
+
+    connect(p->ui.pushScanNow,SIGNAL(clicked()),this,SLOT(onScanNow()));
 }
 
 SettingsDialog::~SettingsDialog()
 {
 	delete p;
+}
+
+int SettingsDialog::execCollection()
+{
+    // select collection folder setup
+    p->ui.settingsGroupsTable->setCurrentCell(1, 0);
+    p->ui.pages->setCurrentIndex(1);
+   return exec();
 }
 
 int SettingsDialog::exec()
@@ -133,6 +155,10 @@ void SettingsDialog::accept()
     settings.setValue("2/Name","DJ All");
     settings.endGroup();
 
+    //CollectionFolders
+    settings.setValue("Dirs",p->model->dirsChecked());
+    settings.setValue("Monitor", p->ui.chkMonitor->isChecked() );
+
     //File Browser
     settings.setValue("editBrowerRoot",p->ui.txtBrowserRoot->text());
 
@@ -164,6 +190,9 @@ bool SettingsDialog::loadSettings()
     p->ui.minTracks->setValue(settings.value("minTracks","6").toInt());
     p->ui.countDJ->setValue(settings.value("countDJ","1").toInt());
 
+    //CollectionFolders
+    p->model->setDirsChecked(settings.value("Dirs").toStringList());
+    p->ui.chkMonitor->setChecked(settings.value("Monitor").toBool());
 
     //File Browser
     p->ui.txtBrowserRoot->setText(settings.value("editBrowerRoot","").toString());
@@ -178,6 +207,13 @@ void SettingsDialog::on_pushButton_clicked()
     dialog.setFileMode(QFileDialog::DirectoryOnly);
     if (dialog.exec())
          p->ui.txtBrowserRoot->setText(dialog.selectedFiles().first());
+}
+
+void SettingsDialog::onScanNow()
+{
+    QSettings settings;
+    settings.setValue("Dirs",p->model->dirsChecked());
+    Q_EMIT scanNowPressed();
 }
 
 void SettingsDialog::on_faderEndSlider_sliderMoved(int position)

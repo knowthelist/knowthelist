@@ -19,7 +19,6 @@
 #include "collectionwidget.h"
 #include "collectiontree.h"
 #include "collectionupdater.h"
-#include "collectionsetup.h"
 #include "progressbar.h"
 #include "track.h"
 
@@ -123,18 +122,6 @@ CollectionWidget::CollectionWidget( QWidget* parent ):
 
     p->actionsMenu->addActions(alignmentGroup->actions());
 
-
-    p->actionsMenu->addSeparator();
-    p->actionsMenu->addAction( tr( "Configure Folders" ), this, SLOT( setupDirs() ) );
-
-    p->actionsMenu->addSeparator();
-    p->actionScan = new QAction( tr( "Start Scan" ),this );
-    p->actionsMenu->addAction( p->actionScan );
-
-    connect(p->actionScan,SIGNAL(triggered()),
-            p->updater,SLOT(scan()));
-
-
     connect( p->searchEdit, SIGNAL( textChanged( const QString& ) ),
              this,           SLOT( onSetFilterTimeout() ) );
 
@@ -144,13 +131,14 @@ CollectionWidget::CollectionWidget( QWidget* parent ):
     connect( p->collectiontree, SIGNAL(selectionChanged(QList<Track*>)),
              this,           SIGNAL(selectionChanged(QList<Track*>)));
 
-    connect( p->updater, SIGNAL(changesDone()),
-             p->collectiontree,    SLOT(createTrunk()));
+    connect( p->collectiontree, SIGNAL(wantLoad(QList<Track*>,QString)),
+             this,           SIGNAL(wantLoad(QList<Track*>,QString)));
+
+    connect( p->updater, SIGNAL(changesDone()), p->collectiontree, SLOT(createTrunk()));
+    connect( p->collectiontree, SIGNAL(rescan()), p->updater, SLOT(scan()));
 
     setFocusProxy( p->collectiontree ); //default object to get focus
     setMaximumWidth(400);
-
-
 
     //Pogressbar for re-read collection
     p->progress = new ProgressBar(this);
@@ -171,7 +159,6 @@ CollectionWidget::CollectionWidget( QWidget* parent ):
     setLayout(mainLayout);
 
     connect(p->updater, SIGNAL(progressChanged(int)), p->progress,SLOT(setValue(int)));
-    connect(p->updater, SIGNAL(progressChanged(int)), this,SLOT(onUpdate(int)));
     connect(p->progress, SIGNAL(stopped()), p->updater,SLOT(stop()));
 }
 
@@ -182,9 +169,12 @@ CollectionWidget::~CollectionWidget()
     delete p;
 }
 
-void CollectionWidget::onUpdate(int value)
+void CollectionWidget::scan()
 {
-    p->actionScan->setEnabled( !(value > 0 && value < 100) );
+    if (p->progress->isHidden()){
+        QSettings settings;
+        p->updater->setDirectoryList( settings.value("Dirs").toStringList(), true );
+    }
 }
 
 void CollectionWidget::mode1Selected()
@@ -211,7 +201,6 @@ void CollectionWidget::onSetFilterTimeout()
         p->timer->singleShot(200,this,SLOT(onSetFilter()) );
 }
 
-
 void CollectionWidget::onSetFilter()
 {
     p->collectiontree->setFilter( p->searchEdit->text() );
@@ -223,30 +212,16 @@ void CollectionWidget::onSetClicked()
     p->actionsMenu->popup(QCursor::pos(),0);
 }
 
-
 bool CollectionWidget::hasItems()
 { 
   return (p->collectiontree->topLevelItemCount() > 0);
 }
 
-void CollectionWidget::setupDirs()
+void CollectionWidget::loadSettings()
 {
-
-        CollectionSetup *setup = new CollectionSetup( this );
-
-        setup->adjustSize();
-        setup->setMinimumHeight(300);
-
-        if ( setup->exec() != QDialog::Rejected )
-        {
-            QSettings settings;
-            p->updater->setDoMonitor( settings.value("Monitor").toBool() );
-
-            p->updater->setDirectoryList(setup->dirs());
-
-
-        }
-
+    QSettings settings;
+    p->updater->setDoMonitor( settings.value("Monitor").toBool() );
+    p->updater->setDirectoryList( settings.value("Dirs").toStringList());
 }
 
 void CollectionWidget::setFilterText( QString strFilter ){

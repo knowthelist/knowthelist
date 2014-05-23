@@ -74,24 +74,25 @@ class CollectionWidget: public QWidget
 
   public slots:
        void setFilterText( QString strFilter );
-       void setupDirs();
+       void loadSettings();
+       void scan();
 
        signals:
          void trackDropped(QString);
          void randomClicked();
          void selectionChanged(QList<Track*>);
+         void wantLoad (QList<Track*>,QString);
          void filterChanged(QString);
+         void setupDirs();
     
 
     private slots:
         void onSetFilterTimeout();
         void onSetClicked();
         void onSetFilter();
-        void onUpdate(int value);
         void mode1Selected();
         void mode2Selected();
         void mode3Selected();
-
 
     private:
 
