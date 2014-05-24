@@ -2996,8 +2996,8 @@ QLabel#pixmapLabel1{
          </property>
          <property name="font">
           <font>
-           <family>Verdana</family>
-           <pointsize>17</pointsize>
+           <family>Sans Serif</family>
+           <pointsize>16</pointsize>
            <kerning>true</kerning>
           </font>
          </property>
