@@ -3,6 +3,7 @@ knowthelist
 
 Knowthelist the awesome party music player
 
+- Easy to use for all party guests
 - Quick search for tracks in collection
 - Two players with separate playlists
 - Mixer with fader, 3 channel EQ and gain
@@ -21,8 +22,7 @@ Needed packages:
 			xml,sql 
 - taglib		http://taglib.github.io 
 - gstreamer-0.10	http://gstreamer.freedesktop.org 
-			http://docs.gstreamer.com/display/GstSDK/Home 
-- gstreamer-0.10-plugins-* 
+- gstreamer-0.10-plugins-* http://docs.gstreamer.com/display/GstSDK/Home 
 - alsa			(Linux only)
 
 Build:
