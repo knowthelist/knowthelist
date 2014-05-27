@@ -22,7 +22,7 @@ Needed packages:
 - taglib		http://taglib.github.io 
 - gstreamer-0.10	http://gstreamer.freedesktop.org 
 			http://docs.gstreamer.com/display/GstSDK/Home 
-			install with gstreamer-0.10-plugins-* 
+- gstreamer-0.10-plugins-* 
 - alsa			(Linux only)
 
 Build:
