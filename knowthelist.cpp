@@ -486,7 +486,8 @@ void Knowthelist::closeEvent(QCloseEvent* event)
 
 void Knowthelist::showCollectionSetup()
 {
-    if ( preferences->execCollection() != QDialog::Rejected )
+    preferences->setCurrentTab(SettingsDialog::TabCollection);
+    if ( preferences->exec() != QDialog::Rejected )
              loadCurrentSettings();
 }
 
@@ -893,6 +894,7 @@ void Knowthelist::on_sliMonitor_sliderMoved(int value)
 
 void Knowthelist::on_cmdOptions_clicked()
 {
+    preferences->setCurrentTab(SettingsDialog::TabFader);
     editSettings();
 }
 
@@ -970,6 +972,7 @@ void Knowthelist::on_potLow_2_valueChanged(int value)
 void Knowthelist::on_lblSoundcard_linkActivated(const QString &link)
 {
     Q_UNUSED(link);
+    preferences->setCurrentTab(SettingsDialog::TabMonitor);
     editSettings();
 }
 

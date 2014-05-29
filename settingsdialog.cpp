@@ -109,12 +109,10 @@ SettingsDialog::~SettingsDialog()
 	delete p;
 }
 
-int SettingsDialog::execCollection()
+void SettingsDialog::setCurrentTab(SettingsDialog::Tab tab)
 {
-    // select collection folder setup
-    p->ui.settingsGroupsTable->setCurrentCell(1, 0);
-    p->ui.pages->setCurrentIndex(1);
-   return exec();
+    p->ui.settingsGroupsTable->setCurrentCell(tab, 0);
+    p->ui.pages->setCurrentIndex(tab);
 }
 
 int SettingsDialog::exec()
@@ -168,6 +166,7 @@ void SettingsDialog::accept()
 bool SettingsDialog::loadSettings()
 {
     QSettings settings;
+    p->ui.monitorOutputDevice->clear();
     p->ui.monitorOutputDevice->addItems(settings.value("MonitorOutputDevices").toStringList());
 
     int index = p->ui.monitorOutputDevice->findText(settings.value("MonitorOutputDevice").toString());

@@ -28,8 +28,11 @@ public:
 	SettingsDialog(QWidget * parent = 0);
 	~SettingsDialog();
 	int exec();
-    int execCollection();
-
+    enum Tab  { TabFader = 0,
+                 TabCollection = 1,
+                 TabMonitor = 2
+               };
+    void setCurrentTab(Tab tab);
 public slots:
 	void accept();
     void tableSelectionChanged();
