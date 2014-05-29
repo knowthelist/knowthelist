@@ -1,4 +1,4 @@
-headset.icns + headset.ico
+headset.icns + headset.ico + knowthelist.png
 ---------------------------------------
 Icon Author: Iconshock - Icon Sets
 

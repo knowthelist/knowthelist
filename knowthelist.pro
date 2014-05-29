@@ -1,4 +1,4 @@
-DEFINES += APP_VERSION="\\\"2.1.0\\\""
+DEFINES += APP_VERSION="\\\"2.1.1\\\""
 QT += core \
     gui \
     xml \
@@ -98,6 +98,15 @@ macx {
 
 }
 unix:!macx {
+            isEmpty(PREFIX):PREFIX = /usr
+            BINDIR = $$PREFIX/bin
+            DATADIR = $$PREFIX/share
+            target.path = $$BINDIR
+            icon.path = $$DATADIR/pixmaps
+            icon.files += knowthelist.png
+            desktop.path = $$DATADIR/applications
+            desktop.files += Knowthelist.desktop
+            INSTALLS += target icon desktop
     CONFIG += link_pkgconfig \
         gstreamer
     PKGCONFIG += gstreamer-0.10 \
@@ -105,5 +114,3 @@ unix:!macx {
 }
 RESOURCES += icons.qrc
 ICON = headset.icns
-target.path = $$PREFIX/bin
-INSTALLS += target

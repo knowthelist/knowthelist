@@ -1,0 +1,38 @@
+Source: knowthelist
+Section: Multimedia
+Priority: extra
+Maintainer: Mario Stephan <mstephan@shared-files.de>
+Build-Depends:  cdbs,qt4-qmake, libqt4-dev, debhelper (>= 8),
+                libc6 (>= 2.2),
+                libc6 (>= 2.3.6-6~),
+                libgcc1 (>= 1:4.1.1),
+                libglib2.0-0 (>= 2.12.0),
+                libgstreamer0.10-0 (>= 0.10.0),
+                libgstreamer0.10-dev,
+                libqt4-sql (>= 4:4.5.3),
+                libqt4-xml (>= 4:4.5.3),
+                libqtcore4 (>= 4:4.7.0~beta2),
+                libqtgui4 (>= 4:4.7.0~beta1),
+                libstdc++6 (>= 4.6),
+                libtag1c2a (>= 1.4),
+                libtag1c2a (>= 1.5),
+                libtag1-dev,
+                libasound2, libasound2-dev,
+                libboost-dev
+Standards-Version: 3.9.3
+Homepage: https://github.com/knowthelist/knowthelist
+#Vcs-Git: git://git.debian.org/collab-maint/knowthelist.git
+#Vcs-Browser: http://git.debian.org/?p=collab-maint/knowthelist.git;a=summary
+
+Package: knowthelist
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: Knowthelist the awesome party music player
+ Easy to use for all party guests
+ Quick search for tracks in collection
+ Two players with separate playlists
+ Mixer with fader, 3 channel EQ and gain
+ Auto fader and auto gain
+ Trackanalyser search for song start/end and gain setting
+ Auto DJ function with multiple filters for random play
+ Monitor player for pre listen tracks (via 2nd sound card e.g. USB)
