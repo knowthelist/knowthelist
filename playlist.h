@@ -36,7 +36,7 @@ class Playlist: public QTreeWidget
       enum Mode  { Tracklist = 0,
                    Playlist_Single = 1,
                    Playlist_Multi = 2
-                     };
+                 };
 
       /** Add a songs to the plalist*/
       void addTrack( QUrl file, PlaylistItem *after );

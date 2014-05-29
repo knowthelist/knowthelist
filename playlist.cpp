@@ -184,7 +184,7 @@ void Playlist::addCurrentTrack( Track* track )
 
 void Playlist::addNextTrack( Track* track )
 {
-
+    Q_UNUSED(track);
 }
 
 
@@ -705,6 +705,7 @@ void Playlist::fillNoColumn()
 
 void Playlist::slotItemChanged( QTreeWidgetItem * current, QTreeWidgetItem * previous )
 {
+    Q_UNUSED(previous);
     if ((selectedItems().count()>1) || (selectedItems().count()==0))
         return;
 
@@ -716,6 +717,7 @@ void Playlist::slotItemChanged( QTreeWidgetItem * current, QTreeWidgetItem * pre
 
 void Playlist::slotItemDoubleClicked( QTreeWidgetItem *item, int column )
 {
+    Q_UNUSED(column);
     emit trackDoubleClicked( static_cast<PlaylistItem*>(item) );
 }
 
@@ -898,6 +900,7 @@ void Playlist::dragMoveEvent (QDragMoveEvent *event)
 
 void Playlist::dragLeaveEvent (QDragLeaveEvent *event)
 {
+  Q_UNUSED(event);
   showDropHighlighter=false;
   viewport()->repaint();
 }
@@ -993,9 +996,9 @@ void Playlist::showContextMenu( PlaylistItem *&item, int col )
         popup.addAction( style()->standardPixmap(QStyle::SP_MediaPlay), tr( "Add to PlayList&1" ),0,0, Qt::Key_1 );//, LOAD1
         popup.addAction( style()->standardPixmap(QStyle::SP_MediaPlay), tr( "Add to PlayList&2" ), 0, 0, Qt::Key_2 );//, LOAD2
     }
-    if (!m_isPlaying & !isCurrentPlaylistItem  & m_PlaylistMode != Playlist::Tracklist )
+    if (!m_isPlaying && !isCurrentPlaylistItem  && m_PlaylistMode != Playlist::Tracklist )
         popup.addAction( style()->standardPixmap(QStyle::SP_MediaPlay), tr( "&Load" ),0,0, Qt::Key_L );
-    if (!isCurrentPlaylistItem  & m_PlaylistMode != Playlist::Tracklist )
+    if (!isCurrentPlaylistItem  && m_PlaylistMode != Playlist::Tracklist )
         popup.addAction( style()->standardPixmap(QStyle::SP_ArrowRight), tr( "Load as &Next" ), 0,0, Qt::Key_N );
     popup.addSeparator();
     popup.addAction( style()->standardPixmap(QStyle::SP_DriveCDIcon), tr( "&Prelisten Track" ),0,0, Qt::Key_P );
@@ -1004,7 +1007,7 @@ void Playlist::showContextMenu( PlaylistItem *&item, int col )
     popup.addSeparator();
     popup.addAction( style()->standardPixmap(QStyle::SP_ArrowRight), tr( "&Search for: '%1'" ).arg(  item->text(col) ),0,0,Qt::Key_S );
     popup.addSeparator();
-    if (!isCurrentPlaylistItem  & m_PlaylistMode != Playlist::Tracklist )
+    if (!isCurrentPlaylistItem  && m_PlaylistMode != Playlist::Tracklist )
         popup.addAction(style()->standardPixmap(QStyle::SP_TrashIcon), tr( "&Remove Selected" ), this, SLOT( removeSelectedItems() ), Qt::Key_Delete );
 
     QAction *a = popup.exec( QCursor::pos());
