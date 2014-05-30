@@ -43,7 +43,8 @@ int main(int argc, char *argv[])
 // load application settings
 
 if (!QSqlDatabase::drivers().contains("QSQLITE")) {
-    QMessageBox::critical(0, "Unable to load database", "This application needs the SQLITE driver");
+    QMessageBox::critical(0, QObject::tr("Unable to load database"),
+                          QObject::tr("This application needs the QT4 SQLITE driver (libqt4-sql-sqlite)"));
     return 1;
 }
 
