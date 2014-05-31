@@ -50,6 +50,7 @@ public:
      QTime length();
      bool isPlaying();
      bool mediaPlayable();
+     QString lastError;
 
      double levelLeft() {return rms_l;}
      double levelRight() {return rms_r;}

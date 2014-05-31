@@ -80,7 +80,7 @@ private Q_SLOTS:
 
     void on_butCue_clicked();
     void on_sliPosition_actionTriggered(int action);
-    void updateTimeAndPositionDisplay();
+    void updateTimeAndPositionDisplay(bool isPassive=true);
     void playerFinished();
     void playerError();
     void playerLoaded();

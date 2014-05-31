@@ -256,6 +256,7 @@ void Player::asyncOpen(QUrl url)
     m_length = 0;
     p->isLoaded=false;
     p->error="";
+    lastError="";
 
     sync_set_state (GST_ELEMENT (pipeline), GST_STATE_NULL);
 
@@ -401,8 +402,9 @@ void Player::messageReceived(GstMessage *message)
                             gchar *debug;
                             gst_message_parse_error (message, &err, &debug);
                             p->error = "Error #"+QString::number(err->code)+" in module "+QString::number(err->domain)+"\n"+QString::fromUtf8(err->message);
-                            if(err->code == 6 && err->domain == 851) {
-                                    p->error += "\nMay be you should to install gstreamer0.10-plugins-ugly or gstreamer0.10-plugins-bad";
+                            if(err->domain != GST_STREAM_ERROR && err->code != GST_STREAM_ERROR_FAILED) {
+                                    p->error += "\nMay be you should install more of gstreamer0.10-plugin-*";
+                                    lastError = QString::fromUtf8(err->message);
                             }
                             qDebug()<< "Gstreamer error:"<< p->error;
                             g_error_free (err);
@@ -424,6 +426,8 @@ void Player::messageReceived(GstMessage *message)
                     case GST_STATE_NULL:
                         rms_l=rms_r=0;
                         rmsout_l=rmsout_r=0;
+                    default:
+                            break;
                     }
                     break;
                   }

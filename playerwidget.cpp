@@ -19,26 +19,7 @@
 #include "ui_playerwidget.h"
 #include "player.h"
 #include "trackanalyser.h"
-
-#include <QtGui/QBoxLayout>
-#include <QtGui/QFileDialog>
-#include <QtGui/QToolButton>
-#include <QtGui/QLabel>
-#include <QtGui/QSlider>
-#include <QtGui/QMouseEvent>
-
-#include <qdebug.h>
-
-
-#include <qlabel.h>
 #include "vumeter.h"
-#include <qpushbutton.h>
-#include <qevent.h>
-//#include <qurldrag.h>
-//#include <qiconloader.h>
-#include <qled.h>
-#include <qwaitcondition.h>
-#include <qmutex.h>
 
 struct PlayerWidget::Private
 {
@@ -280,9 +261,7 @@ void PlayerWidget::loadFile( QUrl file)
 }
 
 void PlayerWidget::loadTrack( Track *track)
-
 {
-
     if ( track )
         qDebug() << __PRETTY_FUNCTION__ <<":"<<objectName()<< " track="<<track->url();
 
@@ -305,8 +284,10 @@ void PlayerWidget::loadTrack( Track *track)
 
     }
     else {
-
-      ui->lblTitle->setText( "no track" );
+        if (player->lastError!="")
+            ui->lblTitle->setText( player->lastError );
+        else
+            ui->lblTitle->setText( "no track" );
       //ToDo: doesn't work - avoid new override afterwards
       ui->lblTime->setText("-:-");
       ui->lblTimeMs->setText(".-");
@@ -331,7 +312,7 @@ float PlayerWidget::currentLevelRight()
      return player->levelOutRight();
 }
 
-void PlayerWidget::updateTimeAndPositionDisplay()
+void PlayerWidget::updateTimeAndPositionDisplay(bool isPassive)
 {
 
     QTime length = player->length();
@@ -350,7 +331,7 @@ void PlayerWidget::updateTimeAndPositionDisplay()
     ui->lblTimeRemainMs->setText("." + remain.toString("zzz").left(1));
 
     //Signal end of track or media error
-    //ToDo: better recocnition of media error (play pressed but player is not running)
+    //ToDo: better recognition of media error (play pressed but player is not running)
 
     if ( (remainMs-remainCueTime-mTrackFinishEmitTime <=0
                 && 0 < remainMs)
@@ -359,11 +340,12 @@ void PlayerWidget::updateTimeAndPositionDisplay()
             Q_EMIT aboutFinished();
     }
 
-    //update position slider
-    if (length != QTime(0,0)) {
-        ui->sliPosition->setValue(curpos.msecsTo(QTime()) * 1000 / length.msecsTo(QTime()));
-    } else {
-        ui->sliPosition->setValue(0);
+    //update position slider only if triggerd by timer
+    if (isPassive) {
+        if (length != QTime(0,0))
+            ui->sliPosition->setValue(curpos.msecsTo(QTime()) * 1000 / length.msecsTo(QTime()));
+        else
+            ui->sliPosition->setValue(0);
     }
 
 }
@@ -412,7 +394,7 @@ void PlayerWidget::on_sliPosition_sliderMoved(int value)
                 qDebug()<<"pos:"<<pos;
         player->setPosition(pos);
     }
-    updateTimeAndPositionDisplay();
+    updateTimeAndPositionDisplay(false);
 }
 
 void PlayerWidget::on_sliPosition_actionTriggered(int action)
