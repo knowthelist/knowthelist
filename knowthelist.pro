@@ -1,3 +1,9 @@
+#
+# Knowthelist
+# Copyright (C) 2011-2014 Mario Stephan <mstephan@shared-files.de>
+# License: LGPL-3.0+
+#
+
 DEFINES += APP_VERSION="\\\"2.1.1\\\""
 QT += core \
     gui \
