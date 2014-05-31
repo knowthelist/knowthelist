@@ -26,7 +26,7 @@ Homepage: https://github.com/knowthelist/knowthelist
 
 Package: knowthelist
 Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}
+Depends: ${shlibs:Depends}, ${misc:Depends}, libqt4-sql-sqlite
 Description: Knowthelist the awesome party music player
  Easy to use for all party guests
  Quick search for tracks in collection
