@@ -236,8 +236,7 @@ void CollectionTree::mouseMoveEvent(QMouseEvent *event)
     if(event->buttons() & Qt::LeftButton)
         {
             int distance = (event->pos() - startPos).manhattanLength();
-            if(distance >= QApplication::startDragDistance() &&
-                    !m_dragLocked)
+            if(distance >= QApplication::startDragDistance())
             {
                 performDrag();
             }
