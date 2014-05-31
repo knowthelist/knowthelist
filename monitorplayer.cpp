@@ -111,8 +111,8 @@ MonitorPlayer::~MonitorPlayer()
 {
     delete p;
     p=0;
-        cleanup();
-        gst_deinit();
+    cleanup();
+    gst_deinit();
 }
 
 GstBusSyncReply MonitorPlayer::bus_cb (GstBus *bus, GstMessage *msg, gpointer data)
@@ -540,6 +540,8 @@ void MonitorPlayer::messageReceived(GstMessage *message)
                     case GST_STATE_PAUSED:
                     case GST_STATE_NULL:
                         rms_l=rms_r=0;
+                    default:
+                            break;
                     }
                     break;
                   }
