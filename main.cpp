@@ -15,9 +15,9 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include <QtGui/QApplication>
 #include "knowthelist.h"
 
+#include <QtGui/QApplication>
 #include <QtSql>
 #include <stdlib.h>
 
@@ -38,7 +38,7 @@ int main(int argc, char *argv[])
     QCoreApplication::setOrganizationName("StephanM");
     QCoreApplication::setOrganizationDomain("");
     QCoreApplication::setApplicationName("Knowthelist");
-    QCoreApplication::setApplicationVersion("2.0");
+    QCoreApplication::setApplicationVersion("2.1");
 
 // load application settings
 
