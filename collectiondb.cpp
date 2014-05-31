@@ -79,6 +79,7 @@ CollectionDB::CollectionDB()
 
 
     p->genreCount=0;
+    p->resultCount=0;
 
     p->quickFilter = "FROM tags, artist, album, year, genre WHERE 1=1 "
                 " AND tags.artist = artist.id "
