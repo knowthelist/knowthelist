@@ -798,8 +798,8 @@ bool Knowthelist::initMonitorPlayer()
       monitorPlayer->prepare();
       monitorPlayer->setObjectName("monitorPlayer");
 
-      ui->cmdMonitorStop->setIcon(style()->standardIcon(QStyle::SP_MediaStop));
-      ui->cmdMonitorPlay->setIcon(style()->standardIcon(QStyle::SP_MediaPlay));
+      ui->cmdMonitorStop->setIcon(QIcon(":images/stop.png"));
+      ui->cmdMonitorPlay->setIcon(QIcon(":images/play.png"));
       //connect(monitorPlayer,SIGNAL(trackTimeChanged(qint64,qint64)),this,SLOT(monitorPlayer_trackTimeChanged(qint64,qint64)));
       //connect(monitorPlayer,SIGNAL(foundCover(QImage*)),this,SLOT(monitorPlayer_foundCover(QImage*)));
       connect(monitorPlayer,SIGNAL(loadFinished()),this,SLOT(timerMonitor_loadFinished()));
@@ -812,7 +812,7 @@ void Knowthelist::on_cmdMonitorStop_clicked()
 {
     monitorPlayer->stop();
     timerMonitor->stop();
-    ui->cmdMonitorPlay->setIcon(style()->standardIcon(QStyle::SP_MediaPlay));
+    ui->cmdMonitorPlay->setIcon(QIcon(":images/play.png"));
     //ui->monitorMeter->reset();
     ui->monitorMeter->setRightValue(0);
     ui->monitorMeter->setLeftValue(0);
@@ -821,7 +821,7 @@ void Knowthelist::on_cmdMonitorStop_clicked()
 void Knowthelist::on_cmdMonitorPlay_clicked()
 {
     if (monitorPlayer->isPlaying()) {
-        ui->cmdMonitorPlay->setIcon(style()->standardIcon(QStyle::SP_MediaPlay));
+        ui->cmdMonitorPlay->setIcon(QIcon(":images/play.png"));
         monitorPlayer->pause();
         timerMonitor->stop();
         //ui->monitorMeter->reset();
@@ -829,7 +829,7 @@ void Knowthelist::on_cmdMonitorPlay_clicked()
         ui->monitorMeter->setLeftValue(0);
     }
     else {
-        ui->cmdMonitorPlay->setIcon(style()->standardIcon(QStyle::SP_MediaPause));
+        ui->cmdMonitorPlay->setIcon(QIcon(":images/pause.png"));
         monitorPlayer->play();
         timerMonitor->start();
     }

@@ -8,5 +8,13 @@
         <file>images/vinyl.png</file>
         <file>images/search.png</file>
         <file>images/shuffle.png</file>
+        <file>images/play.png</file>
+        <file>images/pause.png</file>
+        <file>images/list.png</file>
+        <file>images/slider.png</file>
+        <file>images/volume.png</file>
+        <file>images/stop.png</file>
+        <file>images/backward.png</file>
+        <file>images/forward.png</file>
     </qresource>
 </RCC>

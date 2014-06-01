@@ -5,7 +5,8 @@ Icon Author: Iconshock - Icon Sets
 HomePage: http://www.iconshock.com
 License: Commercial usage: Not allowed
 
-clear_left.png + database.png + settings.png
+clear_left.png + database.png + settings.png +
+volume.png + slider.png
 ------------------------------------------
 Artist: Oxygen Team
 Iconset: Oxygen Icons
@@ -42,3 +43,16 @@ shuffle.png
 Icon Pack:The Clean Desk
 Designer:Alfred Pereira
 License:Freeware
+
+list.png
+------------------------------------------
+Symbolpaket:Human-O2
+Designer:schollidesign
+Lizenz:GNU/GPL
+
+play.png + pause.png + 
+backward.png + forward.png +
+stop.png
+------------------------------------------
+Designer:mstephan
+Lizenz:GNU/GPL

@@ -46,32 +46,32 @@ SettingsDialog::SettingsDialog(QWidget * parent)
 	p->ui.settingsGroupsTable->setIconSize(QSize(32,32));
 
 	item = p->ui.settingsGroupsTable->item(0, 0);
-	item->setIcon(QIcon(":preferences-other.png"));
+    item->setIcon(QIcon(":images/slider.png"));
 	item->setTextAlignment(Qt::AlignCenter);
         item->setFlags(Qt::ItemIsSelectable|Qt::ItemIsEnabled);
 
 	item = p->ui.settingsGroupsTable->item(1, 0);
-	item->setIcon(QIcon(":tools-media-optical-format.png"));
+    item->setIcon(QIcon(":images/database.png"));
 	item->setTextAlignment(Qt::AlignCenter);
         item->setFlags(Qt::ItemIsSelectable|Qt::ItemIsEnabled);
 
 	item = p->ui.settingsGroupsTable->item(2, 0);
-	item->setIcon(QIcon(":preferences-system-network.png"));
+    item->setIcon(QIcon(":images/volume.png"));
 	item->setTextAlignment(Qt::AlignCenter);
         item->setFlags(Qt::ItemIsSelectable|Qt::ItemIsEnabled);
 
 	item = p->ui.settingsGroupsTable->item(3, 0);
-	item->setIcon(QIcon(":server-database.png"));
+    item->setIcon(QIcon(":images/DJ.png"));
 	item->setTextAlignment(Qt::AlignCenter);
         item->setFlags(Qt::ItemIsSelectable|Qt::ItemIsEnabled);
 
 	item = p->ui.settingsGroupsTable->item(4, 0);
-	item->setIcon(QIcon(":preferences-desktop-keyboard.png"));
+    item->setIcon(QIcon(":images/list.png"));
 	item->setTextAlignment(Qt::AlignCenter);
         item->setFlags(Qt::ItemIsSelectable|Qt::ItemIsEnabled);
 
     item = p->ui.settingsGroupsTable->item(5, 0);
-    item->setIcon(QIcon(":server-database.png"));
+    item->setIcon(QIcon(":images/folder.png"));
     item->setTextAlignment(Qt::AlignCenter);
         item->setFlags(Qt::ItemIsSelectable|Qt::ItemIsEnabled);
 

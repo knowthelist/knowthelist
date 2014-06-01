@@ -45,9 +45,9 @@ PlayerWidget::PlayerWidget(QWidget *parent) :
     player = new Player(this);
     player->prepare();
 
-    ui->butFwd->setIcon(style()->standardIcon(QStyle::SP_MediaSkipForward));
-    ui->butRew->setIcon(style()->standardIcon(QStyle::SP_MediaSkipBackward));
-    ui->butPlay->setIcon(style()->standardIcon(QStyle::SP_MediaPlay));
+    ui->butFwd->setIcon(QIcon(":images/forward.png"));
+    ui->butRew->setIcon(QIcon(":images/backward.png"));
+    ui->butPlay->setIcon(QIcon(":images/play.png"));
     ui->butPlay->setChecked(false);
     ui->butFwd->setIconSize(QSize(26, 26));
     ui->butRew->setIconSize(QSize(26, 26));
@@ -133,7 +133,7 @@ void PlayerWidget::play()
 {
   m_isStarted = true;
   if (m_CurrentTrack){
-    ui->butPlay->setIcon(style()->standardIcon(QStyle::SP_MediaPause));
+    ui->butPlay->setIcon(QIcon(":images/pause.png"));
     ui->butPlay->setChecked(true);
     player->play();
     ui->butCue->setChecked(false);
@@ -147,7 +147,7 @@ void PlayerWidget::play()
 
 void PlayerWidget::pause()
 {
-    ui->butPlay->setIcon(style()->standardIcon(QStyle::SP_MediaPlay));
+    ui->butPlay->setIcon(QIcon(":images/play.png"));
     ui->butPlay->setChecked(false);
     m_isStarted = false;
     player->pause();
@@ -160,7 +160,7 @@ void PlayerWidget::pause()
 
 void PlayerWidget::stop()
 {
-    ui->butPlay->setIcon(style()->standardIcon(QStyle::SP_MediaPlay));
+    ui->butPlay->setIcon(QIcon(":images/play.png"));
     ui->butPlay->setChecked(false);
     m_isStarted = false;
     m_isHanging = false;
