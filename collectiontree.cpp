@@ -89,7 +89,7 @@ CollectionTree::createTrunk()
                 CollectionTreeItem* item = new CollectionTreeItem( this );
                 item->setGenre(tag[0]);
             }
-            headerItem()->setText(0, QString("Genres  (%1)").arg(tags.count()));
+            headerItem()->setText(0, QString("%1  (%2)").arg(tr("Genre")).arg(tags.count()));
                     break;
             break;
         case MODEYEAR:
@@ -98,7 +98,7 @@ CollectionTree::createTrunk()
                 CollectionTreeItem* item = new CollectionTreeItem( this );
                 item->setYear(tag[0]);
             }
-            headerItem()->setText(0, QString("Years  (%1)").arg(tags.count()));
+            headerItem()->setText(0, QString("%1  (%2)").arg(tr("Year")).arg(tags.count()));
                     break;
             break;
         default:
@@ -107,7 +107,7 @@ CollectionTree::createTrunk()
                 CollectionTreeItem* item = new CollectionTreeItem( this );
                 item->setArtist(tag[0]);
             }
-            headerItem()->setText(0, QString("Artists  (%1)").arg(tags.count()));
+            headerItem()->setText(0, QString("%1  (%2)").arg(tr("Artist")).arg(tags.count()));
             break;
     }
 }

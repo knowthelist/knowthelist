@@ -173,7 +173,7 @@ void Knowthelist::createUI()
     splitter->addWidget(this->collectionBrowser);
     splitter->addWidget(trackList);
     QPixmap pixmap1(":images/database.png");
-    ui->sideTab->AddTab(splitter,QIcon(pixmap1),"Collection");
+    ui->sideTab->AddTab(splitter,QIcon(pixmap1),tr("Collection"));
 
     connect( collectionBrowser, SIGNAL(selectionChanged(QList<Track*>)),trackList,SLOT(changeTracks(QList<Track*>)));
     connect( collectionBrowser,SIGNAL(setupDirs()),this,SLOT(showCollectionSetup()));
@@ -236,13 +236,13 @@ void Knowthelist::createUI()
     layout->addWidget(listDjs);
     djBox->setLayout(layout);
     QPixmap pixmap2(":images/DJ.png");
-    ui->sideTab->AddTab(djBox,QIcon(pixmap2),"AutoDJ");
+    ui->sideTab->AddTab(djBox,QIcon(pixmap2),tr("AutoDJ"));
     ui->sideTab->setContextMenuPolicy(Qt::NoContextMenu);
 
     //Add the FileBrowser
     filetree = new FileBrowser(this);
     QPixmap pixmap3(":images/folder.png");
-    ui->sideTab->AddTab(filetree,QIcon(pixmap3),"Folder");
+    ui->sideTab->AddTab(filetree,QIcon(pixmap3),tr("Folder"));
 
     //SettingsDialog
     preferences = new SettingsDialog(this);

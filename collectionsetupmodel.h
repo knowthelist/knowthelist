@@ -20,12 +20,12 @@
 
 #include <QTreeView>
 #include <QDirModel>
-#include <Qt>
 
 class CollectionSetupModel : public QDirModel
 {
+  Q_OBJECT
 public:
-    CollectionSetupModel(QWidget *parent = 0);
+    CollectionSetupModel();
     QStringList dirsChecked();
     void setDirsChecked(QStringList list);
 

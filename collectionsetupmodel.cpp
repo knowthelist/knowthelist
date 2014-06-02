@@ -18,10 +18,8 @@
 #include "collectionsetupmodel.h"
 #include <QTreeView>
 #include <QDirModel>
-#include <Qt>
-#include <QDebug>
 
-CollectionSetupModel::CollectionSetupModel( QWidget *parent )
+CollectionSetupModel::CollectionSetupModel()
 {
 
 }
@@ -95,7 +93,8 @@ QVariant CollectionSetupModel::headerData(int section, Qt::Orientation orientati
         if (role != Qt::DisplayRole)
             return QVariant();
         switch (section) {
-        case 0: return tr("Select folders for music collection");
+        case 0:
+            return QString(tr("Select folders for music collection"));
         default: return QVariant();
         }
     }

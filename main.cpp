@@ -19,7 +19,7 @@
 
 #include <QtGui/QApplication>
 #include <QtSql>
-#include <stdlib.h>
+#include <QTranslator>
 
 int main(int argc, char *argv[])
 {
@@ -40,7 +40,10 @@ int main(int argc, char *argv[])
     QCoreApplication::setApplicationName("Knowthelist");
     QCoreApplication::setApplicationVersion("2.1");
 
-// load application settings
+    QTranslator localization;
+    localization.load(":locale/knowthelist_" + QLocale::system().name() +".qm");
+    a.installTranslator(&localization);
+
 
 if (!QSqlDatabase::drivers().contains("QSQLITE")) {
     QMessageBox::critical(0, QObject::tr("Unable to load database"),

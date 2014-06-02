@@ -6,5 +6,7 @@ ui_*.h
 Info.plist
 Makefile
 knowthelist.app*
-qrc_icons.cpp
+qrc_*.cpp
 knowthelist
+knowthelist_*.qm
+

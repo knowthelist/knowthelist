@@ -8,7 +8,8 @@ DEFINES += APP_VERSION="\\\"2.1.1\\\""
 QT += core \
     gui \
     xml \
-    sql
+    sql \
+    location
 TARGET = knowthelist
 TEMPLATE = app
 SOURCES += main.cpp \
@@ -72,6 +73,11 @@ FORMS += \
     djfilterwidget.ui \
     playerwidget.ui \
     knowthelist.ui
+TRANSLATIONS += \
+    locale/knowthelist_cs.ts \
+    locale/knowthelist_de.ts
+
+
 win32 { 
     INCLUDEPATH += $$quote(C:\Program Files (x86)\gstreamer-sdk\0.10\x86\include\gstreamer-0.10) \
         $$quote(C:\Program Files (x86)\gstreamer-sdk\0.10\x86\include\glib-2.0) \
@@ -118,5 +124,17 @@ unix:!macx {
     PKGCONFIG += gstreamer-0.10 \
         taglib alsa
 }
-RESOURCES += icons.qrc
+RESOURCES += icons.qrc \
+    locale.qrc
 ICON = headset.icns
+
+isEmpty(QMAKE_LRELEASE) {
+win32:QMAKE_LRELEASE = $$[QT_INSTALL_BINS]\lrelease.exe
+else:QMAKE_LRELEASE = $$[QT_INSTALL_BINS]/lrelease
+}
+
+lrelease.commands = $$QMAKE_LRELEASE ${QMAKE_FILE_IN}
+lrelease.input = TRANSLATIONS
+lrelease.output = locale/${QMAKE_FILE_BASE}.qm
+lrelease.CONFIG = no_link target_predeps
+QMAKE_EXTRA_COMPILERS += lrelease

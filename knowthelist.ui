@@ -301,7 +301,7 @@ QScrollBar:left-arrow:horizontal, QScrollBar::right-arrow:horizontal {
           </property>
           <property name="minimumSize">
            <size>
-            <width>164</width>
+            <width>167</width>
             <height>329</height>
            </size>
           </property>
@@ -4650,7 +4650,7 @@ QScrollBar:left-arrow:horizontal, QScrollBar::right-arrow:horizontal {
            </property>
            <property name="font">
             <font>
-             <pointsize>8</pointsize>
+             <pointsize>9</pointsize>
             </font>
            </property>
            <property name="styleSheet">
@@ -4683,7 +4683,7 @@ min-height: 16px;
           <widget class="QDial" name="potHigh_1">
            <property name="geometry">
             <rect>
-             <x>25</x>
+             <x>27</x>
              <y>-3</y>
              <width>31</width>
              <height>32</height>
@@ -4720,8 +4720,8 @@ min-height: 16px;
           <widget class="QDial" name="potMid_1">
            <property name="geometry">
             <rect>
-             <x>25</x>
-             <y>25</y>
+             <x>27</x>
+             <y>27</y>
              <width>31</width>
              <height>32</height>
             </rect>
@@ -4748,8 +4748,8 @@ min-height: 16px;
           <widget class="QDial" name="potLow_1">
            <property name="geometry">
             <rect>
-             <x>25</x>
-             <y>52</y>
+             <x>27</x>
+             <y>57</y>
              <width>31</width>
              <height>32</height>
             </rect>
@@ -4773,7 +4773,7 @@ min-height: 16px;
           <widget class="QDial" name="potHigh_2">
            <property name="geometry">
             <rect>
-             <x>110</x>
+             <x>108</x>
              <y>-3</y>
              <width>31</width>
              <height>32</height>
@@ -4798,8 +4798,8 @@ min-height: 16px;
           <widget class="QDial" name="potMid_2">
            <property name="geometry">
             <rect>
-             <x>110</x>
-             <y>25</y>
+             <x>108</x>
+             <y>27</y>
              <width>31</width>
              <height>32</height>
             </rect>
@@ -4823,8 +4823,8 @@ min-height: 16px;
           <widget class="QDial" name="potLow_2">
            <property name="geometry">
             <rect>
-             <x>110</x>
-             <y>52</y>
+             <x>108</x>
+             <y>57</y>
              <width>31</width>
              <height>32</height>
             </rect>
@@ -4848,8 +4848,8 @@ min-height: 16px;
           <widget class="QDial" name="potGain_1">
            <property name="geometry">
             <rect>
-             <x>25</x>
-             <y>83</y>
+             <x>27</x>
+             <y>87</y>
              <width>31</width>
              <height>32</height>
             </rect>
@@ -4879,8 +4879,8 @@ min-height: 16px;
           <widget class="QDial" name="potGain_2">
            <property name="geometry">
             <rect>
-             <x>110</x>
-             <y>83</y>
+             <x>108</x>
+             <y>87</y>
              <width>31</width>
              <height>32</height>
             </rect>
@@ -4907,8 +4907,8 @@ min-height: 16px;
           <widget class="QLabel" name="label">
            <property name="geometry">
             <rect>
-             <x>7</x>
-             <y>89</y>
+             <x>4</x>
+             <y>106</y>
              <width>24</width>
              <height>16</height>
             </rect>
@@ -4923,6 +4923,9 @@ min-height: 16px;
            </property>
            <property name="text">
             <string>Gain</string>
+           </property>
+           <property name="alignment">
+            <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
            </property>
           </widget>
           <widget class="QPushButton" name="toggleAGC">
@@ -5585,8 +5588,8 @@ min-height: 16px;
           <widget class="QLabel" name="label_5">
            <property name="geometry">
             <rect>
-             <x>141</x>
-             <y>89</y>
+             <x>138</x>
+             <y>106</y>
              <width>24</width>
              <height>16</height>
             </rect>
@@ -5606,8 +5609,8 @@ min-height: 16px;
           <widget class="QLabel" name="label_2">
            <property name="geometry">
             <rect>
-             <x>8</x>
-             <y>64</y>
+             <x>4</x>
+             <y>76</y>
              <width>24</width>
              <height>16</height>
             </rect>
@@ -5623,12 +5626,15 @@ min-height: 16px;
            <property name="text">
             <string>Low</string>
            </property>
+           <property name="alignment">
+            <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+           </property>
           </widget>
           <widget class="QLabel" name="label_3">
            <property name="geometry">
             <rect>
-             <x>143</x>
-             <y>64</y>
+             <x>138</x>
+             <y>76</y>
              <width>24</width>
              <height>16</height>
             </rect>
@@ -5648,8 +5654,8 @@ min-height: 16px;
           <widget class="QLabel" name="label_4">
            <property name="geometry">
             <rect>
-             <x>8</x>
-             <y>36</y>
+             <x>4</x>
+             <y>46</y>
              <width>24</width>
              <height>16</height>
             </rect>
@@ -5665,12 +5671,15 @@ min-height: 16px;
            <property name="text">
             <string>Mid</string>
            </property>
+           <property name="alignment">
+            <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+           </property>
           </widget>
           <widget class="QLabel" name="label_6">
            <property name="geometry">
             <rect>
-             <x>143</x>
-             <y>36</y>
+             <x>138</x>
+             <y>46</y>
              <width>24</width>
              <height>16</height>
             </rect>
@@ -5690,8 +5699,8 @@ min-height: 16px;
           <widget class="QLabel" name="label_7">
            <property name="geometry">
             <rect>
-             <x>7</x>
-             <y>10</y>
+             <x>4</x>
+             <y>16</y>
              <width>24</width>
              <height>16</height>
             </rect>
@@ -5701,18 +5710,24 @@ min-height: 16px;
              <pointsize>7</pointsize>
             </font>
            </property>
+           <property name="layoutDirection">
+            <enum>Qt::LeftToRight</enum>
+           </property>
            <property name="styleSheet">
             <string notr="true"/>
            </property>
            <property name="text">
             <string>High</string>
            </property>
+           <property name="alignment">
+            <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+           </property>
           </widget>
           <widget class="QLabel" name="label_8">
            <property name="geometry">
             <rect>
-             <x>141</x>
-             <y>10</y>
+             <x>138</x>
+             <y>16</y>
              <width>24</width>
              <height>16</height>
             </rect>
@@ -5807,9 +5822,9 @@ min-height: 16px;
            <property name="geometry">
             <rect>
              <x>10</x>
-             <y>170</y>
+             <y>165</y>
              <width>111</width>
-             <height>31</height>
+             <height>37</height>
             </rect>
            </property>
            <property name="palette">
@@ -6085,7 +6100,7 @@ min-height: 16px;
            </property>
            <property name="font">
             <font>
-             <pointsize>8</pointsize>
+             <pointsize>10</pointsize>
             </font>
            </property>
            <property name="styleSheet">
@@ -6417,7 +6432,7 @@ min-height: 16px;
            <property name="geometry">
             <rect>
              <x>10</x>
-             <y>206</y>
+             <y>200</y>
              <width>111</width>
              <height>111</height>
             </rect>
@@ -6430,7 +6445,7 @@ min-height: 16px;
            <property name="geometry">
             <rect>
              <x>10</x>
-             <y>313</y>
+             <y>315</y>
              <width>121</width>
              <height>13</height>
             </rect>
@@ -7048,7 +7063,7 @@ p, li { white-space: pre-wrap; }
              <x>40</x>
              <y>20</y>
              <width>21</width>
-             <height>71</height>
+             <height>75</height>
             </rect>
            </property>
           </widget>
@@ -7358,7 +7373,7 @@ p, li { white-space: pre-wrap; }
      <x>0</x>
      <y>0</y>
      <width>1280</width>
-     <height>23</height>
+     <height>22</height>
     </rect>
    </property>
   </widget>

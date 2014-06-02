@@ -85,7 +85,7 @@ SettingsDialog::SettingsDialog(QWidget * parent)
 	p->ui.pages->setCurrentIndex(0);
 
     //Collection folder setup
-    p->model = new CollectionSetupModel(this);
+    p->model = new CollectionSetupModel();
 
     p->ui.collectionsTreeView->setModel(p->model);
     p->ui.collectionsTreeView->setColumnHidden(1, true);
