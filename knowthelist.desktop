@@ -1,0 +1,13 @@
+[Desktop Entry]
+Name=Knowthelist
+Name[de]=Knowthelist
+GenericName=Party Music Player
+GenericName[de]=Party Musik Player
+Comment=Party Music Player
+Comment[de]=Party Musik Player
+Exec=knowthelist
+Icon=knowthelist
+Terminal=false
+Type=Application
+StartupNotify=false
+Categories=AudioVideo;Player;
