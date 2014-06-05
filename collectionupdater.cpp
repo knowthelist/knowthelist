@@ -180,7 +180,7 @@ void CollectionUpdater::asynchronScan(QStringList dirs)
 void CollectionUpdater::readDir( const QString& dir, QStringList& entries )
 {
     //update dir statistics for rescanning purposes
-    QFileInfo fi( QFile::encodeName( dir ));
+    QFileInfo fi( dir );
 
     if ( fi.exists() )
         p->collectionDB->updateDirStats( dir, ( long ) fi.lastModified().toTime_t() );
@@ -195,7 +195,7 @@ void CollectionUpdater::readDir( const QString& dir, QStringList& entries )
     }
 
 
-    QDir rDir( QFile::encodeName( dir ));
+    QDir rDir( dir );
     rDir.setFilter(QDir::Dirs | QDir::Files | QDir::NoDotDot | QDir::NoDot | QDir::NoSymLinks | QDir::Readable);
     QFileInfoList list = rDir.entryInfoList();
 
@@ -212,7 +212,7 @@ void CollectionUpdater::readDir( const QString& dir, QStringList& entries )
 
 void CollectionUpdater::readTags( const QStringList& entries )
 {
-    qWarning() << "BEGIN " << __FUNCTION__;
+    qDebug() << "BEGIN " << __FUNCTION__;
 
     QUrl url;
     p->collectionDB->createTables( true );
@@ -249,7 +249,8 @@ void CollectionUpdater::readTags( const QStringList& entries )
           }
     }
 
-    qDebug()<<"Insert:finish";
+    qDebug()<<"Insert:finish " << __FUNCTION__;
+
     //update database only if not stoped
     if ( !p->isStoped )
     {
@@ -275,10 +276,10 @@ void CollectionUpdater::readTags( const QStringList& entries )
     }
     else
     {
-      qWarning() << "Stoped " << __FUNCTION__;
+      qDebug() << "Stoped " << __FUNCTION__;
     }
 
-    qWarning() << "END " << __FUNCTION__;
+    qDebug() << "END " << __FUNCTION__;
 }
 
 
