@@ -926,7 +926,7 @@ void Knowthelist::on_toggleAutoDJ_toggled(bool checked)
         if ( !player1->isStarted() && !player2->isStarted() )
             fadeNow();
         //Activate Autofade
-        ui->toggleAutoFade->setDown( true );
+        ui->toggleAutoFade->setChecked( true );
     }
     else{
      m_AutoDJGenre=collectionBrowser->filterText();
