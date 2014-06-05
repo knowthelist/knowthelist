@@ -724,13 +724,9 @@ void Playlist::slotItemDoubleClicked( QTreeWidgetItem *item, int column )
 void Playlist::slotItemClicked(QTreeWidgetItem *after,int col)
 {
     PlaylistItem* item = static_cast<PlaylistItem*>(after);
-    if (item){
-        if (openContext)
-            showContextMenu( item, col );
-    }
+
     if (item)
         emit trackClicked(item);
-
 }
 
 // avoid multiple drops on quick drags
@@ -767,13 +763,13 @@ void Playlist::mouseDoubleClickEvent(QMouseEvent *event)
 
 void Playlist::mousePressEvent( QMouseEvent *e )
 {
-    openContext = (e->button() == Qt::RightButton);
-
     if (e->button() == Qt::LeftButton)
         startPos = e->pos();
 
     QTreeWidget::mousePressEvent(e);
 
+    if (e->button() == Qt::RightButton)
+           showContextMenu( dynamic_cast<PlaylistItem *>(currentItem()), currentColumn() );
 }
 
 void Playlist::mouseMoveEvent(QMouseEvent *event)
@@ -976,12 +972,10 @@ void Playlist::keyPressEvent   (   QKeyEvent* e    )
 }
 
 
+void Playlist::dummySlot(){}
 
-
-void Playlist::showContextMenu( PlaylistItem *&item, int col )
+void Playlist::showContextMenu( PlaylistItem *item, int col )
 {
-
-    //ToDo: create popup before first use
     enum Id { LOAD, LOAD_NEXT, VIEW, EDIT, REMOVE, LISTEN, FILTER, LOAD1, LOAD2 };
 
     if( item == NULL ) return;
@@ -993,19 +987,25 @@ void Playlist::showContextMenu( PlaylistItem *&item, int col )
     popup.setTitle( item->track()->prettyTitle( 50 ) );
     if (m_PlaylistMode == Playlist::Tracklist )
     {
-        popup.addAction( style()->standardPixmap(QStyle::SP_MediaPlay), tr( "Add to PlayList&1" ),0,0, Qt::Key_1 );//, LOAD1
-        popup.addAction( style()->standardPixmap(QStyle::SP_MediaPlay), tr( "Add to PlayList&2" ), 0, 0, Qt::Key_2 );//, LOAD2
+        popup.addAction( style()->standardPixmap(QStyle::SP_MediaPlay), tr( "Add to PlayList&1" ),
+                         this, SLOT(dummySlot()), Qt::Key_1 );//, LOAD1
+        popup.addAction( style()->standardPixmap(QStyle::SP_MediaPlay), tr( "Add to PlayList&2" ),
+                         this, SLOT(dummySlot()), Qt::Key_2 );//, LOAD2
     }
     if (!m_isPlaying && !isCurrentPlaylistItem  && m_PlaylistMode != Playlist::Tracklist )
-        popup.addAction( style()->standardPixmap(QStyle::SP_MediaPlay), tr( "&Load" ),0,0, Qt::Key_L );
+        popup.addAction( style()->standardPixmap(QStyle::SP_MediaPlay), tr( "&Load" ),
+                         this, SLOT(dummySlot()), Qt::Key_L );
     if (!isCurrentPlaylistItem  && m_PlaylistMode != Playlist::Tracklist )
-        popup.addAction( style()->standardPixmap(QStyle::SP_ArrowRight), tr( "Load as &Next" ), 0,0, Qt::Key_N );
+        popup.addAction( style()->standardPixmap(QStyle::SP_ArrowRight), tr( "Load as &Next" ),
+                         this, SLOT(dummySlot()), Qt::Key_N );
     popup.addSeparator();
-    popup.addAction( style()->standardPixmap(QStyle::SP_DriveCDIcon), tr( "&Prelisten Track" ),0,0, Qt::Key_P );
-    popup.addAction( style()->standardPixmap(QStyle::SP_MessageBoxInformation), tr( "&View Tag Information..." ), 0,0,Qt::Key_V );
-    //popup.addAction( style()->standardPixmap(QStyle::SP_ArrowRight), tr( "&Edit Tag: '%1'" ).arg( headerItem()->text( col )), 0, 0, Qt::Key_F2 );
+    popup.addAction( style()->standardPixmap(QStyle::SP_DriveCDIcon), tr( "&Prelisten Track" ),
+                     this, SLOT(dummySlot()), Qt::Key_P );
+    popup.addAction( style()->standardPixmap(QStyle::SP_MessageBoxInformation), tr( "&View Tag Information..." ),
+                     this, SLOT(dummySlot()),Qt::Key_V );
     popup.addSeparator();
-    popup.addAction( style()->standardPixmap(QStyle::SP_ArrowRight), tr( "&Search for: '%1'" ).arg(  item->text(col) ),0,0,Qt::Key_S );
+    popup.addAction( style()->standardPixmap(QStyle::SP_ArrowRight), tr( "&Search for: '%1'" ).arg(  item->text(col) ),
+                     this, SLOT(dummySlot()),Qt::Key_S );
     popup.addSeparator();
     if (!isCurrentPlaylistItem  && m_PlaylistMode != Playlist::Tracklist )
         popup.addAction(style()->standardPixmap(QStyle::SP_TrashIcon), tr( "&Remove Selected" ), this, SLOT( removeSelectedItems() ), Qt::Key_Delete );

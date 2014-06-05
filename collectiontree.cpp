@@ -306,30 +306,33 @@ void CollectionTree::showContextMenu( QTreeWidgetItem *&item, int col )
     QMenu popup( this );
 
     popup.setTitle( item->text(0) );
-    popup.addAction( style()->standardPixmap(QStyle::SP_MediaPlay), tr( "Add to PlayList&1" ),0,0, Qt::Key_1 );//, LOAD1
-    popup.addAction( style()->standardPixmap(QStyle::SP_MediaPlay), tr( "Add to PlayList&2" ), 0, 0, Qt::Key_2 );//, LOAD2
+    popup.addAction( style()->standardPixmap(QStyle::SP_MediaPlay), tr( "Add to PlayList&1" ),
+                     this, SLOT(onLoad1Triggered()), Qt::Key_1 );//, LOAD1
+    popup.addAction( style()->standardPixmap(QStyle::SP_MediaPlay), tr( "Add to PlayList&2" ),
+                     this, SLOT(onLoad2Triggered()), Qt::Key_2 );//, LOAD2
     popup.addSeparator();
-    popup.addAction( style()->standardPixmap(QStyle::SP_BrowserReload), tr( "Re-scan collection" ),0,0,Qt::Key_R );
+    popup.addAction( style()->standardPixmap(QStyle::SP_BrowserReload), tr( "Re-scan collection" ),
+                     this,SLOT(onRescanTriggered()),Qt::Key_R );
 
 
-        QAction *a = popup.exec( QCursor::pos());
-    if (!a)
-        return;
-    switch( a->shortcut() )
-    {
-        case Qt::Key_1:
-            Q_EMIT wantLoad(p->tracks,"Left" );
-            break;
+    popup.exec( QCursor::pos());
 
-        case Qt::Key_2:
-            Q_EMIT wantLoad(p->tracks,"Right" );
-            break;
 
-        case Qt::Key_R:
-            Q_EMIT rescan();
-            break;
-    }
+}
 
+void CollectionTree::onLoad1Triggered()
+{
+    Q_EMIT wantLoad(p->tracks,"Left" );
+}
+
+void CollectionTree::onLoad2Triggered()
+{
+    Q_EMIT wantLoad(p->tracks,"Right" );
+}
+
+void CollectionTree::onRescanTriggered()
+{
+    Q_EMIT rescan();
 }
 
 

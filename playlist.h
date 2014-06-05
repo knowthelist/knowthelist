@@ -141,7 +141,6 @@ class Playlist: public QTreeWidget
       bool m_dragLocked;
 
       QPoint startPos;
-      bool openContext;
 
     bool m_isPlaying;
     bool m_isCurrentList;
@@ -167,13 +166,14 @@ class Playlist: public QTreeWidget
       
     private Q_SLOTS:
 
-        void showContextMenu( PlaylistItem*&, int );
+        void showContextMenu( PlaylistItem *, int );
         void slotItemClicked(QTreeWidgetItem*,int);
         void slotItemDoubleClicked ( QTreeWidgetItem *item, int column );
         void emitClicked();
         void timeoutDragLock();
         void handleChanges();
         void slotItemChanged( QTreeWidgetItem * current, QTreeWidgetItem * previous );
+        void dummySlot();
         
 };
 
