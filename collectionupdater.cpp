@@ -157,6 +157,7 @@ void CollectionUpdater::asynchronScan(QStringList dirs)
 
     QStringList entries;
     int dirCount = dirs.count();
+
     //iterate over all folders
     for ( int i = 0; i < dirCount; i++ ) {
         Q_EMIT progressChanged(((i+1)*10)/dirCount);
@@ -200,7 +201,6 @@ void CollectionUpdater::readDir( const QString& dir, QStringList& entries )
     QFileInfoList list = rDir.entryInfoList();
 
     Q_FOREACH (const QFileInfo fi, list) {
-
             if ( fi.isDir() ) {
                 if ( !p->incremental || !p->collectionDB->isDirInCollection( fi.absoluteFilePath() ) )
                     readDir( fi.absoluteFilePath(), entries );
@@ -212,7 +212,7 @@ void CollectionUpdater::readDir( const QString& dir, QStringList& entries )
 
 void CollectionUpdater::readTags( const QStringList& entries )
 {
-    qDebug() << "BEGIN " << __FUNCTION__;
+    qDebug() << __PRETTY_FUNCTION__ << " Start";
 
     QUrl url;
     p->collectionDB->createTables( true );
@@ -225,6 +225,7 @@ void CollectionUpdater::readTags( const QStringList& entries )
         url = QUrl::fromLocalFile( entries[ i ] );
 
         Track track( url );
+
 
          if ( track.isValid() ) {
 
@@ -249,7 +250,7 @@ void CollectionUpdater::readTags( const QStringList& entries )
           }
     }
 
-    qDebug()<<"Insert:finish " << __FUNCTION__;
+    qDebug() << __PRETTY_FUNCTION__ << " Insert finish";
 
     //update database only if not stoped
     if ( !p->isStoped )
@@ -276,10 +277,11 @@ void CollectionUpdater::readTags( const QStringList& entries )
     }
     else
     {
-      qDebug() << "Stoped " << __FUNCTION__;
+
+      qDebug() << __PRETTY_FUNCTION__ << " Stop";
     }
 
-    qDebug() << "END " << __FUNCTION__;
+    qDebug() << __PRETTY_FUNCTION__ << " End";
 }
 
 
