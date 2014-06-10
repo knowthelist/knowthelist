@@ -17,6 +17,7 @@
 
 #include "collectionsetupmodel.h"
 #include "settingsdialog.h"
+#include "djsettings.h"
 #include "ui_settingsdialog.h"
 
 #include <QtDebug>
@@ -102,6 +103,8 @@ SettingsDialog::SettingsDialog(QWidget * parent)
                     this, SLOT(on_faderTimeSlider_sliderMoved(int)));
 
     connect(p->ui.pushScanNow,SIGNAL(clicked()),this,SLOT(onScanNow()));
+
+    connect(p->ui.countDJ,SIGNAL(valueChanged(int)),this,SLOT(loadDjList(int)));
 }
 
 SettingsDialog::~SettingsDialog()
@@ -145,13 +148,19 @@ void SettingsDialog::accept()
     settings.setValue("minTracks",p->ui.minTracks->value());
     settings.setValue("countDJ",p->ui.countDJ->value());
     settings.beginGroup("AutoDJ");
-    settings.setValue("0/FilterCount","4");
-    settings.setValue("1/FilterCount","5");
-    settings.setValue("2/FilterCount","3");
-    settings.setValue("0/Name","DJ Iam");
-    settings.setValue("1/Name","DJ Bear");
-    settings.setValue("2/Name","DJ All");
-    settings.endGroup();
+    int maxDj=p->ui.countDJ->value();
+
+        for (int d=0;d<maxDj;d++)
+        {
+            settings.beginGroup(QString::number(d));
+            QListWidgetItem *item = p->ui.listDjNames->item(d);
+            if (DjSettings *djs = dynamic_cast<DjSettings*>(p->ui.listDjNames->itemWidget(item))) {
+                settings.setValue("Name", djs->name() );
+                settings.setValue("FilterCount", djs->filterCount() );
+            }
+            settings.endGroup();
+        }
+        settings.endGroup();
 
     //CollectionFolders
     settings.setValue("Dirs",p->model->dirsChecked());
@@ -187,7 +196,7 @@ bool SettingsDialog::loadSettings()
 
     //AutoDJ
     p->ui.minTracks->setValue(settings.value("minTracks","6").toInt());
-    p->ui.countDJ->setValue(settings.value("countDJ","1").toInt());
+    p->ui.countDJ->setValue(settings.value("countDJ","3").toInt());
 
     //CollectionFolders
     p->model->setDirsChecked(settings.value("Dirs").toStringList());
@@ -196,9 +205,35 @@ bool SettingsDialog::loadSettings()
     //File Browser
     p->ui.txtBrowserRoot->setText(settings.value("editBrowerRoot","").toString());
 
+    //Load Dj list
+    loadDjList(p->ui.countDJ->value());
+
     return true;
 }
 
+void SettingsDialog::loadDjList(int count)
+{
+    QSettings settings;
+    QListWidgetItem *itm;
+    DjSettings *djs;
+
+    p->ui.listDjNames->clear();
+
+    settings.beginGroup("AutoDJ");
+    for (int d=0;d<count;d++)
+    {
+        settings.beginGroup(QString::number(d));
+        itm = new QListWidgetItem(p->ui.listDjNames);
+        p->ui.listDjNames->addItem(itm);
+        djs = new DjSettings(p->ui.listDjNames);
+        djs->setID(d+1);
+        djs->setName(settings.value("Name","Dj%1").toString().arg(d+1));
+        djs->setFilterCount(settings.value("FilterCount","2").toInt());
+        p->ui.listDjNames->setItemWidget(itm,djs);
+        settings.endGroup();
+    }
+    settings.endGroup();
+}
 
 void SettingsDialog::on_pushButton_clicked()
 {

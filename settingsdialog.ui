@@ -172,7 +172,7 @@
         </sizepolicy>
        </property>
        <property name="currentIndex">
-        <number>0</number>
+        <number>3</number>
        </property>
        <widget class="QWidget" name="page">
         <widget class="QLabel" name="label">
@@ -444,7 +444,7 @@
          <property name="geometry">
           <rect>
            <x>10</x>
-           <y>140</y>
+           <y>370</y>
            <width>42</width>
            <height>22</height>
           </rect>
@@ -457,13 +457,13 @@
          <property name="geometry">
           <rect>
            <x>10</x>
-           <y>120</y>
-           <width>131</width>
+           <y>350</y>
+           <width>271</width>
            <height>16</height>
           </rect>
          </property>
          <property name="text">
-          <string>Minimum Tracks</string>
+          <string>Minimum tracks within each playlist </string>
          </property>
         </widget>
         <widget class="QSpinBox" name="countDJ">
@@ -490,6 +490,51 @@
          </property>
          <property name="text">
           <string>DJ Count</string>
+         </property>
+        </widget>
+        <widget class="QListWidget" name="listDjNames">
+         <property name="geometry">
+          <rect>
+           <x>120</x>
+           <y>90</y>
+           <width>256</width>
+           <height>251</height>
+          </rect>
+         </property>
+         <property name="selectionMode">
+          <enum>QAbstractItemView::NoSelection</enum>
+         </property>
+         <property name="gridSize">
+          <size>
+           <width>0</width>
+           <height>40</height>
+          </size>
+         </property>
+        </widget>
+        <widget class="QLabel" name="label_6">
+         <property name="geometry">
+          <rect>
+           <x>180</x>
+           <y>70</y>
+           <width>101</width>
+           <height>16</height>
+          </rect>
+         </property>
+         <property name="text">
+          <string>DJ Names</string>
+         </property>
+        </widget>
+        <widget class="QLabel" name="label_11">
+         <property name="geometry">
+          <rect>
+           <x>300</x>
+           <y>70</y>
+           <width>91</width>
+           <height>16</height>
+          </rect>
+         </property>
+         <property name="text">
+          <string>Filter Count</string>
          </property>
         </widget>
        </widget>

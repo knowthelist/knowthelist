@@ -43,12 +43,14 @@ signals:
 
 
 protected:
-	bool loadSettings();
+    bool loadSettings();
+
 private slots:
         void on_faderEndSlider_sliderMoved(int position);
         void on_faderTimeSlider_sliderMoved(int position);
         void on_pushButton_clicked();
         void onScanNow();
+        void loadDjList(int count);
 
 
 protected:
