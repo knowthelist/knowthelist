@@ -4,7 +4,7 @@
 # License: LGPL-3.0+
 #
 
-DEFINES += APP_VERSION="\\\"2.1.1\\\""
+DEFINES += APP_VERSION="\\\"2.1.2\\\""
 QT += core \
     gui \
     xml \
@@ -39,7 +39,9 @@ SOURCES += main.cpp \
     collectionupdater.cpp \
     collectiontreeitem.cpp \
     monitorplayer.cpp \
-    collectionsetupmodel.cpp
+    collectionsetupmodel.cpp \
+    stackdisplay.cpp \
+    djsettings.cpp
 HEADERS += knowthelist.h \
     vumeter.h \
     qvumeter.h \
@@ -66,17 +68,20 @@ HEADERS += knowthelist.h \
     collectionupdater.h \
     collectiontreeitem.h \
     monitorplayer.h \
-    collectionsetupmodel.h
+    collectionsetupmodel.h \
+    stackdisplay.h \
+    djsettings.h
 FORMS += \
     settingsdialog.ui \
     djwidget.ui \
     djfilterwidget.ui \
     playerwidget.ui \
-    knowthelist.ui
+    knowthelist.ui \
+    djsettings.ui
 TRANSLATIONS += \
     locale/knowthelist_cs.ts \
-    locale/knowthelist_de.ts
-
+    locale/knowthelist_de.ts \
+    locale/knowthelist_hu.ts
 
 win32 { 
     INCLUDEPATH += $$quote(C:\Program Files (x86)\gstreamer-sdk\0.10\x86\include\gstreamer-0.10) \

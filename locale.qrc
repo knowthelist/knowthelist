@@ -2,5 +2,6 @@
     <qresource prefix="/">
         <file>locale/knowthelist_cs.qm</file>
         <file>locale/knowthelist_de.qm</file>
+        <file>locale/knowthelist_hu.qm</file>
     </qresource>
 </RCC>
