@@ -91,6 +91,11 @@ Auto DJ function with multiple filters for random play
 Monitor player for pre listen tracks (via 2nd sound card e.g. USB)
 
 %changelog
+* Tue Jun 10 2014 Mario Stephan <mstephan@shared-files.de>
+- 2.1.2
+- Added translation for hu_HU (thanks to László Farkas)
+- AutoDJ panel rearrangements, new record case stack display added
+- AutoDJ names settings in settings dialog added  
 * Tue Jun 03 2014 Mario Stephan <mstephan@shared-files.de>
 - 2.1.1
 - Add localization, cs_CZ (thanks to Pavel Fric), de_DE

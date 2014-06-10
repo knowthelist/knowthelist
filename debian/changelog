@@ -1,6 +1,15 @@
-knowthelist (2.1.1) unstable; urgency=low
+knowthelist (2.1.2) stable; urgency=low
 
-  * Add localization, cs_CZ (thanks to Pavel Fric), de_DE
+  * Added translation for hu_HU (thanks to László Farkas)
+  * AutoDJ panel rearrangements, new record case stack display added
+  * AutoDJ names settings in settings dialog added   
+
+ -- Mario <mstephan@shared-files.de>  Tue, 10 Jun 2014 23:45:00 +0200
+knowthelist (2.1.1) stable; urgency=low
+
+  * Added localization, translation for cs_CZ (thanks to Pavel Fric), de_DE
+  * Bugfix: Collection scan ignored folders with special characters
+  * ContextMenu improvements: quicker behavier and get rid of warnings
 
  -- Mario <mstephan@shared-files.de>  Tue, 03 Jun 2014 00:28:26 +0200
 knowthelist (2.1) unstable; urgency=low
