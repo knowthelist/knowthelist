@@ -22,6 +22,7 @@
 #include <QtXml>
 #include <QtGui>
 #include <qprogressdialog.h>
+#include <qscrollbar.h>
 
 #include "playlist.h"
 #include "playlistitem.h"
@@ -47,14 +48,6 @@ Playlist::Playlist(QWidget* parent)
     , m_isInternDrop(false)
     ,m_dragLocked(false)
 {
-
-    qDebug() << __FUNCTION__ << "(BEGIN) constr "<< objectName();
-
-    //QString styleDef ="QTreeWidget{alternate-background-color: grey;}";
-    //setStyleSheet(styleDef);
-    QPalette p( palette() );
-    p.setColor( QPalette::Base, QColor(64,64,64) );
-    setPalette( p );
 
     setSortingEnabled(false);
     setAcceptDrops( true );
@@ -124,7 +117,6 @@ Playlist::Playlist(QWidget* parent)
 
 
     //ToDo: restore sort and width
-    qDebug() << __FUNCTION__ << "(BEGIN) constr " << objectName();
 }
 
 

@@ -54,7 +54,7 @@ CollectionWidget::CollectionWidget( QWidget* parent ):
     QFont this_font(  this->font() );
     this_font.setPointSize( this_font.pointSize()-1 );
 
-    p->actionsMenu = new QMenu(tr( "yy" ), this );
+    p->actionsMenu = new QMenu(tr( "" ), this );
 
     QPushButton *pushSet =new QPushButton();
     QPixmap pixmap1(":images/settings.png");
@@ -255,7 +255,7 @@ SearchEdit::SearchEdit(QWidget *parent)
       clearButton->setIcon(QIcon(pixmap));
       clearButton->setIconSize(QSize(18,18));
     clearButton->setCursor(Qt::ArrowCursor);
-    clearButton->setStyleSheet("QToolButton { border: none; padding: 0px; margin-right: 14px; margin-top: 3px;}");
+    clearButton->setStyleSheet("QToolButton { border: none; padding: 0px; margin-right: 2px; margin-top: 3px;}");
     clearButton->hide();
       setAttribute(Qt::WA_MacShowFocusRect, false);
       connect(clearButton, SIGNAL(clicked()), this, SLOT(clear()));

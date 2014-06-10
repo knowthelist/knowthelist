@@ -19,29 +19,8 @@
   <property name="windowTitle">
    <string>Form</string>
   </property>
-  <layout class="QGridLayout" name="gridLayout">
-   <property name="margin">
-    <number>0</number>
-   </property>
-   <property name="spacing">
-    <number>0</number>
-   </property>
-   <item row="0" column="0">
-    <widget class="QFrame" name="frame">
-     <property name="sizePolicy">
-      <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
-       <horstretch>0</horstretch>
-       <verstretch>0</verstretch>
-      </sizepolicy>
-     </property>
-     <property name="sizeIncrement">
-      <size>
-       <width>0</width>
-       <height>0</height>
-      </size>
-     </property>
-     <property name="styleSheet">
-      <string notr="true">QFrame#frame{
+  <property name="styleSheet">
+   <string notr="true">QFrame#frame{
           background: qlineargradient(
    x1:0, y1:0, x2:0, y2:1,
    stop: 0.03 #666666,
@@ -166,6 +145,30 @@ QFrame#fraDisplay{
    stop: 0 #9aa9be,
    stop: 1 #293859);
 }</string>
+  </property>
+  <layout class="QGridLayout" name="gridLayout">
+   <property name="margin">
+    <number>0</number>
+   </property>
+   <property name="spacing">
+    <number>0</number>
+   </property>
+   <item row="0" column="0">
+    <widget class="QFrame" name="frame">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
+       <horstretch>0</horstretch>
+       <verstretch>0</verstretch>
+      </sizepolicy>
+     </property>
+     <property name="sizeIncrement">
+      <size>
+       <width>0</width>
+       <height>0</height>
+      </size>
+     </property>
+     <property name="styleSheet">
+      <string notr="true"/>
      </property>
      <property name="frameShape">
       <enum>QFrame::StyledPanel</enum>
@@ -273,7 +276,7 @@ QFrame#fraDisplay{
             <property name="geometry">
              <rect>
               <x>5</x>
-              <y>54</y>
+              <y>56</y>
               <width>60</width>
               <height>16</height>
              </rect>
@@ -721,7 +724,7 @@ QFrame#fraDisplay{
             <property name="geometry">
              <rect>
               <x>332</x>
-              <y>54</y>
+              <y>55</y>
               <width>29</width>
               <height>20</height>
              </rect>
@@ -749,7 +752,7 @@ QFrame#fraDisplay{
             <property name="geometry">
              <rect>
               <x>66</x>
-              <y>55</y>
+              <y>57</y>
               <width>42</width>
               <height>14</height>
              </rect>
@@ -1648,7 +1651,7 @@ QFrame#fraDisplay{
             <property name="geometry">
              <rect>
               <x>286</x>
-              <y>55</y>
+              <y>57</y>
               <width>35</width>
               <height>14</height>
              </rect>
@@ -2094,7 +2097,7 @@ QFrame#fraDisplay{
             <property name="geometry">
              <rect>
               <x>226</x>
-              <y>54</y>
+              <y>56</y>
               <width>61</width>
               <height>16</height>
              </rect>
@@ -2537,7 +2540,7 @@ QFrame#fraDisplay{
             <property name="geometry">
              <rect>
               <x>13</x>
-              <y>36</y>
+              <y>40</y>
               <width>290</width>
               <height>14</height>
              </rect>
@@ -2633,7 +2636,7 @@ QFrame#fraDisplay{
            </property>
            <layout class="QHBoxLayout" name="horizontalLayout_3">
             <property name="spacing">
-             <number>-1</number>
+             <number>6</number>
             </property>
             <property name="topMargin">
              <number>0</number>
@@ -2697,7 +2700,7 @@ QFrame#fraDisplay{
            </property>
            <layout class="QHBoxLayout" name="horizontalLayout_2">
             <property name="spacing">
-             <number>-1</number>
+             <number>6</number>
             </property>
             <property name="margin">
              <number>0</number>

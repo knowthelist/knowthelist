@@ -39,8 +39,6 @@ PlayerWidget::PlayerWidget(QWidget *parent) :
 {
     ui->setupUi(this);
 
-    qDebug() << __FUNCTION__ << "(BEGIN) constr "<< objectName();
-
     //create the player
     player = new Player(this);
     player->prepare();
