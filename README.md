@@ -11,11 +11,11 @@ Knowthelist the awesome party music player
 - Trackanalyser search for song start/end and gain setting
 - Auto DJ function with multiple filters  for random play 
 - Monitor player for pre listen tracks (via 2nd sound card e.g. USB)
-
+- ... more https://github.com/knowthelist/knowthelist/wiki
 
 Runs under Linux, MacOS and Windows
 
-Needed packages:
+Needed packages for building:
 ------------------
 - QT4.8			http://qt-project.org
 			core,gui,
@@ -23,7 +23,8 @@ Needed packages:
 - taglib		http://taglib.github.io 
 - gstreamer-0.10	http://gstreamer.freedesktop.org 
 - gstreamer-0.10-plugins-* http://docs.gstreamer.com/display/GstSDK/Home 
-- alsa			(Linux only)
+- boost-devel
+- alsa-devel		(Linux only)
 
 Build:
 ----------
