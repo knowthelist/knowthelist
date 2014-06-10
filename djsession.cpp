@@ -146,7 +146,7 @@ void DjSession::fillPlaylists()
 
 void DjSession::on_dj_filterChanged(Filter* f)
 {
-    qDebug() << __PRETTY_FUNCTION__ ;
+    //qDebug() << __PRETTY_FUNCTION__ ;
     int cnt = p->database->getCount(f->path(),f->genre(),f->artist());
     f->setLength(p->database->lastLengthSum());
     f->setCount(cnt);

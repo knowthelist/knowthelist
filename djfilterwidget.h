@@ -35,6 +35,7 @@ public:
 
     void setFilter(Filter *filter);
     Filter* filter();
+    void setID(QString value);
 
 protected:
     void changeEvent(QEvent *e);
@@ -49,17 +50,17 @@ private:
     Private *p;
 
 private slots:
-    void on_toolButton_clicked();
     void on_pushActivate_clicked();
     void on_txtPath_textChanged(QString );
     void on_txtGenre_textChanged(QString );
     void on_txtArtist_textChanged(QString );
     void on_sliFilterValue_valueChanged(int value);
     void slotSetFilter();
-    void on_filter_statusChanged(bool b);
-    void on_filter_countChanged();
-    void on_filter_usageChanged();
-    void on_filter_maxUsageChanged();
+    void onFilterStatusChanged(bool b);
+    void onFilterCountChanged();
+    void onFilterUsageChanged();
+    void onFilterMaxUsageChanged();
+    void on_lbl1_linkActivated(const QString &link);
 };
 
 #endif // DJFILTERWIDGET_H

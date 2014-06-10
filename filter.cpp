@@ -61,6 +61,7 @@ Filter::~Filter()
     delete p;
 }
 
+
 int Filter::maxUsage()
 {
     return p->maxUsage;
@@ -90,7 +91,7 @@ void Filter::setActive(bool b)
 
 void Filter::update()
 {
-    qDebug() << __PRETTY_FUNCTION__ ;
+    //qDebug() << __PRETTY_FUNCTION__ ;
     Q_EMIT filterChanged();
 }
 

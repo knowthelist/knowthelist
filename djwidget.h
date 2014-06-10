@@ -42,6 +42,7 @@ public Q_SLOTS:
 
 Q_SIGNALS:
    void activated();
+   void filterCountChanged(int count);
 
 
 protected:
@@ -50,7 +51,6 @@ protected:
 private slots:
 
     void on_lblName_linkActivated(const QString &link);
-
 
 private:
     Ui::DjWidget *ui;

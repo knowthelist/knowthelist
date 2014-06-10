@@ -232,8 +232,9 @@ void Knowthelist::createUI()
     QHBoxLayout *layout = new QHBoxLayout;
     layout->setMargin(0);
     layout->setSpacing(1);
-    layout->addWidget(listDjFilters);
+    listDjs->setMaximumWidth(350);
     layout->addWidget(listDjs);
+    layout->addWidget(listDjFilters);
     djBox->setLayout(layout);
     QPixmap pixmap2(":images/DJ.png");
     ui->sideTab->AddTab(djBox,QIcon(pixmap2),tr("AutoDJ"));
@@ -269,79 +270,11 @@ void Knowthelist::loadStartSettings()
 {
     QSettings settings;
 
-    ui->slider1->setValue( settings.value("Volume1").toDouble());
-    ui->slider2->setValue( settings.value("Volume2").toDouble());
+    ui->slider1->setValue( settings.value("Volume1","80").toDouble());
+    ui->slider2->setValue( settings.value("Volume2","80").toDouble());
     ui->sliMonitorVolume->setValue( settings.value("VolumeMonitor").toDouble());
     ui->sliFader->setValue( 70 );
     changeVolumes();
-
-    //Dj Widget List
-
-    listDjs->clear();
-    listDjs->setSelectionMode(QAbstractItemView::ExtendedSelection);
-
-
-    DjWidget* djw;
-    QListWidgetItem* itm;
-    Dj* dj;
-    int maxDj=settings.value("countDJ","1").toInt();
-
-    settings.beginGroup("AutoDJ");
-
-            // Filters
-            for (int d=0;d<maxDj;d++)
-            {
-                settings.beginGroup(QString::number(d));
-                    dj = new Dj();
-                    dj->name = settings.value("Name","Dj").toString();
-
-                    djw  = new DjWidget(listDjs);
-
-                    connect(djw,SIGNAL(activated()),this,SLOT(loadDj()));
-
-                     itm = new QListWidgetItem(listDjs);
-                     itm->setSizeHint(QSize(0,75));
-                     listDjs->addItem(itm);
-                     listDjs->setItemWidget(itm,djw);
-
-
-
-                     // Filters
-                     int countFilter =settings.value("FilterCount","1").toInt();
-                     settings.beginGroup("Filter");
-                     for (int i=0;i<countFilter;i++)
-                     {
-                         settings.beginGroup(QString::number(i));
-                           Filter* f = new Filter();
-                           //djfw  = new DjFilterWidget(listDjFilters);
-                           dj->addFilter(f);
-
-                           f->setPath(settings.value("Path","").toString());
-                           f->setGenre(settings.value("Genre","").toString());
-                           f->setArtist(settings.value("Artist","").toString());
-
-                           // set to active for sum update
-                           djSession->setCurrentDj(dj);
-                           f->update();
-                           f->setMaxUsage(settings.value("Value","2").toInt());
-                         settings.endGroup();
-
-                         f->setUsage(0);
-                         //itm = new QListWidgetItem(listDjFilters);
-                         //itm->setSizeHint(QSize(0,75));
-                         //listDjFilters->addItem(itm);
-                         //listDjFilters->setItemWidget(itm,djfw);
-                     }
-
-                    djw->setDj(dj);
-                    settings.endGroup();
-                    dj->setActiveFilterIdx(settings.value("currentDjActiveFilter","0").toInt());
-                    settings.endGroup();
-            }
-            settings.endGroup();
-    listDjs->setCurrentRow(0);
-    dj = ((DjWidget*)listDjs->itemWidget(listDjs->currentItem()))->dj();
-    loadDj();
 
 
     if ( settings.value("loadPlaylists","true" )=="true")
@@ -414,6 +347,68 @@ void Knowthelist::loadCurrentSettings()
     //File Browser
     filetree->setRootPath(settings.value("editBrowerRoot","").toString());
 
+    //Dj Widget List
+    listDjs->clear();
+    listDjs->setSelectionMode(QAbstractItemView::ExtendedSelection);
+
+
+    DjWidget* djw;
+    QListWidgetItem* itm;
+    Dj* dj;
+    int maxDj=settings.value("countDJ","3").toInt();
+
+    settings.beginGroup("AutoDJ");
+
+            // Filters
+            for (int d=0;d<maxDj;d++)
+            {
+                settings.beginGroup(QString::number(d));
+                    dj = new Dj();
+                    dj->name = settings.value("Name","Dj%1").toString().arg(d+1);
+
+                    djw  = new DjWidget(listDjs);
+
+                    connect(djw,SIGNAL(activated()),this,SLOT(loadDj()));
+
+                     itm = new QListWidgetItem(listDjs);
+                     itm->setSizeHint(QSize(0,75));
+                     listDjs->addItem(itm);
+                     listDjs->setItemWidget(itm,djw);
+
+
+
+                     // Filters
+                     int countFilter = settings.value("FilterCount","2").toInt();
+                     settings.beginGroup("Filter");
+                     for (int i=0;i<countFilter;i++)
+                     {
+                         settings.beginGroup(QString::number(i));
+                           Filter* f = new Filter();
+                           dj->addFilter(f);
+
+                           f->setPath(settings.value("Path","").toString());
+                           f->setGenre(settings.value("Genre","").toString());
+                           f->setArtist(settings.value("Artist","").toString());
+
+                           // set to active for sum update
+                           djSession->setCurrentDj(dj);
+                           f->update();
+                           f->setMaxUsage(settings.value("Value","2").toInt());
+                         settings.endGroup();
+
+                         f->setUsage(0);
+                     }
+
+                    djw->setDj(dj);
+                    settings.endGroup();
+                    dj->setActiveFilterIdx(settings.value("currentDjActiveFilter","0").toInt());
+                    settings.endGroup();
+            }
+            settings.endGroup();
+    listDjs->setCurrentRow(0);
+    dj = ((DjWidget*)listDjs->itemWidget(listDjs->currentItem()))->dj();
+    loadDj();
+
 }
 
 void Knowthelist::closeEvent(QCloseEvent* event)
@@ -460,7 +455,7 @@ void Knowthelist::closeEvent(QCloseEvent* event)
 
     settings.setValue("currentDjActiveFilter",QString("%1").arg(djSession->currentDj()->activeFilterIdx()));
 
-     for (int i=0; i<4;i++)
+     for (int i=0; i<f.count();i++)
     {
          settings.setValue(QString("editAutoDJPath%1").arg(i),f.at(i)->path());
          settings.setValue(QString("editAutoDJGenre%1").arg(i),f.at(i)->genre());
@@ -511,10 +506,13 @@ void Knowthelist::loadDj()
     if (dj)
     {
          // Filters
+        qDebug() << __PRETTY_FUNCTION__<<dj->filters().count() ;
         for (int i=0;i<dj->filters().count();i++)
         {
+
                            djfw  = new DjFilterWidget(listDjFilters);
                            djfw->setFilter( dj->filters().at(i) );
+                           djfw->setID(QString::number(i+1));
                            itm = new QListWidgetItem(listDjFilters);
                            itm->setSizeHint(QSize(0,75));
                            listDjFilters->addItem(itm);
@@ -706,14 +704,14 @@ void Knowthelist::Track_selectionChanged(  PlaylistItem *item )
          monitorPlayer->open(item->track()->url() );
          QPixmap pix = QPixmap::fromImage(item->track()->coverImage());
                  if (!pix.isNull())
-                 ui->pixmapLabel->setPixmap(pix);
+                 ui->pixMonitorCover->setPixmap(pix);
                  timerMonitor_timeOut();
        }
 
     }
     else{
         ui->lblMonitorTrack->setText("");
-        ui->pixmapLabel->setPixmap(QPixmap());
+        ui->pixMonitorCover->setPixmap(QPixmap());
         //monitorPlayer->loadTrack(QUrl());
     }
 

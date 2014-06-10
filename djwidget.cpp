@@ -18,6 +18,7 @@
 #include "djwidget.h"
 #include "ui_djwidget.h"
 #include <qdebug.h>
+#include <QSettings>;
 
 struct DjWidget::Private
 {
@@ -93,26 +94,44 @@ void DjWidget::updateView()
     QString res;
     int sum = 0;
     long length = 0;
-    for (int i=0;i<p->dj->filters().count();i++)
+    int filterCount = p->dj->filters().count();
+    for (int i=0;i<filterCount;i++)
     {
         Filter* f=p->dj->filters().at(i);
         res+=f->description();
         sum+=f->count();
         length+=f->length();
-        qDebug() << __PRETTY_FUNCTION__ <<f->description() << ":"<<f->count()<< ":"<<f->length();
+        //qDebug() << __PRETTY_FUNCTION__ <<f->description() << ":"<<f->count()<< ":"<<f->length();
     }
 
     // update Labels
     ui->lblDesciption->setText(res );
-    ui->lblCount->setText(QString::number(sum) + " tracks");
-    ui->lblLength->setText(Track::prettyTime(length,true) + " hours");
+    ui->lblCount->setText(QString::number(sum) + " " + tr("tracks"));
+    ui->lblLength->setText(Track::prettyTime(length,true) + " " + tr("hours"));
+    QString strCase = (filterCount>1)?tr("cases"):tr("case");
+    ui->lblCases->setText(QString::number(filterCount) + " " + strCase);
 
     // active/passive look differentiation
     QString activeStyle;
-    if (p->isActive)
+    if (p->isActive){
        activeStyle = "color:#ff6464;'>";
+       this->setStyleSheet("#frameDj{	background: qlineargradient("
+                           "x1:0, y1:0, x2:0, y2:1,"
+                           "stop: 0.01 #202020,"
+                            "stop:0.11 #505050,"
+                           "stop:1 #505050"
+                           ");}");
+    }
     else
+    {
        activeStyle = "color:#eeeeee;'>";
+       this->setStyleSheet("#frameDj{		background: qlineargradient("
+                           "x1:0, y1:0, x2:0, y2:1,"
+                           "stop: 0.01 #202020,"
+                            "stop:0.11 #404040,"
+                           "stop:1 #404040"
+                           ");}");
+        }
 
     ui->lblName->setText("<!DOCTYPE HTML PUBLIC '-//W3C//DTD HTML 4.0//EN' 'http://www.w3.org/TR/REC-html40/strict.dtd'>"
                          "<html><head><meta name='qrichtext' content='1' /><style type='text/css'>p, li { white-space: pre-wrap; }"
@@ -123,3 +142,4 @@ void DjWidget::updateView()
                          + p->dj->name +
                          "</span></a></p></body></html>");
 }
+

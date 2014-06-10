@@ -44,17 +44,8 @@ DjFilterWidget::DjFilterWidget(QWidget *parent) :
     ui->txtArtist->setAttribute(Qt::WA_MacShowFocusRect, false);
 
 
-    ui->barRepeat->setOrientation( Qt::Vertical );
-    ui->barRepeat->LevelColorNormal.setRgb( 35,119,246 );
-    ui->barRepeat->LevelColorHigh.setRgb( 35,119,246 );
-    ui->barRepeat->LevelColorOff.setRgb( 31,45,65 );
-    //ui->barRepeat->setBackgroundColor( QColor(33,24,41) );
-    ui->barRepeat->setSpacesBetweenSecments(0);
-    ui->barRepeat->setLinesPerSecment(1);
-    ui->barRepeat->setLinesPerPeak(1);
-    ui->barRepeat->setSpacesInSecments(0);
-    ui->barRepeat->setSpacesInPeak(0);
-    ui->barRepeat->setMargin(0);
+    ui->stackDisplay->setBarColor(QColor( 196,196,210));
+
 
     timer = new QTimer( this );
     timer->stop();
@@ -90,24 +81,29 @@ void DjFilterWidget::slotSetFilter()
     p->filter->update();
 }
 
+void DjFilterWidget::setID(QString value)
+{
+    ui->lblNumber->setText(value);
+}
+
 void DjFilterWidget::setFilter(Filter* filter)
 {
     timer->stop();
 
     p->filter = filter;
-    on_filter_countChanged();
-    on_filter_maxUsageChanged();
+    onFilterCountChanged();
+    onFilterMaxUsageChanged();
     ui->txtPath->setText(p->filter->path());
     ui->txtGenre->setText(p->filter->genre());
     ui->txtArtist->setText(p->filter->artist());
     connect(p->filter,SIGNAL(statusChanged(bool)),
-            this,SLOT(on_filter_statusChanged(bool)));
+            this,SLOT(onFilterStatusChanged(bool)));
     connect(p->filter,SIGNAL(countChanged()),
-            this,SLOT(on_filter_countChanged()));
+            this,SLOT(onFilterCountChanged()));
     connect(p->filter,SIGNAL(usageChanged()),
-            this,SLOT(on_filter_usageChanged()));
+            this,SLOT(onFilterUsageChanged()));
     connect(p->filter,SIGNAL(maxUsageChanged()),
-            this,SLOT(on_filter_maxUsageChanged()));
+            this,SLOT(onFilterMaxUsageChanged()));
 
 
 }
@@ -119,7 +115,7 @@ Filter* DjFilterWidget::filter()
 
 void DjFilterWidget::on_sliFilterValue_valueChanged(int value)
 {
-    ui->lblFilterValue->setText(QString("%1").arg( value));
+    ui->lblFilterValue->setText(QString("%1 %2").arg( value).arg(QString(tr("of"))));
     p->filter->setMaxUsage(ui->sliFilterValue->value());
 }
 
@@ -145,33 +141,36 @@ void DjFilterWidget::on_pushActivate_clicked()
     p->filter->setActive(true);
 }
 
-void DjFilterWidget::on_filter_statusChanged(bool b)
+void DjFilterWidget::onFilterStatusChanged(bool b)
 {
     if (b)
         ui->ledActive->on();
     else {
         ui->ledActive->off();
-        ui->barRepeat->setPercentage(0.f);
+        ui->stackDisplay->setSelected(-1);
     }
 }
 
-void DjFilterWidget::on_filter_countChanged()
+void DjFilterWidget::onFilterCountChanged()
 {
     ui->lblCount->setText( QString("%1").arg( p->filter->count()));
 }
 
-void DjFilterWidget::on_filter_maxUsageChanged()
+void DjFilterWidget::onFilterMaxUsageChanged()
 {
-    ui->lblFilterValue->setText(QString("%1").arg( p->filter->maxUsage()));
+    ui->lblFilterValue->setText(QString("%1 %2").arg( p->filter->maxUsage()).arg(tr("of")));
     ui->sliFilterValue->setValue(p->filter->maxUsage());
+    ui->stackDisplay->setCount(p->filter->maxUsage());
 }
 
-void DjFilterWidget::on_filter_usageChanged()
+void DjFilterWidget::onFilterUsageChanged()
 {
-    ui->barRepeat->setPercentage((p->filter->usage() *1.0f) /p->filter->maxUsage());
+    ui->stackDisplay->setCount( p->filter->maxUsage());
+    ui->stackDisplay->setSelected(p->filter->usage());
 }
 
-void DjFilterWidget::on_toolButton_clicked()
+
+void DjFilterWidget::on_lbl1_linkActivated(const QString &link)
 {
     QFileDialog dialog(this);
     dialog.setFileMode(QFileDialog::DirectoryOnly);
