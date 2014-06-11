@@ -62,8 +62,8 @@ make
 
 %install
 %{__install} -Dm 755 -s %{name} %{buildroot}%{_bindir}/%{name}
-%{__install} -Dm 644 %{name}.desktop %{buildroot}%{_datadir}/applications/%{name}.desktop
-%{__install} -Dm 644 %{name}.png %{buildroot}%{_datadir}/pixmaps/%{name}.png
+%{__install} -Dm 644 dist/%{name}.desktop %{buildroot}%{_datadir}/applications/%{name}.desktop
+%{__install} -Dm 644 dist/%{name}.png %{buildroot}%{_datadir}/pixmaps/%{name}.png
 %if 0%{?suse_version} > 0
 %suse_update_desktop_file -r %{name} AudioVideo Player
 %endif
