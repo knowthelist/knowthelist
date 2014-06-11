@@ -22,7 +22,6 @@
 #include "vumeter.h"
 #include "qvumeter.h"
 #include "playlist.h"
-#include "playlistwidget.h"
 #include "collectionwidget.h"
 #include "monitorplayer.h"
 #include "djsession.h"
