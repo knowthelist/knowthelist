@@ -1,7 +1,7 @@
 #!/bin/bash
 
 dist="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-version=$(grep "APP_VERSION.*$" ${dist}/../knowthelist.pro| sed 's/^.*APP_VERSION.*\([0-9]\.[0-9]\.[0-9]\).*$/\1/')
+version=$(grep "APP_VERSION.*$" ${dist}/../src/src.pro| sed 's/^.*APP_VERSION.*\([0-9]\.[0-9]\.[0-9]\).*$/\1/')
 target=${dist}"/../../knowthelist-"${version}
 
 rm -rf ${target} && mkdir ${target}
