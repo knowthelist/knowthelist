@@ -43,9 +43,9 @@ PlayerWidget::PlayerWidget(QWidget *parent) :
     player = new Player(this);
     player->prepare();
 
-    ui->butFwd->setIcon(QIcon(":images/forward.png"));
-    ui->butRew->setIcon(QIcon(":images/backward.png"));
-    ui->butPlay->setIcon(QIcon(":images/play.png"));
+    ui->butFwd->setIcon(QIcon(":forward.png"));
+    ui->butRew->setIcon(QIcon(":backward.png"));
+    ui->butPlay->setIcon(QIcon(":play.png"));
     ui->butPlay->setChecked(false);
     ui->butFwd->setIconSize(QSize(26, 26));
     ui->butRew->setIconSize(QSize(26, 26));
@@ -131,7 +131,7 @@ void PlayerWidget::play()
 {
   m_isStarted = true;
   if (m_CurrentTrack){
-    ui->butPlay->setIcon(QIcon(":images/pause.png"));
+    ui->butPlay->setIcon(QIcon(":pause.png"));
     ui->butPlay->setChecked(true);
     player->play();
     ui->butCue->setChecked(false);
@@ -145,7 +145,7 @@ void PlayerWidget::play()
 
 void PlayerWidget::pause()
 {
-    ui->butPlay->setIcon(QIcon(":images/play.png"));
+    ui->butPlay->setIcon(QIcon(":play.png"));
     ui->butPlay->setChecked(false);
     m_isStarted = false;
     player->pause();
@@ -158,7 +158,7 @@ void PlayerWidget::pause()
 
 void PlayerWidget::stop()
 {
-    ui->butPlay->setIcon(QIcon(":images/play.png"));
+    ui->butPlay->setIcon(QIcon(":play.png"));
     ui->butPlay->setChecked(false);
     m_isStarted = false;
     m_isHanging = false;

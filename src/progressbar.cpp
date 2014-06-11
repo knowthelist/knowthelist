@@ -33,7 +33,7 @@ ProgressBar::ProgressBar(  QWidget* parent, const char* name):
   bar->setRange(0,100);
 
   clearButton = new QToolButton(this );
-  QPixmap pixmap(":images/clear_left.png");
+  QPixmap pixmap(":clear_left.png");
   clearButton->setIcon(QIcon(pixmap));
   clearButton->setIconSize(QSize(18,17));
   clearButton->setStyleSheet("QToolButton {max-height: 16px;min-height: 16px;}");

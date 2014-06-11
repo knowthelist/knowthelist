@@ -57,14 +57,14 @@ CollectionWidget::CollectionWidget( QWidget* parent ):
     p->actionsMenu = new QMenu(tr( "" ), this );
 
     QPushButton *pushSet =new QPushButton();
-    QPixmap pixmap1(":images/settings.png");
+    QPixmap pixmap1(":settings.png");
     pushSet->setIcon(QIcon(pixmap1));
     pushSet->setIconSize(QSize(20,20));
     pushSet->setStyleSheet("QPushButton { border: none; padding: 0px; margin-left: 7px; margin-right: 14px; max-height: 20px;}");
     connect(pushSet,SIGNAL(clicked()),this,SLOT(onSetClicked()) );
 
     QPushButton *pushRandom =new QPushButton();
-    QPixmap pixmap2(":images/shuffle.png");
+    QPixmap pixmap2(":shuffle.png");
     pushRandom->setIcon(QIcon(pixmap2));
     pushRandom->setIconSize(QSize(32,32));
     pushRandom->setStyleSheet("QPushButton { border: none; padding: 0px; margin-left: 7px;max-height: 20px; margin-right: 14px;}");
@@ -244,14 +244,14 @@ void CollectionWidget::resizeEvent(QResizeEvent *)
 
 SearchEdit::SearchEdit(QWidget *parent)
                     :QLineEdit(parent){
-    QPixmap searchIcon(":images/search.png");
+    QPixmap searchIcon(":search.png");
     QLabel* lbl = new QLabel(this);
     lbl->setScaledContents(true);
     lbl->setPixmap(searchIcon);
     lbl->setFixedSize(QSize(21,21));
     lbl->setStyleSheet("QLabel { border: none; padding: 0px; margin-left: 9px; margin-top: 8px;}");
     clearButton = new QToolButton(this);
-    QPixmap pixmap(":images/clear_left.png");
+    QPixmap pixmap(":clear_left.png");
       clearButton->setIcon(QIcon(pixmap));
       clearButton->setIconSize(QSize(18,18));
     clearButton->setCursor(Qt::ArrowCursor);

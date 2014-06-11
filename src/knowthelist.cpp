@@ -172,7 +172,7 @@ void Knowthelist::createUI()
     QSplitter *splitter= new QSplitter();
     splitter->addWidget(this->collectionBrowser);
     splitter->addWidget(trackList);
-    QPixmap pixmap1(":images/database.png");
+    QPixmap pixmap1(":database.png");
     ui->sideTab->AddTab(splitter,QIcon(pixmap1),tr("Collection"));
 
     connect( collectionBrowser, SIGNAL(selectionChanged(QList<Track*>)),trackList,SLOT(changeTracks(QList<Track*>)));
@@ -236,13 +236,13 @@ void Knowthelist::createUI()
     layout->addWidget(listDjs);
     layout->addWidget(listDjFilters);
     djBox->setLayout(layout);
-    QPixmap pixmap2(":images/DJ.png");
+    QPixmap pixmap2(":DJ.png");
     ui->sideTab->AddTab(djBox,QIcon(pixmap2),tr("AutoDJ"));
     ui->sideTab->setContextMenuPolicy(Qt::NoContextMenu);
 
     //Add the FileBrowser
     filetree = new FileBrowser(this);
-    QPixmap pixmap3(":images/folder.png");
+    QPixmap pixmap3(":folder.png");
     ui->sideTab->AddTab(filetree,QIcon(pixmap3),tr("Folder"));
 
     //SettingsDialog
@@ -796,8 +796,8 @@ bool Knowthelist::initMonitorPlayer()
       monitorPlayer->prepare();
       monitorPlayer->setObjectName("monitorPlayer");
 
-      ui->cmdMonitorStop->setIcon(QIcon(":images/stop.png"));
-      ui->cmdMonitorPlay->setIcon(QIcon(":images/play.png"));
+      ui->cmdMonitorStop->setIcon(QIcon(":stop.png"));
+      ui->cmdMonitorPlay->setIcon(QIcon(":play.png"));
       //connect(monitorPlayer,SIGNAL(trackTimeChanged(qint64,qint64)),this,SLOT(monitorPlayer_trackTimeChanged(qint64,qint64)));
       //connect(monitorPlayer,SIGNAL(foundCover(QImage*)),this,SLOT(monitorPlayer_foundCover(QImage*)));
       connect(monitorPlayer,SIGNAL(loadFinished()),this,SLOT(timerMonitor_loadFinished()));
@@ -810,7 +810,7 @@ void Knowthelist::on_cmdMonitorStop_clicked()
 {
     monitorPlayer->stop();
     timerMonitor->stop();
-    ui->cmdMonitorPlay->setIcon(QIcon(":images/play.png"));
+    ui->cmdMonitorPlay->setIcon(QIcon(":play.png"));
     //ui->monitorMeter->reset();
     ui->monitorMeter->setRightValue(0);
     ui->monitorMeter->setLeftValue(0);
@@ -819,7 +819,7 @@ void Knowthelist::on_cmdMonitorStop_clicked()
 void Knowthelist::on_cmdMonitorPlay_clicked()
 {
     if (monitorPlayer->isPlaying()) {
-        ui->cmdMonitorPlay->setIcon(QIcon(":images/play.png"));
+        ui->cmdMonitorPlay->setIcon(QIcon(":play.png"));
         monitorPlayer->pause();
         timerMonitor->stop();
         //ui->monitorMeter->reset();
@@ -827,7 +827,7 @@ void Knowthelist::on_cmdMonitorPlay_clicked()
         ui->monitorMeter->setLeftValue(0);
     }
     else {
-        ui->cmdMonitorPlay->setIcon(QIcon(":images/pause.png"));
+        ui->cmdMonitorPlay->setIcon(QIcon(":pause.png"));
         monitorPlayer->play();
         timerMonitor->start();
     }

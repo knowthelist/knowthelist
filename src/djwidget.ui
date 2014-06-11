@@ -94,7 +94,7 @@
          <string/>
         </property>
         <property name="pixmap">
-         <pixmap resource="icons.qrc">:/images/DJ.png</pixmap>
+         <pixmap resource="icons.qrc">:/DJ.png</pixmap>
         </property>
        </widget>
       </item>

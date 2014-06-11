@@ -1,0 +1,20 @@
+<RCC>
+    <qresource prefix="/">
+        <file>clear_left.png</file>
+        <file>DJ.png</file>
+        <file>database.png</file>
+        <file>settings.png</file>
+        <file>folder.png</file>
+        <file>vinyl.png</file>
+        <file>search.png</file>
+        <file>shuffle.png</file>
+        <file>play.png</file>
+        <file>pause.png</file>
+        <file>list.png</file>
+        <file>slider.png</file>
+        <file>volume.png</file>
+        <file>stop.png</file>
+        <file>backward.png</file>
+        <file>forward.png</file>
+    </qresource>
+</RCC>

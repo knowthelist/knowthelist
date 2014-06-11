@@ -627,7 +627,7 @@ QFrame#fraDisplay{
           <string/>
          </property>
          <property name="pixmap">
-          <pixmap resource="icons.qrc">:/images/vinyl.png</pixmap>
+          <pixmap resource="icons.qrc">:/vinyl.png</pixmap>
          </property>
          <property name="scaledContents">
           <bool>true</bool>

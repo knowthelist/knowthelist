@@ -1,0 +1,7 @@
+<RCC>
+    <qresource prefix="/">
+        <file>knowthelist_cs.qm</file>
+        <file>knowthelist_de.qm</file>
+        <file>knowthelist_hu.qm</file>
+    </qresource>
+</RCC>
