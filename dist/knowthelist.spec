@@ -13,7 +13,7 @@
 
 
 
-Summary: Knowthelist the awesome party music player
+Summary: Knowthelist - the awesome party music player
 Name: %{name}
 License: LGPL-3.0+
 URL: https://github.com/knowthelist/knowthelist

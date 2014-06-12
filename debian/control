@@ -21,13 +21,13 @@ Build-Depends:  cdbs,qt4-qmake, libqt4-dev, debhelper (>= 8),
                 libboost-dev
 Standards-Version: 3.9.3
 Homepage: https://github.com/knowthelist/knowthelist
-#Vcs-Git: git://git.debian.org/collab-maint/knowthelist.git
-#Vcs-Browser: http://git.debian.org/?p=collab-maint/knowthelist.git;a=summary
+Vcs-Git: git://github.com/knowthelist/knowthelist.git
+Vcs-Browser: https://github.com/knowthelist/knowthelist
 
 Package: knowthelist
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends}, libqt4-sql-sqlite
-Description: Knowthelist the awesome party music player
+Description: Knowthelist - the awesome party music player
  Easy to use for all party guests
  Quick search for tracks in collection
  Two players with separate playlists
