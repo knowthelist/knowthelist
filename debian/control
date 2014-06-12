@@ -2,9 +2,8 @@ Source: knowthelist
 Section: Multimedia
 Priority: extra
 Maintainer: Mario Stephan <mstephan@shared-files.de>
-Build-Depends:  cdbs,qt4-qmake, libqt4-dev, debhelper (>= 8),
+Build-Depends:  cdbs, qt4-qmake, libqt4-dev, debhelper (>= 8),
                 libc6 (>= 2.2),
-                libc6 (>= 2.3.6-6~),
                 libgcc1 (>= 1:4.1.1),
                 libglib2.0-0 (>= 2.12.0),
                 libgstreamer0.10-0 (>= 0.10.0),
@@ -14,12 +13,11 @@ Build-Depends:  cdbs,qt4-qmake, libqt4-dev, debhelper (>= 8),
                 libqtcore4 (>= 4:4.7.0~beta2),
                 libqtgui4 (>= 4:4.7.0~beta1),
                 libstdc++6 (>= 4.6),
-                libtag1c2a (>= 1.4),
                 libtag1c2a (>= 1.5),
                 libtag1-dev,
                 libasound2, libasound2-dev,
                 libboost-dev
-Standards-Version: 3.9.3
+Standards-Version: 3.9.5
 Homepage: https://github.com/knowthelist/knowthelist
 Vcs-Git: git://github.com/knowthelist/knowthelist.git
 Vcs-Browser: https://github.com/knowthelist/knowthelist
@@ -27,7 +25,7 @@ Vcs-Browser: https://github.com/knowthelist/knowthelist
 Package: knowthelist
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends}, libqt4-sql-sqlite
-Description: Knowthelist - the awesome party music player
+Description: the awesome party music player
  Easy to use for all party guests
  Quick search for tracks in collection
  Two players with separate playlists

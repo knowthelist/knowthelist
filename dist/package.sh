@@ -10,7 +10,7 @@ rm ${target}/knowthelist.pro.user
 cd ${target}
 
 
-dpkg-buildpackage
+dpkg-buildpackage -k${GPGKEY}
 
 # Suse / Fedora spec
 sed -i 's/Version: 1/Version: '${version}'/g' ${target}/dist/knowthelist.spec
