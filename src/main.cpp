@@ -41,8 +41,8 @@ int main(int argc, char *argv[])
     QCoreApplication::setApplicationVersion("2.1");
 
     QTranslator localization;
-    bool result = localization.load(":locale/knowthelist_" + QLocale::system().name() +".qm");
-    qDebug() << "localization load " << ":locale/knowthelist_" + QLocale::system().name() +".qm result:" << result;
+    bool result = localization.load(":knowthelist_" + QLocale::system().name() +".qm");
+    qDebug() << "localization load " << ":knowthelist_" + QLocale::system().name() +".qm result:" << result;
     a.installTranslator(&localization);
 
 
