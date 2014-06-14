@@ -172,7 +172,7 @@
         </sizepolicy>
        </property>
        <property name="currentIndex">
-        <number>3</number>
+        <number>4</number>
        </property>
        <widget class="QWidget" name="page">
         <widget class="QLabel" name="label">
@@ -212,9 +212,15 @@
           <rect>
            <x>10</x>
            <y>60</y>
-           <width>191</width>
+           <width>371</width>
            <height>16</height>
           </rect>
+         </property>
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
          </property>
          <property name="text">
           <string>Start fading before song end</string>
@@ -254,7 +260,7 @@
           <rect>
            <x>10</x>
            <y>110</y>
-           <width>191</width>
+           <width>361</width>
            <height>16</height>
           </rect>
          </property>
@@ -299,7 +305,7 @@
           <rect>
            <x>10</x>
            <y>170</y>
-           <width>321</width>
+           <width>371</width>
            <height>20</height>
           </rect>
          </property>
@@ -318,7 +324,7 @@
           <rect>
            <x>10</x>
            <y>200</y>
-           <width>321</width>
+           <width>371</width>
            <height>20</height>
           </rect>
          </property>
@@ -341,9 +347,6 @@
             <string/>
            </property>
            <layout class="QVBoxLayout" name="verticalLayout">
-            <property name="spacing">
-             <number>6</number>
-            </property>
             <property name="margin">
              <number>0</number>
             </property>
@@ -560,7 +563,7 @@
           <rect>
            <x>7</x>
            <y>74</y>
-           <width>211</width>
+           <width>371</width>
            <height>20</height>
           </rect>
          </property>

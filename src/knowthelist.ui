@@ -412,7 +412,7 @@ QListWidget::item:focus {
           <widget class="QLed" name="ledFadeLeft" native="true">
            <property name="geometry">
             <rect>
-             <x>34</x>
+             <x>31</x>
              <y>279</y>
              <width>6</width>
              <height>26</height>
@@ -438,11 +438,17 @@ QListWidget::item:focus {
           <widget class="QPushButton" name="toggleAutoFade">
            <property name="geometry">
             <rect>
-             <x>77</x>
+             <x>68</x>
              <y>314</y>
-             <width>40</width>
-             <height>16</height>
+             <width>51</width>
+             <height>18</height>
             </rect>
+           </property>
+           <property name="minimumSize">
+            <size>
+             <width>0</width>
+             <height>18</height>
+            </size>
            </property>
            <property name="palette">
             <palette>
@@ -1075,7 +1081,7 @@ QListWidget::item:focus {
           <widget class="QLed" name="ledDJ" native="true">
            <property name="geometry">
             <rect>
-             <x>50</x>
+             <x>45</x>
              <y>307</y>
              <width>12</width>
              <height>7</height>
@@ -1101,7 +1107,7 @@ QListWidget::item:focus {
           <widget class="QLed" name="ledFade" native="true">
            <property name="geometry">
             <rect>
-             <x>90</x>
+             <x>87</x>
              <y>307</y>
              <width>12</width>
              <height>7</height>
@@ -1127,11 +1133,17 @@ QListWidget::item:focus {
           <widget class="QPushButton" name="toggleAutoDJ">
            <property name="geometry">
             <rect>
-             <x>35</x>
+             <x>28</x>
              <y>314</y>
              <width>40</width>
-             <height>16</height>
+             <height>18</height>
             </rect>
+           </property>
+           <property name="minimumSize">
+            <size>
+             <width>0</width>
+             <height>18</height>
+            </size>
            </property>
            <property name="palette">
             <palette>
@@ -1758,7 +1770,7 @@ QListWidget::item:focus {
           <widget class="QLed" name="ledFadeRight" native="true">
            <property name="geometry">
             <rect>
-             <x>147</x>
+             <x>152</x>
              <y>279</y>
              <width>6</width>
              <height>26</height>
@@ -1786,9 +1798,15 @@ QListWidget::item:focus {
             <rect>
              <x>119</x>
              <y>314</y>
-             <width>36</width>
-             <height>16</height>
+             <width>41</width>
+             <height>18</height>
             </rect>
+           </property>
+           <property name="minimumSize">
+            <size>
+             <width>41</width>
+             <height>18</height>
+            </size>
            </property>
            <property name="palette">
             <palette>
@@ -2410,7 +2428,7 @@ QListWidget::item:focus {
            <property name="geometry">
             <rect>
              <x>25</x>
-             <y>137</y>
+             <y>132</y>
              <width>31</width>
              <height>110</height>
             </rect>
@@ -3536,7 +3554,7 @@ QListWidget::item:focus {
            <property name="geometry">
             <rect>
              <x>132</x>
-             <y>137</y>
+             <y>132</y>
              <width>31</width>
              <height>110</height>
             </rect>
@@ -4095,11 +4113,23 @@ QListWidget::item:focus {
           <widget class="QToolButton" name="cmdFade">
            <property name="geometry">
             <rect>
-             <x>40</x>
+             <x>36</x>
              <y>279</y>
-             <width>107</width>
+             <width>117</width>
              <height>26</height>
             </rect>
+           </property>
+           <property name="minimumSize">
+            <size>
+             <width>117</width>
+             <height>26</height>
+            </size>
+           </property>
+           <property name="maximumSize">
+            <size>
+             <width>117</width>
+             <height>26</height>
+            </size>
            </property>
            <property name="palette">
             <palette>
@@ -4740,7 +4770,7 @@ min-height: 16px;
           <widget class="QDial" name="potHigh_1">
            <property name="geometry">
             <rect>
-             <x>37</x>
+             <x>39</x>
              <y>1</y>
              <width>33</width>
              <height>32</height>
@@ -4777,7 +4807,7 @@ min-height: 16px;
           <widget class="QDial" name="potMid_1">
            <property name="geometry">
             <rect>
-             <x>37</x>
+             <x>39</x>
              <y>33</y>
              <width>33</width>
              <height>32</height>
@@ -4805,7 +4835,7 @@ min-height: 16px;
           <widget class="QDial" name="potLow_1">
            <property name="geometry">
             <rect>
-             <x>37</x>
+             <x>39</x>
              <y>65</y>
              <width>33</width>
              <height>32</height>
@@ -4830,7 +4860,7 @@ min-height: 16px;
           <widget class="QDial" name="potHigh_2">
            <property name="geometry">
             <rect>
-             <x>117</x>
+             <x>115</x>
              <y>1</y>
              <width>33</width>
              <height>32</height>
@@ -4855,7 +4885,7 @@ min-height: 16px;
           <widget class="QDial" name="potMid_2">
            <property name="geometry">
             <rect>
-             <x>117</x>
+             <x>115</x>
              <y>33</y>
              <width>33</width>
              <height>32</height>
@@ -4880,7 +4910,7 @@ min-height: 16px;
           <widget class="QDial" name="potLow_2">
            <property name="geometry">
             <rect>
-             <x>117</x>
+             <x>115</x>
              <y>65</y>
              <width>33</width>
              <height>32</height>
@@ -4905,7 +4935,7 @@ min-height: 16px;
           <widget class="QDial" name="potGain_1">
            <property name="geometry">
             <rect>
-             <x>37</x>
+             <x>39</x>
              <y>99</y>
              <width>33</width>
              <height>32</height>
@@ -4936,7 +4966,7 @@ min-height: 16px;
           <widget class="QDial" name="potGain_2">
            <property name="geometry">
             <rect>
-             <x>117</x>
+             <x>115</x>
              <y>99</y>
              <width>33</width>
              <height>32</height>
@@ -4965,8 +4995,8 @@ min-height: 16px;
            <property name="geometry">
             <rect>
              <x>5</x>
-             <y>103</y>
-             <width>32</width>
+             <y>101</y>
+             <width>35</width>
              <height>16</height>
             </rect>
            </property>
@@ -5645,9 +5675,9 @@ min-height: 16px;
           <widget class="QLabel" name="label_5">
            <property name="geometry">
             <rect>
-             <x>151</x>
-             <y>103</y>
-             <width>32</width>
+             <x>149</x>
+             <y>101</y>
+             <width>36</width>
              <height>16</height>
             </rect>
            </property>
@@ -5667,8 +5697,8 @@ min-height: 16px;
            <property name="geometry">
             <rect>
              <x>5</x>
-             <y>69</y>
-             <width>32</width>
+             <y>67</y>
+             <width>35</width>
              <height>16</height>
             </rect>
            </property>
@@ -5690,9 +5720,9 @@ min-height: 16px;
           <widget class="QLabel" name="label_3">
            <property name="geometry">
             <rect>
-             <x>151</x>
-             <y>69</y>
-             <width>32</width>
+             <x>149</x>
+             <y>67</y>
+             <width>36</width>
              <height>16</height>
             </rect>
            </property>
@@ -5712,8 +5742,8 @@ min-height: 16px;
            <property name="geometry">
             <rect>
              <x>5</x>
-             <y>39</y>
-             <width>32</width>
+             <y>37</y>
+             <width>35</width>
              <height>16</height>
             </rect>
            </property>
@@ -5735,9 +5765,9 @@ min-height: 16px;
           <widget class="QLabel" name="label_6">
            <property name="geometry">
             <rect>
-             <x>151</x>
-             <y>39</y>
-             <width>32</width>
+             <x>149</x>
+             <y>37</y>
+             <width>36</width>
              <height>16</height>
             </rect>
            </property>
@@ -5757,8 +5787,8 @@ min-height: 16px;
            <property name="geometry">
             <rect>
              <x>5</x>
-             <y>5</y>
-             <width>32</width>
+             <y>3</y>
+             <width>35</width>
              <height>16</height>
             </rect>
            </property>
@@ -5783,9 +5813,9 @@ min-height: 16px;
           <widget class="QLabel" name="label_8">
            <property name="geometry">
             <rect>
-             <x>151</x>
-             <y>5</y>
-             <width>32</width>
+             <x>149</x>
+             <y>3</y>
+             <width>36</width>
              <height>16</height>
             </rect>
            </property>

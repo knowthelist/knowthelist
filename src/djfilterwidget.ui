@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>872</width>
-    <height>87</height>
+    <height>101</height>
    </rect>
   </property>
   <property name="maximumSize">
@@ -140,13 +140,13 @@ QFrame#fraDisplay{
           <rect>
            <x>4</x>
            <y>12</y>
-           <width>72</width>
+           <width>98</width>
            <height>14</height>
           </rect>
          </property>
          <property name="minimumSize">
           <size>
-           <width>72</width>
+           <width>98</width>
            <height>11</height>
           </size>
          </property>
@@ -627,7 +627,7 @@ QFrame#fraDisplay{
           <string/>
          </property>
          <property name="pixmap">
-          <pixmap resource="icons.qrc">:/vinyl.png</pixmap>
+          <pixmap resource="../images/icons.qrc">:/vinyl.png</pixmap>
          </property>
          <property name="scaledContents">
           <bool>true</bool>
@@ -2136,7 +2136,7 @@ QFrame#fraDisplay{
              <rect>
               <x>14</x>
               <y>39</y>
-              <width>22</width>
+              <width>51</width>
               <height>22</height>
              </rect>
             </property>
@@ -2174,7 +2174,7 @@ p, li { white-space: pre-wrap; }
              <rect>
               <x>13</x>
               <y>6</y>
-              <width>27</width>
+              <width>31</width>
               <height>24</height>
              </rect>
             </property>
@@ -2210,8 +2210,8 @@ p, li { white-space: pre-wrap; }
              <rect>
               <x>14</x>
               <y>32</y>
-              <width>29</width>
-              <height>11</height>
+              <width>51</width>
+              <height>16</height>
              </rect>
             </property>
             <property name="font">
@@ -3020,7 +3020,7 @@ p, li { white-space: pre-wrap; }
   </customwidget>
  </customwidgets>
  <resources>
-  <include location="icons.qrc"/>
+  <include location="../images/icons.qrc"/>
  </resources>
  <connections/>
 </ui>
