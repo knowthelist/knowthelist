@@ -301,7 +301,7 @@ p, li { white-space: pre-wrap; }
     <message>
         <location filename="../knowthelist.ui" line="1746"/>
         <source>AutoD&amp;J</source>
-        <translation>&amp;AutoDJ</translation>
+        <translation>&amp;Diskžokej</translation>
     </message>
     <message>
         <location filename="../knowthelist.ui" line="1749"/>
@@ -394,7 +394,7 @@ p, li { white-space: pre-wrap; }
     <message>
         <location filename="../knowthelist.cpp" line="240"/>
         <source>AutoDJ</source>
-        <translation>AutoDJ</translation>
+        <translation>Diskžokej</translation>
     </message>
     <message>
         <location filename="../knowthelist.cpp" line="246"/>
@@ -624,7 +624,7 @@ p, li { white-space: pre-wrap; }
     <message>
         <location filename="../settingsdialog.ui" line="151"/>
         <source>AutoDJ</source>
-        <translation>AutoDJ</translation>
+        <translation>Diskžokej</translation>
     </message>
     <message>
         <location filename="../settingsdialog.ui" line="156"/>
@@ -685,17 +685,17 @@ p, li { white-space: pre-wrap; }
     <message>
         <location filename="../settingsdialog.ui" line="399"/>
         <source>Monitor Player</source>
-        <translation>Sledování přehrávání</translation>
+        <translation>Přehrávání</translation>
     </message>
     <message>
         <location filename="../settingsdialog.ui" line="424"/>
         <source>AutoDJ settings</source>
-        <translation>Nastavení AutoDJ</translation>
+        <translation>Nastavení automatického diskžokeje</translation>
     </message>
     <message>
         <location filename="../settingsdialog.ui" line="466"/>
         <source>Minimum tracks within each playlist </source>
-        <translation>Nejmenší počet skladeb</translation>
+        <translation>Nejmenší počet skladeb v každém seznamu skladeb </translation>
     </message>
     <message>
         <source>Minimum Tracks</source>
@@ -704,17 +704,17 @@ p, li { white-space: pre-wrap; }
     <message>
         <location filename="../settingsdialog.ui" line="492"/>
         <source>DJ Count</source>
-        <translation>Počet DJ</translation>
+        <translation>Počet diskžokejů</translation>
     </message>
     <message>
         <location filename="../settingsdialog.ui" line="524"/>
         <source>DJ Names</source>
-        <translation>Jméno DJ</translation>
+        <translation>Jména diskžokejů</translation>
     </message>
     <message>
         <location filename="../settingsdialog.ui" line="537"/>
         <source>Filter Count</source>
-        <translation>Počet filtru</translation>
+        <translation>Počet filtrů</translation>
     </message>
     <message>
         <location filename="../settingsdialog.ui" line="568"/>
