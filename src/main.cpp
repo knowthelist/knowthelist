@@ -40,6 +40,11 @@ int main(int argc, char *argv[])
     QCoreApplication::setApplicationName("Knowthelist");
     QCoreApplication::setApplicationVersion("2.1");
 
+    QTranslator qtTranslator;
+    qtTranslator.load("qt_" + QLocale::system().name(),
+            QLibraryInfo::location(QLibraryInfo::TranslationsPath));
+    a.installTranslator(&qtTranslator);
+
     QTranslator localization;
     bool result = localization.load(":knowthelist_" + QLocale::system().name() +".qm");
     qDebug() << "localization load " << ":knowthelist_" + QLocale::system().name() +".qm result:" << result;
