@@ -1,7 +1,7 @@
 knowthelist
 ===========
 
-Knowthelist the awesome party music player
+Knowthelist - the awesome party music player
 
 - Easy to use for all party guests
 - Quick search for tracks in collection
