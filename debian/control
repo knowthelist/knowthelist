@@ -18,7 +18,7 @@ Build-Depends:  cdbs, qt4-qmake, libqt4-dev, debhelper (>= 8),
                 libasound2, libasound2-dev,
                 libboost-dev
 Standards-Version: 3.9.5
-Homepage: https://github.com/knowthelist/knowthelist
+Homepage: http://knowthelist.github.io/knowthelist
 Vcs-Git: git://github.com/knowthelist/knowthelist.git
 Vcs-Browser: https://github.com/knowthelist/knowthelist
 
