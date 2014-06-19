@@ -1,5 +1,5 @@
 Source: knowthelist
-Section: Multimedia
+Section: sound
 Priority: extra
 Maintainer: Mario Stephan <mstephan@shared-files.de>
 Build-Depends:  cdbs, qt4-qmake, libqt4-dev, debhelper (>= 8),
