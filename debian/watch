@@ -1,0 +1,3 @@
+version=3
+opts=filenamemangle=s/.+\/v?(\d\S*)\.tar\.gz/knowthelist-$1\.tar\.gz/ \
+  https://github.com/knowthelist/knowthelist/tags .*/v?(\d\S*)\.tar\.gz

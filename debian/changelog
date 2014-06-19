@@ -1,19 +1,22 @@
-knowthelist (2.1.2) stable; urgency=low
+knowthelist (2.1.2-1) unstable; urgency=low
 
+  * Switch to dpkg-source 3.0 (quilt) format
   * Added translation for hu_HU (thanks to László Farkas)
   * AutoDJ panel rearrangements, new record case stack display added
   * AutoDJ names settings in settings dialog added   
 
- -- Mario <mstephan@shared-files.de>  Tue, 10 Jun 2014 23:45:00 +0200
-knowthelist (2.1.1) stable; urgency=low
+ -- Mario Stephan <mstephan@shared-files.de>  Thu, 19 Jun 2014 23:01:44 +0200
+
+knowthelist (2.1.1) unstable; urgency=low
 
   * Added localization, translation for cs_CZ (thanks to Pavel Fric), de_DE
   * Bugfix: Collection scan ignored folders with special characters
   * ContextMenu improvements: quicker behavier and get rid of warnings
 
- -- Mario <mstephan@shared-files.de>  Tue, 03 Jun 2014 00:28:26 +0200
+ -- Mario  Stephan <mstephan@shared-files.de>  Tue, 03 Jun 2014 00:28:26 +0200
+
 knowthelist (2.1) unstable; urgency=low
 
   * Initial Release.
 
- -- Mario <mstephan@shared-files.de>  Wed, 21 May 2014 23:14:02 +0200
+ -- Mario Stephan <mstephan@shared-files.de>  Wed, 21 May 2014 23:14:02 +0200

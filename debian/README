@@ -1,6 +1,14 @@
-The Debian Package knowthelist
-----------------------------
+knowthelist
+===========
 
-Comments regarding the Package
+Knowthelist - the awesome party music player
 
- -- Mario <mstephan@shared-files.de>  Wed, 21 May 2014 23:14:02 +0200
+- Easy to use for all party guests
+- Quick search for tracks in collection
+- Two players with separate playlists
+- Mixer with fader, 3 channel EQ and gain
+- Auto fader and auto gain
+- Trackanalyser search for song start/end and gain setting
+- Auto DJ function with multiple filters  for random play 
+- Monitor player for pre listen tracks (via 2nd sound card e.g. USB)
+- ... more https://github.com/knowthelist/knowthelist/wiki

@@ -10,4 +10,5 @@ Icon=knowthelist
 Terminal=false
 Type=Application
 StartupNotify=false
+Keywords=music;party;player;dj;mix;playlist
 Categories=AudioVideo;Player;
