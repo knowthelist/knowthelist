@@ -20,6 +20,7 @@
 #include "collectiontree.h"
 #include "collectionupdater.h"
 #include "progressbar.h"
+#include "modeselector.h"
 #include "track.h"
 
 #include <QTimerEvent>
@@ -33,9 +34,6 @@ class CollectionWidgetPrivate
 {
     public:
         QMenu *actionsMenu;
-        QAction *actionMode1;
-        QAction *actionMode2;
-        QAction *actionMode3;
         QAction* actionScan;
         CollectionTree *collectiontree;
         ProgressBar *progress;
@@ -51,18 +49,6 @@ CollectionWidget::CollectionWidget( QWidget* parent ):
 {
     p = new CollectionWidgetPrivate;
 
-    QFont this_font(  this->font() );
-    this_font.setPointSize( this_font.pointSize()-1 );
-
-    p->actionsMenu = new QMenu(tr( "" ), this );
-
-    QPushButton *pushSet =new QPushButton();
-    QPixmap pixmap1(":settings.png");
-    pushSet->setIcon(QIcon(pixmap1));
-    pushSet->setIconSize(QSize(20,20));
-    pushSet->setStyleSheet("QPushButton { border: none; padding: 0px; margin-left: 7px; margin-right: 14px; max-height: 20px;}");
-    connect(pushSet,SIGNAL(clicked()),this,SLOT(onSetClicked()) );
-
     QPushButton *pushRandom =new QPushButton();
     QPixmap pixmap2(":shuffle.png");
     pushRandom->setIcon(QIcon(pixmap2));
@@ -75,13 +61,15 @@ CollectionWidget::CollectionWidget( QWidget* parent ):
 
     QVBoxLayout *mainLayout = new QVBoxLayout;
     QWidget *headWidget = new QWidget(this);
-    headWidget->setMaximumHeight(40);
+    headWidget->setMaximumHeight(38);
 
     QHBoxLayout *headWidgetLayout = new QHBoxLayout;
     headWidgetLayout->setMargin(0);
     headWidgetLayout->setSpacing(1);
 
-    headWidgetLayout->addWidget(pushSet);
+    ModeSelector *modeSelect = new ModeSelector();
+
+    headWidgetLayout->addWidget(modeSelect);
     headWidgetLayout->addWidget(p->searchEdit);
     headWidgetLayout->addWidget(pushRandom);
     headWidget->setLayout(headWidgetLayout);
@@ -98,29 +86,11 @@ CollectionWidget::CollectionWidget( QWidget* parent ):
     mainLayout->setMargin(0);
     mainLayout->setSpacing(0);
  
-    connect(pushRandom,SIGNAL(clicked()),p->collectiontree,SLOT(triggerRandomSelection()) );
+    connect(pushRandom,SIGNAL(clicked()),
+            p->collectiontree,SLOT(triggerRandomSelection()) );
 
-    p->actionMode1 = new QAction( "Artist > Album",this );
-    p->actionMode1->setCheckable(true);
-    p->actionMode2 = new QAction( "Year > Artist > Album",this );
-    p->actionMode2->setCheckable(true);
-    p->actionMode3 = new QAction( "Genre > Artist > Album",this );
-    p->actionMode3->setCheckable(true);
-
-    connect(p->actionMode1, SIGNAL(triggered()),
-            this, SLOT(mode1Selected()));
-    connect(p->actionMode2, SIGNAL(triggered()),
-            this, SLOT(mode2Selected()));
-    connect(p->actionMode3, SIGNAL(triggered()),
-            this, SLOT(mode3Selected()));
-
-    QActionGroup *alignmentGroup = new QActionGroup(this);
-
-    alignmentGroup->addAction( p->actionMode1 );
-    alignmentGroup->addAction( p->actionMode2 );
-    alignmentGroup->addAction( p->actionMode3 );
-
-    p->actionsMenu->addActions(alignmentGroup->actions());
+    connect ( modeSelect , SIGNAL(modeChanged(ModeSelector::modeType)),
+            this, SLOT(onModeSelected(ModeSelector::modeType)));
 
     connect( p->searchEdit, SIGNAL( textChanged( const QString& ) ),
              this,           SLOT( onSetFilterTimeout() ) );
@@ -150,10 +120,8 @@ CollectionWidget::CollectionWidget( QWidget* parent ):
 
     // Read config values
     QSettings settings;
-    p->collectiontree->treeMode = static_cast<CollectionTree::mode>(settings.value("TreeMode",CollectionTree::MODENONE).toUInt());
-    alignmentGroup->actions().at(0)->setChecked(p->collectiontree->treeMode==CollectionTree::MODENONE);
-    alignmentGroup->actions().at(1)->setChecked(p->collectiontree->treeMode==CollectionTree::MODEYEAR);
-    alignmentGroup->actions().at(2)->setChecked(p->collectiontree->treeMode==CollectionTree::MODEGENRE);
+    modeSelect->setMode( static_cast<ModeSelector::modeType>(settings.value("TreeMode",ModeSelector::MODENONE).toUInt()));
+
 
     p->collectiontree->createTrunk();
     setLayout(mainLayout);
@@ -177,21 +145,9 @@ void CollectionWidget::scan()
     }
 }
 
-void CollectionWidget::mode1Selected()
+void CollectionWidget::onModeSelected(ModeSelector::modeType value)
 {
-    p->collectiontree->treeMode = CollectionTree::MODENONE;
-    p->collectiontree->createTrunk();
-}
-
-void CollectionWidget::mode2Selected()
-{
-    p->collectiontree->treeMode = CollectionTree::MODEYEAR;
-    p->collectiontree->createTrunk();
-}
-
-void CollectionWidget::mode3Selected()
-{
-    p->collectiontree->treeMode = CollectionTree::MODEGENRE;
+    p->collectiontree->treeMode = static_cast<CollectionTree::modeType>(value);
     p->collectiontree->createTrunk();
 }
 

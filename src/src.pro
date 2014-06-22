@@ -41,7 +41,8 @@ SOURCES += main.cpp \
     monitorplayer.cpp \
     collectionsetupmodel.cpp \
     stackdisplay.cpp \
-    djsettings.cpp
+    djsettings.cpp \
+    modeselector.cpp
 HEADERS += knowthelist.h \
     vumeter.h \
     qvumeter.h \
@@ -70,14 +71,16 @@ HEADERS += knowthelist.h \
     monitorplayer.h \
     collectionsetupmodel.h \
     stackdisplay.h \
-    djsettings.h
+    djsettings.h \
+    modeselector.h
 FORMS += \
     settingsdialog.ui \
     djwidget.ui \
     djfilterwidget.ui \
     playerwidget.ui \
     knowthelist.ui \
-    djsettings.ui
+    djsettings.ui \
+    modeselector.ui
 TRANSLATIONS += \
     ../locale/knowthelist_cs.ts \
     ../locale/knowthelist_de.ts \

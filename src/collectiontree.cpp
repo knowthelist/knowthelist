@@ -45,15 +45,15 @@ CollectionTree::CollectionTree(QWidget *parent) :
 
     setAttribute(Qt::WA_MacShowFocusRect, false);
 
-     QStringList headers;
-         headers << tr("Artist");
+    QStringList headers;
+    headers << tr("Artist");
 
-        QTreeWidgetItem *headeritem = new QTreeWidgetItem(headers);
-        headeritem->setTextAlignment(0,Qt::AlignLeft);
+    QTreeWidgetItem *headeritem = new QTreeWidgetItem(headers);
+    headeritem->setTextAlignment(0,Qt::AlignLeft);
 
-        setHeaderItem(headeritem);
-        setHeaderLabels(headers);
-       header()->resizeSection(0,this->width()-50);
+    setHeaderItem(headeritem);
+    setHeaderLabels(headers);
+    header()->resizeSection(0,this->width()-50);
 
 
     connect( this, SIGNAL(currentItemChanged(QTreeWidgetItem*,QTreeWidgetItem*)),

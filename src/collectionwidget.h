@@ -20,7 +20,7 @@
 
 #include "collectiondb.h"
 #include "collectiontree.h"
-//#include "collectionsetup.h"
+#include "modeselector.h"
 #include "playlist.h"
 #include "progressbar.h"
 
@@ -90,9 +90,7 @@ class CollectionWidget: public QWidget
         void onSetFilterTimeout();
         void onSetClicked();
         void onSetFilter();
-        void mode1Selected();
-        void mode2Selected();
-        void mode3Selected();
+        void onModeSelected(ModeSelector::modeType value);
 
     private:
 

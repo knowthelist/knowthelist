@@ -33,12 +33,12 @@ public:
     ~CollectionTree();
 
     QString filter();
-    enum mode { MODENONE, MODEYEAR, MODEGENRE };
-    mode treeMode;
+    enum modeType { MODENONE, MODEYEAR, MODEGENRE };
+    modeType treeMode;
     
 Q_SIGNALS:
-    void  selectionChanged(QList<Track*>);
-    void  wantLoad(QList<Track*>, QString);
+    void selectionChanged(QList<Track*>);
+    void wantLoad(QList<Track*>, QString);
     void rescan();
     
 public slots:
