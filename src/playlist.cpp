@@ -94,11 +94,6 @@ Playlist::Playlist(QWidget* parent)
     header()->resizeSection(11,0);
     header()->resizeSection(12,0);
 
-
-    //QFont this_font(  this->font() );
-    //this_font.setPointSize( this_font.pointSize()-2 );
-    //this->setFont( this_font );
-
     // prevent click event if doubleclicked
     ignoreNextRelease = false;
     timer = new QTimer(this);
