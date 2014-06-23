@@ -43,6 +43,7 @@ public:
     static QStringList tagNameList;
     
     QImage coverImage();
+    QImage defaultImage();
 
     bool operator==(Track * track);
     bool containIn( QList< Track * > list );

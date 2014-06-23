@@ -22,6 +22,7 @@
 #include "playlistitem.h"
 
 #include <QFileInfo>
+#include <QPainter>
 #include <qdebug.h>
     
 #include <taglib/tag.h>
@@ -182,7 +183,34 @@ QImage Track::coverImage()
                } 
            }
        }
-       return QImage();
+       return defaultImage();
+}
+
+/*
+ *  Create a default cover image: a gray record with diagonal record name as text
+ */
+QImage Track::defaultImage()
+{
+    QImage img(120, 120, QImage::Format_RGB888);
+    img.fill(QColor(Qt::white));
+
+    QPainter painter(&img);
+
+    painter.setPen(QPen(Qt::lightGray));
+    painter.setBrush(Qt::lightGray);
+    painter.setRenderHint(QPainter::Antialiasing, true);
+    painter.drawEllipse(QPoint(60,60),45,45);
+
+    painter.setBrush(Qt::white);
+    painter.drawEllipse(QPoint(60,60),15,15);
+
+    painter.setPen(QPen(QColor(60,60,60)));
+    painter.setFont(QFont("Monospace", 13, QFont::Normal));
+    painter.translate(QPoint(-26,62));
+    painter.rotate(-45);
+    painter.drawText( img.rect(), Qt::AlignCenter , p->artist + '\n' + p->title);
+
+    return img;
 }
 
 QString Track::prettyTitle() const
