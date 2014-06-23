@@ -20,7 +20,7 @@ URL: https://github.com/knowthelist/knowthelist
 Version: 1
 Release: 1
 Group: Multimedia
-Source: %{name}_%{version}.tar.gz
+Source: %{name}_%{version}.orig.tar.gz
 Packager: Mario Stephan <mstephan@shared-files.de>
 Distribution: %{distr}
 BuildRoot:      %{_tmppath}/%{name}-%{version}-build

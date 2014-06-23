@@ -7,9 +7,11 @@ target=${dist}"/../../knowthelist-"${version}
 rm -rf ${target} && mkdir ${target}
 cp -R ${dist}/../../knowthelist/* ${target}
 rm ${target}/knowthelist.pro.user
+rm ${target}/src/Makefile
+rm ${target}/Makefile
 cd ${target}
 
-
+tar -czf ../knowthelist_${version}.orig.tar.gz ../knowthelist-${version}/
 dpkg-buildpackage -k${GPGKEY}
 
 # Suse / Fedora spec
