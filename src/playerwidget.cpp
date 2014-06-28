@@ -54,8 +54,7 @@ PlayerWidget::PlayerWidget(QWidget *parent) :
     ui->butPlay->setIconSize(QSize(26, 26));
     ui->butCue->setChecked(false);
 
-   vuMeter = new VUMeter(this);
-   vuMeter->setGeometry(ui->txtVUMeter->geometry());
+   vuMeter = ui->vuMeter;
    vuMeter->setOrientation( Qt::Horizontal );
    vuMeter->LevelColorNormal.setRgb( 112,146,190 );
    vuMeter->LevelColorHigh.setRgb( 218,59,9 );
