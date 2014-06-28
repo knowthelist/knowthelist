@@ -64,35 +64,23 @@ Playlist::Playlist(QWidget* parent)
     setAttribute(Qt::WA_MacShowFocusRect, false);
 
     QStringList headers;
-     headers << tr("Trackname") << tr("No")<<tr("Artist")<<tr("Title");
-     headers <<tr("Album")<<tr("Year")<<tr("Comment")<<tr("Genre")<<tr("Track");
-     headers <<tr("Directory")<<tr("Length")<<tr("Bitrate")<<"";
+     headers << tr("Url")<<tr("No")<<tr("Played")<<tr("Artist")<<tr("Title");
+     headers <<tr("Album")<<tr("Year")<<tr("Genre")<<tr("Track");
+     headers <<tr("Length");
 
     QTreeWidgetItem *headeritem = new QTreeWidgetItem(headers);
-    headeritem->setTextAlignment(1,Qt::AlignLeft);//No
-    headeritem->setTextAlignment(7,Qt::AlignHCenter);//track
-    headeritem->setTextAlignment(9,Qt::AlignRight);//length
-    headeritem->setTextAlignment(10,Qt::AlignHCenter);//bitrate
+//    headeritem->setTextAlignment(1,Qt::AlignLeft);//No
+//    headeritem->setTextAlignment(7,Qt::AlignHCenter);//track
+//    headeritem->setTextAlignment(9,Qt::AlignRight);//length
+//    headeritem->setTextAlignment(10,Qt::AlignHCenter);//bitrate
 
     setHeaderItem(headeritem);
     setHeaderLabels(headers);
     setSelectionBehavior(QAbstractItemView::SelectRows);
-    //setRootIsDecorated(false);
-    //setAlternatingRowColors(true);
 
-    header()->resizeSection(0,0);
-    header()->resizeSection(1,40);
-    header()->resizeSection(2,200);
-    header()->resizeSection(3,185);
-    header()->resizeSection(4,0);
-    header()->resizeSection(5,0);
-    header()->resizeSection(6,0);
-    header()->resizeSection(7,0);
-    header()->resizeSection(8,0);
-    header()->resizeSection(9,0);
-    header()->resizeSection(10,60);
-    header()->resizeSection(11,0);
-    header()->resizeSection(12,0);
+        header()->setResizeMode(QHeaderView::Interactive);
+
+    header()->hideSection(PlaylistItem::Column_Url);
 
     // prevent click event if doubleclicked
     ignoreNextRelease = false;
@@ -110,15 +98,18 @@ Playlist::Playlist(QWidget* parent)
     connect( this,     SIGNAL(currentItemChanged(QTreeWidgetItem*,QTreeWidgetItem*)),
              this,       SLOT(slotItemChanged(QTreeWidgetItem*,QTreeWidgetItem*)));
 
-
-    //ToDo: restore sort and width
+    QSettings settings;
+    header()->restoreState( settings.value("playlist_"+objectName()).toByteArray());
 }
 
 
 Playlist::~Playlist()
 {
+    // save width and sort settings
+    QSettings settings;
+    settings.setValue("playlist_"+objectName(), header()->saveState());
 }
-//ToDo: save width and sort
+
 
 /** Add a song to the playlist */
 void Playlist::addTrack( QUrl file, PlaylistItem* after )
@@ -252,30 +243,32 @@ void Playlist::setPlaylistMode(Mode newMode)
 {
   m_PlaylistMode = newMode;
 
+
   switch ( m_PlaylistMode )
   {
   case Playlist::Tracklist:
-    setColumnWidth( 5,35);
-    setColumnWidth( 1,0);
-    setColumnWidth( 4,95);
-    setColumnWidth( 5,35);
-    setColumnWidth( 7,35);
+    header()->hideSection( PlaylistItem::Column_No );
+    header()->showSection( PlaylistItem::Column_Played );
+    header()->showSection( PlaylistItem::Column_Year );
+    header()->showSection( PlaylistItem::Column_Genre );
+    header()->showSection( PlaylistItem::Column_Tracknumber );
+    header()->showSection( PlaylistItem::Column_Album );
     setSortingEnabled(true);
-    //setSortColumn(0);
     m_CurrentTrackColor = Qt::white;
     m_NextTrackColor = Qt::white;
     break;
   default :
-    setColumnWidth( 5,0);
-    setColumnWidth( 1,30);
-    setColumnWidth( 4,0);
-    setColumnWidth( 5,0);
-    setColumnWidth( 7,0);
+    header()->showSection( PlaylistItem::Column_No );
+    header()->hideSection( PlaylistItem::Column_Played );
+    header()->hideSection( PlaylistItem::Column_Year );
+    header()->hideSection( PlaylistItem::Column_Genre );
+    header()->hideSection( PlaylistItem::Column_Tracknumber );
+    header()->hideSection( PlaylistItem::Column_Album );
     setSortingEnabled(false);
-    //setSortColumn(-1);
     m_CurrentTrackColor = QColor( 255,100,100 );
     m_NextTrackColor = QColor( 200,200,255 );
   }
+
   handleChanges();
 }
 
@@ -619,6 +612,7 @@ void Playlist::loadXML( const QString &path )
               track->setGenre( e.namedItem("extension").toElement().attribute( "genre" ));
               track->setYear( e.namedItem("extension").toElement().attribute( "year" ));
               track->setLength( e.namedItem("duration").firstChild().nodeValue());
+              track->setCounter("0");
               appendSong(track);
 
               if ( e.namedItem("extension").toElement().attribute( CURRENT ) == "1" )
@@ -684,7 +678,7 @@ void Playlist::fillNoColumn()
     }
 
       //qDebug() << this->name() << ": m_alternateMax: " << m_alternateMax << " i: " << i << " no: " << no;
-      item->setText(PlaylistItem::No,QString::number(no));
+      item->setText(PlaylistItem::Column_No,QString::number(no));
 
   }
 }
@@ -728,6 +722,36 @@ void Playlist::emitClicked()
 {
         emit itemClicked( currentItem(), currentColumn() );
         timer->stop();
+}
+
+void Playlist::resizeEvent( QResizeEvent* e )
+{
+    QTreeWidget::resizeEvent(e);
+
+    double percent = this->size().width()/100.0;
+
+    switch ( m_PlaylistMode )
+    {
+    case Playlist::Tracklist:
+
+        header()->resizeSection(PlaylistItem::Column_Artist,22*percent);
+        header()->resizeSection(PlaylistItem::Column_Title,22*percent);
+        header()->resizeSection(PlaylistItem::Column_Album,20*percent);
+        header()->resizeSection(PlaylistItem::Column_Length,7*percent);
+        header()->resizeSection(PlaylistItem::Column_Genre,10*percent);
+        header()->resizeSection(PlaylistItem::Column_Year,8*percent);
+        header()->resizeSection(PlaylistItem::Column_Tracknumber,5*percent);
+        header()->resizeSection(PlaylistItem::Column_Played,5*percent);
+
+      break;
+    default :
+
+      header()->resizeSection(PlaylistItem::Column_No,6*percent);
+      header()->resizeSection(PlaylistItem::Column_Artist,40*percent);
+      header()->resizeSection(PlaylistItem::Column_Title,40*percent);
+      header()->resizeSection(PlaylistItem::Column_Length,10*percent);
+    }
+
 }
 
 void Playlist::mouseReleaseEvent(QMouseEvent *event)

@@ -56,6 +56,7 @@ public:
     QString comment();
     QString genre();
     int length();
+    int counter();
     QString tracknumber();
     QString prettyLength();
     QStringList tagList();
@@ -73,6 +74,7 @@ public:
     void setTracknumber(QString);
     void setLength(QString);
     void setLengthFromPretty(QString);
+    void setCounter(QString);
 
     
     QString prettyTitle() const;
@@ -90,8 +92,7 @@ protected:
 
 private:
 
-    struct Private;
-    Private *p;
+    struct TrackPrivate *p;
 
 };
 #endif

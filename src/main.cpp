@@ -71,6 +71,18 @@ if ( !db.open() ) {
     return 1;
 }
 
+//QLabel temp("");
+////temp.setAttribute(Qt::WA_MacSmallSize);
+
+//QFont small_font = temp.font();
+//const qreal pointsz = small_font.pointSizeF();
+//const int pixelsz = small_font.pixelSize();
+//const QString sz = (pointsz != -1) ?
+//                   QString::number(pointsz) + "pt" :
+//                   QString::number(pixelsz) + "px";
+
+//a.setStyleSheet("* { font-size: " + sz + "; }");
+
     Knowthelist w;
     w.show();
 

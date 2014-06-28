@@ -44,15 +44,15 @@ void PlaylistItem::setTrack( Track *track )
 void PlaylistItem::setTexts( Track *track )
 {
     //qDebug()<<track->url();
-    setText( Url,   track->url().toString() );
-    setText( Artist,  ( track->artist() != "" ) ? track->artist() : "Unknown"  );
-    setText( Title,   ( track->title() != "" ) ? track->title() : "Unknown" );
-    setText( Album,   track->album() );
-    setText( Year,    track->year() );
-    setText( Comment, track->comment() );
-    setText( Genre,   track->genre() );
-    setText( Length,  track->prettyLength() );
-    setText( Tracknumber,  track->tracknumber() );
+    setText( Column_Url,   track->url().toString() );
+    setText( Column_Artist,  ( track->artist() != "" ) ? track->artist() : "Unknown"  );
+    setText( Column_Title,   ( track->title() != "" ) ? track->title() : "Unknown" );
+    setText( Column_Album,   track->album() );
+    setText( Column_Year,    track->year() );
+    setText( Column_Genre,   track->genre() );
+    setText( Column_Length,  track->prettyLength() );
+    setText( Column_Tracknumber,  track->tracknumber() );
+    setText( Column_Played,   QString::number(track->counter()) );
     m_track = track;
 }
 
@@ -60,25 +60,25 @@ void PlaylistItem::setText( int c, QString text)
 {
     QTreeWidgetItem::setText( c, ( text != "" ) ? text : "Unknown" );
     switch (c) {
-    case Url:
+    case Column_Url:
         m_track->setUrl(QUrl::fromLocalFile(text));
         break;
-    case Artist:
+    case Column_Artist:
         m_track->setArtist(text);
         break;
-    case Title:
+    case Column_Title:
         m_track->setTitle(text);
         break;
-    case Album:
+    case Column_Album:
         m_track->setAlbum(text);
         break;
-    case Comment:
-        m_track->setComment(text);
+    case Column_Played:
+        m_track->setCounter(text);
         break;
-    case Genre:
+    case Column_Genre:
         m_track->setGenre(text);
         break;
-    case Length:
+    case Column_Length:
         m_track->setLength(text);
         break;
     }

@@ -81,11 +81,12 @@ CollectionDB::CollectionDB()
     p->genreCount=0;
     p->resultCount=0;
 
-    p->quickFilter = "FROM tags, artist, album, year, genre WHERE 1=1 "
-                " AND tags.artist = artist.id "
-                " AND tags.album = album.id "
-                " AND tags.year = year.id "
-                " AND tags.genre = genre.id ";
+    p->quickFilter = "FROM tags "
+            " INNER JOIN artist ON tags.artist = artist.id "
+            " INNER JOIN album ON tags.album = album.id "
+            " INNER JOIN year ON tags.year = year.id "
+            " INNER JOIN genre ON tags.genre = genre.id "
+            " LEFT OUTER JOIN statistics ON tags.url = statistics.url WHERE 1=1 ";
 }
 
 
@@ -105,11 +106,12 @@ CollectionDB::escapeString( QString string )
 
 void CollectionDB::setFilterString( QString string )
 {
-    p->quickFilter = "FROM tags, artist, album, year, genre WHERE 1=1 "
-                " AND tags.artist = artist.id "
-                " AND tags.album = album.id "
-                " AND tags.year = year.id "
-                " AND tags.genre = genre.id ";
+    p->quickFilter = "FROM tags "
+            " INNER JOIN artist ON tags.artist = artist.id "
+            " INNER JOIN album ON tags.album = album.id "
+            " INNER JOIN year ON tags.year = year.id "
+            " INNER JOIN genre ON tags.genre = genre.id "
+            " LEFT OUTER JOIN statistics ON tags.url = statistics.url  WHERE 1=1 ";
 
     if ( string != "" ) {
       string = escapeString( string );
@@ -158,6 +160,11 @@ void CollectionDB::incSongCounter( const QString url )
     }
 }
 
+void CollectionDB::resetSongCounter()
+{
+    executeSql( QString( "DELETE FROM statistics;"));
+    //executeSql( QString( "VACUUM;"));
+}
 
 void CollectionDB::updateDirStats( QString path, const long datetime )
 {
@@ -249,8 +256,7 @@ QList<QStringList> CollectionDB::selectSql( const QString& statement)
     return tags;
 }
 
-void
-CollectionDB::createTables( bool temporary )
+void CollectionDB::createTables( bool temporary )
 {
     qDebug() << __FUNCTION__;
 
@@ -326,8 +332,7 @@ CollectionDB::createTables( bool temporary )
 }
 
 
-void
-CollectionDB::dropTables( bool temporary )
+void CollectionDB::dropTables( bool temporary )
 {
     qDebug() << __FUNCTION__;
 
@@ -347,8 +352,7 @@ CollectionDB::dropTables( bool temporary )
 }
 
 
-void
-CollectionDB::moveTempTables()
+void CollectionDB::moveTempTables()
 {
     executeSql( "INSERT INTO tags SELECT * FROM tags_temp;" );
     executeSql( "INSERT INTO album SELECT * FROM album_temp;" );
@@ -482,7 +486,7 @@ QStringList CollectionDB::getRandomEntry()
 
 ulong CollectionDB::getCount()
 {
-    QString command = "SELECT count(distinct url) "
+    QString command = "SELECT count(distinct tags.url) "
                     + p->quickFilter;
 
     return selectSqlNumber( command );
@@ -517,7 +521,7 @@ uint CollectionDB::lastMaxCount()
 
 QList<QStringList> CollectionDB::selectRandomEntry( QString rownum, QString path, QString genre, QString artist)
 {
-    QString command = "SELECT tags.url, artist.name, tags.title, album.name, year.name, genre.name, tags.track, tags.length "
+    QString command = "SELECT tags.url, artist.name, tags.title, album.name, year.name, genre.name, tags.track, tags.length, statistics.playcounter "
             + p->quickFilter
             + p->selectionFilterForRandom(path, genre, artist) +
             " LIMIT 1 OFFSET " + rownum +";";
@@ -572,7 +576,7 @@ QList<QStringList> CollectionDB::selectAlbums(QString year, QString genre, QStri
 
 QList<QStringList> CollectionDB::selectTracks(QString year, QString genre, QString artist, QString album)
 {
-  QString command = "SELECT DISTINCT tags.url, artist.name, tags.title, album.name, year.name, genre.name, tags.track, tags.length "
+  QString command = "SELECT DISTINCT tags.url, artist.name, tags.title, album.name, year.name, genre.name, tags.track, tags.length, statistics.playcounter "
           + p->quickFilter
           + p->selectionFilter(year,genre,artist,album) +
           "ORDER BY artist.name DESC, album.name DESC, tags.track;";

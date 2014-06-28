@@ -45,11 +45,12 @@ public slots:
     void fillPlaylists();
     void onTracksChanged_Playlist1(QList<Track*> ts);
     void onTracksChanged_Playlist2(QList<Track*> ts);
+    void onTrackFinished(Track *track);
     void on_dj_filterChanged(Filter* f);
+    void onResetStats();
 
 private:
-    struct Private;
-    Private *p;
+    class DjSessionPrivate *p;
     void searchTracks();
 
     Track* getRandomTrack();

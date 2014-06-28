@@ -21,9 +21,9 @@
 #include "trackanalyser.h"
 #include "vumeter.h"
 
-struct PlayerWidget::Private
+struct PlayerWidgetPrivate
 {
-
+    bool isEndAnnounced;
 };
 
 PlayerWidget::PlayerWidget(QWidget *parent) :
@@ -35,9 +35,11 @@ PlayerWidget::PlayerWidget(QWidget *parent) :
     remainCueTime(0),
     m_isStarted(false),
     m_isHanging(false),
-    p(new Private)
+    p(new PlayerWidgetPrivate)
 {
     ui->setupUi(this);
+
+    p->isEndAnnounced = false;
 
     //create the player
     player = new Player(this);
@@ -93,6 +95,7 @@ PlayerWidget::~PlayerWidget()
     delete timerPosition;
     delete timerLevel;
     delete trackanalyser;
+    delete p;
 }
 
 
@@ -332,11 +335,18 @@ void PlayerWidget::updateTimeAndPositionDisplay(bool isPassive)
     //ToDo: better recognition of media error (play pressed but player is not running)
 
     if ( (remainMs-remainCueTime-mTrackFinishEmitTime <=0
-                && 0 < remainMs)
+                && 0 < remainMs )
                 || m_isHanging )    {
+        if (!p->isEndAnnounced ) {
             qDebug() << __PRETTY_FUNCTION__ <<":"<<objectName()<<" EMIT aboutFinished";
+            //send signals only once
+            p->isEndAnnounced = true;
             Q_EMIT aboutFinished();
+            Q_EMIT trackPlayed(m_CurrentTrack);
+        }
     }
+    else
+        p->isEndAnnounced = false;
 
     //update position slider only if triggerd by timer
     if (isPassive) {

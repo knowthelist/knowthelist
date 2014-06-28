@@ -53,7 +53,7 @@ CollectionWidget::CollectionWidget( QWidget* parent ):
     QPixmap pixmap2(":shuffle.png");
     pushRandom->setIcon(QIcon(pixmap2));
     pushRandom->setIconSize(QSize(32,32));
-    pushRandom->setStyleSheet("QPushButton { border: none; padding: 0px; margin-left: 7px;max-height: 20px; margin-right: 14px;}");
+    pushRandom->setStyleSheet("QPushButton { border: none; padding: 0px; margin-left: 8px;max-height: 20px; margin-right: 8px;}");
     pushRandom->setToolTip(tr( "Random Tracks" ));
 
     p->searchEdit = new SearchEdit();

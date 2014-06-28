@@ -115,6 +115,8 @@ private:
     Playlist* playList2;
     Playlist* trackList;
 
+    QSplitter *splitter;
+
     CollectionWidget* collectionBrowser;
     MonitorPlayer* monitorPlayer;
     DjSession* djSession;

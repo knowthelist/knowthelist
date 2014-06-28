@@ -129,6 +129,7 @@ class Playlist: public QTreeWidget
 
           void updateNextPlaylistItem();
           void updateCurrentPlaylistItem();
+          void resizeEvent( QResizeEvent* e );
 
       int  m_recursionCount;
       int mDropVisualizerWidth;

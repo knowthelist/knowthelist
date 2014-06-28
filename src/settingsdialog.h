@@ -39,6 +39,7 @@ public slots:
 
 signals:
       void  scanNowPressed();
+      void  resetStatsPressed();
 
 
 

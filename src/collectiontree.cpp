@@ -135,7 +135,6 @@ CollectionTree::on_itemExpanded( QTreeWidgetItem* item )
             tags = p->database->selectArtists( collItem->year(), collItem->genre() );
         }
 
-        //add tags to this track list
         foreach ( QStringList tag, tags) {
             CollectionTreeItem* child = new CollectionTreeItem( item );
 
@@ -198,7 +197,7 @@ void CollectionTree::on_currentItemChanged( QTreeWidgetItem* item )
 
     //add tags to this track list
     foreach ( QStringList tag, tags) {
-        //qDebug() << __PRETTY_FUNCTION__ <<": is playlistitem; tags:"<<tags;
+        qDebug() << __PRETTY_FUNCTION__ <<": is playlistitem; tags:"<<tags;
         p->tracks.append( new Track(tag));
     }
 

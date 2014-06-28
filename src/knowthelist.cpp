@@ -145,6 +145,9 @@ void Knowthelist::createUI()
     connect( player1, SIGNAL(trackFinished()),SLOT( player1_trackFinished()));
     connect( player2, SIGNAL(trackFinished()),SLOT( player2_trackFinished()));
 
+    connect( player1, SIGNAL(trackPlayed(Track*)),djSession, SLOT(onTrackFinished(Track*)));
+    connect( player2, SIGNAL(trackPlayed(Track*)),djSession, SLOT(onTrackFinished(Track*)));
+
     connect( player1, SIGNAL(trackDropped( Track* )),playList1,SLOT(addCurrentTrack(Track*)));
     connect( player2, SIGNAL(trackDropped( Track* )),playList2,SLOT(addCurrentTrack(Track*)));
 
@@ -169,7 +172,7 @@ void Knowthelist::createUI()
     collectionBrowser=new CollectionWidget(this);
 
 
-    QSplitter *splitter= new QSplitter();
+    splitter= new QSplitter();
     splitter->addWidget(this->collectionBrowser);
     splitter->addWidget(trackList);
     QPixmap pixmap1(":database.png");
@@ -248,6 +251,7 @@ void Knowthelist::createUI()
     //SettingsDialog
     preferences = new SettingsDialog(this);
     connect(preferences,SIGNAL(scanNowPressed()), collectionBrowser,SLOT(scan()));
+    connect(preferences, SIGNAL(resetStatsPressed()), djSession, SLOT(onResetStats()));
 
 
     loadStartSettings();
@@ -276,6 +280,7 @@ void Knowthelist::loadStartSettings()
     ui->sliFader->setValue( 70 );
     changeVolumes();
 
+    splitter->restoreState(settings.value("Splitter").toByteArray());
 
     if ( settings.value("loadPlaylists","true" )=="true")
     {
@@ -422,6 +427,9 @@ void Knowthelist::closeEvent(QCloseEvent* event)
 
     //if (KnowthelistConfig::savePlaylist())
         savePlaylists();
+
+    // save splitter
+    settings.setValue("Splitter",splitter->saveState());
 
     //Save AutoDJ
 

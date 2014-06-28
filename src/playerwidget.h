@@ -70,6 +70,7 @@ public:
     void trackFinished();
     void aboutFinished();
     void trackDropped( Track* );
+    void trackPlayed( Track* );
     void forwardPressed();
     void rewindPressed();
     void statusChanged(bool);
@@ -129,10 +130,7 @@ private:
     bool m_skipSilentEnd;
     bool m_skipSilentBegin;
 
-
-
-    struct Private;
-    Private * p;
+    struct PlayerWidgetPrivate *p;
 
 };
 

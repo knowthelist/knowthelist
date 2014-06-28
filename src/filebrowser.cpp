@@ -46,6 +46,7 @@ FileBrowser::FileBrowser(QWidget *parent) :
       p->layout->addWidget(p->filetree);
 
       setLayout(p->layout);
+      setAttribute(Qt::WA_MacShowFocusRect, false);
 
 }
 

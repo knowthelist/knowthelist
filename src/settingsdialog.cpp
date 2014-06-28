@@ -102,7 +102,8 @@ SettingsDialog::SettingsDialog(QWidget * parent)
     connect(p->ui.faderTimeSlider, SIGNAL(sliderMoved(int)),
                     this, SLOT(on_faderTimeSlider_sliderMoved(int)));
 
-    connect(p->ui.pushScanNow,SIGNAL(clicked()),this,SLOT(onScanNow()));
+    connect(p->ui.pushScanNow,SIGNAL(clicked()),this, SLOT(onScanNow()));
+    connect(p->ui.pushResetStats,SIGNAL(clicked()),this, SIGNAL(resetStatsPressed()) );
 
     connect(p->ui.countDJ,SIGNAL(valueChanged(int)),this,SLOT(loadDjList(int)));
 }

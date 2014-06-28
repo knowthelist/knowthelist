@@ -277,7 +277,7 @@ QListWidget::item:focus {
 	padding-top: 2px;
 	padding-bottom: 3px;
      border: 0px solid #6c6c6c;
-	font-size:	10px;
+	font-size:	10pt;
  }
 </string>
   </property>

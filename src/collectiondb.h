@@ -68,6 +68,7 @@ class CollectionDB : public QObject
         void moveTempTables();
         void createStatsTable();
         void dropStatsTable();
+        void resetSongCounter();
 
         void purgeDirCache();
         void scanModifiedDirs( bool recursively );

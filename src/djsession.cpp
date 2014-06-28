@@ -20,7 +20,7 @@
 #include "track.h"
 #include "dj.h"
 
-struct DjSession::Private
+struct DjSessionPrivate
 {
         //QFutureWatcher<void> watcher1;
         //QFutureWatcher<void> watcher2;
@@ -36,7 +36,7 @@ struct DjSession::Private
 };
 
 DjSession::DjSession()
-    :p(new Private)
+    :p(new DjSessionPrivate)
 {
     p->database  = new CollectionDB();
     p->minCount=10;
@@ -150,6 +150,16 @@ void DjSession::on_dj_filterChanged(Filter* f)
     int cnt = p->database->getCount(f->path(),f->genre(),f->artist());
     f->setLength(p->database->lastLengthSum());
     f->setCount(cnt);
+}
+
+void DjSession::onResetStats()
+{
+    p->database->resetSongCounter();
+}
+
+void DjSession::onTrackFinished(Track *track)
+{
+    p->database->incSongCounter(track->url().toLocalFile());
 }
 
 void DjSession::onTracksChanged_Playlist1(QList<Track*> ts)

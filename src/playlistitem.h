@@ -30,9 +30,9 @@ class PlaylistItem : public QTreeWidgetItem
 public:
     PlaylistItem( Playlist *pl, QTreeWidgetItem *lvi );
     ~PlaylistItem();
-    QString urlString() const { return text(Url ); }
-    QString title() const { return text( Title ); }
-    QString artist() const { return text( Artist ); }
+    QString urlString() const { return text(Column_Url ); }
+    QString title() const { return text( Column_Title ); }
+    QString artist() const { return text( Column_Artist ); }
     Playlist *listView() const { return (Playlist*)treeWidget(); }
     PlaylistItem *nextSibling() const { return (PlaylistItem*)treeWidget()->itemBelow(this); }
 
@@ -49,18 +49,16 @@ public:
     void setText( int c, QString  Text);
     QString exactText( int col ) const { return text( col ); }
     QString seconds() const;
-      enum Column  { Url = 0,
-                      No = 1,
-                      Artist = 2,
-                      Title = 3,
-                      Album = 4,
-                      Year = 5,
-                      Comment = 6,
-                      Genre = 7,
-                      Directory = 8,
-                      Tracknumber = 9,
-                      Length = 10,
-                      Bitrate = 11 };
+      enum Column  { Column_Url = 0,
+                      Column_No = 1,
+                      Column_Played = 2,
+                      Column_Artist = 3,
+                      Column_Title = 4,
+                      Column_Album = 5,
+                      Column_Year = 6,
+                      Column_Genre = 7,
+                      Column_Tracknumber = 8,
+                      Column_Length = 9};
                       
     private:
         //static QString trackUrl( const QUrl &u ) { return u.protocol() == "file" ? u.fileName() : u.toString(); }
