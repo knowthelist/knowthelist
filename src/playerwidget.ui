@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>652</width>
-    <height>124</height>
+    <width>1023</width>
+    <height>130</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -210,7 +210,7 @@ QFrame#fraDisplay{
         <property name="maximumSize">
          <size>
           <width>16777215</width>
-          <height>112</height>
+          <height>120</height>
          </size>
         </property>
         <property name="frameShape">
@@ -279,7 +279,7 @@ QFrame#fraDisplay{
            <property name="maximumSize">
             <size>
              <width>16777215</width>
-             <height>110</height>
+             <height>113</height>
             </size>
            </property>
            <property name="frameShape">
@@ -289,11 +289,14 @@ QFrame#fraDisplay{
             <enum>QFrame::Raised</enum>
            </property>
            <layout class="QVBoxLayout" name="verticalLayout">
+            <property name="spacing">
+             <number>10</number>
+            </property>
             <property name="topMargin">
-             <number>12</number>
+             <number>11</number>
             </property>
             <property name="bottomMargin">
-             <number>19</number>
+             <number>12</number>
             </property>
             <item>
              <widget class="QLabel" name="lblTitle">
@@ -306,7 +309,7 @@ QFrame#fraDisplay{
               <property name="minimumSize">
                <size>
                 <width>0</width>
-                <height>22</height>
+                <height>26</height>
                </size>
               </property>
               <property name="palette">
@@ -759,7 +762,7 @@ QFrame#fraDisplay{
               <property name="minimumSize">
                <size>
                 <width>17</width>
-                <height>18</height>
+                <height>16</height>
                </size>
               </property>
              </widget>
@@ -810,7 +813,7 @@ QFrame#fraDisplay{
                  </property>
                  <property name="maximumSize">
                   <size>
-                   <width>46</width>
+                   <width>57</width>
                    <height>16777215</height>
                   </size>
                  </property>
@@ -2632,14 +2635,13 @@ QFrame#fraDisplay{
                   </font>
                  </property>
                  <property name="styleSheet">
-                  <string notr="true">color: rgb(255, 61, 42);
-margin-top:8px;</string>
+                  <string notr="true">color: rgb(255, 61, 42);</string>
                  </property>
                  <property name="text">
-                  <string>Cueval</string>
+                  <string>-00</string>
                  </property>
                  <property name="alignment">
-                  <set>Qt::AlignRight|Qt::AlignTop|Qt::AlignTrailing</set>
+                  <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
                  </property>
                  <property name="wordWrap">
                   <bool>false</bool>
