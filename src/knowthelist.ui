@@ -95,6 +95,7 @@ max-height:15px;
          margin: 0 2px; /* handle is placed by default on the contents rect of the groove. Expand outside the groove */
          border-radius: 3px;
      }
+
 QFrame#frameMixer{
           background: qlineargradient(
    x1:0, y1:0, x2:0, y2:1,
@@ -7547,6 +7548,16 @@ p, li { white-space: pre-wrap; }
      </layout>
     </item>
    </layout>
+  </widget>
+  <widget class="QMenuBar" name="menuBar">
+   <property name="geometry">
+    <rect>
+     <x>0</x>
+     <y>0</y>
+     <width>1280</width>
+     <height>23</height>
+    </rect>
+   </property>
   </widget>
   <action name="actionSettings">
    <property name="text">

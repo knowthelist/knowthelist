@@ -108,8 +108,9 @@ private:
     QToolButton *initButton(QStyle::StandardPixmap icon, const QString & tip,
                             QObject *dstobj, const char *slot_method, QLayout *layout);
 
-    void createUI(QBoxLayout *appLayout);
-
+   void createUI(QBoxLayout *appLayout);
+   void resizeEvent( QResizeEvent* e );
+   void drawTitle();
 
     Player *player;
     TrackAnalyser *trackanalyser;

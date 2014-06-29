@@ -269,7 +269,7 @@ void PlayerWidget::loadTrack( Track *track)
 
     if ( track != NULL ) {
 
-      ui->lblTitle->setText( track->artist() + " - " + track->title() );
+      drawTitle();
 
       bool doPlay = m_isStarted;
       player->stop();
@@ -300,6 +300,22 @@ void PlayerWidget::loadTrack( Track *track)
     ui->sliPosition->setValue( 0 );
     ui->txtCue->setText("?");
 
+}
+
+void PlayerWidget::resizeEvent( QResizeEvent* e )
+{
+    QWidget::resizeEvent(e);
+
+    drawTitle();
+}
+
+void PlayerWidget::drawTitle()
+{
+    QFontMetrics metrix(ui->lblTitle->font());
+    int width = ui->lblTitle->width() - 2;
+    QString clippedText = metrix.elidedText(m_CurrentTrack->artist() + " - " + m_CurrentTrack->title(), Qt::ElideRight, width);
+
+    ui->lblTitle->setText( clippedText );
 }
 
 float PlayerWidget::currentLevelLeft()

@@ -253,7 +253,6 @@ void Knowthelist::createUI()
     connect(preferences,SIGNAL(scanNowPressed()), collectionBrowser,SLOT(scan()));
     connect(preferences, SIGNAL(resetStatsPressed()), djSession, SLOT(onResetStats()));
 
-
     loadStartSettings();
 
     //ToDo: load from Settings
