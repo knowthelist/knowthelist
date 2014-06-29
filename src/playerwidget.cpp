@@ -313,7 +313,9 @@ void PlayerWidget::drawTitle()
 {
     QFontMetrics metrix(ui->lblTitle->font());
     int width = ui->lblTitle->width() - 2;
-    QString clippedText = metrix.elidedText(m_CurrentTrack->artist() + " - " + m_CurrentTrack->title(), Qt::ElideRight, width);
+    QString clippedText = tr("No track");
+    if ( m_CurrentTrack )
+        clippedText = metrix.elidedText(m_CurrentTrack->artist() + " - " + m_CurrentTrack->title(), Qt::ElideRight, width);
 
     ui->lblTitle->setText( clippedText );
 }

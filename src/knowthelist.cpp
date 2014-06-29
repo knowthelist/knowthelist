@@ -281,14 +281,18 @@ void Knowthelist::loadStartSettings()
 
     splitter->restoreState(settings.value("Splitter").toByteArray());
 
+    restoreGeometry(settings.value("mainWindowGeometry").toByteArray());
+    restoreState(settings.value("mainWindowState").toByteArray());
+
+    // Workaround to force correct geometry
+    hide();
+    show();
+
     if ( settings.value("loadPlaylists","true" )=="true")
     {
        playList1->loadXML( playList1->defaultPlaylistPath() );
        playList2->loadXML( playList2->defaultPlaylistPath() );
     }
-
-    restoreGeometry(settings.value("mainWindowGeometry").toByteArray());
-    restoreState(settings.value("mainWindowState").toByteArray());
 
     //AutoFade, AGC ...
     ui->toggleAutoFade->setChecked(settings.value("checkAutoFade",false).toBool());
