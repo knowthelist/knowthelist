@@ -311,8 +311,16 @@ void PlayerWidget::resizeEvent( QResizeEvent* e )
 
 void PlayerWidget::drawTitle()
 {
-    QFontMetrics metrix(ui->lblTitle->font());
     int width = ui->lblTitle->width() - 2;
+    if ( width < 300)
+        ui->lblTitle->setStyleSheet("* { font-size: 13pt; }");
+    else if ( width < 400)
+        ui->lblTitle->setStyleSheet("* { font-size: 14pt; }");
+    else
+        ui->lblTitle->setStyleSheet("* { font-size: 16pt; }");
+
+    QFontMetrics metrix(ui->lblTitle->font());
+
     QString clippedText = tr("No track");
     if ( m_CurrentTrack )
         clippedText = metrix.elidedText(m_CurrentTrack->artist() + " - " + m_CurrentTrack->title(), Qt::ElideRight, width);
