@@ -69,17 +69,11 @@ Playlist::Playlist(QWidget* parent)
      headers <<tr("Length");
 
     QTreeWidgetItem *headeritem = new QTreeWidgetItem(headers);
-//    headeritem->setTextAlignment(1,Qt::AlignLeft);//No
-//    headeritem->setTextAlignment(7,Qt::AlignHCenter);//track
-//    headeritem->setTextAlignment(9,Qt::AlignRight);//length
-//    headeritem->setTextAlignment(10,Qt::AlignHCenter);//bitrate
-
     setHeaderItem(headeritem);
     setHeaderLabels(headers);
     setSelectionBehavior(QAbstractItemView::SelectRows);
 
-        header()->setResizeMode(QHeaderView::Interactive);
-
+    header()->setResizeMode(QHeaderView::Interactive);
     header()->hideSection(PlaylistItem::Column_Url);
 
     // prevent click event if doubleclicked
@@ -98,8 +92,6 @@ Playlist::Playlist(QWidget* parent)
     connect( this,     SIGNAL(currentItemChanged(QTreeWidgetItem*,QTreeWidgetItem*)),
              this,       SLOT(slotItemChanged(QTreeWidgetItem*,QTreeWidgetItem*)));
 
-    QSettings settings;
-    header()->restoreState( settings.value("playlist_"+objectName()).toByteArray());
 }
 
 
@@ -243,6 +235,7 @@ void Playlist::setPlaylistMode(Mode newMode)
 {
   m_PlaylistMode = newMode;
 
+  double percent = this->size().width()/100.0;
 
   switch ( m_PlaylistMode )
   {
@@ -253,6 +246,14 @@ void Playlist::setPlaylistMode(Mode newMode)
     header()->showSection( PlaylistItem::Column_Genre );
     header()->showSection( PlaylistItem::Column_Tracknumber );
     header()->showSection( PlaylistItem::Column_Album );
+    header()->resizeSection(PlaylistItem::Column_Artist,22*percent);
+    header()->resizeSection(PlaylistItem::Column_Title,22*percent);
+    header()->resizeSection(PlaylistItem::Column_Album,20*percent);
+    header()->resizeSection(PlaylistItem::Column_Length,7*percent);
+    header()->resizeSection(PlaylistItem::Column_Genre,10*percent);
+    header()->resizeSection(PlaylistItem::Column_Year,8*percent);
+    header()->resizeSection(PlaylistItem::Column_Tracknumber,5*percent);
+    header()->resizeSection(PlaylistItem::Column_Played,5*percent);
     setSortingEnabled(true);
     m_CurrentTrackColor = Qt::white;
     m_NextTrackColor = Qt::white;
@@ -264,10 +265,18 @@ void Playlist::setPlaylistMode(Mode newMode)
     header()->hideSection( PlaylistItem::Column_Genre );
     header()->hideSection( PlaylistItem::Column_Tracknumber );
     header()->hideSection( PlaylistItem::Column_Album );
+    header()->resizeSection(PlaylistItem::Column_No,6*percent);
+    header()->resizeSection(PlaylistItem::Column_Artist,40*percent);
+    header()->resizeSection(PlaylistItem::Column_Title,40*percent);
+    header()->resizeSection(PlaylistItem::Column_Length,10*percent);
     setSortingEnabled(false);
     m_CurrentTrackColor = QColor( 255,100,100 );
     m_NextTrackColor = QColor( 200,200,255 );
   }
+
+  QSettings settings;
+  if ( settings.contains("playlist_"+objectName()) )
+    header()->restoreState( settings.value("playlist_"+objectName()).toByteArray());
 
   handleChanges();
 }
@@ -722,36 +731,6 @@ void Playlist::emitClicked()
 {
         emit itemClicked( currentItem(), currentColumn() );
         timer->stop();
-}
-
-void Playlist::resizeEvent( QResizeEvent* e )
-{
-    QTreeWidget::resizeEvent(e);
-
-    double percent = this->size().width()/100.0;
-
-    switch ( m_PlaylistMode )
-    {
-    case Playlist::Tracklist:
-
-        header()->resizeSection(PlaylistItem::Column_Artist,22*percent);
-        header()->resizeSection(PlaylistItem::Column_Title,22*percent);
-        header()->resizeSection(PlaylistItem::Column_Album,20*percent);
-        header()->resizeSection(PlaylistItem::Column_Length,7*percent);
-        header()->resizeSection(PlaylistItem::Column_Genre,10*percent);
-        header()->resizeSection(PlaylistItem::Column_Year,8*percent);
-        header()->resizeSection(PlaylistItem::Column_Tracknumber,5*percent);
-        header()->resizeSection(PlaylistItem::Column_Played,5*percent);
-
-      break;
-    default :
-
-      header()->resizeSection(PlaylistItem::Column_No,6*percent);
-      header()->resizeSection(PlaylistItem::Column_Artist,40*percent);
-      header()->resizeSection(PlaylistItem::Column_Title,40*percent);
-      header()->resizeSection(PlaylistItem::Column_Length,10*percent);
-    }
-
 }
 
 void Playlist::mouseReleaseEvent(QMouseEvent *event)
