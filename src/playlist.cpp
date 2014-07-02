@@ -906,7 +906,7 @@ void Playlist::paintEvent ( QPaintEvent* event )
       //Draw drop line after last item
       if (!modidx.isValid())
       {
-          modidx =  model()->index(model()->rowCount()-1,0,modidx);
+          modidx =  model()->index(model()->rowCount()-1,1,modidx);
           addHeight=1;
       }
       //bookmark item in case of a drop 
@@ -921,6 +921,8 @@ void Playlist::paintEvent ( QPaintEvent* event )
               m_marker = 0;
           }
       }
+
+      qDebug() << __PRETTY_FUNCTION__ <<": modidx:"<<modidx;
 
       //draw the drop point hightlighter
       QRect arect = visualRect ( modidx );
