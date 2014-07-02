@@ -65,6 +65,7 @@ private:
     bool openContext;
     bool m_dragLocked;
     void showTrackInfo( Track* mb );
+    void asynchronCurrentItemChanged( QTreeWidgetItem* item );
 
 };
 

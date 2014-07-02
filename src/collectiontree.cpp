@@ -21,6 +21,7 @@
 #include <QApplication>
 #include <QMenu>
 #include <QtGui>
+#include <QtConcurrentRun>
 
 struct CollectionTreePrivate
 {
@@ -179,6 +180,11 @@ CollectionTree::triggerRandomSelection()
 
 void CollectionTree::on_currentItemChanged( QTreeWidgetItem* item )
 {
+    QFuture<void> future = QtConcurrent::run( this, &CollectionTree::asynchronCurrentItemChanged, item);
+}
+
+void CollectionTree::asynchronCurrentItemChanged( QTreeWidgetItem* item )
+{
     if (!item)
         return;
 
@@ -197,7 +203,7 @@ void CollectionTree::on_currentItemChanged( QTreeWidgetItem* item )
 
     //add tags to this track list
     foreach ( QStringList tag, tags) {
-        qDebug() << __PRETTY_FUNCTION__ <<": is playlistitem; tags:"<<tags;
+        //qDebug() << __PRETTY_FUNCTION__ <<": is playlistitem; tags:"<<tags;
         p->tracks.append( new Track(tag));
     }
 
