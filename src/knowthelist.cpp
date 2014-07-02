@@ -106,6 +106,12 @@ void Knowthelist::createUI()
     timerMonitor->setInterval(50);
     connect( timerMonitor, SIGNAL(timeout()), SLOT(timerMonitor_timeOut()) );
 
+    timerGain1 = new QTimer(this);
+    timerGain2 = new QTimer(this);
+    timerGain1->setInterval(100);
+    timerGain2->setInterval(100);
+    connect( timerGain1, SIGNAL(timeout()), SLOT(timerGain1_timeOut()) );
+    connect( timerGain2, SIGNAL(timeout()), SLOT(timerGain2_timeOut()) );
 
     qRegisterMetaType<QList<Track*> > ("QList<Track*>");
 
@@ -566,14 +572,42 @@ void Knowthelist::player2_trackFinished( ) {
     playList2->skipForward();
 }
 
-void Knowthelist::player1_gainChanged(double newGain) {
-   if ( ui->toggleAGC->isChecked() )
-        ui->potGain_1->setValue(newGain * 100.0);
+void Knowthelist::player1_gainChanged(double gainValue)
+{
+    gain1Target = (int)(gainValue * 100.0);
+    if ( ui->toggleAGC->isChecked())
+         timerGain1->start();
 }
 
-void Knowthelist::player2_gainChanged(double newGain) {
+void Knowthelist::player2_gainChanged(double gainValue)
+{
+   gain2Target = (int)(gainValue * 100.0);
    if ( ui->toggleAGC->isChecked())
-        ui->potGain_2->setValue(newGain * 100.0);
+        timerGain2->start();
+}
+
+// Move gain1 dial smoothly
+void Knowthelist::timerGain1_timeOut()
+{
+   int gain1 = ui->potGain_1->value();
+   if ( gain1Target > gain1 )
+       ui->potGain_1->setValue(gain1+1);
+   else if ( gain1Target < gain1 )
+       ui->potGain_1->setValue(gain1-1);
+   else
+       timerGain1->stop();
+}
+
+// Move gain2 dial smoothly
+void Knowthelist::timerGain2_timeOut()
+{
+   int gain2 = ui->potGain_2->value();
+   if ( gain2Target > gain2 )
+       ui->potGain_2->setValue(gain2+1);
+   else if ( gain2Target < gain2 )
+       ui->potGain_2->setValue(gain2-1);
+   else
+       timerGain2->stop();
 }
 
 void Knowthelist::fadeNow()

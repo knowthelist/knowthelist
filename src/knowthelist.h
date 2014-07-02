@@ -66,7 +66,7 @@ private Q_SLOTS:
 
      void player_aboutTrackFinished();
      void player1_gainChanged(double newGain);
-     void player2_gainChanged(double newGain);
+     void player2_gainChanged(double gainValue);
      void player1_trackFinished();
      void player2_trackFinished();
      void player1_levelChanged(double left, double right);
@@ -80,8 +80,8 @@ private Q_SLOTS:
      void monitorPlayer_trackTimeChanged(qint64, qint64);
      void timerMonitor_loadFinished();
 
-     //void timerMeter_timeOut();
-     //void timerGain_timeOut();
+     void timerGain1_timeOut();
+     void timerGain2_timeOut();
      void Track_doubleClicked( PlaylistItem* );
      void trackList_wantLoad(PlaylistItem*,QString);
      void Track_selectionChanged(PlaylistItem*);
@@ -104,13 +104,15 @@ private:
     void setFaderModeToPlayer();
     QTimer* timerAutoFader;
     int m_xfadeDir;
+    int gain1Target;
+    int gain2Target;
     bool isFading;
     QVUMeter* vuMeter1;
     QVUMeter* vuMeter2;
     QTimer* timerMeter;
     QTimer* timerMonitor;
-    QTimer* timerGain;
-
+    QTimer* timerGain1;
+    QTimer* timerGain2;
     Playlist* playList1;
     Playlist* playList2;
     Playlist* trackList;
