@@ -323,7 +323,7 @@ void PlayerWidget::drawTitle()
 
     QString clippedText = tr("No track");
     if ( m_CurrentTrack )
-        clippedText = metrix.elidedText(m_CurrentTrack->artist() + " - " + m_CurrentTrack->title(), Qt::ElideRight, width);
+        clippedText = metrix.elidedText(m_CurrentTrack->prettyTitle(), Qt::ElideRight, width);
 
     ui->lblTitle->setText( clippedText );
 }

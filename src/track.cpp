@@ -127,9 +127,11 @@ void Track::readTags()
             p->length     = fileref.audioProperties()->length();
             p->counter = 0;
 
-            //polish empty tags
-            if( p->title.isEmpty() ) p->title =  p->url.toLocalFile().replace( '_', ' ' ) ;
-
+            //polish up empty tags
+            if( p->title.isEmpty() ) {
+                QFileInfo fileInfo(p->url.toLocalFile());
+                p->title = fileInfo.fileName().replace( '_', ' ' ).replace('.' + fileInfo.suffix(),"") ;
+            }
         }
     }
 
