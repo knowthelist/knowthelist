@@ -94,6 +94,7 @@ Monitor player for pre listen tracks (via 2nd sound card e.g. USB)
 * Wed Jul 03 2014 Mario Stephan <mstephan@shared-files.de>
 -  Added new widget ModeSelector to select collection tree mode
 -  Added a counter for played songs
+-  New: Generate a default cover image if the tag provides none
 -  Optimized: gain dial moves smoothly now to avoid hard skips of volume
 -  Optimized function to decouple database requests from GUI activities
 -  Optimized for size scaling of form
