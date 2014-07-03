@@ -48,9 +48,9 @@ public:
     void checkPeakTime();
     void setOrientation( Qt::Orientation );
     Qt::Orientation orientation() const;
-    void setLinesPerSecment( int );
-    void setSpacesBetweenSecments( int );
-    void setSpacesInSecments( int );
+    void setLinesPerSegment( int );
+    void setSpacesBetweenSegments( int );
+    void setSpacesInSegments( int );
     void setLinesPerPeak( int );
     void setSpacesInPeak( int );
     void setMargin( int );

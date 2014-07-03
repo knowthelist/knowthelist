@@ -127,7 +127,7 @@ void VUMeter::setValueRight ( float f ) {
     }
 }
 
-void VUMeter::setLinesPerSecment( int i ){
+void VUMeter::setLinesPerSegment( int i ){
     sh = i;
     step = sh + space;
 }

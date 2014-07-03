@@ -60,10 +60,10 @@ PlayerWidget::PlayerWidget(QWidget *parent) :
    vuMeter->LevelColorHigh.setRgb( 218,59,9 );
    vuMeter->LevelColorOff.setRgb( 31,45,65 );
    //vuMeter->setBackgroundColor( QColor(33,24,41) );
-   vuMeter->setSpacesBetweenSecments( 1 );
-   vuMeter->setLinesPerSecment( 2 );
+   vuMeter->setSpacesBetweenSegments( 1 );
+   vuMeter->setLinesPerSegment( 2 );
    vuMeter->setLinesPerPeak( 2 );
-   vuMeter->setSpacesInSecments( 1 );
+   vuMeter->setSpacesInSegments( 1 );
    vuMeter->setSpacesInPeak( 1 );
 
    timerLevel = new QTimer(this);
