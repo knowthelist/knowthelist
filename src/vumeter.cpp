@@ -76,6 +76,7 @@ void VUMeter::resizeEvent( QResizeEvent* e )
 void VUMeter::checkPeakTime() {
     if ( peakTime.elapsed() >= 1000 ) {
         peakLeft = 0;
+        peakRight = 0;
         peakTime.restart();
         update();
     }
@@ -131,12 +132,12 @@ void VUMeter::setLinesPerSecment( int i ){
     step = sh + space;
 }
 
-void VUMeter::setSpacesBetweenSecments( int i ) {
+void VUMeter::setSpacesBetweenSegments( int i ) {
     space = i;
     step = sh + space;
 }
 
-void VUMeter::setSpacesInSecments( int i ) {
+void VUMeter::setSpacesInSegments( int i ) {
     secStep = i-1;
     if ( secStep<1 ) secStep=1;
 }
@@ -256,7 +257,7 @@ void VUMeter::drawMeter() {
                  for (int led=0; led<ph; led+=pStep)
                      painter.drawLine ( x1, h-(peak+led)+m, x2, h-(peak+led)+m );}
             else
-                 for (int led=0; led<sh; led+=pStep)
+                 for (int led=0; led<ph; led+=pStep)
                     painter.drawLine ( peak+led+m, x1, peak+led+m, x2 );
        }
     }
