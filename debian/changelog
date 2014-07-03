@@ -2,6 +2,7 @@ knowthelist (2.1.3-1) unstable; urgency=low
 
   * Added new widget ModeSelector to select collection tree mode
   * Added a counter for played songs
+  * New: Generate a default cover image if the tag provides none
   * Optimized: gain dial moves smoothly now to avoid hard skips of volume
   * Optimized function to decouple database requests from GUI activities
   * Optimized for size scaling of form
