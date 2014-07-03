@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>1280</width>
-    <height>689</height>
+    <height>695</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -278,7 +278,6 @@ QListWidget::item:focus {
 	padding-top: 2px;
 	padding-bottom: 3px;
      border: 0px solid #6c6c6c;
-	font-size:	10px;
  }
 </string>
   </property>
@@ -7555,7 +7554,7 @@ p, li { white-space: pre-wrap; }
      <x>0</x>
      <y>0</y>
      <width>1280</width>
-     <height>23</height>
+     <height>27</height>
     </rect>
    </property>
   </widget>
