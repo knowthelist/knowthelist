@@ -35,6 +35,10 @@ Build:
 - make
 - ./knowthelist
 
+Install packages:
+-----------------
+Prebuilt packages can be found here: http://opendesktop.org/content/show.php/Knowthelist?content=165335
+
 Versions:
 ----------
 - 2.1 (2014-05):	without qt3support
