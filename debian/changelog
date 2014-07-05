@@ -7,7 +7,7 @@ knowthelist (2.1.3-1) unstable; urgency=low
   * Optimized function to decouple database requests from GUI activities
   * Optimized for size scaling of form
 
- -- Mario Stephan <mstephan@shared-files.de>  Wed, 03 Jul 2014 01:36:00 +0200
+ -- Mario Stephan <mstephan@shared-files.de>  Thu, 03 Jul 2014 01:36:00 +0200
 
 knowthelist (2.1.2-1) unstable; urgency=low
 

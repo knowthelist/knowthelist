@@ -91,7 +91,7 @@ Auto DJ function with multiple filters for random play
 Monitor player for pre listen tracks (via 2nd sound card e.g. USB)
 
 %changelog
-* Wed Jul 03 2014 Mario Stephan <mstephan@shared-files.de>
+* Thu Jul 03 2014 Mario Stephan <mstephan@shared-files.de>
 -  Added new widget ModeSelector to select collection tree mode
 -  Added a counter for played songs
 -  New: Generate a default cover image if the tag provides none
