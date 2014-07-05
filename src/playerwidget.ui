@@ -765,6 +765,12 @@ QFrame#fraDisplay{
                 <height>16</height>
                </size>
               </property>
+              <property name="maximumSize">
+               <size>
+                <width>400</width>
+                <height>16777215</height>
+               </size>
+              </property>
              </widget>
             </item>
             <item>
@@ -779,6 +785,12 @@ QFrame#fraDisplay{
                <size>
                 <width>33</width>
                 <height>27</height>
+               </size>
+              </property>
+              <property name="maximumSize">
+               <size>
+                <width>400</width>
+                <height>16777215</height>
                </size>
               </property>
               <property name="frameShape">
