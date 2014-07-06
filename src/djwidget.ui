@@ -90,11 +90,14 @@
           <height>16777215</height>
          </size>
         </property>
+        <property name="toolTip">
+         <string>AutoDJ</string>
+        </property>
         <property name="text">
          <string/>
         </property>
         <property name="pixmap">
-         <pixmap resource="icons.qrc">:/DJ.png</pixmap>
+         <pixmap resource="../images/icons.qrc">:/DJ.png</pixmap>
         </property>
        </widget>
       </item>
@@ -209,7 +212,7 @@ p, li { white-space: pre-wrap; }
   </layout>
  </widget>
  <resources>
-  <include location="icons.qrc"/>
+  <include location="../images/icons.qrc"/>
  </resources>
  <connections/>
 </ui>

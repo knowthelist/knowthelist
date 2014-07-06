@@ -241,7 +241,7 @@ void Knowthelist::createUI()
     QHBoxLayout *layout = new QHBoxLayout;
     layout->setMargin(0);
     layout->setSpacing(1);
-    listDjs->setMaximumWidth(350);
+    listDjs->setMaximumWidth(width()*.2);
     layout->addWidget(listDjs);
     layout->addWidget(listDjFilters);
     djBox->setLayout(layout);
