@@ -87,14 +87,18 @@ void DjSession::searchTracks()
     for (int i=0; i<needed ; i++)
     {
         if ( i % 2== 0 ){
-            if ( diffCount1 > 0)
+            if ( diffCount1 > 0){
                 tracks1.append( getRandomTrack() );
+                diffCount1--;
+            }
             else
                 tracks2.append( getRandomTrack() );
         }
         else{
-            if ( diffCount2 > 0)
+            if ( diffCount2 > 0){
                 tracks2.append( getRandomTrack() );
+                diffCount2--;
+            }
             else
                 tracks1.append( getRandomTrack() );
         }
