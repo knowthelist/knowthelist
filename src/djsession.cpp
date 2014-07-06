@@ -75,30 +75,37 @@ void DjSession::searchTracks()
     p->mutex1.lock();
     int diffCount1= p->minCount - p->playList1_Tracks.count();
     int diffCount2= p->minCount - p->playList2_Tracks.count();
+    int needed = (diffCount1 > 0) ? diffCount1 : 0;
+    needed = (diffCount2 > 0) ? needed + diffCount2 : needed;
+
     qDebug() << __PRETTY_FUNCTION__ << " need "<<diffCount1<<" tracks left and "<<diffCount2<<" tracks right ";
+    qDebug() << __PRETTY_FUNCTION__ << " needed together: "<<needed;
 
     // retrieve new random tracks for both playlists
     QList<Track*> tracks1;
     QList<Track*> tracks2;
-    for (int i=0; i<(diffCount1+diffCount2) ; i++)
+    for (int i=0; i<needed ; i++)
     {
-        if ( i % 2== 0 )
-            tracks1.append( getRandomTrack() );
-        else
-            tracks2.append( getRandomTrack() );
+        if ( i % 2== 0 ){
+            if ( diffCount1 > 0)
+                tracks1.append( getRandomTrack() );
+            else
+                tracks2.append( getRandomTrack() );
+        }
+        else{
+            if ( diffCount2 > 0)
+                tracks2.append( getRandomTrack() );
+            else
+                tracks1.append( getRandomTrack() );
+        }
+
     }
 
     // new tracks available, trigger fill up of playlists
-    if (diffCount1>diffCount2)
-    {
-        emit foundTracks_Playlist1(tracks1);
-        emit foundTracks_Playlist2(tracks2);
-    }
-    else
-    {
-        emit foundTracks_Playlist1(tracks2);
-        emit foundTracks_Playlist2(tracks1);
-    }
+    qDebug() << __PRETTY_FUNCTION__ << " provide "<<tracks1.count()<<" tracks left and "<<tracks2.count()<<" tracks right ";
+
+    emit foundTracks_Playlist1(tracks1);
+    emit foundTracks_Playlist2(tracks2);
 
     p->mutex1.unlock();
 }
