@@ -19,7 +19,8 @@
  #include "playlist.h"
  #include <qdebug.h>
  #include <qlistview.h>
-#include <QColorGroup>
+
+ #include <QColorGroup>
  
 PlaylistItem::PlaylistItem( Playlist* parent, QTreeWidgetItem *lvi )
       : QTreeWidgetItem( parent, lvi )
@@ -45,8 +46,8 @@ void PlaylistItem::setTexts( Track *track )
 {
     //qDebug()<<track->url();
     setText( Column_Url,   track->url().toString() );
-    setText( Column_Artist,  ( track->artist() != "" ) ? track->artist() : "Unknown"  );
-    setText( Column_Title,   ( track->title() != "" ) ? track->title() : "Unknown" );
+    setText( Column_Artist,  ( track->artist() != "" ) ? track->artist() : QObject::tr("Unknown")  );
+    setText( Column_Title,   ( track->title() != "" ) ? track->title() : QObject::tr("Unknown") );
     setText( Column_Album,   track->album() );
     setText( Column_Year,    track->year() );
     setText( Column_Genre,   track->genre() );
@@ -58,7 +59,7 @@ void PlaylistItem::setTexts( Track *track )
 
 void PlaylistItem::setText( int c, QString text)
 {
-    QTreeWidgetItem::setText( c, ( text != "" ) ? text : "Unknown" );
+    QTreeWidgetItem::setText( c, ( text != "" ) ? text : QObject::tr("Unknown") );
     switch (c) {
     case Column_Url:
         m_track->setUrl(QUrl::fromLocalFile(text));
@@ -91,3 +92,28 @@ void PlaylistItem::update()
         setForeground(i,QBrush(m_foreColor));
 }
 
+bool PlaylistItem::operator< (const QTreeWidgetItem &other) const
+{
+    bool ok;
+    int sortCol = treeWidget()->sortColumn();
+    QString otherText = other.text(sortCol).replace(QObject::tr("Unknown"),"0");
+
+    if ( sortCol == Column_Length){
+        int otherLength=-1;
+        if ( otherText.contains(':') ){
+            QStringList list=otherText.split(':');
+            otherLength=list.at(0).toInt(&ok)*60;
+            otherLength+=list.at(1).toInt(&ok);
+        if (ok)
+            return m_track->length() < otherLength;
+        }
+    }
+    else {
+        int value = text(sortCol).replace(QObject::tr("Unknown"),"0").toInt(&ok);
+        int otherValue = otherText.toInt(&ok);
+        if (ok)
+            return value < otherValue;
+    }
+
+    return QTreeWidgetItem::operator <(other);
+}

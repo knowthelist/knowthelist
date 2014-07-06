@@ -27,6 +27,7 @@
 
 class PlaylistItem : public QTreeWidgetItem
 {
+
 public:
     PlaylistItem( Playlist *pl, QTreeWidgetItem *lvi );
     ~PlaylistItem();
@@ -35,6 +36,7 @@ public:
     QString artist() const { return text( Column_Artist ); }
     Playlist *listView() const { return (Playlist*)treeWidget(); }
     PlaylistItem *nextSibling() const { return (PlaylistItem*)treeWidget()->itemBelow(this); }
+
 
     Track *track() { return m_track ; }
     void setTrack( Track*);
@@ -64,6 +66,7 @@ public:
         //static QString trackUrl( const QUrl &u ) { return u.protocol() == "file" ? u.fileName() : u.toString(); }
         Track *m_track;
         QColor m_foreColor;
+        bool operator< (const QTreeWidgetItem &other) const;
 };
 
 #endif
