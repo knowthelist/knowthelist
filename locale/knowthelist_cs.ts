@@ -12,56 +12,56 @@
 <context>
     <name>CollectionTree</name>
     <message>
-        <location filename="../src/collectiontree.cpp" line="49"/>
-        <location filename="../src/collectiontree.cpp" line="110"/>
-        <location filename="../src/collectiontree.cpp" line="346"/>
+        <location filename="../src/collectiontree.cpp" line="50"/>
+        <location filename="../src/collectiontree.cpp" line="111"/>
+        <location filename="../src/collectiontree.cpp" line="351"/>
         <source>Artist</source>
         <translation>Umělec</translation>
     </message>
     <message>
-        <location filename="../src/collectiontree.cpp" line="309"/>
+        <location filename="../src/collectiontree.cpp" line="314"/>
         <source>Add to PlayList&amp;1</source>
         <translation>Přidat do seznamu skladeb &amp;1</translation>
     </message>
     <message>
-        <location filename="../src/collectiontree.cpp" line="311"/>
+        <location filename="../src/collectiontree.cpp" line="316"/>
         <source>Add to PlayList&amp;2</source>
         <translation>Přidat do seznamu skladeb &amp;2</translation>
     </message>
     <message>
-        <location filename="../src/collectiontree.cpp" line="314"/>
+        <location filename="../src/collectiontree.cpp" line="319"/>
         <source>Re-scan collection</source>
         <translation>Obnovit hudební sbírku</translation>
     </message>
     <message>
-        <location filename="../src/collectiontree.cpp" line="345"/>
+        <location filename="../src/collectiontree.cpp" line="350"/>
         <source>Title</source>
         <translation>Název</translation>
     </message>
     <message>
-        <location filename="../src/collectiontree.cpp" line="347"/>
+        <location filename="../src/collectiontree.cpp" line="352"/>
         <source>Album</source>
         <translation>Album</translation>
     </message>
     <message>
-        <location filename="../src/collectiontree.cpp" line="92"/>
-        <location filename="../src/collectiontree.cpp" line="348"/>
+        <location filename="../src/collectiontree.cpp" line="93"/>
+        <location filename="../src/collectiontree.cpp" line="353"/>
         <source>Genre</source>
         <translation>Žánr</translation>
     </message>
     <message>
-        <location filename="../src/collectiontree.cpp" line="101"/>
-        <location filename="../src/collectiontree.cpp" line="349"/>
+        <location filename="../src/collectiontree.cpp" line="102"/>
+        <location filename="../src/collectiontree.cpp" line="354"/>
         <source>Year</source>
         <translation>Rok</translation>
     </message>
     <message>
-        <location filename="../src/collectiontree.cpp" line="350"/>
+        <location filename="../src/collectiontree.cpp" line="355"/>
         <source>Location</source>
         <translation>Umístění</translation>
     </message>
     <message>
-        <location filename="../src/collectiontree.cpp" line="353"/>
+        <location filename="../src/collectiontree.cpp" line="358"/>
         <source>Meta Information</source>
         <translation>Popisné informace</translation>
     </message>
@@ -119,48 +119,48 @@
         <translation>Formulář</translation>
     </message>
     <message>
-        <location filename="../src/djfilterwidget.ui" line="2189"/>
+        <location filename="../src/djfilterwidget.ui" line="1742"/>
         <source>1</source>
         <translation>1</translation>
     </message>
     <message>
-        <location filename="../src/djfilterwidget.ui" line="588"/>
+        <location filename="../src/djfilterwidget.ui" line="174"/>
         <source>Record Case</source>
         <translation>Kufr s deskami</translation>
     </message>
     <message>
-        <location filename="../src/djfilterwidget.ui" line="1120"/>
+        <location filename="../src/djfilterwidget.ui" line="673"/>
         <source>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;a href=&quot;#&quot;&gt;&lt;span style=&quot; text-decoration: underline; color:#e1e1e1;&quot;&gt;Path&lt;/span&gt;&lt;/a&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</source>
         <translation>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;a href=&quot;#&quot;&gt;&lt;span style=&quot; text-decoration: underline; color:#e1e1e1;&quot;&gt;Adresář&lt;/span&gt;&lt;/a&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</translation>
     </message>
     <message>
-        <location filename="../src/djfilterwidget.ui" line="2166"/>
-        <location filename="../src/djfilterwidget.ui" line="2223"/>
+        <location filename="../src/djfilterwidget.ui" line="1719"/>
+        <location filename="../src/djfilterwidget.ui" line="1776"/>
         <source>0</source>
         <translation>0</translation>
     </message>
     <message>
-        <location filename="../src/djfilterwidget.ui" line="2965"/>
+        <location filename="../src/djfilterwidget.ui" line="2518"/>
         <source>Activate this record case</source>
         <translation>Použít tento kufr s deskami</translation>
     </message>
     <message>
-        <location filename="../src/djfilterwidget.ui" line="2968"/>
+        <location filename="../src/djfilterwidget.ui" line="2521"/>
         <source>set</source>
         <translation>set</translation>
     </message>
     <message>
-        <location filename="../src/djfilterwidget.ui" line="2971"/>
+        <location filename="../src/djfilterwidget.ui" line="2524"/>
         <source>Alt+J</source>
         <translation>Alt+J</translation>
     </message>
     <message>
-        <location filename="../src/djfilterwidget.ui" line="2995"/>
+        <location filename="../src/djfilterwidget.ui" line="2548"/>
         <source>Count</source>
         <translation>Počet</translation>
     </message>
     <message>
-        <location filename="../src/djfilterwidget.ui" line="2275"/>
+        <location filename="../src/djfilterwidget.ui" line="1828"/>
         <source>how many records per turn</source>
         <translation>Kolik nahrávak přehrát v jednom kole</translation>
     </message>
@@ -169,17 +169,17 @@
         <translation type="obsolete">Adresář</translation>
     </message>
     <message>
-        <location filename="../src/djfilterwidget.ui" line="1583"/>
+        <location filename="../src/djfilterwidget.ui" line="1136"/>
         <source>Genre</source>
         <translation>Žánr</translation>
     </message>
     <message>
-        <location filename="../src/djfilterwidget.ui" line="2043"/>
+        <location filename="../src/djfilterwidget.ui" line="1596"/>
         <source>Artist</source>
         <translation>Umělec</translation>
     </message>
     <message>
-        <location filename="../src/djfilterwidget.ui" line="2155"/>
+        <location filename="../src/djfilterwidget.ui" line="1708"/>
         <source>&lt;!DOCTYPE HTML PUBLIC &quot;-//W3C//DTD HTML 4.0//EN&quot; &quot;http://www.w3.org/TR/REC-html40/strict.dtd&quot;&gt;
 &lt;html&gt;&lt;head&gt;&lt;meta name=&quot;qrichtext&quot; content=&quot;1&quot; /&gt;&lt;style type=&quot;text/css&quot;&gt;
 p, li { white-space: pre-wrap; }
@@ -233,7 +233,12 @@ p, li { white-space: pre-wrap; }
         <translation>Formulář</translation>
     </message>
     <message>
-        <location filename="../src/djwidget.ui" line="177"/>
+        <location filename="../src/djwidget.ui" line="103"/>
+        <source>AutoDJ</source>
+        <translation type="unfinished">Diskžokej</translation>
+    </message>
+    <message>
+        <location filename="../src/djwidget.ui" line="201"/>
         <source>&lt;!DOCTYPE HTML PUBLIC &quot;-//W3C//DTD HTML 4.0//EN&quot; &quot;http://www.w3.org/TR/REC-html40/strict.dtd&quot;&gt;
 &lt;html&gt;&lt;head&gt;&lt;meta name=&quot;qrichtext&quot; content=&quot;1&quot; /&gt;&lt;style type=&quot;text/css&quot;&gt;
 p, li { white-space: pre-wrap; }
@@ -258,10 +263,10 @@ p, li { white-space: pre-wrap; }
 &lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;a href=&quot;fdadfaf&quot;&gt;&lt;span style=&quot; font-size:8pt; text-decoration: underline; color:#d0fff8;&quot;&gt;DJ Main&lt;/span&gt;&lt;/a&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</translation>
     </message>
     <message>
-        <location filename="../src/djwidget.ui" line="104"/>
-        <location filename="../src/djwidget.ui" line="137"/>
-        <location filename="../src/djwidget.ui" line="167"/>
-        <location filename="../src/djwidget.ui" line="199"/>
+        <location filename="../src/djwidget.ui" line="116"/>
+        <location filename="../src/djwidget.ui" line="149"/>
+        <location filename="../src/djwidget.ui" line="179"/>
+        <location filename="../src/djwidget.ui" line="226"/>
         <source>TextLabel</source>
         <translatorcomment>no need to translate</translatorcomment>
         <translation>Textový štítek</translation>
@@ -302,7 +307,7 @@ p, li { white-space: pre-wrap; }
     <message>
         <location filename="../src/knowthelist.ui" line="1774"/>
         <source>AutoD&amp;J</source>
-        <translation>&amp;Diskžokej</translation>
+        <translation>Auto&amp;DJ</translation>
     </message>
     <message>
         <location filename="../src/knowthelist.ui" line="1777"/>
@@ -313,7 +318,7 @@ p, li { white-space: pre-wrap; }
     <message>
         <location filename="../src/knowthelist.ui" line="2437"/>
         <source>Set</source>
-        <translation>Nastavení</translation>
+        <translation>Nastavit</translation>
     </message>
     <message>
         <location filename="../src/knowthelist.ui" line="4777"/>
@@ -383,22 +388,22 @@ p, li { white-space: pre-wrap; }
         <translation>-0:00.0</translation>
     </message>
     <message>
-        <location filename="../src/knowthelist.ui" line="7553"/>
+        <location filename="../src/knowthelist.ui" line="7563"/>
         <source>Settings</source>
         <translation>Nastavení</translation>
     </message>
     <message>
-        <location filename="../src/knowthelist.cpp" line="176"/>
+        <location filename="../src/knowthelist.cpp" line="185"/>
         <source>Collection</source>
         <translation>Sbírka</translation>
     </message>
     <message>
-        <location filename="../src/knowthelist.cpp" line="240"/>
+        <location filename="../src/knowthelist.cpp" line="249"/>
         <source>AutoDJ</source>
         <translation>Diskžokej</translation>
     </message>
     <message>
-        <location filename="../src/knowthelist.cpp" line="246"/>
+        <location filename="../src/knowthelist.cpp" line="255"/>
         <source>Folder</source>
         <translation>Složka</translation>
     </message>
@@ -445,23 +450,28 @@ p, li { white-space: pre-wrap; }
         <translation>Formulář</translation>
     </message>
     <message>
-        <location filename="../src/playerwidget.ui" line="708"/>
+        <location filename="../src/playerwidget.ui" line="1256"/>
         <source>00:00</source>
         <translation>00:00</translation>
     </message>
     <message>
-        <location filename="../src/playerwidget.ui" line="1635"/>
+        <location filename="../src/playerwidget.ui" line="2653"/>
+        <source>-00</source>
+        <translation>-00</translation>
+    </message>
+    <message>
+        <location filename="../src/playerwidget.ui" line="741"/>
         <source>texttexttexttexttexttexttexttexttexttexttexttexttexttexttexttexttexttexttexttexttexttexttext</source>
         <translation>texttexttexttexttexttexttexttexttexttexttexttexttexttexttexttexttexttexttexttexttexttexttext</translation>
     </message>
     <message>
-        <location filename="../src/playerwidget.ui" line="2530"/>
+        <location filename="../src/playerwidget.ui" line="2170"/>
         <source>-00:00</source>
         <translation>-00:00</translation>
     </message>
     <message>
-        <location filename="../src/playerwidget.ui" line="1182"/>
-        <location filename="../src/playerwidget.ui" line="2084"/>
+        <location filename="../src/playerwidget.ui" line="1708"/>
+        <location filename="../src/playerwidget.ui" line="2622"/>
         <source>.00</source>
         <translation>.00</translation>
     </message>
@@ -470,22 +480,21 @@ p, li { white-space: pre-wrap; }
         <translation type="obsolete">Textový štítek 1</translation>
     </message>
     <message>
-        <location filename="../src/playerwidget.ui" line="742"/>
-        <source>Cueval</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../src/playerwidget.ui" line="2808"/>
+        <location filename="../src/playerwidget.ui" line="2905"/>
         <source>Cue</source>
         <translation>CUE</translation>
+    </message>
+    <message>
+        <location filename="../src/playerwidget.cpp" line="324"/>
+        <source>No track</source>
+        <translation>Žádná skladba</translation>
     </message>
 </context>
 <context>
     <name>Playlist</name>
     <message>
-        <location filename="../src/playlist.cpp" line="67"/>
         <source>Trackname</source>
-        <translation>Název skladby</translation>
+        <translation type="obsolete">Název skladby</translation>
     </message>
     <message>
         <location filename="../src/playlist.cpp" line="67"/>
@@ -494,36 +503,45 @@ p, li { white-space: pre-wrap; }
     </message>
     <message>
         <location filename="../src/playlist.cpp" line="67"/>
-        <location filename="../src/playlist.cpp" line="1057"/>
+        <location filename="../src/playlist.cpp" line="1062"/>
         <source>Artist</source>
         <translation>Umělec</translation>
     </message>
     <message>
         <location filename="../src/playlist.cpp" line="67"/>
-        <location filename="../src/playlist.cpp" line="1056"/>
+        <location filename="../src/playlist.cpp" line="1061"/>
         <source>Title</source>
         <translation>Název</translation>
     </message>
     <message>
+        <location filename="../src/playlist.cpp" line="67"/>
+        <source>Url</source>
+        <translation>Adresa</translation>
+    </message>
+    <message>
+        <location filename="../src/playlist.cpp" line="67"/>
+        <source>Played</source>
+        <translation>Hráno</translation>
+    </message>
+    <message>
         <location filename="../src/playlist.cpp" line="68"/>
-        <location filename="../src/playlist.cpp" line="1058"/>
+        <location filename="../src/playlist.cpp" line="1063"/>
         <source>Album</source>
         <translation>Alba</translation>
     </message>
     <message>
         <location filename="../src/playlist.cpp" line="68"/>
-        <location filename="../src/playlist.cpp" line="1060"/>
+        <location filename="../src/playlist.cpp" line="1065"/>
         <source>Year</source>
         <translation>Rok</translation>
     </message>
     <message>
-        <location filename="../src/playlist.cpp" line="68"/>
         <source>Comment</source>
-        <translation>Poznámka</translation>
+        <translation type="obsolete">Poznámka</translation>
     </message>
     <message>
         <location filename="../src/playlist.cpp" line="68"/>
-        <location filename="../src/playlist.cpp" line="1059"/>
+        <location filename="../src/playlist.cpp" line="1064"/>
         <source>Genre</source>
         <translation>Žánr</translation>
     </message>
@@ -533,9 +551,8 @@ p, li { white-space: pre-wrap; }
         <translation>Skladba</translation>
     </message>
     <message>
-        <location filename="../src/playlist.cpp" line="69"/>
         <source>Directory</source>
-        <translation>Adresář</translation>
+        <translation type="obsolete">Adresář</translation>
     </message>
     <message>
         <location filename="../src/playlist.cpp" line="69"/>
@@ -543,57 +560,56 @@ p, li { white-space: pre-wrap; }
         <translation>Délka</translation>
     </message>
     <message>
-        <location filename="../src/playlist.cpp" line="69"/>
         <source>Bitrate</source>
-        <translation>Datový tok</translation>
+        <translation type="obsolete">Datový tok</translation>
     </message>
     <message>
-        <location filename="../src/playlist.cpp" line="977"/>
+        <location filename="../src/playlist.cpp" line="982"/>
         <source>Add to PlayList&amp;1</source>
         <translation>Přidat do seznamu skladeb &amp;1</translation>
     </message>
     <message>
-        <location filename="../src/playlist.cpp" line="979"/>
+        <location filename="../src/playlist.cpp" line="984"/>
         <source>Add to PlayList&amp;2</source>
         <translation>Přidat do seznamu skladeb &amp;2</translation>
     </message>
     <message>
-        <location filename="../src/playlist.cpp" line="983"/>
+        <location filename="../src/playlist.cpp" line="988"/>
         <source>&amp;Load</source>
         <translation>&amp;Nahrát</translation>
     </message>
     <message>
-        <location filename="../src/playlist.cpp" line="986"/>
+        <location filename="../src/playlist.cpp" line="991"/>
         <source>Load as &amp;Next</source>
         <translation>Nahrát jako &amp;další</translation>
     </message>
     <message>
-        <location filename="../src/playlist.cpp" line="989"/>
+        <location filename="../src/playlist.cpp" line="994"/>
         <source>&amp;Prelisten Track</source>
         <translation>&amp;Slyšet skladbu předem</translation>
     </message>
     <message>
-        <location filename="../src/playlist.cpp" line="991"/>
+        <location filename="../src/playlist.cpp" line="996"/>
         <source>&amp;View Tag Information...</source>
         <translation>&amp;Zobrazit informace o skladbě...</translation>
     </message>
     <message>
-        <location filename="../src/playlist.cpp" line="994"/>
+        <location filename="../src/playlist.cpp" line="999"/>
         <source>&amp;Search for: &apos;%1&apos;</source>
         <translation>&amp;Hledat: &apos;%1&apos;</translation>
     </message>
     <message>
-        <location filename="../src/playlist.cpp" line="998"/>
+        <location filename="../src/playlist.cpp" line="1003"/>
         <source>&amp;Remove Selected</source>
         <translation>&amp;Odstranit vybrané</translation>
     </message>
     <message>
-        <location filename="../src/playlist.cpp" line="1061"/>
+        <location filename="../src/playlist.cpp" line="1066"/>
         <source>Location</source>
         <translation>Umístění</translation>
     </message>
     <message>
-        <location filename="../src/playlist.cpp" line="1064"/>
+        <location filename="../src/playlist.cpp" line="1069"/>
         <source>Meta Information</source>
         <translation>Popisné informace</translation>
     </message>
@@ -613,6 +629,15 @@ p, li { white-space: pre-wrap; }
     <message>
         <source>Select folders for music collection</source>
         <translation type="obsolete">Vyberte složky pro hudební sbírku</translation>
+    </message>
+    <message>
+        <location filename="../src/playlistitem.cpp" line="49"/>
+        <location filename="../src/playlistitem.cpp" line="50"/>
+        <location filename="../src/playlistitem.cpp" line="62"/>
+        <location filename="../src/playlistitem.cpp" line="99"/>
+        <location filename="../src/playlistitem.cpp" line="112"/>
+        <source>Unknown</source>
+        <translation>Neznámý</translation>
     </message>
 </context>
 <context>
@@ -703,32 +728,47 @@ p, li { white-space: pre-wrap; }
         <translation>Přeskočit ticho na konci</translation>
     </message>
     <message>
-        <location filename="../src/settingsdialog.ui" line="361"/>
+        <location filename="../src/settingsdialog.ui" line="364"/>
         <source>Scan for new files and update the music collection</source>
         <translation>Hledat nové soubory a aktualizovat sbírku</translation>
     </message>
     <message>
-        <location filename="../src/settingsdialog.ui" line="364"/>
+        <location filename="../src/settingsdialog.ui" line="367"/>
         <source>Watch folders for changes</source>
         <translation>Sledovat změny ve složkách</translation>
     </message>
     <message>
-        <location filename="../src/settingsdialog.ui" line="380"/>
+        <location filename="../src/settingsdialog.ui" line="389"/>
         <source>Scan Now</source>
         <translation>Prohledat nyní</translation>
     </message>
     <message>
-        <location filename="../src/settingsdialog.ui" line="402"/>
+        <location filename="../src/settingsdialog.ui" line="396"/>
+        <source>Scan folders for songs</source>
+        <translation>Prohledat složky na písně</translation>
+    </message>
+    <message>
+        <location filename="../src/settingsdialog.ui" line="403"/>
+        <source>Play Counter Statistics</source>
+        <translation>Statistika počítadla přehrávání</translation>
+    </message>
+    <message>
+        <location filename="../src/settingsdialog.ui" line="410"/>
+        <source>Reset</source>
+        <translation>Vynulovat</translation>
+    </message>
+    <message>
+        <location filename="../src/settingsdialog.ui" line="432"/>
         <source>Monitor Player</source>
         <translation>Přehrávání</translation>
     </message>
     <message>
-        <location filename="../src/settingsdialog.ui" line="427"/>
+        <location filename="../src/settingsdialog.ui" line="457"/>
         <source>AutoDJ settings</source>
         <translation>Nastavení automatického diskžokeje</translation>
     </message>
     <message>
-        <location filename="../src/settingsdialog.ui" line="469"/>
+        <location filename="../src/settingsdialog.ui" line="499"/>
         <source>Minimum tracks within each playlist </source>
         <translation>Nejmenší počet skladeb v každém seznamu skladeb </translation>
     </message>
@@ -737,37 +777,37 @@ p, li { white-space: pre-wrap; }
         <translation type="obsolete">Nejmenší počet skladeb</translation>
     </message>
     <message>
-        <location filename="../src/settingsdialog.ui" line="495"/>
+        <location filename="../src/settingsdialog.ui" line="525"/>
         <source>DJ Count</source>
         <translation>Počet diskžokejů</translation>
     </message>
     <message>
-        <location filename="../src/settingsdialog.ui" line="527"/>
+        <location filename="../src/settingsdialog.ui" line="557"/>
         <source>DJ Names</source>
         <translation>Jména diskžokejů</translation>
     </message>
     <message>
-        <location filename="../src/settingsdialog.ui" line="540"/>
+        <location filename="../src/settingsdialog.ui" line="570"/>
         <source>Filter Count</source>
         <translation>Počet filtrů</translation>
     </message>
     <message>
-        <location filename="../src/settingsdialog.ui" line="571"/>
+        <location filename="../src/settingsdialog.ui" line="601"/>
         <source>Auto Remove Played Tracks</source>
         <translation>Odstranit přehrané skladby automaticky</translation>
     </message>
     <message>
-        <location filename="../src/settingsdialog.ui" line="584"/>
+        <location filename="../src/settingsdialog.ui" line="614"/>
         <source>Playlist Settings</source>
         <translation>Nastavení seznamu skladeb</translation>
     </message>
     <message>
-        <location filename="../src/settingsdialog.ui" line="609"/>
+        <location filename="../src/settingsdialog.ui" line="639"/>
         <source>Browser Root</source>
         <translation>Výchozí cesta</translation>
     </message>
     <message>
-        <location filename="../src/settingsdialog.ui" line="622"/>
+        <location filename="../src/settingsdialog.ui" line="652"/>
         <source>...</source>
         <translation>...</translation>
     </message>
