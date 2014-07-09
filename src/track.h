@@ -57,6 +57,7 @@ public:
     QString genre();
     int length();
     int counter();
+    int target();
     QString tracknumber();
     QString prettyLength();
     QStringList tagList();
@@ -75,6 +76,7 @@ public:
     void setLength(QString);
     void setLengthFromPretty(QString);
     void setCounter(QString);
+    void setTarget(int);
 
     
     QString prettyTitle() const;

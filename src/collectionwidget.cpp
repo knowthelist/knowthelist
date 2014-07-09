@@ -27,8 +27,7 @@
 #include <QPixmap>
 #include <QDropEvent>
 #include <Qt>
-#include <QAction>
-#include <QMenuBar>
+#include <QtGui>
 
 class CollectionWidgetPrivate
 {

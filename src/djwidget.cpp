@@ -32,7 +32,6 @@ DjWidget::DjWidget(QWidget *parent) :
    ,p(new Private)
 {
     ui->setupUi(this);
-    connect(ui->lblName,SIGNAL(linkActivated(QString)),this,SLOT(on_lblName_linkActivated(QString)));
 }
 
 DjWidget::~DjWidget()
@@ -67,7 +66,7 @@ Dj* DjWidget::dj()
     return p->dj;
 }
 
-
+// auto connect slot
 void DjWidget::on_lblName_linkActivated(const QString &link)
 {
     qDebug() << __PRETTY_FUNCTION__ ;

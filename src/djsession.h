@@ -43,9 +43,10 @@ Q_SIGNALS:
 
 public slots:
     void fillPlaylists();
-    void onTracksChanged_Playlist1(QList<Track*> ts);
-    void onTracksChanged_Playlist2(QList<Track*> ts);
+    void onTracksChanged_Playlist1(QList<Track*> tracks);
+    void onTracksChanged_Playlist2(QList<Track*> tracks);
     void onTrackFinished(Track *track);
+    void forceTracks(QList<Track*> tracks);
     void on_dj_filterChanged(Filter* f);
     void onResetStats();
 

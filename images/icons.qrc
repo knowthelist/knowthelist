@@ -10,11 +10,11 @@
         <file>shuffle.png</file>
         <file>play.png</file>
         <file>pause.png</file>
-        <file>list.png</file>
         <file>slider.png</file>
         <file>volume.png</file>
         <file>stop.png</file>
         <file>backward.png</file>
         <file>forward.png</file>
+        <file>list.png</file>
     </qresource>
 </RCC>

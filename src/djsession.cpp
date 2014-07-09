@@ -22,10 +22,7 @@
 
 struct DjSessionPrivate
 {
-        //QFutureWatcher<void> watcher1;
-        //QFutureWatcher<void> watcher2;
         QMutex mutex1;
-        QMutex mutex2;
 
         Dj* currentDj;
         int minCount;
@@ -151,9 +148,40 @@ Track* DjSession::getRandomTrack()
 void DjSession::fillPlaylists()
 {
     QFuture<void> future = QtConcurrent::run( this, &DjSession::searchTracks);
-    //p->watcher1.setFuture(future1);
 }
 
+//ToDo: distribute according track->target
+void DjSession::forceTracks(QList<Track*> tracks)
+{
+    int count1 = p->playList1_Tracks.count();
+    int count2 = p->playList2_Tracks.count();
+
+    qDebug() << __PRETTY_FUNCTION__ <<count1<<" tracks left and "<<count2<<" tracks right ";
+
+    // distribute tracks to both playlists
+    QList<Track*> tracks1;
+    QList<Track*> tracks2;
+    for (int i=0; i<tracks.count() ; i++)
+    {
+        if ( count1 < count2 ){
+
+                tracks1.append( tracks.at(i) );
+                count1++;
+        }
+        else{
+
+                tracks2.append( tracks.at(i) );
+                count2++;
+        }
+
+    }
+
+    // new tracks available, trigger fill up of playlists
+    qDebug() << __PRETTY_FUNCTION__ << " provide "<<tracks1.count()<<" tracks left and "<<tracks2.count()<<" tracks right ";
+
+    emit foundTracks_Playlist1(tracks1);
+    emit foundTracks_Playlist2(tracks2);
+}
 
 void DjSession::on_dj_filterChanged(Filter* f)
 {
@@ -170,17 +198,19 @@ void DjSession::onResetStats()
 
 void DjSession::onTrackFinished(Track *track)
 {
-    p->database->incSongCounter(track->url().toLocalFile());
+    if (track){
+        p->database->incSongCounter(track->url().toLocalFile());
+    }
 }
 
-void DjSession::onTracksChanged_Playlist1(QList<Track*> ts)
+void DjSession::onTracksChanged_Playlist1(QList<Track*> tracks)
 {
-    p->playList1_Tracks = ts;
+    p->playList1_Tracks = tracks;
 }
 
-void DjSession::onTracksChanged_Playlist2(QList<Track*> ts)
+void DjSession::onTracksChanged_Playlist2(QList<Track*> tracks)
 {
-    p->playList2_Tracks = ts;
+    p->playList2_Tracks = tracks;
 }
 
 int DjSession::minCount()

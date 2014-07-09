@@ -154,8 +154,7 @@ CollectionTree::on_itemExpanded( QTreeWidgetItem* item )
     }
 }
 
-void
-CollectionTree::triggerRandomSelection()
+void CollectionTree::triggerRandomSelection()
 {
     p->tracks.clear();
 

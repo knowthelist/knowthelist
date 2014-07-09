@@ -18,6 +18,7 @@
 #include "knowthelist.h"
 #include "ui_knowthelist.h"
 #include "playerwidget.h"
+#include "playlistbrowser.h"
 #include "qled.h"
 #include "dj.h"
 #include "djwidget.h"
@@ -241,7 +242,7 @@ void Knowthelist::createUI()
     QHBoxLayout *layout = new QHBoxLayout;
     layout->setMargin(0);
     layout->setSpacing(1);
-    listDjs->setMaximumWidth(width()*.2);
+    listDjs->setMaximumWidth(width()*.22);
     layout->addWidget(listDjs);
     layout->addWidget(listDjFilters);
     djBox->setLayout(layout);
@@ -253,6 +254,28 @@ void Knowthelist::createUI()
     filetree = new FileBrowser(this);
     QPixmap pixmap3(":folder.png");
     ui->sideTab->AddTab(filetree,QIcon(pixmap3),tr("Folder"));
+
+    //Add PlaylistBrowser
+    PlaylistBrowser *playlistBrowser = new PlaylistBrowser();
+
+    splitterPlaylist = new QSplitter();
+    splitterPlaylist->addWidget(playlistBrowser);
+
+    trackList2 = new Playlist();
+    trackList2->setObjectName("tracklist2");
+    trackList2->setAcceptDrops( false );
+    trackList2->setPlaylistMode(Playlist::Tracklist);
+
+    connect(playlistBrowser,SIGNAL(selectionChanged(QList<Track*>)), trackList2, SLOT(changeTracks(QList<Track*>)));
+    connect(playlistBrowser,SIGNAL(selectionStarted(QList<Track*>)), djSession, SLOT(forceTracks(QList<Track*>)));
+    connect( trackList2, SIGNAL(trackDoubleClicked(PlaylistItem*)),SLOT(Track_doubleClicked(PlaylistItem*)));
+    connect( trackList2, SIGNAL(wantLoad(PlaylistItem*,QString)),SLOT(trackList_wantLoad(PlaylistItem*, QString)));
+    connect( trackList2, SIGNAL(trackClicked(PlaylistItem*)),SLOT(Track_selectionChanged(PlaylistItem* )));
+    connect( trackList2, SIGNAL(trackChanged(PlaylistItem*)),SLOT(Track_selectionChanged(PlaylistItem* )));
+
+    splitterPlaylist->addWidget(trackList2);
+    QPixmap pixmap4(":list.png");
+    ui->sideTab->AddTab(splitterPlaylist,QIcon(pixmap4),tr("Lists"));
 
     //SettingsDialog
     preferences = new SettingsDialog(this);
@@ -286,6 +309,7 @@ void Knowthelist::loadStartSettings()
     changeVolumes();
 
     splitter->restoreState(settings.value("Splitter").toByteArray());
+    splitterPlaylist->restoreState(settings.value("SplitterPlaylist").toByteArray());
 
     restoreGeometry(settings.value("mainWindowGeometry").toByteArray());
     restoreState(settings.value("mainWindowState").toByteArray());
@@ -439,6 +463,7 @@ void Knowthelist::closeEvent(QCloseEvent* event)
 
     // save splitter
     settings.setValue("Splitter",splitter->saveState());
+    settings.setValue("SplitterPlaylist",splitterPlaylist->saveState());
 
     //Save AutoDJ
 
@@ -653,6 +678,7 @@ void Knowthelist::changeVolumes()
     player2->setVolume( v2 * f2 );
 
 }
+
 void Knowthelist::slider1_valueChanged(int)
 {
     changeVolumes();
@@ -781,13 +807,13 @@ void Knowthelist::Track_doubleClicked(PlaylistItem* item)
     }
 }
 
-void Knowthelist::trackList_wantLoad(PlaylistItem *pli, QString source)
+void Knowthelist::trackList_wantLoad(PlaylistItem *pli, QString target)
 {
     //ToDo: enable for multiple tracks like drag/drop
-    qDebug() << __FUNCTION__ << "source=" << source;
-    if ( source == "Right" )
+    qDebug() << __FUNCTION__ << "target=" << target;
+    if ( target == "Right" )
       playList2->appendSong( pli->track() );
-    else if ( source ==  "Left" )
+    else if ( target ==  "Left" )
       playList1->appendSong( pli->track() );
 }
 

@@ -37,6 +37,7 @@ class CollectionDbPrivate
         ulong resultCount;
         ulong resultLength;
         QString quickFilter;
+        QString fromString;
         QSqlDatabase *db;
         QSqlQuery *query;
 
@@ -81,7 +82,7 @@ CollectionDB::CollectionDB()
     p->genreCount=0;
     p->resultCount=0;
 
-    p->quickFilter = "FROM tags "
+    p->fromString = "FROM tags "
             " INNER JOIN artist ON tags.artist = artist.id "
             " INNER JOIN album ON tags.album = album.id "
             " INNER JOIN year ON tags.year = year.id "
@@ -106,16 +107,10 @@ CollectionDB::escapeString( QString string )
 
 void CollectionDB::setFilterString( QString string )
 {
-    p->quickFilter = "FROM tags "
-            " INNER JOIN artist ON tags.artist = artist.id "
-            " INNER JOIN album ON tags.album = album.id "
-            " INNER JOIN year ON tags.year = year.id "
-            " INNER JOIN genre ON tags.genre = genre.id "
-            " LEFT OUTER JOIN statistics ON tags.url = statistics.url  WHERE 1=1 ";
 
     if ( string != "" ) {
       string = escapeString( string );
-      p->quickFilter += " AND ( artist.name LIKE '%" + string + "%' OR "
+      p->quickFilter = " AND ( artist.name LIKE '%" + string + "%' OR "
                     + "album.name LIKE '%" + string + "%' OR "
                     + "tags.title LIKE '%" + string + "%' OR "
                     + "lower(tags.url) LIKE '%" + string + "%' )";
@@ -487,7 +482,8 @@ QStringList CollectionDB::getRandomEntry()
 ulong CollectionDB::getCount()
 {
     QString command = "SELECT count(distinct tags.url) "
-                    + p->quickFilter;
+            + p->fromString
+            + p->quickFilter;
 
     return selectSqlNumber( command );
 }
@@ -522,6 +518,7 @@ uint CollectionDB::lastMaxCount()
 QList<QStringList> CollectionDB::selectRandomEntry( QString rownum, QString path, QString genre, QString artist)
 {
     QString command = "SELECT tags.url, artist.name, tags.title, album.name, year.name, genre.name, tags.track, tags.length, statistics.playcounter "
+            + p->fromString
             + p->quickFilter
             + p->selectionFilterForRandom(path, genre, artist) +
             " LIMIT 1 OFFSET " + rownum +";";
@@ -532,7 +529,8 @@ QList<QStringList> CollectionDB::selectRandomEntry( QString rownum, QString path
 QList<QStringList> CollectionDB::selectYears()
 {
     QString command = "SELECT DISTINCT year.name "
-         + p->quickFilter +
+            + p->fromString
+            + p->quickFilter +
          "AND year.name <> '' "
          "ORDER BY year.name DESC;";
 
@@ -542,6 +540,7 @@ QList<QStringList> CollectionDB::selectYears()
 QList<QStringList> CollectionDB::selectGenres()
 {
     QString command = "SELECT DISTINCT genre.name "
+         + p->fromString
          + p->quickFilter +
          "AND genre.name <> '' "
          "ORDER BY genre.name;";
@@ -552,7 +551,8 @@ QList<QStringList> CollectionDB::selectGenres()
 QList<QStringList> CollectionDB::selectArtists(QString year, QString genre)
 {
     QString command = "SELECT DISTINCT artist.name "
-         + p->quickFilter
+          + p->fromString
+          + p->quickFilter
           + p->selectionFilter(year,genre) +
             "AND artist.name <> '' "
          "ORDER BY artist.name;";
@@ -565,7 +565,8 @@ QList<QStringList> CollectionDB::selectAlbums(QString year, QString genre, QStri
 {
 
   QString command = "SELECT DISTINCT album.name "
-            + p->quickFilter
+          + p->fromString
+          + p->quickFilter
           + p->selectionFilter(year,genre,artist) +
           "AND album.name <> '' "
             "ORDER BY album.name;";
@@ -577,6 +578,7 @@ QList<QStringList> CollectionDB::selectAlbums(QString year, QString genre, QStri
 QList<QStringList> CollectionDB::selectTracks(QString year, QString genre, QString artist, QString album)
 {
   QString command = "SELECT DISTINCT tags.url, artist.name, tags.title, album.name, year.name, genre.name, tags.track, tags.length, statistics.playcounter "
+          + p->fromString
           + p->quickFilter
           + p->selectionFilter(year,genre,artist,album) +
           "ORDER BY artist.name DESC, album.name DESC, tags.track;";
@@ -584,5 +586,25 @@ QList<QStringList> CollectionDB::selectTracks(QString year, QString genre, QStri
   return selectSql(command);
 }
 
+QList<QStringList> CollectionDB::selectHotTracks()
+{
+  QString command = "SELECT DISTINCT tags.url, artist.name, tags.title, album.name, year.name, genre.name, tags.track, tags.length, statistics.playcounter "
+          + p->fromString +
+          "AND statistics.playcounter>0 "
+          "ORDER BY statistics.playcounter DESC "
+          "LIMIT 20 OFFSET 0;";
+
+  return selectSql(command);
+}
 
 
+QList<QStringList> CollectionDB::selectLastTracks()
+{
+  QString command = "SELECT DISTINCT tags.url, artist.name, tags.title, album.name, year.name, genre.name, tags.track, tags.length, statistics.playcounter "
+          + p->fromString +
+          "AND statistics.playcounter>0 "
+          "ORDER BY statistics.accessdate DESC "
+          "LIMIT 20 OFFSET 0;";
+
+  return selectSql(command);
+}

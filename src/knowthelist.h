@@ -83,7 +83,7 @@ private Q_SLOTS:
      void timerGain1_timeOut();
      void timerGain2_timeOut();
      void Track_doubleClicked( PlaylistItem* );
-     void trackList_wantLoad(PlaylistItem*,QString);
+     void trackList_wantLoad(PlaylistItem*,QString target);
      void Track_selectionChanged(PlaylistItem*);
      bool initMonitorPlayer();
      void editSettings();
@@ -116,8 +116,10 @@ private:
     Playlist* playList1;
     Playlist* playList2;
     Playlist* trackList;
+    Playlist* trackList2;
 
-    QSplitter *splitter;
+    QSplitter* splitter;
+    QSplitter* splitterPlaylist;
 
     CollectionWidget* collectionBrowser;
     MonitorPlayer* monitorPlayer;

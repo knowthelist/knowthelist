@@ -240,7 +240,7 @@ void PlayerWidget::dropEvent( QDropEvent *event )
         QVector<QStringList> tags;
 
         stream >> tags;
-        event->setDropAction(Qt::CopyAction);
+        event->setDropAction(Qt::MoveAction);
         event->accept();
 
         //publish dropped Tracks to connected playlist

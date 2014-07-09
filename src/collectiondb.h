@@ -79,6 +79,8 @@ class CollectionDB : public QObject
         QList<QStringList> selectArtists(QString year, QString genre);
         QList<QStringList> selectYears();
         QList<QStringList> selectGenres();
+        QList<QStringList> selectHotTracks();
+        QList<QStringList> selectLastTracks();
 
     signals:
         void scanDone( bool changed );

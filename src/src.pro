@@ -42,7 +42,9 @@ SOURCES += main.cpp \
     collectionsetupmodel.cpp \
     stackdisplay.cpp \
     djsettings.cpp \
-    modeselector.cpp
+    modeselector.cpp \
+    playlistbrowser.cpp \
+    playlistwidget.cpp
 HEADERS += knowthelist.h \
     vumeter.h \
     qvumeter.h \
@@ -72,7 +74,9 @@ HEADERS += knowthelist.h \
     collectionsetupmodel.h \
     stackdisplay.h \
     djsettings.h \
-    modeselector.h
+    modeselector.h \
+    playlistbrowser.h \
+    playlistwidget.h
 FORMS += \
     settingsdialog.ui \
     djwidget.ui \
@@ -80,7 +84,8 @@ FORMS += \
     playerwidget.ui \
     knowthelist.ui \
     djsettings.ui \
-    modeselector.ui
+    modeselector.ui \
+    playlistwidget.ui
 TRANSLATIONS += \
     ../locale/knowthelist_cs.ts \
     ../locale/knowthelist_de.ts \
