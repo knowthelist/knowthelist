@@ -215,7 +215,7 @@ void PlayerWidget::dragEnterEvent(QDragEnterEvent* event)
     event->setDropAction(Qt::CopyAction);
      QString sourceSite = event->source()->objectName();
      QString dropSite = this->objectName();
-     if ( sourceSite.left(4) == dropSite.left(4) || sourceSite == "tracklist" )
+     if ( sourceSite.left(4) == dropSite.left(4) || sourceSite.left(9) == "tracklist" )
         event->accept();
 }
 
