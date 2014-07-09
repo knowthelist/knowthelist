@@ -43,10 +43,11 @@ Playlist::Playlist(QWidget* parent)
     , newPlaylistItem(0)
     , m_alternateMax(0)
     , showDropHighlighter(false)
-    , autoClearOn(true)
+    , autoClearOn(false)
     , m_isPlaying(false)
     , m_isInternDrop(false)
-    ,m_dragLocked(false)
+    , m_dragLocked(false)
+    , m_currentIndex(-1)
 {
 
     setSortingEnabled(false);
@@ -118,11 +119,6 @@ void Playlist::addTrack( Track* track, PlaylistItem* after )
     PlaylistItem* item =  new PlaylistItem( this, after );
     item->setTexts( track );
     newPlaylistItem  = item;
-    // is it a potential next playlist item?
-    //if (after == currentPlaylistItem && currentPlaylistItem && item!=currentPlaylistItem)
-    //    setNextPlaylistItem(item);
-    //else
-        setNormalPlaylistItem(item);
     handleChanges();
 }
 
@@ -141,15 +137,16 @@ void Playlist::addCurrentTrack( Track* track )
     else
         newPlaylistItem = currItem;
 
+
     if (!m_isPlaying){
         //is not playing, direct into player and roll others
-        previousPlaylistItem=currentPlaylistItem;
         setCurrentPlaylistItem( newPlaylistItem );
-        setNextPlaylistItem( previousPlaylistItem );
     } else {
         //is playing, wait and add as next
         setNextPlaylistItem( newPlaylistItem );
     }
+
+    handleChanges();
 }
 
 void Playlist::addNextTrack( Track* track )
@@ -287,31 +284,23 @@ void Playlist::handleChanges()
     if ( m_PlaylistMode==Playlist::Tracklist)
         return;
 
-    //check the need to set current track
-    if (!currentPlaylistItem) {
-        //current track has been lost, new current will be the next track
-        //search for new next track is forced
-        //but not for internal move of current track and next track is just new
-        if ( nextPlaylistItem && !m_isInternDrop
-             && nextPlaylistItem!=newPlaylistItem) {
-            setCurrentPlaylistItem( nextPlaylistItem );
-            nextPlaylistItem = 0;
-        }
-        //current track will be the last added track
-        else if ( newPlaylistItem )
-            setCurrentPlaylistItem( newPlaylistItem );
-    }
+//    if ( autoClearOn ){
 
-    //check need to set next track
-    if (!nextPlaylistItem  ) {
-        if (m_isInternDrop)
-            setNextPlaylistItem( newPlaylistItem );
-        else
-            setNextPlaylistItem( findNextTrack() );
-    }
+//        if ( currentPlaylistItem != firstChild() ){
 
-    updateCurrentPlaylistItem();
-    updateNextPlaylistItem();
+//            currentPlaylistItem = firstChild();
+
+//        }
+//    }
+
+      if ( itemBelow(currentPlaylistItem) ) {
+            nextPlaylistItem = (PlaylistItem*)itemBelow(currentPlaylistItem);
+       } else {
+           nextPlaylistItem = NULL;
+       }
+
+
+    updatePlaylistItems();
 
     Q_EMIT countChanged(countTrack());
     Q_EMIT countChanged(allTracks());
@@ -320,54 +309,54 @@ void Playlist::handleChanges()
 }
 
 
-void Playlist::setCurrentPlaylistItem( PlaylistItem *item )
+void Playlist::setCurrentPlaylistItem( PlaylistItem* item )
 {
-    //qDebug() << __FUNCTION__ ;
-    // repaint "old" CurrentPlaylistItem as normal
-    // only if not both are at the same position
-    if ( currentPlaylistItem != nextPlaylistItem )
-        setNormalPlaylistItem(currentPlaylistItem);
-
     currentPlaylistItem = item;
-    updateCurrentPlaylistItem();
 
-    if (item)
+    if ( autoClearOn ){
+        // Only for the mode, where current item is always on top of the list
+        if ( currentPlaylistItem != firstChild() ){
+            // Move nextPlaylistItem at first row
+            QTreeWidgetItem* child = takeTopLevelItem(indexOfTopLevelItem(item));
+            this->insertTopLevelItem(0,child);
+            currentPlaylistItem=(PlaylistItem*)child;
+        }
+    }
+
+    if (currentPlaylistItem)
         Q_EMIT currentTrackChanged(currentPlaylistItem->track());
     else
         Q_EMIT currentTrackChanged(NULL);
 }
 
-void Playlist::setNormalPlaylistItem( PlaylistItem *item )
+void Playlist::setNextPlaylistItem( PlaylistItem* item )
 {
-   if ( item ) {
-         item->setFlags(Qt::ItemIsSelectable|Qt::ItemIsDragEnabled|Qt::ItemIsEnabled);
-         for(int i = 0; i<=item->columnCount()-1; i++)
-              item->setForeground(i,QBrush(Qt::white));
-   }
+    if ( autoClearOn ){
+        // Move nextPlaylistItem to second row
+        // Only for the mode, where current item is always on top of the list
+        QTreeWidgetItem* child = takeTopLevelItem(indexOfTopLevelItem(item));
+        this->insertTopLevelItem(1,child);
+        handleChanges();
+    }
 }
 
-void Playlist::setNextPlaylistItem( PlaylistItem *item )
+void Playlist::updatePlaylistItems()
 {
-    if (currentPlaylistItem==item && item!=0)
-        return;
+    // Set all items to normal
+    for( PlaylistItem *item = firstChild(); item; item = item->nextSibling() )
+    {
+        if (item)
+        {
+            item->setFlags(Qt::ItemIsSelectable|Qt::ItemIsDragEnabled|Qt::ItemIsEnabled);
+            item->setForeColor( Qt::white );
+        }
+    }
 
-   // repaint "old" NextPlaylistItem as normal
-   // only if not both are at the same position
-   if ( nextPlaylistItem != currentPlaylistItem )
-        setNormalPlaylistItem(nextPlaylistItem);
 
-   nextPlaylistItem  = item;
-   updateNextPlaylistItem();
-
-}
-
-void Playlist::updateCurrentPlaylistItem()
-{
-    //qDebug() << __FUNCTION__ ;
     if (currentPlaylistItem) {
 
         if (m_isPlaying)
-            currentPlaylistItem->setFlags(Qt::ItemIsDragEnabled|Qt::ItemIsEnabled);
+            currentPlaylistItem->setFlags(Qt::ItemIsEnabled);
         else
             currentPlaylistItem->setFlags(Qt::ItemIsSelectable|Qt::ItemIsDragEnabled|Qt::ItemIsEnabled);
 
@@ -376,10 +365,7 @@ void Playlist::updateCurrentPlaylistItem()
         else
             currentPlaylistItem->setForeColor( m_CurrentTrackColor);
     }
-}
 
-void Playlist::updateNextPlaylistItem()
-{
     if (nextPlaylistItem) {
 
         nextPlaylistItem->setFlags(Qt::ItemIsSelectable|Qt::ItemIsDragEnabled|Qt::ItemIsEnabled);
@@ -389,42 +375,6 @@ void Playlist::updateNextPlaylistItem()
         else
             nextPlaylistItem->setForeColor( m_NextTrackColor);
     }
-
-}
-
-PlaylistItem * Playlist::findNextTrack() const
-{
-
-   if ( m_PlaylistMode == Playlist_Single) {
-        //Return next Item
-       if (  itemBelow(currentPlaylistItem) ) {
-            return (PlaylistItem*)itemBelow(currentPlaylistItem);
-       } else {
-           return NULL;
-       }
-   }
-
-   if ( countTrack()>0
-        && autoClearOn
-        && currentPlaylistItem!=this->firstChild()
-        && previousPlaylistItem!=this->firstChild()) {
-          //Return FirstItem
-          return (PlaylistItem*)this->firstChild();
-   }
-
-   if ( itemBelow(currentPlaylistItem) ) {
-         //Return next Item
-          return (PlaylistItem*)itemBelow(currentPlaylistItem);
-   }
-   else
-         if (  itemAbove(currentPlaylistItem)
-               && autoClearOn) {
-           //Above is still something
-          return (PlaylistItem*)itemAbove(currentPlaylistItem);
-          } else {
-              return NULL;
-          }
-
 }
 
 QList<Track*> Playlist::allTracks()
@@ -460,34 +410,27 @@ void Playlist::skipForward()
 {
     qDebug() << __PRETTY_FUNCTION__ <<":"<<objectName() ;
 
-    //can skip?
-    if ( !nextPlaylistItem && !autoClearOn )
-        return;
-
-    //remember current item
-    previousPlaylistItem=currentPlaylistItem;
-
-    //skip both items forward
-    setCurrentPlaylistItem( nextPlaylistItem );
-    setNextPlaylistItem( findNextTrack() );
-
     //remove previous item at last due to keep playing
     if ( autoClearOn ){
+        previousPlaylistItem = currentPlaylistItem;
+        setCurrentPlaylistItem((PlaylistItem*)itemBelow(currentPlaylistItem));
         removePlaylistItem( previousPlaylistItem );
-        handleChanges();
     }
+    else
+        setCurrentPlaylistItem((PlaylistItem*)itemBelow(currentPlaylistItem));
+
+    handleChanges();
 }
 
 void Playlist::skipRewind()
 {
     if ( itemAbove(currentPlaylistItem) ) {
-        setCurrentPlaylistItem( (PlaylistItem*)itemAbove(currentPlaylistItem) );
-        setNextPlaylistItem( findNextTrack() );
+        setCurrentPlaylistItem((PlaylistItem*)itemAbove(currentPlaylistItem));
     }
+    handleChanges();
 }
 
-
-QString Playlist::defaultPlaylistPath() //static
+QString Playlist::defaultPlaylistPath()
 {
     QString pathName = QDesktopServices::storageLocation(QDesktopServices::DataLocation);
     QDir path(pathName);
@@ -546,9 +489,8 @@ void Playlist::saveXML( const QString &path ) const
             if ( currentPlaylistItem )
               if ( item == currentPlaylistItem )
                 extElem.setAttribute("current", "1");
-            if ( item == nextTrack() )
+              if ( item == nextTrack() )
                 extElem.setAttribute("next", "1");
-
 
             QStringList tag = item->track()->tagList();
 
@@ -627,35 +569,30 @@ void Playlist::loadXML( const QString &path )
               if ( e.namedItem("extension").toElement().attribute( CURRENT ) == "1" )
                 this->setCurrentPlaylistItem( newPlaylistItem  );
               if ( e.namedItem("extension").toElement().attribute( NEXT ) == "1" )
-                this->setNextPlaylistItem( newPlaylistItem  );
+                this->setNextPlaylistItem( newPlaylistItem );
             }
           n = n.nextSibling();
       }
     }
     file.close();
-    //Q_EMIT countChanged(countTrack());
-    //fillNoColumn();
+
     qDebug() << "End " << __FUNCTION__;
 }
 
-void
-Playlist::removeSelectedItems()
+void Playlist::removeSelectedItems()
 {
+    if ( m_PlaylistMode==Playlist::Tracklist)
+        return;
 
     QListIterator<QTreeWidgetItem *> it(selectedItems());
-int z=0;
+
      while (it.hasNext()){
          PlaylistItem *item = dynamic_cast<PlaylistItem *>(it.next());
          if ( item != currentPlaylistItem || (!m_isPlaying) )
-         {
-             z++;
-             qDebug()<<z;
             removePlaylistItem( item );
-         }
     }
 
     handleChanges();
-
 }
 
 void Playlist::fillNoColumn()
@@ -842,10 +779,12 @@ void Playlist::dropEvent(QDropEvent *event)
 
     if (event->mimeData()->hasUrls()) {
             QList<QUrl> urlList = event->mimeData()->urls(); // returns list of QUrls
-            //ToDo: why ignore?:
-            //event->ignore();
             event->accept();
             appendList(urlList,m_marker);
+            if ( autoClearOn && newPlaylistItem == firstChild() ){
+                setCurrentPlaylistItem(newPlaylistItem);
+                handleChanges();
+            }
 
      }
     else if (event->mimeData()->hasFormat("text/playlistitem")) {
@@ -861,6 +800,10 @@ void Playlist::dropEvent(QDropEvent *event)
         foreach ( QStringList tag, tags) {
             qDebug() << __PRETTY_FUNCTION__ <<": is playlistitem; tags:"<<tags;
             addTrack(new Track(tag),m_marker);
+            if ( autoClearOn && newPlaylistItem == firstChild() ){
+                setCurrentPlaylistItem(newPlaylistItem);
+                handleChanges();
+            }
             m_marker = this->newTrack();
         }
 
@@ -903,12 +846,18 @@ void Playlist::paintEvent ( QPaintEvent* event )
       QModelIndex modidx = indexAt( point );
       int addHeight=0;
 
+      //if is playing mark as next only
+      if (isPlaying() && modidx.row()==0){
+          modidx =  model()->index(1,1);
+      }
+
       //Draw drop line after last item
       if (!modidx.isValid())
       {
           modidx =  model()->index(model()->rowCount()-1,1,modidx);
           addHeight=1;
       }
+
       //bookmark item in case of a drop 
       m_marker = (PlaylistItem*)this->itemFromIndex(modidx);
       if (addHeight==0) {
@@ -922,7 +871,7 @@ void Playlist::paintEvent ( QPaintEvent* event )
           }
       }
 
-      qDebug() << __PRETTY_FUNCTION__ <<": modidx:"<<modidx;
+     // qDebug() << __PRETTY_FUNCTION__ <<": modidx:"<<modidx;
 
       //draw the drop point hightlighter
       QRect arect = visualRect ( modidx );
@@ -963,7 +912,7 @@ void Playlist::keyPressEvent   (   QKeyEvent* e    )
 
 }
 
-
+// needed for showContextMenu actions
 void Playlist::dummySlot(){}
 
 void Playlist::showContextMenu( PlaylistItem *item, int col )
@@ -1008,12 +957,7 @@ void Playlist::showContextMenu( PlaylistItem *item, int col )
     switch( a->shortcut() )
     {
         case Qt::Key_L:
-            nextPlaylistItem  = currentPlaylistItem;
             setCurrentPlaylistItem( item );
-            if ( item == nextPlaylistItem  )
-                setNextPlaylistItem( findNextTrack() );
-            else
-                setNextPlaylistItem( nextPlaylistItem  );
             break;
 
         case Qt::Key_N:
@@ -1050,7 +994,6 @@ void Playlist::showContextMenu( PlaylistItem *item, int col )
     }
 
 }
-
 
 void Playlist::showTrackInfo( Track* mb )
 {

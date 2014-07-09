@@ -48,11 +48,9 @@ class Playlist: public QTreeWidget
 
       void saveXML( const QString& ) const;
       void loadXML( const QString& );
-        
-      static const int NO_SORT = 200;
+
       //----------------
       PlaylistItem *firstTrack() const { return firstChild(); }
-      PlaylistItem *findNextTrack() const;
       PlaylistItem *nextTrack() const { return nextPlaylistItem ; }
       PlaylistItem *currentTrack() const { return currentPlaylistItem; }
       PlaylistItem *dragTrack() const { return (PlaylistItem*)this->currentItem(); }
@@ -124,15 +122,16 @@ class Playlist: public QTreeWidget
     
           void setCurrentPlaylistItem( PlaylistItem* );
           void setNextPlaylistItem( PlaylistItem* );
-          void setNormalPlaylistItem( PlaylistItem* );
           void removePlaylistItem( PlaylistItem* );
 
           void updateNextPlaylistItem();
           void updateCurrentPlaylistItem();
+          void updatePlaylistItems();
 
       int  m_recursionCount;
       int mDropVisualizerWidth;
       int m_alternateMax;
+      int m_currentIndex;
       void fillNoColumn();
       void performDrag();
       QTimer *timer;
