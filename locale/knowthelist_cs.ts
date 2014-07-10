@@ -14,54 +14,54 @@
     <message>
         <location filename="../src/collectiontree.cpp" line="50"/>
         <location filename="../src/collectiontree.cpp" line="111"/>
-        <location filename="../src/collectiontree.cpp" line="351"/>
+        <location filename="../src/collectiontree.cpp" line="350"/>
         <source>Artist</source>
         <translation>Umělec</translation>
     </message>
     <message>
-        <location filename="../src/collectiontree.cpp" line="314"/>
+        <location filename="../src/collectiontree.cpp" line="313"/>
         <source>Add to PlayList&amp;1</source>
         <translation>Přidat do seznamu skladeb &amp;1</translation>
     </message>
     <message>
-        <location filename="../src/collectiontree.cpp" line="316"/>
+        <location filename="../src/collectiontree.cpp" line="315"/>
         <source>Add to PlayList&amp;2</source>
         <translation>Přidat do seznamu skladeb &amp;2</translation>
     </message>
     <message>
-        <location filename="../src/collectiontree.cpp" line="319"/>
+        <location filename="../src/collectiontree.cpp" line="318"/>
         <source>Re-scan collection</source>
         <translation>Obnovit hudební sbírku</translation>
     </message>
     <message>
-        <location filename="../src/collectiontree.cpp" line="350"/>
+        <location filename="../src/collectiontree.cpp" line="349"/>
         <source>Title</source>
         <translation>Název</translation>
     </message>
     <message>
-        <location filename="../src/collectiontree.cpp" line="352"/>
+        <location filename="../src/collectiontree.cpp" line="351"/>
         <source>Album</source>
         <translation>Album</translation>
     </message>
     <message>
         <location filename="../src/collectiontree.cpp" line="93"/>
-        <location filename="../src/collectiontree.cpp" line="353"/>
+        <location filename="../src/collectiontree.cpp" line="352"/>
         <source>Genre</source>
         <translation>Žánr</translation>
     </message>
     <message>
         <location filename="../src/collectiontree.cpp" line="102"/>
-        <location filename="../src/collectiontree.cpp" line="354"/>
+        <location filename="../src/collectiontree.cpp" line="353"/>
         <source>Year</source>
         <translation>Rok</translation>
     </message>
     <message>
-        <location filename="../src/collectiontree.cpp" line="355"/>
+        <location filename="../src/collectiontree.cpp" line="354"/>
         <source>Location</source>
         <translation>Umístění</translation>
     </message>
     <message>
-        <location filename="../src/collectiontree.cpp" line="358"/>
+        <location filename="../src/collectiontree.cpp" line="357"/>
         <source>Meta Information</source>
         <translation>Popisné informace</translation>
     </message>
@@ -73,12 +73,12 @@
         <translation type="obsolete">rr</translation>
     </message>
     <message>
-        <location filename="../src/collectionwidget.cpp" line="57"/>
+        <location filename="../src/collectionwidget.cpp" line="56"/>
         <source>Random Tracks</source>
         <translation>Náhodné skladby</translation>
     </message>
     <message>
-        <location filename="../src/collectionwidget.cpp" line="60"/>
+        <location filename="../src/collectionwidget.cpp" line="59"/>
         <source>Enter space-separated terms to filter collection</source>
         <translation>Zadejte mezerou oddělená hledaná slova pro filtrování sbírky</translation>
     </message>
@@ -272,22 +272,22 @@ p, li { white-space: pre-wrap; }
         <translation>Textový štítek</translation>
     </message>
     <message>
-        <location filename="../src/djwidget.cpp" line="109"/>
+        <location filename="../src/djwidget.cpp" line="108"/>
         <source>tracks</source>
         <translation>Skladba</translation>
     </message>
     <message>
-        <location filename="../src/djwidget.cpp" line="110"/>
+        <location filename="../src/djwidget.cpp" line="109"/>
         <source>hours</source>
         <translation>Hodiny</translation>
     </message>
     <message>
-        <location filename="../src/djwidget.cpp" line="111"/>
+        <location filename="../src/djwidget.cpp" line="110"/>
         <source>cases</source>
         <translation>Kufrs</translation>
     </message>
     <message>
-        <location filename="../src/djwidget.cpp" line="111"/>
+        <location filename="../src/djwidget.cpp" line="110"/>
         <source>case</source>
         <translation>Kufr</translation>
     </message>
@@ -393,19 +393,24 @@ p, li { white-space: pre-wrap; }
         <translation>Nastavení</translation>
     </message>
     <message>
-        <location filename="../src/knowthelist.cpp" line="185"/>
+        <location filename="../src/knowthelist.cpp" line="186"/>
         <source>Collection</source>
         <translation>Sbírka</translation>
     </message>
     <message>
-        <location filename="../src/knowthelist.cpp" line="249"/>
+        <location filename="../src/knowthelist.cpp" line="250"/>
         <source>AutoDJ</source>
         <translation>Diskžokej</translation>
     </message>
     <message>
-        <location filename="../src/knowthelist.cpp" line="255"/>
+        <location filename="../src/knowthelist.cpp" line="256"/>
         <source>Folder</source>
         <translation>Složka</translation>
+    </message>
+    <message>
+        <location filename="../src/knowthelist.cpp" line="278"/>
+        <source>Lists</source>
+        <translation type="unfinished"></translation>
     </message>
 </context>
 <context>
@@ -497,41 +502,41 @@ p, li { white-space: pre-wrap; }
         <translation type="obsolete">Název skladby</translation>
     </message>
     <message>
-        <location filename="../src/playlist.cpp" line="67"/>
+        <location filename="../src/playlist.cpp" line="68"/>
         <source>No</source>
         <translation>Čís</translation>
     </message>
     <message>
-        <location filename="../src/playlist.cpp" line="67"/>
-        <location filename="../src/playlist.cpp" line="1062"/>
+        <location filename="../src/playlist.cpp" line="68"/>
+        <location filename="../src/playlist.cpp" line="1005"/>
         <source>Artist</source>
         <translation>Umělec</translation>
     </message>
     <message>
-        <location filename="../src/playlist.cpp" line="67"/>
-        <location filename="../src/playlist.cpp" line="1061"/>
+        <location filename="../src/playlist.cpp" line="68"/>
+        <location filename="../src/playlist.cpp" line="1004"/>
         <source>Title</source>
         <translation>Název</translation>
     </message>
     <message>
-        <location filename="../src/playlist.cpp" line="67"/>
+        <location filename="../src/playlist.cpp" line="68"/>
         <source>Url</source>
         <translation>Adresa</translation>
     </message>
     <message>
-        <location filename="../src/playlist.cpp" line="67"/>
+        <location filename="../src/playlist.cpp" line="68"/>
         <source>Played</source>
         <translation>Hráno</translation>
     </message>
     <message>
-        <location filename="../src/playlist.cpp" line="68"/>
-        <location filename="../src/playlist.cpp" line="1063"/>
+        <location filename="../src/playlist.cpp" line="69"/>
+        <location filename="../src/playlist.cpp" line="1006"/>
         <source>Album</source>
         <translation>Alba</translation>
     </message>
     <message>
-        <location filename="../src/playlist.cpp" line="68"/>
-        <location filename="../src/playlist.cpp" line="1065"/>
+        <location filename="../src/playlist.cpp" line="69"/>
+        <location filename="../src/playlist.cpp" line="1008"/>
         <source>Year</source>
         <translation>Rok</translation>
     </message>
@@ -540,13 +545,13 @@ p, li { white-space: pre-wrap; }
         <translation type="obsolete">Poznámka</translation>
     </message>
     <message>
-        <location filename="../src/playlist.cpp" line="68"/>
-        <location filename="../src/playlist.cpp" line="1064"/>
+        <location filename="../src/playlist.cpp" line="69"/>
+        <location filename="../src/playlist.cpp" line="1007"/>
         <source>Genre</source>
         <translation>Žánr</translation>
     </message>
     <message>
-        <location filename="../src/playlist.cpp" line="68"/>
+        <location filename="../src/playlist.cpp" line="69"/>
         <source>Track</source>
         <translation>Skladba</translation>
     </message>
@@ -555,7 +560,7 @@ p, li { white-space: pre-wrap; }
         <translation type="obsolete">Adresář</translation>
     </message>
     <message>
-        <location filename="../src/playlist.cpp" line="69"/>
+        <location filename="../src/playlist.cpp" line="70"/>
         <source>Length</source>
         <translation>Délka</translation>
     </message>
@@ -564,54 +569,109 @@ p, li { white-space: pre-wrap; }
         <translation type="obsolete">Datový tok</translation>
     </message>
     <message>
-        <location filename="../src/playlist.cpp" line="982"/>
+        <location filename="../src/playlist.cpp" line="931"/>
         <source>Add to PlayList&amp;1</source>
         <translation>Přidat do seznamu skladeb &amp;1</translation>
     </message>
     <message>
-        <location filename="../src/playlist.cpp" line="984"/>
+        <location filename="../src/playlist.cpp" line="933"/>
         <source>Add to PlayList&amp;2</source>
         <translation>Přidat do seznamu skladeb &amp;2</translation>
     </message>
     <message>
-        <location filename="../src/playlist.cpp" line="988"/>
+        <location filename="../src/playlist.cpp" line="937"/>
         <source>&amp;Load</source>
         <translation>&amp;Nahrát</translation>
     </message>
     <message>
-        <location filename="../src/playlist.cpp" line="991"/>
+        <location filename="../src/playlist.cpp" line="940"/>
         <source>Load as &amp;Next</source>
         <translation>Nahrát jako &amp;další</translation>
     </message>
     <message>
-        <location filename="../src/playlist.cpp" line="994"/>
+        <location filename="../src/playlist.cpp" line="943"/>
         <source>&amp;Prelisten Track</source>
         <translation>&amp;Slyšet skladbu předem</translation>
     </message>
     <message>
-        <location filename="../src/playlist.cpp" line="996"/>
+        <location filename="../src/playlist.cpp" line="945"/>
         <source>&amp;View Tag Information...</source>
         <translation>&amp;Zobrazit informace o skladbě...</translation>
     </message>
     <message>
-        <location filename="../src/playlist.cpp" line="999"/>
+        <location filename="../src/playlist.cpp" line="948"/>
         <source>&amp;Search for: &apos;%1&apos;</source>
         <translation>&amp;Hledat: &apos;%1&apos;</translation>
     </message>
     <message>
-        <location filename="../src/playlist.cpp" line="1003"/>
+        <location filename="../src/playlist.cpp" line="952"/>
         <source>&amp;Remove Selected</source>
         <translation>&amp;Odstranit vybrané</translation>
     </message>
     <message>
-        <location filename="../src/playlist.cpp" line="1066"/>
+        <location filename="../src/playlist.cpp" line="1009"/>
         <source>Location</source>
         <translation>Umístění</translation>
     </message>
     <message>
-        <location filename="../src/playlist.cpp" line="1069"/>
+        <location filename="../src/playlist.cpp" line="1012"/>
         <source>Meta Information</source>
         <translation>Popisné informace</translation>
+    </message>
+</context>
+<context>
+    <name>PlaylistBrowser</name>
+    <message>
+        <location filename="../src/playlistbrowser.cpp" line="104"/>
+        <source>Top Tracks</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/playlistbrowser.cpp" line="106"/>
+        <source>Most played tracks</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/playlistbrowser.cpp" line="117"/>
+        <source>Last Tracks</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/playlistbrowser.cpp" line="119"/>
+        <source>Recently played tracks</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
+    <name>PlaylistWidget</name>
+    <message>
+        <location filename="../src/playlistwidget.ui" line="14"/>
+        <source>Frame</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/playlistwidget.ui" line="93"/>
+        <source>Click here to show the content of this list</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/playlistwidget.ui" line="96"/>
+        <source>&lt;!DOCTYPE HTML PUBLIC &quot;-//W3C//DTD HTML 4.0//EN&quot; &quot;http://www.w3.org/TR/REC-html40/strict.dtd&quot;&gt;
+&lt;html&gt;&lt;head&gt;&lt;meta name=&quot;qrichtext&quot; content=&quot;1&quot; /&gt;&lt;style type=&quot;text/css&quot;&gt;
+p, li { white-space: pre-wrap; }
+&lt;/style&gt;&lt;/head&gt;&lt;body style=&quot; font-family:&apos;MS Shell Dlg 2&apos;; font-size:8.25pt; font-weight:400; font-style:normal;&quot;&gt;
+&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;a href=&quot;charts&quot;&gt;&lt;span style=&quot; font-size:8pt; text-decoration: underline; color:#d0fff8;&quot;&gt;Most Played&lt;/span&gt;&lt;/a&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/playlistwidget.ui" line="107"/>
+        <source>TextLabel</source>
+        <translation type="unfinished">Textový štítek</translation>
+    </message>
+    <message>
+        <location filename="../src/playlistwidget.ui" line="140"/>
+        <source>Load all songs directly into the playlists</source>
+        <translation type="unfinished"></translation>
     </message>
 </context>
 <context>

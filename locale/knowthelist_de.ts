@@ -12,56 +12,56 @@
 <context>
     <name>CollectionTree</name>
     <message>
-        <location filename="../src/collectiontree.cpp" line="49"/>
-        <location filename="../src/collectiontree.cpp" line="110"/>
-        <location filename="../src/collectiontree.cpp" line="346"/>
+        <location filename="../src/collectiontree.cpp" line="50"/>
+        <location filename="../src/collectiontree.cpp" line="111"/>
+        <location filename="../src/collectiontree.cpp" line="350"/>
         <source>Artist</source>
         <translation>Interpret</translation>
     </message>
     <message>
-        <location filename="../src/collectiontree.cpp" line="309"/>
+        <location filename="../src/collectiontree.cpp" line="313"/>
         <source>Add to PlayList&amp;1</source>
         <translation>Zur Abspiellist&amp;1 hinzufügen</translation>
     </message>
     <message>
-        <location filename="../src/collectiontree.cpp" line="311"/>
+        <location filename="../src/collectiontree.cpp" line="315"/>
         <source>Add to PlayList&amp;2</source>
         <translation>Zur Abspiellist&amp;2 hinzufügen</translation>
     </message>
     <message>
-        <location filename="../src/collectiontree.cpp" line="314"/>
+        <location filename="../src/collectiontree.cpp" line="318"/>
         <source>Re-scan collection</source>
         <translation>Musiksammlung erneuern</translation>
     </message>
     <message>
-        <location filename="../src/collectiontree.cpp" line="345"/>
+        <location filename="../src/collectiontree.cpp" line="349"/>
         <source>Title</source>
         <translation>Title</translation>
     </message>
     <message>
-        <location filename="../src/collectiontree.cpp" line="347"/>
+        <location filename="../src/collectiontree.cpp" line="351"/>
         <source>Album</source>
         <translation>Album</translation>
     </message>
     <message>
-        <location filename="../src/collectiontree.cpp" line="92"/>
-        <location filename="../src/collectiontree.cpp" line="348"/>
+        <location filename="../src/collectiontree.cpp" line="93"/>
+        <location filename="../src/collectiontree.cpp" line="352"/>
         <source>Genre</source>
         <translation>Genre</translation>
     </message>
     <message>
-        <location filename="../src/collectiontree.cpp" line="101"/>
-        <location filename="../src/collectiontree.cpp" line="349"/>
+        <location filename="../src/collectiontree.cpp" line="102"/>
+        <location filename="../src/collectiontree.cpp" line="353"/>
         <source>Year</source>
         <translation>Jahr</translation>
     </message>
     <message>
-        <location filename="../src/collectiontree.cpp" line="350"/>
+        <location filename="../src/collectiontree.cpp" line="354"/>
         <source>Location</source>
         <translation>Adresse</translation>
     </message>
     <message>
-        <location filename="../src/collectiontree.cpp" line="353"/>
+        <location filename="../src/collectiontree.cpp" line="357"/>
         <source>Meta Information</source>
         <translation>Meta Informationen</translation>
     </message>
@@ -73,12 +73,12 @@
         <translation type="obsolete">rr</translation>
     </message>
     <message>
-        <location filename="../src/collectionwidget.cpp" line="57"/>
+        <location filename="../src/collectionwidget.cpp" line="56"/>
         <source>Random Tracks</source>
         <translation>Zufallstitel</translation>
     </message>
     <message>
-        <location filename="../src/collectionwidget.cpp" line="60"/>
+        <location filename="../src/collectionwidget.cpp" line="59"/>
         <source>Enter space-separated terms to filter collection</source>
         <translation>Geben Sie Suchwörter mit Leerzeichen getrennt ein, um in der Musiksammlung zu suchen</translation>
     </message>
@@ -119,48 +119,48 @@
         <translation>Form</translation>
     </message>
     <message>
-        <location filename="../src/djfilterwidget.ui" line="2189"/>
+        <location filename="../src/djfilterwidget.ui" line="1742"/>
         <source>1</source>
         <translation>1</translation>
     </message>
     <message>
-        <location filename="../src/djfilterwidget.ui" line="588"/>
+        <location filename="../src/djfilterwidget.ui" line="174"/>
         <source>Record Case</source>
         <translation>Plattenkoffer</translation>
     </message>
     <message>
-        <location filename="../src/djfilterwidget.ui" line="1120"/>
+        <location filename="../src/djfilterwidget.ui" line="673"/>
         <source>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;a href=&quot;#&quot;&gt;&lt;span style=&quot; text-decoration: underline; color:#e1e1e1;&quot;&gt;Path&lt;/span&gt;&lt;/a&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</source>
-        <translation type="unfinished">&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;a href=&quot;#&quot;&gt;&lt;span style=&quot; text-decoration: underline; color:#e1e1e1;&quot;&gt;Verzeichnis&lt;/span&gt;&lt;/a&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</translation>
+        <translation>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;a href=&quot;#&quot;&gt;&lt;span style=&quot; text-decoration: underline; color:#e1e1e1;&quot;&gt;Verzeichnis&lt;/span&gt;&lt;/a&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</translation>
     </message>
     <message>
-        <location filename="../src/djfilterwidget.ui" line="2166"/>
-        <location filename="../src/djfilterwidget.ui" line="2223"/>
+        <location filename="../src/djfilterwidget.ui" line="1719"/>
+        <location filename="../src/djfilterwidget.ui" line="1776"/>
         <source>0</source>
-        <translation type="unfinished">12 s {0?}</translation>
+        <translation>12 s {0?}</translation>
     </message>
     <message>
-        <location filename="../src/djfilterwidget.ui" line="2965"/>
+        <location filename="../src/djfilterwidget.ui" line="2518"/>
         <source>Activate this record case</source>
         <translation>Diesen Plattenkoffer nutzen</translation>
     </message>
     <message>
-        <location filename="../src/djfilterwidget.ui" line="2968"/>
+        <location filename="../src/djfilterwidget.ui" line="2521"/>
         <source>set</source>
         <translation>aktiv</translation>
     </message>
     <message>
-        <location filename="../src/djfilterwidget.ui" line="2971"/>
+        <location filename="../src/djfilterwidget.ui" line="2524"/>
         <source>Alt+J</source>
         <translation>Alt+J</translation>
     </message>
     <message>
-        <location filename="../src/djfilterwidget.ui" line="2995"/>
+        <location filename="../src/djfilterwidget.ui" line="2548"/>
         <source>Count</source>
         <translation>Anzahl</translation>
     </message>
     <message>
-        <location filename="../src/djfilterwidget.ui" line="2275"/>
+        <location filename="../src/djfilterwidget.ui" line="1828"/>
         <source>how many records per turn</source>
         <translation>Wieviele Titel pro Runde abspielen</translation>
     </message>
@@ -169,17 +169,17 @@
         <translation type="obsolete">Verzeichnis</translation>
     </message>
     <message>
-        <location filename="../src/djfilterwidget.ui" line="1583"/>
+        <location filename="../src/djfilterwidget.ui" line="1136"/>
         <source>Genre</source>
         <translation>Genre</translation>
     </message>
     <message>
-        <location filename="../src/djfilterwidget.ui" line="2043"/>
+        <location filename="../src/djfilterwidget.ui" line="1596"/>
         <source>Artist</source>
         <translation>Interpret</translation>
     </message>
     <message>
-        <location filename="../src/djfilterwidget.ui" line="2155"/>
+        <location filename="../src/djfilterwidget.ui" line="1708"/>
         <source>&lt;!DOCTYPE HTML PUBLIC &quot;-//W3C//DTD HTML 4.0//EN&quot; &quot;http://www.w3.org/TR/REC-html40/strict.dtd&quot;&gt;
 &lt;html&gt;&lt;head&gt;&lt;meta name=&quot;qrichtext&quot; content=&quot;1&quot; /&gt;&lt;style type=&quot;text/css&quot;&gt;
 p, li { white-space: pre-wrap; }
@@ -217,7 +217,7 @@ p, li { white-space: pre-wrap; }
     <message>
         <location filename="../src/djsettings.ui" line="26"/>
         <source>Form</source>
-        <translation type="unfinished">Form</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../src/djsettings.ui" line="47"/>
@@ -230,16 +230,21 @@ p, li { white-space: pre-wrap; }
     <message>
         <location filename="../src/djwidget.ui" line="20"/>
         <source>Form</source>
-        <translation>Form</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/djwidget.ui" line="177"/>
+        <location filename="../src/djwidget.ui" line="103"/>
+        <source>AutoDJ</source>
+        <translation>AutoDJ</translation>
+    </message>
+    <message>
+        <location filename="../src/djwidget.ui" line="201"/>
         <source>&lt;!DOCTYPE HTML PUBLIC &quot;-//W3C//DTD HTML 4.0//EN&quot; &quot;http://www.w3.org/TR/REC-html40/strict.dtd&quot;&gt;
 &lt;html&gt;&lt;head&gt;&lt;meta name=&quot;qrichtext&quot; content=&quot;1&quot; /&gt;&lt;style type=&quot;text/css&quot;&gt;
 p, li { white-space: pre-wrap; }
 &lt;/style&gt;&lt;/head&gt;&lt;body style=&quot; font-family:&apos;MS Shell Dlg 2&apos;; font-size:8.25pt; font-weight:400; font-style:normal;&quot;&gt;
 &lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;a href=&quot;#&quot;&gt;&lt;span style=&quot; font-size:8pt; text-decoration: underline; color:#d0fff8;&quot;&gt;DJ Main&lt;/span&gt;&lt;/a&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</source>
-        <translation type="unfinished">&lt;!DOCTYPE HTML PUBLIC &quot;-//W3C//DTD HTML 4.0//EN&quot; &quot;http://www.w3.org/TR/REC-html40/strict.dtd&quot;&gt;
+        <translation>&lt;!DOCTYPE HTML PUBLIC &quot;-//W3C//DTD HTML 4.0//EN&quot; &quot;http://www.w3.org/TR/REC-html40/strict.dtd&quot;&gt;
 &lt;html&gt;&lt;head&gt;&lt;meta name=&quot;qrichtext&quot; content=&quot;1&quot; /&gt;&lt;style type=&quot;text/css&quot;&gt;
 p, li { white-space: pre-wrap; }
 &lt;/style&gt;&lt;/head&gt;&lt;body style=&quot; font-family:&apos;MS Shell Dlg 2&apos;; font-size:8.25pt; font-weight:400; font-style:normal;&quot;&gt;
@@ -258,30 +263,30 @@ p, li { white-space: pre-wrap; }
 &lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;a href=&quot;fdadfaf&quot;&gt;&lt;span style=&quot; font-size:8pt; text-decoration: underline; color:#d0fff8;&quot;&gt;DJ Main&lt;/span&gt;&lt;/a&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</translation>
     </message>
     <message>
-        <location filename="../src/djwidget.ui" line="104"/>
-        <location filename="../src/djwidget.ui" line="137"/>
-        <location filename="../src/djwidget.ui" line="167"/>
-        <location filename="../src/djwidget.ui" line="199"/>
+        <location filename="../src/djwidget.ui" line="116"/>
+        <location filename="../src/djwidget.ui" line="149"/>
+        <location filename="../src/djwidget.ui" line="179"/>
+        <location filename="../src/djwidget.ui" line="226"/>
         <source>TextLabel</source>
         <translation>TextLabel</translation>
     </message>
     <message>
-        <location filename="../src/djwidget.cpp" line="109"/>
+        <location filename="../src/djwidget.cpp" line="108"/>
         <source>tracks</source>
         <translation>Songs</translation>
     </message>
     <message>
-        <location filename="../src/djwidget.cpp" line="110"/>
+        <location filename="../src/djwidget.cpp" line="109"/>
         <source>hours</source>
         <translation>Stunden</translation>
     </message>
     <message>
-        <location filename="../src/djwidget.cpp" line="111"/>
+        <location filename="../src/djwidget.cpp" line="110"/>
         <source>cases</source>
         <translation>Plattenkoffer</translation>
     </message>
     <message>
-        <location filename="../src/djwidget.cpp" line="111"/>
+        <location filename="../src/djwidget.cpp" line="110"/>
         <source>case</source>
         <translation>Plattenkoffer</translation>
     </message>
@@ -382,24 +387,29 @@ p, li { white-space: pre-wrap; }
         <translation>-0:00.0</translation>
     </message>
     <message>
-        <location filename="../src/knowthelist.ui" line="7553"/>
+        <location filename="../src/knowthelist.ui" line="7563"/>
         <source>Settings</source>
         <translation>Einstellungen</translation>
     </message>
     <message>
-        <location filename="../src/knowthelist.cpp" line="176"/>
+        <location filename="../src/knowthelist.cpp" line="186"/>
         <source>Collection</source>
         <translation>Sammlung</translation>
     </message>
     <message>
-        <location filename="../src/knowthelist.cpp" line="240"/>
+        <location filename="../src/knowthelist.cpp" line="250"/>
         <source>AutoDJ</source>
         <translation>AutoDJ</translation>
     </message>
     <message>
-        <location filename="../src/knowthelist.cpp" line="246"/>
+        <location filename="../src/knowthelist.cpp" line="256"/>
         <source>Folder</source>
         <translation>Ordner</translation>
+    </message>
+    <message>
+        <location filename="../src/knowthelist.cpp" line="278"/>
+        <source>Lists</source>
+        <translation>Listen</translation>
     </message>
 </context>
 <context>
@@ -443,23 +453,28 @@ p, li { white-space: pre-wrap; }
         <translation>Form</translation>
     </message>
     <message>
-        <location filename="../src/playerwidget.ui" line="708"/>
+        <location filename="../src/playerwidget.ui" line="1256"/>
         <source>00:00</source>
         <translation>00:00</translation>
     </message>
     <message>
-        <location filename="../src/playerwidget.ui" line="1635"/>
+        <location filename="../src/playerwidget.ui" line="2653"/>
+        <source>-00</source>
+        <translation type="unfinished">-00</translation>
+    </message>
+    <message>
+        <location filename="../src/playerwidget.ui" line="741"/>
         <source>texttexttexttexttexttexttexttexttexttexttexttexttexttexttexttexttexttexttexttexttexttexttext</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/playerwidget.ui" line="2530"/>
+        <location filename="../src/playerwidget.ui" line="2170"/>
         <source>-00:00</source>
         <translation>-00:00</translation>
     </message>
     <message>
-        <location filename="../src/playerwidget.ui" line="1182"/>
-        <location filename="../src/playerwidget.ui" line="2084"/>
+        <location filename="../src/playerwidget.ui" line="1708"/>
+        <location filename="../src/playerwidget.ui" line="2622"/>
         <source>.00</source>
         <translation>.00</translation>
     </message>
@@ -468,132 +483,193 @@ p, li { white-space: pre-wrap; }
         <translation type="obsolete">Textový štítek 1</translation>
     </message>
     <message>
-        <location filename="../src/playerwidget.ui" line="742"/>
-        <source>Cueval</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../src/playerwidget.ui" line="2808"/>
+        <location filename="../src/playerwidget.ui" line="2905"/>
         <source>Cue</source>
         <translation>CUE</translation>
+    </message>
+    <message>
+        <location filename="../src/playerwidget.cpp" line="324"/>
+        <source>No track</source>
+        <translation type="unfinished"></translation>
     </message>
 </context>
 <context>
     <name>Playlist</name>
     <message>
-        <location filename="../src/playlist.cpp" line="67"/>
         <source>Trackname</source>
-        <translation>Trackname</translation>
+        <translation type="obsolete">Trackname</translation>
     </message>
     <message>
-        <location filename="../src/playlist.cpp" line="67"/>
+        <location filename="../src/playlist.cpp" line="68"/>
         <source>No</source>
         <translation>N°</translation>
     </message>
     <message>
-        <location filename="../src/playlist.cpp" line="67"/>
-        <location filename="../src/playlist.cpp" line="1057"/>
+        <location filename="../src/playlist.cpp" line="68"/>
+        <location filename="../src/playlist.cpp" line="1005"/>
         <source>Artist</source>
         <translation>Interpret</translation>
     </message>
     <message>
-        <location filename="../src/playlist.cpp" line="67"/>
-        <location filename="../src/playlist.cpp" line="1056"/>
+        <location filename="../src/playlist.cpp" line="68"/>
+        <location filename="../src/playlist.cpp" line="1004"/>
         <source>Title</source>
         <translation>Name</translation>
     </message>
     <message>
         <location filename="../src/playlist.cpp" line="68"/>
-        <location filename="../src/playlist.cpp" line="1058"/>
+        <source>Url</source>
+        <translation type="unfinished">Adresse</translation>
+    </message>
+    <message>
+        <location filename="../src/playlist.cpp" line="68"/>
+        <source>Played</source>
+        <translation type="unfinished">Gespielt</translation>
+    </message>
+    <message>
+        <location filename="../src/playlist.cpp" line="69"/>
+        <location filename="../src/playlist.cpp" line="1006"/>
         <source>Album</source>
         <translation>Album</translation>
     </message>
     <message>
-        <location filename="../src/playlist.cpp" line="68"/>
-        <location filename="../src/playlist.cpp" line="1060"/>
+        <location filename="../src/playlist.cpp" line="69"/>
+        <location filename="../src/playlist.cpp" line="1008"/>
         <source>Year</source>
         <translation>Jahr</translation>
     </message>
     <message>
-        <location filename="../src/playlist.cpp" line="68"/>
         <source>Comment</source>
-        <translation>Kommentar</translation>
+        <translation type="obsolete">Kommentar</translation>
     </message>
     <message>
-        <location filename="../src/playlist.cpp" line="68"/>
-        <location filename="../src/playlist.cpp" line="1059"/>
+        <location filename="../src/playlist.cpp" line="69"/>
+        <location filename="../src/playlist.cpp" line="1007"/>
         <source>Genre</source>
         <translation>Genre</translation>
     </message>
     <message>
-        <location filename="../src/playlist.cpp" line="68"/>
+        <location filename="../src/playlist.cpp" line="69"/>
         <source>Track</source>
         <translation>Track</translation>
     </message>
     <message>
-        <location filename="../src/playlist.cpp" line="69"/>
         <source>Directory</source>
-        <translation>Verzeichnis</translation>
+        <translation type="obsolete">Verzeichnis</translation>
     </message>
     <message>
-        <location filename="../src/playlist.cpp" line="69"/>
+        <location filename="../src/playlist.cpp" line="70"/>
         <source>Length</source>
         <translation>Dauer</translation>
     </message>
     <message>
-        <location filename="../src/playlist.cpp" line="69"/>
         <source>Bitrate</source>
-        <translation>Datenrate</translation>
+        <translation type="obsolete">Datenrate</translation>
     </message>
     <message>
-        <location filename="../src/playlist.cpp" line="977"/>
+        <location filename="../src/playlist.cpp" line="931"/>
         <source>Add to PlayList&amp;1</source>
         <translation>Zur Abspielliste&amp;1 hinzufügen</translation>
     </message>
     <message>
-        <location filename="../src/playlist.cpp" line="979"/>
+        <location filename="../src/playlist.cpp" line="933"/>
         <source>Add to PlayList&amp;2</source>
         <translation>Zur Abspielliste&amp;2 hinzufügen</translation>
     </message>
     <message>
-        <location filename="../src/playlist.cpp" line="983"/>
+        <location filename="../src/playlist.cpp" line="937"/>
         <source>&amp;Load</source>
         <translation>&amp;Laden</translation>
     </message>
     <message>
-        <location filename="../src/playlist.cpp" line="986"/>
+        <location filename="../src/playlist.cpp" line="940"/>
         <source>Load as &amp;Next</source>
         <translation>Als &amp;Nächstes laden</translation>
     </message>
     <message>
-        <location filename="../src/playlist.cpp" line="989"/>
+        <location filename="../src/playlist.cpp" line="943"/>
         <source>&amp;Prelisten Track</source>
         <translation>Titel vorhören</translation>
     </message>
     <message>
-        <location filename="../src/playlist.cpp" line="991"/>
+        <location filename="../src/playlist.cpp" line="945"/>
         <source>&amp;View Tag Information...</source>
         <translation>Zeige Titel Info</translation>
     </message>
     <message>
-        <location filename="../src/playlist.cpp" line="994"/>
+        <location filename="../src/playlist.cpp" line="948"/>
         <source>&amp;Search for: &apos;%1&apos;</source>
         <translation>&amp;Suche: &apos;%1&apos;</translation>
     </message>
     <message>
-        <location filename="../src/playlist.cpp" line="998"/>
+        <location filename="../src/playlist.cpp" line="952"/>
         <source>&amp;Remove Selected</source>
         <translation>&amp;Entferne markierte</translation>
     </message>
     <message>
-        <location filename="../src/playlist.cpp" line="1061"/>
+        <location filename="../src/playlist.cpp" line="1009"/>
         <source>Location</source>
         <translation>Adresse</translation>
     </message>
     <message>
-        <location filename="../src/playlist.cpp" line="1064"/>
+        <location filename="../src/playlist.cpp" line="1012"/>
         <source>Meta Information</source>
         <translation>Meta Informationen</translation>
+    </message>
+</context>
+<context>
+    <name>PlaylistBrowser</name>
+    <message>
+        <location filename="../src/playlistbrowser.cpp" line="104"/>
+        <source>Top Tracks</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/playlistbrowser.cpp" line="106"/>
+        <source>Most played tracks</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/playlistbrowser.cpp" line="117"/>
+        <source>Last Tracks</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/playlistbrowser.cpp" line="119"/>
+        <source>Recently played tracks</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
+    <name>PlaylistWidget</name>
+    <message>
+        <location filename="../src/playlistwidget.ui" line="14"/>
+        <source>Frame</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/playlistwidget.ui" line="93"/>
+        <source>Click here to show the content of this list</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/playlistwidget.ui" line="96"/>
+        <source>&lt;!DOCTYPE HTML PUBLIC &quot;-//W3C//DTD HTML 4.0//EN&quot; &quot;http://www.w3.org/TR/REC-html40/strict.dtd&quot;&gt;
+&lt;html&gt;&lt;head&gt;&lt;meta name=&quot;qrichtext&quot; content=&quot;1&quot; /&gt;&lt;style type=&quot;text/css&quot;&gt;
+p, li { white-space: pre-wrap; }
+&lt;/style&gt;&lt;/head&gt;&lt;body style=&quot; font-family:&apos;MS Shell Dlg 2&apos;; font-size:8.25pt; font-weight:400; font-style:normal;&quot;&gt;
+&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;a href=&quot;charts&quot;&gt;&lt;span style=&quot; font-size:8pt; text-decoration: underline; color:#d0fff8;&quot;&gt;Most Played&lt;/span&gt;&lt;/a&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/playlistwidget.ui" line="107"/>
+        <source>TextLabel</source>
+        <translation type="unfinished">TextLabel</translation>
+    </message>
+    <message>
+        <location filename="../src/playlistwidget.ui" line="140"/>
+        <source>Load all songs directly into the playlists</source>
+        <translation type="unfinished"></translation>
     </message>
 </context>
 <context>
@@ -611,6 +687,15 @@ p, li { white-space: pre-wrap; }
     <message>
         <source>Select folders for music collection</source>
         <translation type="obsolete">Wählen Sie die Ordner für Ihre Musik Sammlung</translation>
+    </message>
+    <message>
+        <location filename="../src/playlistitem.cpp" line="49"/>
+        <location filename="../src/playlistitem.cpp" line="50"/>
+        <location filename="../src/playlistitem.cpp" line="62"/>
+        <location filename="../src/playlistitem.cpp" line="99"/>
+        <location filename="../src/playlistitem.cpp" line="112"/>
+        <source>Unknown</source>
+        <translation type="unfinished"></translation>
     </message>
 </context>
 <context>
@@ -701,32 +786,47 @@ p, li { white-space: pre-wrap; }
         <translation>Stille am Ende ignorieren</translation>
     </message>
     <message>
-        <location filename="../src/settingsdialog.ui" line="361"/>
+        <location filename="../src/settingsdialog.ui" line="364"/>
         <source>Scan for new files and update the music collection</source>
         <translation>Nach neuen Dateien suchen und zur Sammlung hinzufügen</translation>
     </message>
     <message>
-        <location filename="../src/settingsdialog.ui" line="364"/>
+        <location filename="../src/settingsdialog.ui" line="367"/>
         <source>Watch folders for changes</source>
         <translation>Veränderungen überwachen</translation>
     </message>
     <message>
-        <location filename="../src/settingsdialog.ui" line="380"/>
+        <location filename="../src/settingsdialog.ui" line="389"/>
         <source>Scan Now</source>
         <translation>Jetzt durchsuchen</translation>
     </message>
     <message>
-        <location filename="../src/settingsdialog.ui" line="402"/>
+        <location filename="../src/settingsdialog.ui" line="396"/>
+        <source>Scan folders for songs</source>
+        <translation type="unfinished">Verzeichnisse nach Liedern durchsuchen</translation>
+    </message>
+    <message>
+        <location filename="../src/settingsdialog.ui" line="403"/>
+        <source>Play Counter Statistics</source>
+        <translation type="unfinished">Zähler für gespielte Titel zurücksetzen</translation>
+    </message>
+    <message>
+        <location filename="../src/settingsdialog.ui" line="410"/>
+        <source>Reset</source>
+        <translation type="unfinished">Zurücksetzen</translation>
+    </message>
+    <message>
+        <location filename="../src/settingsdialog.ui" line="432"/>
         <source>Monitor Player</source>
         <translation>Monitor Player</translation>
     </message>
     <message>
-        <location filename="../src/settingsdialog.ui" line="427"/>
+        <location filename="../src/settingsdialog.ui" line="457"/>
         <source>AutoDJ settings</source>
         <translation>AutoDJ Einstellungen</translation>
     </message>
     <message>
-        <location filename="../src/settingsdialog.ui" line="469"/>
+        <location filename="../src/settingsdialog.ui" line="499"/>
         <source>Minimum tracks within each playlist </source>
         <translation>Mindestanzahl Songs pro Plalist</translation>
     </message>
@@ -735,37 +835,37 @@ p, li { white-space: pre-wrap; }
         <translation type="obsolete">Mindestanzahl Titel</translation>
     </message>
     <message>
-        <location filename="../src/settingsdialog.ui" line="495"/>
+        <location filename="../src/settingsdialog.ui" line="525"/>
         <source>DJ Count</source>
         <translation>Anzahl DJs</translation>
     </message>
     <message>
-        <location filename="../src/settingsdialog.ui" line="527"/>
+        <location filename="../src/settingsdialog.ui" line="557"/>
         <source>DJ Names</source>
         <translation>DJ Namen</translation>
     </message>
     <message>
-        <location filename="../src/settingsdialog.ui" line="540"/>
+        <location filename="../src/settingsdialog.ui" line="570"/>
         <source>Filter Count</source>
         <translation>Anzahl Filter</translation>
     </message>
     <message>
-        <location filename="../src/settingsdialog.ui" line="571"/>
+        <location filename="../src/settingsdialog.ui" line="601"/>
         <source>Auto Remove Played Tracks</source>
         <translation>Gespielte Titel automatisch entfernen</translation>
     </message>
     <message>
-        <location filename="../src/settingsdialog.ui" line="584"/>
+        <location filename="../src/settingsdialog.ui" line="614"/>
         <source>Playlist Settings</source>
         <translation>Einstellungen Abspielliste</translation>
     </message>
     <message>
-        <location filename="../src/settingsdialog.ui" line="609"/>
+        <location filename="../src/settingsdialog.ui" line="639"/>
         <source>Browser Root</source>
         <translation>Verzeichnis Start</translation>
     </message>
     <message>
-        <location filename="../src/settingsdialog.ui" line="622"/>
+        <location filename="../src/settingsdialog.ui" line="652"/>
         <source>...</source>
         <translation>...</translation>
     </message>
