@@ -325,7 +325,7 @@ void Knowthelist::loadStartSettings()
     }
 
     //AutoFade, AGC ...
-    ui->toggleAutoFade->setChecked(settings.value("checkAutoFade",false).toBool());
+    ui->toggleAutoFade->setChecked(settings.value("checkAutoFade",true).toBool());
     ui->toggleAGC->setChecked(settings.value("checkAGC",true).toBool());
 
     //EQ values
