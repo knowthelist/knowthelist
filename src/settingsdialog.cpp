@@ -76,6 +76,11 @@ SettingsDialog::SettingsDialog(QWidget * parent)
     item->setTextAlignment(Qt::AlignCenter);
         item->setFlags(Qt::ItemIsSelectable|Qt::ItemIsEnabled);
 
+    item = p->ui.settingsGroupsTable->item(6, 0);
+    item->setIcon(QIcon(":settings.png"));
+    item->setTextAlignment(Qt::AlignCenter);
+        item->setFlags(Qt::ItemIsSelectable|Qt::ItemIsEnabled);
+
 	int w = p->ui.settingsGroupsTable->width();
 	p->ui.settingsGroupsTable->setColumnWidth(0, w);
 
@@ -134,6 +139,9 @@ void SettingsDialog::accept()
     QSettings settings;
     settings.setValue("MonitorOutputDevice",p->ui.monitorOutputDevice->currentText());
 
+    //Common
+    settings.setValue("language",p->ui.comboLanguage->currentIndex());
+
     //save fade slider
     settings.setValue("faderTimeSlider",p->ui.faderTimeSlider->value());
     settings.setValue("faderEndSlider",p->ui.faderEndSlider->value());
@@ -181,6 +189,9 @@ bool SettingsDialog::loadSettings()
 
     int index = p->ui.monitorOutputDevice->findText(settings.value("MonitorOutputDevice").toString());
     p->ui.monitorOutputDevice->setCurrentIndex(index);
+
+    //Common
+    p->ui.comboLanguage->setCurrentIndex( settings.value("language",0 ).toInt());
 
     //fade slider
     p->ui.faderTimeSlider->setValue(settings.value("faderTimeSlider","12").toInt());
