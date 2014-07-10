@@ -35,6 +35,7 @@ public:
     int minCount();
     void setMinCount(int value);
     void setCurrentDj(Dj*);
+    Track* getRandomTrack();
     Dj* currentDj();
 
 Q_SIGNALS:
@@ -54,7 +55,7 @@ private:
     class DjSessionPrivate *p;
     void searchTracks();
 
-    Track* getRandomTrack();
+
 
 };
 

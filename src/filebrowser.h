@@ -35,8 +35,7 @@ protected:
 
 
 private:
-    struct Private;
-    Private * p;
+    struct FileBrowserPrivate* p;
 
 };
 

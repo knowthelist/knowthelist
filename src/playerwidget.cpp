@@ -189,10 +189,10 @@ void PlayerWidget::analyseFinished()
     if (trackanalyser->gainDB()!=TrackAnalyser::GAIN_INVALID){
         Q_EMIT gainChanged(trackanalyser->gainFactor());
     }
-
-    setPositionMarkers();
-    updateTimeAndPositionDisplay();
-
+    if ( m_CurrentTrack ){
+        setPositionMarkers();
+        updateTimeAndPositionDisplay();
+    }
 }
 
 void PlayerWidget::timerLevel_timeOut()
@@ -284,11 +284,11 @@ void PlayerWidget::loadTrack( Track *track)
 
     }
     else {
-        if (player->lastError!="")
-            ui->lblTitle->setText( player->lastError );
-        else
-            ui->lblTitle->setText( "no track" );
-      //ToDo: doesn't work - avoid new override afterwards
+      if (player->lastError!="")
+          ui->lblTitle->setText( player->lastError );
+      else
+          ui->lblTitle->setText( "no track" );
+
       ui->lblTime->setText("-:-");
       ui->lblTimeMs->setText(".-");
       ui->lblTimeRemain->setText("-:-");
@@ -299,6 +299,7 @@ void PlayerWidget::loadTrack( Track *track)
     remainCueTime=0;
     ui->sliPosition->setValue( 0 );
     ui->txtCue->setText("?");
+    ui->butCue->setChecked(false);
 
 }
 

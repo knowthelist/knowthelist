@@ -765,13 +765,9 @@ void Knowthelist::Track_selectionChanged(  PlaylistItem *item )
 
         ui->lblMonitorTrack->setText( item->track()->prettyTitle(40) );
         wantSeek=false;
-        //QPixmap pix = QPixmap::fromImage(item->track()->coverImage());
-                //if (!pix.isNull())
-        //        ui->pixmapLabel->setPixmap(pix);
 
         if ( monitorPlayer ) {
              on_cmdMonitorStop_clicked();
-         //monitorPlayer->loadTrack( item->track()->url() );
          monitorPlayer->open(item->track()->url() );
          QPixmap pix = QPixmap::fromImage(item->track()->coverImage());
                  if (!pix.isNull())
@@ -783,7 +779,6 @@ void Knowthelist::Track_selectionChanged(  PlaylistItem *item )
     else{
         ui->lblMonitorTrack->setText("");
         ui->pixMonitorCover->setPixmap(QPixmap());
-        //monitorPlayer->loadTrack(QUrl());
     }
 
 }
@@ -987,6 +982,13 @@ void Knowthelist::on_toggleAutoDJ_toggled(bool checked)
 {
     if ( checked ) {
         //AutoDJ on
+
+        //For an empty list
+        if ( playList1->isEmpty() )
+            playList1->addCurrentTrack(djSession->getRandomTrack());
+
+        if ( playList2->isEmpty() )
+            playList2->addCurrentTrack(djSession->getRandomTrack());
 
         //Fill both playlists
         djSession->fillPlaylists();

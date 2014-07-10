@@ -47,7 +47,7 @@ Playlist::Playlist(QWidget* parent)
     , m_isPlaying(false)
     , m_isInternDrop(false)
     , m_dragLocked(false)
-    , m_currentIndex(-1)
+    , isChangeSignalEnabled(true)
 {
 
     setSortingEnabled(false);
@@ -207,6 +207,7 @@ void Playlist::appendList( const QList<QUrl> urls, PlaylistItem* after )
          // none
            }
    }
+   checkCurrentItem();
 }
 
 void Playlist::changeTracks( const QList<Track*> tracks )
@@ -226,6 +227,7 @@ void Playlist::appendTracks( QList<Track*> tracks, PlaylistItem* after )
         addTrack(new Track(*track),after);
         after = this->newTrack();
     }
+    checkCurrentItem();
 }
 
 void Playlist::setPlaylistMode(Mode newMode)
@@ -278,20 +280,21 @@ void Playlist::setPlaylistMode(Mode newMode)
   handleChanges();
 }
 
+void Playlist::checkCurrentItem()
+{
+    if ( autoClearOn && newPlaylistItem == firstChild() )
+        setCurrentPlaylistItem(newPlaylistItem);
+    if ( !currentPlaylistItem )
+        setCurrentPlaylistItem(firstChild());
+
+    handleChanges();
+}
+
 /** handle changes after remove or adding tracks to play list */
 void Playlist::handleChanges()
 {
     if ( m_PlaylistMode==Playlist::Tracklist)
         return;
-
-//    if ( autoClearOn ){
-
-//        if ( currentPlaylistItem != firstChild() ){
-
-//            currentPlaylistItem = firstChild();
-
-//        }
-//    }
 
       if ( itemBelow(currentPlaylistItem) ) {
             nextPlaylistItem = (PlaylistItem*)itemBelow(currentPlaylistItem);
@@ -306,8 +309,9 @@ void Playlist::handleChanges()
     Q_EMIT countChanged(allTracks());
 
     fillNoColumn();
-}
 
+    isChangeSignalEnabled = true;
+}
 
 void Playlist::setCurrentPlaylistItem( PlaylistItem* item )
 {
@@ -638,7 +642,7 @@ void Playlist::slotItemChanged( QTreeWidgetItem * current, QTreeWidgetItem * pre
 
     PlaylistItem* item = static_cast<PlaylistItem*>(current);
 
-    if (item)
+    if (item && isChangeSignalEnabled )
         emit trackChanged(item);
 }
 
@@ -650,6 +654,8 @@ void Playlist::slotItemDoubleClicked( QTreeWidgetItem *item, int column )
 
 void Playlist::slotItemClicked(QTreeWidgetItem *after,int col)
 {
+    isChangeSignalEnabled = true;
+
     PlaylistItem* item = static_cast<PlaylistItem*>(after);
 
     if (item)
@@ -731,8 +737,10 @@ void Playlist::performDrag()
              qDebug() << __PRETTY_FUNCTION__ <<": send Data:"<<item->track()->url();
              QStringList tag = item->track()->tagList();
              tags << tag;
-             if (i==0)
+             if (i==0){
                  cover=QPixmap::fromImage( item->track()->coverImage());
+                 emit trackClicked( item );
+             }
              i++;
 
          }
@@ -754,6 +762,7 @@ void Playlist::performDrag()
     if (drag->exec(Qt::CopyAction | Qt::MoveAction, Qt::CopyAction) == Qt::MoveAction){
         if ( m_PlaylistMode != Playlist::Tracklist ) {
             //ToDo: before remove, give over current or next Track to newTrack, if within the same playlist
+            isChangeSignalEnabled = false;
             removeSelectedItems();
         }
     }
@@ -781,11 +790,6 @@ void Playlist::dropEvent(QDropEvent *event)
             QList<QUrl> urlList = event->mimeData()->urls(); // returns list of QUrls
             event->accept();
             appendList(urlList,m_marker);
-            if ( autoClearOn && newPlaylistItem == firstChild() ){
-                setCurrentPlaylistItem(newPlaylistItem);
-                handleChanges();
-            }
-
      }
     else if (event->mimeData()->hasFormat("text/playlistitem")) {
 
@@ -800,12 +804,9 @@ void Playlist::dropEvent(QDropEvent *event)
         foreach ( QStringList tag, tags) {
             qDebug() << __PRETTY_FUNCTION__ <<": is playlistitem; tags:"<<tags;
             addTrack(new Track(tag),m_marker);
-            if ( autoClearOn && newPlaylistItem == firstChild() ){
-                setCurrentPlaylistItem(newPlaylistItem);
-                handleChanges();
-            }
             m_marker = this->newTrack();
         }
+        checkCurrentItem();
 
         event->setDropAction(Qt::MoveAction);
         event->accept();

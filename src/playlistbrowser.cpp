@@ -64,6 +64,7 @@ PlaylistBrowser::PlaylistBrowser(QWidget *parent) :
     headWidget->setLayout(headWidgetLayout);
 
     p->listPlaylists = new QListWidget();
+    p->listPlaylists->setAttribute(Qt::WA_MacShowFocusRect, false);
 
     p->database  = new CollectionDB();
     p->database->executeSql( "PRAGMA synchronous = OFF;" );

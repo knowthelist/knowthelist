@@ -19,7 +19,7 @@
 #include <Qt>
 #include <QtGui>
 
-struct FileBrowser::Private
+struct FileBrowserPrivate
 {
         QVBoxLayout *layout;
         QTreeView *filetree;
@@ -28,7 +28,7 @@ struct FileBrowser::Private
 
 FileBrowser::FileBrowser(QWidget *parent) :
     QWidget(parent)
-  , p( new Private )
+  , p( new FileBrowserPrivate )
 {
      p->layout = new QVBoxLayout;
 
@@ -42,12 +42,11 @@ FileBrowser::FileBrowser(QWidget *parent) :
       p->filetree->setSelectionMode(QAbstractItemView::ContiguousSelection);
       p->filetree->header()->resizeSection(0,400);
       p->filetree->setRootIndex(p->model->index(QDesktopServices::storageLocation(QDesktopServices::MusicLocation)));
-
+      p->filetree->setAttribute(Qt::WA_MacShowFocusRect, false);
       p->layout->addWidget(p->filetree);
 
       setLayout(p->layout);
       setAttribute(Qt::WA_MacShowFocusRect, false);
-
 }
 
 void FileBrowser::setRootPath(QString path){

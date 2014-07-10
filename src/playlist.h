@@ -123,6 +123,7 @@ class Playlist: public QTreeWidget
           void setCurrentPlaylistItem( PlaylistItem* );
           void setNextPlaylistItem( PlaylistItem* );
           void removePlaylistItem( PlaylistItem* );
+          void checkCurrentItem();
 
           void updateNextPlaylistItem();
           void updateCurrentPlaylistItem();
@@ -131,7 +132,6 @@ class Playlist: public QTreeWidget
       int  m_recursionCount;
       int mDropVisualizerWidth;
       int m_alternateMax;
-      int m_currentIndex;
       void fillNoColumn();
       void performDrag();
       QTimer *timer;
@@ -144,6 +144,7 @@ class Playlist: public QTreeWidget
     bool m_isPlaying;
     bool m_isCurrentList;
     bool m_isInternDrop;
+    bool isChangeSignalEnabled;
 
     bool autoClearOn;
 
