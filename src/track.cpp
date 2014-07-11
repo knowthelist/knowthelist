@@ -62,11 +62,17 @@ struct TrackPrivate
     int target;
 };
 
-Track::Track( )
+Track::Track()
    :p(new TrackPrivate)
 {
+    p->counter=-1;
 }
- 
+
+Track::~Track()
+{
+    delete p;
+}
+
 Track::Track( const QUrl &u )
     :p(new TrackPrivate)
 {
@@ -140,11 +146,13 @@ void Track::readTags()
 
 bool  Track::operator==(Track *track) {
 
+    if (!isValid())
+        return false;
     return p->artist == track->artist()
             && p->title == track->title();
 }
 
-bool Track::containIn( QList< Track * > list )
+bool Track::containIn( QList<Track*> list )
 {
    foreach( Track* i, list ) {
       if( *i == this ){
@@ -296,7 +304,7 @@ QString Track::prettyTime( int seconds, bool showHours )
 
 bool Track::isValid()
 {
-    if ( p->url.isEmpty() || !p->url.isValid()  )
+    if ( p->url.isEmpty() || !p->url.isValid() )
         return false;
 
     if (p->url.toString().contains(".mp3",Qt::CaseInsensitive)

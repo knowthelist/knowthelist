@@ -93,6 +93,7 @@ void Player::newpad (GstElement *decodebin,
 Player::Player(QWidget *parent) :
         QWidget(parent),
     pipeline(0), bus(0), Gstart(0), Glength(0)
+  ,m_position(0)
     , p( new Private )
 {
     p->isStarted=false;
@@ -254,6 +255,7 @@ void Player::asyncOpen(QUrl url)
     p->mutex.lock();
     QString filename = url.toLocalFile().toUtf8();
     m_length = 0;
+    m_position = 0;
     p->isLoaded=false;
     p->error="";
     lastError="";

@@ -29,7 +29,7 @@ struct DjSessionPrivate
         CollectionDB* database;
         QList<Track*> playList1_Tracks;
         QList<Track*> playList2_Tracks;
-        QList<Track*> seenTracks;
+        QStringList seenUrls;
 };
 
 DjSession::DjSession()
@@ -117,12 +117,13 @@ void DjSession::searchTracks()
   */
 Track* DjSession::getRandomTrack()
 {
-    Track* track;
+    Track* track=0;
     int i=0;
     Filter* f = p->currentDj->requestFilter();
     int maxCount=0;
 
     do {
+
         track = new Track( p->database->getRandomEntry(f->path(),f->genre(),f->artist()) );
 
         if (maxCount==0)
@@ -132,7 +133,7 @@ Track* DjSession::getRandomTrack()
     while ((track->prettyLength()=="?"
            || track->containIn( p->playList1_Tracks )
            || track->containIn( p->playList2_Tracks )
-           || track->containIn( p->seenTracks ))
+           || p->seenUrls.contains(track->url().toString()) )
            && i<maxCount*3);
     if (i>=maxCount*3)
         qDebug() << __PRETTY_FUNCTION__ << " no new track found.";
@@ -141,7 +142,8 @@ Track* DjSession::getRandomTrack()
 
     f->setCount(maxCount);
     f->setLength(p->database->lastLengthSum());
-    p->seenTracks.append(track);
+    p->seenUrls.append(track->url().toString());
+    p->seenUrls.removeDuplicates();
     return track;
 }
 

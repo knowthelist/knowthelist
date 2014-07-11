@@ -39,14 +39,15 @@ public:
     Track( const QUrl &u);
     Track( const QStringList& list );
     Track( const PlaylistItem *item );
+    ~Track();
 
     static QStringList tagNameList;
     
     QImage coverImage();
     QImage defaultImage();
 
-    bool operator==(Track * track);
-    bool containIn( QList< Track * > list );
+    bool operator==(Track* track);
+    bool containIn(QList<Track*> list );
 
     QUrl   url();
     QString title();
