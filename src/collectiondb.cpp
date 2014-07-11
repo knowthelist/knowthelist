@@ -107,14 +107,12 @@ CollectionDB::escapeString( QString string )
 
 void CollectionDB::setFilterString( QString string )
 {
-
-    if ( string != "" ) {
-      string = escapeString( string );
-      p->quickFilter = " AND ( artist.name LIKE '%" + string + "%' OR "
-                    + "album.name LIKE '%" + string + "%' OR "
-                    + "tags.title LIKE '%" + string + "%' OR "
-                    + "lower(tags.url) LIKE '%" + string + "%' )";
-    }
+    string = escapeString( string );
+    p->quickFilter = QString( " AND ( artist.name LIKE '%%1%' OR "
+                        "album.name LIKE '%%1%' OR "
+                        "tags.title LIKE '%%1%' OR "
+                        "lower(tags.url) LIKE '%%1%' )")
+                        .arg(string);
     p->filterString = string;
 }
 
