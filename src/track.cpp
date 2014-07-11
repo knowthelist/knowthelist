@@ -296,6 +296,9 @@ QString Track::prettyTime( int seconds, bool showHours )
 
 bool Track::isValid()
 {
+    if ( p->url.isEmpty() || !p->url.isValid()  )
+        return false;
+
     if (p->url.toString().contains(".mp3",Qt::CaseInsensitive)
             || p->url.toString().contains(".ogg",Qt::CaseInsensitive)
             || p->url.toString().contains(".wav",Qt::CaseInsensitive)
