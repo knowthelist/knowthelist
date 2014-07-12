@@ -596,7 +596,7 @@ void Playlist::removeSelectedItems()
             removePlaylistItem( item );
     }
 
-    handleChanges();
+    checkCurrentItem();
 }
 
 void Playlist::fillNoColumn()
