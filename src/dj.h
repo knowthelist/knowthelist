@@ -29,13 +29,19 @@ public:
     QList<Filter*> filters();
     Filter* requestFilter();
     QString name;
+    QString description();
+    void setDescription(QString);
+    int countTracks();
+    void setCountTracks(int);
+    int lengthTracks();
+    void setLengthTracks(int);
     void addFilter(Filter* filter);
     void setActiveFilterIdx(int idx);
     int activeFilterIdx();
 
 Q_SIGNALS:
    void filterChanged(Filter*);
-   void countChanged(Filter*);
+   void countChanged();
 
   private  Q_SLOTS:
     void on_filter_activated();
@@ -48,8 +54,7 @@ protected:
 
 
 private:
-    struct Private;
-    Private * p;
+    struct DjPrivate* p;
 
 };
 

@@ -21,18 +21,18 @@
 #include <qwaitcondition.h>
 #include <qmutex.h>
 
-struct Dj::Private
+struct DjPrivate
 {
         int rotation;
         QList<Filter*> filters;
-        //QWaitCondition wc;
-        //QMutex mutex;
         Filter* filter;
-
+        long countTracks;
+        long lengthTracks;
+        QString description;
 };
 
 Dj::Dj()
-    :p(new Private)
+    :p(new DjPrivate)
 {
     p->rotation=0;
     p->filter=0;
@@ -50,8 +50,8 @@ void Dj::addFilter(Filter* filter)
             this,SLOT(on_filter_activated()));
     connect(filter,SIGNAL(filterChanged()),
             this,SLOT(on_filter_filterChanged()));
-    connect(filter,SIGNAL(countChanged()),
-            this,SLOT(on_filter_countChanged()));
+//    connect(filter,SIGNAL(countChanged()),
+//            this,SLOT(on_filter_countChanged()));
     connect(filter,SIGNAL(maxUsageChanged()),
             this,SLOT(on_filter_maxUsageChanged()));
 }
@@ -84,8 +84,8 @@ void Dj::on_filter_filterChanged()
 void Dj::on_filter_countChanged()
 {
     //qDebug() << __PRETTY_FUNCTION__ ;
-    Filter* f = qobject_cast<Filter*>(QObject::sender());
-    Q_EMIT countChanged(f);
+    //Filter* f = qobject_cast<Filter*>(QObject::sender());
+    //Q_EMIT countChanged();
 }
 
 void Dj::on_filter_activated()
@@ -164,3 +164,33 @@ Filter* Dj::requestFilter()
     return p->filter;
 }
 
+QString Dj::description()
+{
+    return p->description;
+}
+
+void Dj::setDescription(QString value)
+{
+    p->description = value;
+}
+
+int Dj::countTracks()
+{
+    return p->countTracks;
+}
+
+void Dj::setCountTracks(int value)
+{
+    p->countTracks = value;
+    Q_EMIT countChanged();
+}
+
+int Dj::lengthTracks()
+{
+    return p->lengthTracks;
+}
+
+void Dj::setLengthTracks(int value)
+{
+    p->lengthTracks = value;
+}

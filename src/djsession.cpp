@@ -191,6 +191,7 @@ void DjSession::on_dj_filterChanged(Filter* f)
     int cnt = p->database->getCount(f->path(),f->genre(),f->artist());
     f->setLength(p->database->lastLengthSum());
     f->setCount(cnt);
+    summariseCount();
 }
 
 void DjSession::onResetStats()
@@ -223,5 +224,28 @@ int DjSession::minCount()
 void DjSession::setMinCount(int value)
 {
     p->minCount=value;
+}
+
+void DjSession::summariseCount()
+{
+    QString res;
+    QStringList genres;
+    QStringList paths;
+    QStringList artists;
+    int filterCount = p->currentDj->filters().count();
+    for (int i=0;i<filterCount;i++)
+    {
+        Filter* f=p->currentDj->filters().at(i);
+            qDebug() << __PRETTY_FUNCTION__ << " countOfFilter= "<<f->count();
+        res+=f->description();
+        genres.append(f->genre());
+        paths.append(f->path());
+        artists.append(f->artist());
+    }
+    QPair<int,int> counts = p->database->getCount(paths,genres,artists);
+    p->currentDj->setLengthTracks( counts.second );
+    p->currentDj->setDescription(res);
+    p->currentDj->setCountTracks( counts.first );
+
 }
 

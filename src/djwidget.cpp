@@ -20,7 +20,7 @@
 #include <qdebug.h>
 #include <QSettings>;
 
-struct DjWidget::Private
+struct DjWidgetPrivate
 {
         Dj* dj;
         bool isActive;
@@ -29,7 +29,7 @@ struct DjWidget::Private
 DjWidget::DjWidget(QWidget *parent) :
     QWidget(parent),
     ui(new Ui::DjWidget)
-   ,p(new Private)
+   ,p(new DjWidgetPrivate)
 {
     ui->setupUi(this);
 }
@@ -37,6 +37,7 @@ DjWidget::DjWidget(QWidget *parent) :
 DjWidget::~DjWidget()
 {
     delete ui;
+    delete p;
 }
 
 void DjWidget::changeEvent(QEvent *e)
@@ -56,7 +57,7 @@ void DjWidget::setDj(Dj* dj)
     qDebug() << __PRETTY_FUNCTION__ ;
     p->dj = dj;
 
-    connect(p->dj,SIGNAL(countChanged(Filter*)),this,SLOT(updateView()));
+    connect(p->dj,SIGNAL(countChanged()),this,SLOT(updateView()));
     deactivateDJ();
 
 }
@@ -89,26 +90,12 @@ void DjWidget::updateView()
 {
     // Filter description and count update
 
-    // retrieve values
-    QString res;
-    int sum = 0;
-    long length = 0;
-    int filterCount = p->dj->filters().count();
-    for (int i=0;i<filterCount;i++)
-    {
-        Filter* f=p->dj->filters().at(i);
-        res+=f->description();
-        sum+=f->count();
-        length+=f->length();
-        //qDebug() << __PRETTY_FUNCTION__ <<f->description() << ":"<<f->count()<< ":"<<f->length();
-    }
-
     // update Labels
-    ui->lblDesciption->setText(res );
-    ui->lblCount->setText(QString::number(sum) + " " + tr("tracks"));
-    ui->lblLength->setText(Track::prettyTime(length,true) + " " + tr("hours"));
-    QString strCase = (filterCount>1)?tr("cases"):tr("case");
-    ui->lblCases->setText(QString::number(filterCount) + " " + strCase);
+    ui->lblDesciption->setText( p->dj->description() );
+    ui->lblCount->setText(QString::number( p->dj->countTracks() ) + " " + tr("tracks"));
+    ui->lblLength->setText(Track::prettyTime( p->dj->lengthTracks() ,true) + " " + tr("hours"));
+    QString strCase = (p->dj->filters().count() > 1) ? tr("cases") : tr("case");
+    ui->lblCases->setText(QString::number( p->dj->filters().count() ) + " " + strCase);
 
     // active/passive look differentiation
     QString activeStyle;

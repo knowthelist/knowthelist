@@ -54,6 +54,7 @@ public slots:
 private:
     class DjSessionPrivate *p;
     void searchTracks();
+    void summariseCount();
 
 
 

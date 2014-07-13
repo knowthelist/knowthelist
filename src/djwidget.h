@@ -54,8 +54,7 @@ private slots:
 
 private:
     Ui::DjWidget *ui;
-    struct Private;
-    Private *p;
+    struct DjWidgetPrivate* p;
 };
 
 #endif // DJWIDGET_H

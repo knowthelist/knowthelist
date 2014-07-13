@@ -68,6 +68,29 @@ class CollectionDbPrivate
             return ret;
         }
 
+        QString selectionFilterForRandom(QStringList paths, QStringList genres, QStringList artists)
+        {
+            QString ret = "";
+            if ( !paths.isEmpty() ){
+              ret += "AND ( ";
+              foreach (QString path, paths)
+                    ret += " lower(tags.url) like lower('%" + path.replace( "'", "''" ) + "%') OR ";
+              ret += " 1=2) ";
+            }
+            if ( !genres.isEmpty() ){
+              ret += "AND ( ";
+              foreach (QString genre, genres)
+                  ret += " lower(genre.name) like lower('%" + genre.replace( "'", "''" ) + "%') OR ";
+              ret += " 1=2) ";
+            }
+            if ( !artists.isEmpty() ){
+              ret += "AND ( ";
+              foreach (QString artist, artists)
+                ret += " lower(artist.name) like lower('%" + artist.replace( "'", "''" ) + "%') OR ";
+              ret += " 1=2) ";
+            }
+            return ret;
+        }
 };
 
 CollectionDB::CollectionDB()
@@ -486,6 +509,22 @@ ulong CollectionDB::getCount()
     return selectSqlNumber( command );
 }
 
+QPair<int,int> CollectionDB::getCount(QStringList paths, QStringList genres, QStringList artists)
+{
+  QString command = "SELECT count(distinct tags.url), sum(tags.length)  FROM tags, artist, genre "
+                    " WHERE tags.artist = artist.id "
+                    " AND tags.artist = artist.id "
+                    " AND tags.genre = genre.id "
+                    + p->selectionFilterForRandom(paths, genres, artists) +
+                    ";";
+
+    QStringList result = selectSql(command).at(0);
+    QPair<int,int> pair;
+    pair.first = result[0].toInt();
+    pair.second = result[1].toInt();
+
+    return pair;
+}
 
 uint CollectionDB::getCount(QString path, QString genre, QString artist)
 {

@@ -55,6 +55,7 @@ class CollectionDB : public QObject
         ulong getValueID( QString name, QString value, bool autocreate = true, bool useTempTables = false );
         ulong getCount();
         uint getCount(QString path, QString genre, QString artist);
+        QPair<int,int> getCount(QStringList paths, QStringList genres, QStringList artists);
         long lastLengthSum();
         uint lastMaxCount();
 
