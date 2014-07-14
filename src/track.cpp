@@ -124,18 +124,18 @@ void Track::readTags()
         {
             TagLib::Tag *tag = fileref.tag();
 
-            p->title   = TStringToQString( tag->title() ).trimmed();
-            p->artist  = TStringToQString( tag->artist() ).trimmed();
-            p->album   = TStringToQString( tag->album() ).trimmed();
+            p->title   = !tag->title().isNull() ? TStringToQString( tag->title() ).trimmed() : QObject::tr("Unknown");
+            p->artist  = !tag->artist().isNull() ? TStringToQString( tag->artist() ).trimmed() : QObject::tr("Unknown");
+            p->album   = !tag->album().isNull() ? TStringToQString( tag->album() ).trimmed() : QObject::tr("Unknown");
             p->comment = TStringToQString( tag->comment() ).trimmed();
-            p->genre   = TStringToQString( tag->genre() ).trimmed();
+            p->genre   = !tag->genre().isNull() ? TStringToQString( tag->genre() ).trimmed() : QObject::tr("Unknown");
             p->year    = tag->year() ? QString::number( tag->year() ) : QString::null;
             p->tracknumber   = tag->track() ? QString::number( tag->track() ) : QString::null;
             p->length     = fileref.audioProperties()->length();
             p->counter = 0;
 
             //polish up empty tags
-            if( p->title.isEmpty() ) {
+            if( p->title == QObject::tr("Unknown") ) {
                 QFileInfo fileInfo(p->url.toLocalFile());
                 p->title = fileInfo.fileName().replace( '_', ' ' ).replace('.' + fileInfo.suffix(),"") ;
             }
