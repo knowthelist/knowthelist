@@ -32,6 +32,10 @@ DjWidget::DjWidget(QWidget *parent) :
    ,p(new DjWidgetPrivate)
 {
     ui->setupUi(this);
+    ui->lblDesciption->setText( QString::null );
+    ui->lblCount->setText( QString::null );
+    ui->lblLength->setText( QString::null );
+    ui->lblCases->setText( QString::null );
 }
 
 DjWidget::~DjWidget()

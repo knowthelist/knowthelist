@@ -43,6 +43,9 @@ DjFilterWidget::DjFilterWidget(QWidget *parent) :
     ui->txtGenre->setAttribute(Qt::WA_MacShowFocusRect, false);
     ui->txtArtist->setAttribute(Qt::WA_MacShowFocusRect, false);
 
+    ui->lblFilterValue->setText( QString::null );
+    ui->sliFilterValue->setValue( 0 );
+    ui->stackDisplay->setCount( 0 );
 
     ui->stackDisplay->setBarColor(QColor( 196,196,210));
 

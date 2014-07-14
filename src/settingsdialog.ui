@@ -182,7 +182,7 @@
         </sizepolicy>
        </property>
        <property name="currentIndex">
-        <number>6</number>
+        <number>5</number>
        </property>
        <widget class="QWidget" name="page">
         <widget class="QLabel" name="label">
@@ -670,7 +670,7 @@
           <rect>
            <x>10</x>
            <y>66</y>
-           <width>111</width>
+           <width>361</width>
            <height>16</height>
           </rect>
          </property>
