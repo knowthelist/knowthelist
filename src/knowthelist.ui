@@ -5948,7 +5948,7 @@ min-height: 16px;
              <property name="minimumSize">
               <size>
                <width>0</width>
-               <height>151</height>
+               <height>126</height>
               </size>
              </property>
              <property name="maximumSize">
@@ -5966,7 +5966,7 @@ min-height: 16px;
              <widget class="QVUMeter" name="monitorMeter" native="true">
               <property name="geometry">
                <rect>
-                <x>30</x>
+                <x>40</x>
                 <y>7</y>
                 <width>27</width>
                 <height>75</height>
@@ -5976,7 +5976,7 @@ min-height: 16px;
              <widget class="QSlider" name="sliMonitorVolume">
               <property name="geometry">
                <rect>
-                <x>64</x>
+                <x>5</x>
                 <y>7</y>
                 <width>31</width>
                 <height>77</height>
@@ -6825,9 +6825,9 @@ min-height: 16px;
              <widget class="QToolButton" name="cmdMonitorPlay">
               <property name="geometry">
                <rect>
-                <x>65</x>
-                <y>129</y>
-                <width>51</width>
+                <x>77</x>
+                <y>19</y>
+                <width>41</width>
                 <height>26</height>
                </rect>
               </property>
@@ -7166,9 +7166,9 @@ min-height: 16px;
              <widget class="QToolButton" name="cmdMonitorStop">
               <property name="geometry">
                <rect>
-                <x>2</x>
-                <y>129</y>
-                <width>51</width>
+                <x>77</x>
+                <y>57</y>
+                <width>41</width>
                 <height>26</height>
                </rect>
               </property>
@@ -7193,6 +7193,19 @@ min-height: 16px;
               <property name="margin">
                <number>0</number>
               </property>
+              <item>
+               <widget class="QLabel" name="lblMonitorArtist">
+                <property name="font">
+                 <font>
+                  <weight>75</weight>
+                  <bold>true</bold>
+                 </font>
+                </property>
+                <property name="text">
+                 <string/>
+                </property>
+               </widget>
+              </item>
               <item>
                <widget class="QLabel" name="lblMonitorTrack">
                 <property name="palette">
@@ -7477,8 +7490,14 @@ min-height: 16px;
                 <property name="text">
                  <string>MonitorPlayer</string>
                 </property>
+                <property name="alignment">
+                 <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
+                </property>
                 <property name="wordWrap">
                  <bool>true</bool>
+                </property>
+                <property name="margin">
+                 <number>0</number>
                 </property>
                </widget>
               </item>
@@ -7554,7 +7573,7 @@ p, li { white-space: pre-wrap; }
      <x>0</x>
      <y>0</y>
      <width>1280</width>
-     <height>27</height>
+     <height>22</height>
     </rect>
    </property>
   </widget>

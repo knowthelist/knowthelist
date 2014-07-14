@@ -221,7 +221,7 @@ QImage Track::defaultImage()
     painter.drawEllipse(QPoint(60,60),15,15);
 
     painter.setPen(QPen(QColor(60,60,60)));
-    painter.setFont(QFont("Monospace", 13, QFont::Normal));
+    painter.setFont(QFont("Monospace"));
     painter.translate(QPoint(-26,62));
     painter.rotate(-45);
     painter.drawText( img.rect(), Qt::AlignCenter , p->artist + '\n' + p->title);
@@ -248,9 +248,14 @@ QString Track::prettyTitle( QString filename ) //static
     return s;
 }
 
+QString Track::prettyArtist( int maxlen ) const
+{
+    return this->rsqueeze(p->artist,maxlen);
+}
+
 QString Track::prettyTitle( int maxlen ) const
 {
-    return this->rsqueeze(prettyTitle(),maxlen);
+    return this->rsqueeze(p->title,maxlen);
 }
 
 QString Track::rsqueeze( const QString & str, int maxlen ) const

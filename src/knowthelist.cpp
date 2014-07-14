@@ -763,7 +763,8 @@ void Knowthelist::Track_selectionChanged(  PlaylistItem *item )
 {
     if ( item ){
 
-        ui->lblMonitorTrack->setText( item->track()->prettyTitle(40) );
+        ui->lblMonitorArtist->setText( item->track()->prettyArtist(30) );
+        ui->lblMonitorTrack->setText( item->track()->prettyTitle(60) );
         wantSeek=false;
 
         if ( monitorPlayer ) {

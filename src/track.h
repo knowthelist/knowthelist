@@ -81,6 +81,7 @@ public:
 
     
     QString prettyTitle() const;
+    QString prettyArtist(int) const;
     QString prettyTitle(int) const;
 
     static QString prettyLength( int );
