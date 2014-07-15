@@ -232,8 +232,9 @@ QImage Track::defaultImage()
 QString Track::prettyTitle() const
 {
 
-    QString s = p->artist;
-    if( !s.isEmpty() ) s += " - ";
+    QString s = QString::null;
+    if( p->artist != QObject::tr("Unknown") )
+        s += p->artist + " - ";
     s += p->title;
 
     return s;

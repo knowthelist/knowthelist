@@ -105,8 +105,11 @@ void DjSession::searchTracks()
     // new tracks available, trigger fill up of playlists
     qDebug() << __PRETTY_FUNCTION__ << " provide "<<tracks1.count()<<" tracks left and "<<tracks2.count()<<" tracks right ";
 
-    emit foundTracks_Playlist1(tracks1);
-    emit foundTracks_Playlist2(tracks2);
+    // emit if needed
+    if ( tracks1.count() > 0 )
+        emit foundTracks_Playlist1(tracks1);
+    if ( tracks2.count() > 0 )
+        emit foundTracks_Playlist2(tracks2);
 
     p->mutex1.unlock();
 }
@@ -181,8 +184,12 @@ void DjSession::forceTracks(QList<Track*> tracks)
     // new tracks available, trigger fill up of playlists
     qDebug() << __PRETTY_FUNCTION__ << " provide "<<tracks1.count()<<" tracks left and "<<tracks2.count()<<" tracks right ";
 
-    emit foundTracks_Playlist1(tracks1);
-    emit foundTracks_Playlist2(tracks2);
+    // emit if needed
+    if ( tracks1.count() > 0 )
+        emit foundTracks_Playlist1(tracks1);
+    if ( tracks2.count() > 0 )
+        emit foundTracks_Playlist2(tracks2);
+
 }
 
 void DjSession::on_dj_filterChanged(Filter* f)
