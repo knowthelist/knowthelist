@@ -116,15 +116,17 @@ void PlayerWidget::setEqualizer(EqBand band, int value)
 
 void PlayerWidget::setPositionMarkers()
 {
-    if (m_skipSilentEnd){
-        qDebug() << __PRETTY_FUNCTION__ <<"endPosition:"<<trackanalyser->endPosition();
-        qDebug() << __PRETTY_FUNCTION__ <<"length:"<<trackanalyser->length();
-        remainCueTime=trackanalyser->endPosition().msecsTo(trackanalyser->length());
-    }
-    else
-        remainCueTime = 0;
+    if ( trackanalyser->finished()) {
+        if (m_skipSilentEnd){
+            qDebug() << __PRETTY_FUNCTION__ <<"endPosition:"<<trackanalyser->endPosition();
+            qDebug() << __PRETTY_FUNCTION__ <<"length:"<<trackanalyser->length();
+            remainCueTime=trackanalyser->endPosition().msecsTo(trackanalyser->length());
+        }
+        else
+            remainCueTime = 0;
 
-    ui->txtCue->setText("-" + QString::number(remainCueTime/1000));
+        ui->txtCue->setText("-" + QString::number(remainCueTime/1000));
+    }
 
     if ( !m_isStarted && m_skipSilentBegin && trackanalyser->finished()) {
         player->setPosition(trackanalyser->startPosition());
@@ -368,6 +370,7 @@ void PlayerWidget::updateTimeAndPositionDisplay(bool isPassive)
                 || m_isHanging )    {
         if (!p->isEndAnnounced ) {
             qDebug() << __PRETTY_FUNCTION__ <<":"<<objectName()<<" EMIT aboutFinished";
+            qDebug() << __PRETTY_FUNCTION__ <<": curpos:"<< curpos;
             qDebug() << __PRETTY_FUNCTION__ <<": remainMs:"<< remainMs;
             qDebug() << __PRETTY_FUNCTION__ <<": remainCueTime:"<< remainCueTime;
             qDebug() << __PRETTY_FUNCTION__ <<": mTrackFinishEmitTime:"<< mTrackFinishEmitTime;
