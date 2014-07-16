@@ -254,6 +254,7 @@ void Playlist::setPlaylistMode(Mode newMode)
     header()->resizeSection(PlaylistItem::Column_Tracknumber,5*percent);
     header()->resizeSection(PlaylistItem::Column_Played,5*percent);
     setSortingEnabled(true);
+    sortByColumn(PlaylistItem::Column_Played,Qt::DescendingOrder);
     m_CurrentTrackColor = Qt::white;
     m_NextTrackColor = Qt::white;
     break;
@@ -943,14 +944,17 @@ void Playlist::showContextMenu( PlaylistItem *item, int col )
     popup.addSeparator();
     popup.addAction( style()->standardPixmap(QStyle::SP_DriveCDIcon), tr( "&Prelisten Track" ),
                      this, SLOT(dummySlot()), Qt::Key_P );
-    popup.addAction( style()->standardPixmap(QStyle::SP_MessageBoxInformation), tr( "&View Tag Information..." ),
-                     this, SLOT(dummySlot()),Qt::Key_V );
     popup.addSeparator();
     popup.addAction( style()->standardPixmap(QStyle::SP_ArrowRight), tr( "&Search for: '%1'" ).arg(  item->text(col) ),
                      this, SLOT(dummySlot()),Qt::Key_S );
     popup.addSeparator();
     if (!isCurrentPlaylistItem  && m_PlaylistMode != Playlist::Tracklist )
         popup.addAction(style()->standardPixmap(QStyle::SP_TrashIcon), tr( "&Remove Selected" ), this, SLOT( removeSelectedItems() ), Qt::Key_Delete );
+    popup.addSeparator();
+    popup.addAction( style()->standardPixmap(QStyle::SP_DirOpenIcon), tr( "&Open File Location" ),
+                     this, SLOT(dummySlot()),Qt::Key_O );
+    popup.addAction( style()->standardPixmap(QStyle::SP_MessageBoxInformation), tr( "&View Tag Information" ),
+                     this, SLOT(dummySlot()),Qt::Key_V );
 
     QAction *a = popup.exec( QCursor::pos());
     if (!a)
@@ -983,6 +987,11 @@ void Playlist::showContextMenu( PlaylistItem *item, int col )
 
         case Qt::Key_V:
             showTrackInfo( item->track() );
+            break;
+
+        case Qt::Key_O:
+            if ( item->track())
+                QDesktopServices::openUrl( QUrl(QString("file://%1").arg(item->track()->dirPath())));
             break;
 
         case Qt::Key_F2:
