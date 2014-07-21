@@ -15,20 +15,25 @@ class PlaylistBrowser : public QWidget
 public:
     explicit PlaylistBrowser(QWidget *parent = 0);
     ~PlaylistBrowser();
-    void fillList();
+    QList<Track*> readFileList(QString filename);
+    QPair<int, int> readFileValues(QString filename);
     QList<Track*> selectedTracks();
     
 signals:
     void selectionStarted(QList<Track*>);
     void selectionChanged(QList<Track*>);
+    void savePlaylists(QString);
     
 public slots:
-    void loadPlaylist();
-    void playPlaylist();
+    void loadDatabaseList();
+    void loadFileList();
+    void playDatabaseList();
+    void playFileList();
     void onSelectionChanged(PlaylistWidget* item);
+    void onPushSave();
+    void updateLists();
 
 private:
-
     class PlaylistBrowsertPrivate *p;
     
 };

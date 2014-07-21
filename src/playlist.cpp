@@ -496,6 +496,8 @@ void Playlist::saveXML( const QString &path ) const
                 extElem.setAttribute("current", "1");
               if ( item == nextTrack() )
                 extElem.setAttribute("next", "1");
+              if ( item->track()->flags().testFlag(Track::isAutoDjSelection ))
+                extElem.setAttribute("isAutoDjSelection", "1");
 
             QStringList tag = item->track()->tagList();
 
@@ -569,6 +571,9 @@ void Playlist::loadXML( const QString &path )
               track->setYear( e.namedItem("extension").toElement().attribute( "year" ));
               track->setLength( e.namedItem("duration").firstChild().nodeValue());
               track->setCounter("0");
+              if ( e.namedItem("extension").toElement().attribute( "isAutoDjSelection" ) =="1" )
+                track->setFlags( track->flags() | Track::isAutoDjSelection );
+
               appendSong(track);
 
               if ( e.namedItem("extension").toElement().attribute( CURRENT ) == "1" )

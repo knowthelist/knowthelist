@@ -15,8 +15,10 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "djsession.h"
 #include <QtConcurrentRun>
+#include <QtXml>
+
+#include "djsession.h"
 #include "track.h"
 #include "dj.h"
 
@@ -30,6 +32,7 @@ struct DjSessionPrivate
         QList<Track*> playList1_Tracks;
         QList<Track*> playList2_Tracks;
         QStringList seenUrls;
+        bool isEnabledAutoDJCount;
 };
 
 DjSession::DjSession()
@@ -38,6 +41,7 @@ DjSession::DjSession()
     p->database  = new CollectionDB();
     p->minCount=10;
     p->currentDj=0;
+    p->isEnabledAutoDJCount=false;
 }
 
 DjSession::~DjSession()
@@ -147,10 +151,12 @@ Track* DjSession::getRandomTrack()
     f->setLength(p->database->lastLengthSum());
     p->seenUrls.append(track->url().toString());
     p->seenUrls.removeDuplicates();
+
+    track->setFlags(track->flags()|Track::isAutoDjSelection);
     return track;
 }
 
-void DjSession::fillPlaylists()
+void DjSession::updatePlaylists()
 {
     QFuture<void> future = QtConcurrent::run( this, &DjSession::searchTracks);
 }
@@ -168,13 +174,22 @@ void DjSession::forceTracks(QList<Track*> tracks)
     QList<Track*> tracks2;
     for (int i=0; i<tracks.count() ; i++)
     {
-        if ( count1 < count2 ){
+
+        if ( tracks.at(i)->flags().testFlag(Track::isOnFirstPlayer) ){
+                tracks1.append( tracks.at(i) );
+                count1++;
+        }
+        else if ( tracks.at(i)->flags().testFlag(Track::isOnSecondPlayer) ){
+
+                tracks2.append( tracks.at(i) );
+                count2++;
+        }
+        else if ( count1 < count2 ){
 
                 tracks1.append( tracks.at(i) );
                 count1++;
         }
         else{
-
                 tracks2.append( tracks.at(i) );
                 count2++;
         }
@@ -208,7 +223,7 @@ void DjSession::onResetStats()
 
 void DjSession::onTrackFinished(Track *track)
 {
-    if (track){
+    if (track && (p->isEnabledAutoDJCount || !track->flags().testFlag(Track::isAutoDjSelection))){
         p->database->incSongCounter(track->url().toLocalFile());
     }
 }
@@ -216,21 +231,95 @@ void DjSession::onTrackFinished(Track *track)
 void DjSession::onTracksChanged_Playlist1(QList<Track*> tracks)
 {
     p->playList1_Tracks = tracks;
+    foreach (Track* track, p->playList1_Tracks){
+        Track::Options flags = track->flags();
+        flags|=Track::isOnFirstPlayer;
+        flags^=Track::isOnSecondPlayer;
+        track->setFlags( flags );
+    }
 }
 
 void DjSession::onTracksChanged_Playlist2(QList<Track*> tracks)
 {
     p->playList2_Tracks = tracks;
+    foreach (Track* track, p->playList2_Tracks){
+        Track::Options flags = track->flags();
+        flags^=Track::isOnFirstPlayer;
+        flags|=Track::isOnSecondPlayer;
+        track->setFlags( flags );
+    }
 }
 
-int DjSession::minCount()
+void DjSession::savePlaylists( const QString &filename )
 {
-    return p->minCount;
-}
+    qDebug() << __FUNCTION__ << "BEGIN " ;
+    QFile file( filename );
 
-void DjSession::setMinCount(int value)
-{
-    p->minCount=value;
+    if( !file.open(QFile::WriteOnly) ) return;
+
+    QList<Track*> listToSave;
+    listToSave.append( p->playList1_Tracks );
+    listToSave.append( p->playList2_Tracks );
+
+    QDomDocument newdoc;
+    QDomElement playlistElem = newdoc.createElement( "playlist" );
+    playlistElem.setAttribute( "version", "1" );
+    playlistElem.setAttribute( "xmlns", "http://xspf.org/ns/0/" );
+    newdoc.appendChild( playlistElem );
+
+    QDomElement elem = newdoc.createElement( "creator" );
+    QDomText t = newdoc.createTextNode( "Knowthelist" );
+    elem.appendChild( t );
+    playlistElem.appendChild( elem );
+
+    QDomElement listElem = newdoc.createElement( "trackList" );
+
+    QList<Track*>::Iterator i = listToSave.begin();
+    while (i != listToSave.end()) {
+
+            QDomElement trackElem = newdoc.createElement("track");
+
+            QDomElement extElem = newdoc.createElement( "extension" );
+
+            if ( (*i)->flags().testFlag(Track::isAutoDjSelection ))
+              extElem.setAttribute("isAutoDjSelection", "1");
+            if ( (*i)->flags().testFlag(Track::isOnFirstPlayer ))
+              extElem.setAttribute("isOnFirstPlayer", "1");
+            if ( (*i)->flags().testFlag(Track::isOnSecondPlayer ))
+              extElem.setAttribute("isOnSecondPlayer", "1");
+
+            QStringList tag = (*i)->tagList();
+
+            for( int x = 0; x < tag.count(); ++x )
+            {
+                if (x==4 ||x==5) {
+                    extElem.setAttribute( Track::tagNameList.at(x), tag.at(x) );
+                }
+                else {
+                    QDomElement elem = newdoc.createElement( Track::tagNameList.at(x) );
+                    QDomText t = newdoc.createTextNode( tag.at(x) );
+                    elem.appendChild( t );
+                    trackElem.appendChild( elem );
+                }
+            }
+
+            trackElem.appendChild( extElem );
+            listElem.appendChild( trackElem );
+
+            i++;
+    }
+
+    playlistElem.appendChild( listElem );
+
+    QTextStream stream( &file );
+    stream.setCodec( "UTF-8" );
+    stream << "<?xml version=\"1.0\" encoding=\"utf8\"?>\n";
+    stream << newdoc.toString();
+    file.close();
+
+    Q_EMIT savedPlaylists();
+    qDebug() << __FUNCTION__<< "END "  ;
+
 }
 
 void DjSession::summariseCount()
@@ -254,5 +343,25 @@ void DjSession::summariseCount()
     p->currentDj->setDescription(res);
     p->currentDj->setCountTracks( counts.first );
 
+}
+
+bool DjSession::isEnabledAutoDJCount()
+{
+    return p->isEnabledAutoDJCount;
+}
+
+void DjSession::setIsEnabledAutoDJCount(bool value)
+{
+    p->isEnabledAutoDJCount=value;
+}
+
+int DjSession::minCount()
+{
+    return p->minCount;
+}
+
+void DjSession::setMinCount(int value)
+{
+    p->minCount=value;
 }
 

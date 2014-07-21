@@ -182,7 +182,7 @@
         </sizepolicy>
        </property>
        <property name="currentIndex">
-        <number>5</number>
+        <number>6</number>
        </property>
        <widget class="QWidget" name="page">
         <widget class="QLabel" name="label">
@@ -516,7 +516,7 @@
          <property name="geometry">
           <rect>
            <x>10</x>
-           <y>390</y>
+           <y>360</y>
            <width>42</width>
            <height>22</height>
           </rect>
@@ -528,10 +528,10 @@
         <widget class="QLabel" name="label_9">
          <property name="geometry">
           <rect>
-           <x>10</x>
-           <y>370</y>
-           <width>381</width>
-           <height>16</height>
+           <x>70</x>
+           <y>360</y>
+           <width>321</width>
+           <height>20</height>
           </rect>
          </property>
          <property name="text">
@@ -609,6 +609,19 @@
           <string>Filter Count</string>
          </property>
         </widget>
+        <widget class="QCheckBox" name="checkAutoDjCountPlayed">
+         <property name="geometry">
+          <rect>
+           <x>10</x>
+           <y>390</y>
+           <width>361</width>
+           <height>20</height>
+          </rect>
+         </property>
+         <property name="text">
+          <string>Increment play counter for AutoDj selected tracks</string>
+         </property>
+        </widget>
        </widget>
        <widget class="QWidget" name="page_5">
         <widget class="Line" name="line_2">
@@ -651,6 +664,42 @@
          </property>
          <property name="text">
           <string>Playlist Settings</string>
+         </property>
+        </widget>
+        <widget class="QLineEdit" name="txtPlaylistRoot">
+         <property name="geometry">
+          <rect>
+           <x>10</x>
+           <y>142</y>
+           <width>291</width>
+           <height>26</height>
+          </rect>
+         </property>
+        </widget>
+        <widget class="QLabel" name="label_19">
+         <property name="geometry">
+          <rect>
+           <x>10</x>
+           <y>120</y>
+           <width>361</width>
+           <height>16</height>
+          </rect>
+         </property>
+         <property name="text">
+          <string>Playlist Folder</string>
+         </property>
+        </widget>
+        <widget class="QPushButton" name="pushPlaylistRoot">
+         <property name="geometry">
+          <rect>
+           <x>310</x>
+           <y>140</y>
+           <width>50</width>
+           <height>30</height>
+          </rect>
+         </property>
+         <property name="text">
+          <string>...</string>
          </property>
         </widget>
        </widget>
@@ -829,25 +878,54 @@
     </layout>
    </item>
    <item>
-    <widget class="QDialogButtonBox" name="buttonBox">
-     <property name="sizePolicy">
-      <sizepolicy hsizetype="Maximum" vsizetype="Fixed">
-       <horstretch>0</horstretch>
-       <verstretch>0</verstretch>
-      </sizepolicy>
+    <widget class="QWidget" name="widget" native="true">
+     <property name="minimumSize">
+      <size>
+       <width>0</width>
+       <height>28</height>
+      </size>
      </property>
-     <property name="layoutDirection">
-      <enum>Qt::RightToLeft</enum>
-     </property>
-     <property name="orientation">
-      <enum>Qt::Horizontal</enum>
-     </property>
-     <property name="standardButtons">
-      <set>QDialogButtonBox::Cancel|QDialogButtonBox::Ok</set>
-     </property>
-     <property name="centerButtons">
-      <bool>false</bool>
-     </property>
+     <widget class="QPushButton" name="pushAbout">
+      <property name="geometry">
+       <rect>
+        <x>0</x>
+        <y>3</y>
+        <width>76</width>
+        <height>32</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>About</string>
+      </property>
+     </widget>
+     <widget class="QDialogButtonBox" name="buttonBox">
+      <property name="geometry">
+       <rect>
+        <x>443</x>
+        <y>-2</y>
+        <width>164</width>
+        <height>32</height>
+       </rect>
+      </property>
+      <property name="sizePolicy">
+       <sizepolicy hsizetype="Maximum" vsizetype="Fixed">
+        <horstretch>0</horstretch>
+        <verstretch>0</verstretch>
+       </sizepolicy>
+      </property>
+      <property name="layoutDirection">
+       <enum>Qt::RightToLeft</enum>
+      </property>
+      <property name="orientation">
+       <enum>Qt::Horizontal</enum>
+      </property>
+      <property name="standardButtons">
+       <set>QDialogButtonBox::Cancel|QDialogButtonBox::Ok</set>
+      </property>
+      <property name="centerButtons">
+       <bool>false</bool>
+      </property>
+     </widget>
     </widget>
    </item>
   </layout>

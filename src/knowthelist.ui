@@ -13,6 +13,10 @@
   <property name="windowTitle">
    <string>Knowthelist</string>
   </property>
+  <property name="windowIcon">
+   <iconset>
+    <normaloff>../dist/knowthelist.png</normaloff>../dist/knowthelist.png</iconset>
+  </property>
   <property name="styleSheet">
    <string notr="true">QPushButton {
  color: white; 

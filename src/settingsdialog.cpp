@@ -148,6 +148,7 @@ void SettingsDialog::accept()
 
     //Playlist settings
     settings.setValue("checkAutoRemove",p->ui.checkAutoRemove->isChecked());
+    settings.setValue("editPlaylistRoot",p->ui.txtPlaylistRoot->text());
 
     //Silent settings
     settings.setValue("checkAutoCue",p->ui.checkAutoCue->isChecked());
@@ -156,6 +157,7 @@ void SettingsDialog::accept()
     //AutoDJ
     settings.setValue("minTracks",p->ui.minTracks->value());
     settings.setValue("countDJ",p->ui.countDJ->value());
+    settings.setValue("isEnabledAutoDJCount",p->ui.checkAutoDjCountPlayed->isChecked());
     settings.beginGroup("AutoDJ");
     int maxDj=p->ui.countDJ->value();
 
@@ -201,6 +203,7 @@ bool SettingsDialog::loadSettings()
 
     //Playlist setting
     p->ui.checkAutoRemove->setChecked(settings.value("checkAutoRemove",true).toBool());
+    p->ui.txtPlaylistRoot->setText(settings.value("editPlaylistRoot","").toString());
 
     //Silent setting
     p->ui.checkSkipSilentEnd->setChecked(settings.value("checkSkipSilentEnd",true).toBool());
@@ -209,6 +212,7 @@ bool SettingsDialog::loadSettings()
     //AutoDJ
     p->ui.minTracks->setValue(settings.value("minTracks","6").toInt());
     p->ui.countDJ->setValue(settings.value("countDJ","3").toInt());
+    p->ui.checkAutoDjCountPlayed->setChecked(settings.value("isEnabledAutoDJCount",false).toBool());
 
     //CollectionFolders
     p->model->setDirsChecked(settings.value("Dirs").toStringList());
@@ -253,6 +257,25 @@ void SettingsDialog::on_pushButton_clicked()
     dialog.setFileMode(QFileDialog::DirectoryOnly);
     if (dialog.exec())
          p->ui.txtBrowserRoot->setText(dialog.selectedFiles().first());
+}
+
+void SettingsDialog::on_pushPlaylistRoot_clicked()
+{
+    QFileDialog dialog(this);
+    dialog.setFileMode(QFileDialog::DirectoryOnly);
+    if (dialog.exec())
+         p->ui.txtPlaylistRoot->setText(dialog.selectedFiles().first());
+}
+
+void SettingsDialog::on_pushAbout_clicked()
+{
+    QMessageBox::about(this->parentWidget(),tr("About Knowthelist"),
+                       tr("<h3>Knowthelist</h3>"
+                          "<br />Copyright (C) 2005-2014 Mario Stephan "
+                          "<br /><a href='mailto:mstephan@shared-files.de'>mstephan@shared-files.de</a>"
+                          "<br /><br /><a href='http://knowthelist.github.io/knowthelist'>"
+                          "http://knowthelist.github.io/knowthelist</a>"));
+
 }
 
 void SettingsDialog::onScanNow()

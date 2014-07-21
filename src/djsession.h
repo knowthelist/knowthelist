@@ -35,21 +35,25 @@ public:
     int minCount();
     void setMinCount(int value);
     void setCurrentDj(Dj*);
+    void setIsEnabledAutoDJCount(bool value);
+    bool isEnabledAutoDJCount();
     Track* getRandomTrack();
     Dj* currentDj();
 
 Q_SIGNALS:
     void foundTracks_Playlist1(QList<Track*>);
     void foundTracks_Playlist2(QList<Track*>);
+    void savedPlaylists();
 
 public slots:
-    void fillPlaylists();
+    void updatePlaylists();
     void onTracksChanged_Playlist1(QList<Track*> tracks);
     void onTracksChanged_Playlist2(QList<Track*> tracks);
     void onTrackFinished(Track *track);
     void forceTracks(QList<Track*> tracks);
     void on_dj_filterChanged(Filter* f);
     void onResetStats();
+    void savePlaylists( const QString &filename );
 
 private:
     class DjSessionPrivate *p;

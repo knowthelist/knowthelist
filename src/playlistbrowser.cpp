@@ -21,12 +21,8 @@
 #include "collectiondb.h"
 #include "track.h"
 
-#include <QTimerEvent>
-#include <QPixmap>
-#include <QDropEvent>
+#include <QtXml>
 #include <Qt>
-#include <QAction>
-#include <QMenuBar>
 
 class Track;
 
@@ -36,6 +32,7 @@ class PlaylistBrowsertPrivate
     QListWidget *listPlaylists;
     CollectionDB* database;
     QList<QStringList> selectedTags;
+    QString directory;
 
 };
 
@@ -45,22 +42,27 @@ PlaylistBrowser::PlaylistBrowser(QWidget *parent) :
 {
     p = new PlaylistBrowsertPrivate;
 
-//    QPushButton *pushRandom =new QPushButton();
-//    QPixmap pixmap2(":shuffle.png");
-//    pushRandom->setIcon(QIcon(pixmap2));
-//    pushRandom->setIconSize(QSize(32,32));
-//    pushRandom->setStyleSheet("QPushButton { border: none; padding: 0px; margin-left: 8px;max-height: 20px; margin-right: 8px;}");
-//    pushRandom->setToolTip(tr( "Random Tracks" ));
+    QPushButton *pushSave =new QPushButton();
+    pushSave->setGeometry(QRect(1,1,60,25));
+    pushSave->setMaximumWidth(60);
+    pushSave->setMinimumWidth(60);
+    pushSave->setText("+");
+
+    pushSave->setStyleSheet("QPushButton { border: none; padding-top: -3px; margin-left: 8px;max-height: 20px; margin-right: 28px;}");
+    pushSave->setToolTip(tr( "Save loaded player lists into a file" ));
+    connect( pushSave,SIGNAL(clicked()),this, SLOT(onPushSave()));
 
     QVBoxLayout *mainLayout = new QVBoxLayout;
     QWidget *headWidget = new QWidget(this);
-    headWidget->setMaximumHeight(38);
+    headWidget->setMaximumHeight(35);
+    headWidget->setMinimumHeight(25);
 
     QHBoxLayout *headWidgetLayout = new QHBoxLayout;
     headWidgetLayout->setMargin(0);
     headWidgetLayout->setSpacing(1);
+    headWidgetLayout->setAlignment(Qt::AlignRight);
 
-//    headWidgetLayout->addWidget(pushRandom);
+    headWidgetLayout->addWidget(pushSave);
     headWidget->setLayout(headWidgetLayout);
 
     p->listPlaylists = new QListWidget();
@@ -69,7 +71,7 @@ PlaylistBrowser::PlaylistBrowser(QWidget *parent) :
     p->database  = new CollectionDB();
     p->database->executeSql( "PRAGMA synchronous = OFF;" );
 
-    fillList();
+    updateLists();
 
     headWidget->raise();
     mainLayout->addWidget(headWidget);
@@ -82,7 +84,8 @@ PlaylistBrowser::PlaylistBrowser(QWidget *parent) :
     setMaximumWidth(400);
 
     // Read config values
-//    QSettings settings;
+    QSettings settings;
+    p->directory = settings.value("editPlaylistRoot","").toString();
 
     setLayout(mainLayout);
 
@@ -91,26 +94,27 @@ PlaylistBrowser::PlaylistBrowser(QWidget *parent) :
 PlaylistBrowser::~PlaylistBrowser()
 {
     QSettings settings;
-    //settings.setValue("TreeMode",p->collectiontree->treeMode);
+    //settings.setValue("",p->);
     delete p;
 }
 
-void PlaylistBrowser::fillList()
+void PlaylistBrowser::updateLists()
 {
     // Insert dynamic lists
     PlaylistWidget* list;
     QListWidgetItem* itm;
+    p->listPlaylists->clear();
 
     list = new PlaylistWidget(p->listPlaylists);
     list->setName(tr("Top Tracks"));
     list->setObjectName("TopTracks");
     list->setDescription(tr("Most played tracks"));
-    connect(list,SIGNAL(activated()),this,SLOT(loadPlaylist()));
-    connect(list,SIGNAL(started()),this,SLOT(playPlaylist()));
+    connect(list,SIGNAL(activated()),this,SLOT(loadDatabaseList()));
+    connect(list,SIGNAL(started()),this,SLOT(playDatabaseList()));
 
     itm = new QListWidgetItem(p->listPlaylists);
 
-    itm->setSizeHint(QSize(0,75));
+    itm->setSizeHint(QSize(0,70));
     p->listPlaylists->addItem(itm);
     p->listPlaylists->setItemWidget(itm,list);
 
@@ -118,31 +122,203 @@ void PlaylistBrowser::fillList()
     list->setName(tr("Last Tracks"));
     list->setObjectName("LastTracks");
     list->setDescription(tr("Recently played tracks"));
-    connect(list,SIGNAL(activated()),this,SLOT(loadPlaylist()));
-    connect(list,SIGNAL(started()),this,SLOT(playPlaylist()));
+    connect(list,SIGNAL(activated()),this,SLOT(loadDatabaseList()));
+    connect(list,SIGNAL(started()),this,SLOT(playDatabaseList()));
 
     itm = new QListWidgetItem(p->listPlaylists);
 
-    itm->setSizeHint(QSize(0,75));
+    itm->setSizeHint(QSize(0,70));
     p->listPlaylists->addItem(itm);
     p->listPlaylists->setItemWidget(itm,list);
+
+    // read saved lists
+    QDir rDir( p->directory );
+    rDir.setFilter(QDir::Files | QDir::NoDotDot | QDir::NoDot | QDir::Readable);
+    QStringList filters;
+         filters << "*.xspf";
+    rDir.setNameFilters(filters);
+    QFileInfoList filelist = rDir.entryInfoList();
+
+    Q_FOREACH (const QFileInfo fi, filelist) {
+            if ( fi.isFile() ) {
+                qDebug() << __PRETTY_FUNCTION__ << "add playlist: " << fi.fileName();
+                list = new PlaylistWidget(p->listPlaylists);
+                list->setName(fi.fileName().replace(".xspf",""));
+                list->setObjectName(fi.fileName());
+
+                QPair<int,int> count = readFileValues( p->directory+"/"+fi.fileName());
+                list->setDescription( fi.lastModified().toString("yyyy-MM-dd") + "    "
+                                      + QString::number(count.first) + " " + tr("tracks") + "    "
+                                      + Track::prettyTime( count.second ,true) + " " + tr("hours"));
+                connect(list,SIGNAL(activated()),this,SLOT(loadFileList()));
+                connect(list,SIGNAL(started()),this,SLOT(playFileList()));
+
+                itm = new QListWidgetItem(p->listPlaylists);
+
+                itm->setSizeHint(QSize(0,70));
+                p->listPlaylists->addItem(itm);
+                p->listPlaylists->setItemWidget(itm,list);
+            }
+
+    }
 }
 
-void PlaylistBrowser::playPlaylist()
+QList<Track*> PlaylistBrowser::readFileList(QString filename)
+{
+    QFile file( filename );
+    QList<Track*> tracks;
+
+    tracks.clear();
+
+    if( file.open( QFile::ReadOnly ) )
+    {
+        QTextStream stream( &file );
+
+      stream.setCodec( QTextCodec::codecForName("utf8") );
+      QDomDocument d;
+      if( !d.setContent(stream.readAll()) ) { qDebug() << "Could not load XML\n"; return tracks; }
+
+      QDomNode n = d.namedItem( "playlist" ).namedItem( "trackList" ).firstChild();
+
+      const QString TRACK( "track" ); //so we don't construct the QStrings all the time
+      const QString URL( "url" );
+      const QString CURRENT( "current" );
+      const QString NEXT( "next" );
+
+
+      while( !n.isNull() )
+      {
+           if( n.nodeName() == TRACK ) {
+              const QDomElement e = n.toElement();
+              if( e.isNull() ) {
+                 qDebug() << "Element '" << n.nodeName() << "' is null, skipping.";
+                 continue;
+              }
+
+              //qDebug() << "Add from xml url='" << e.attribute( URL );
+              Track *track = new Track();
+              track->setUrl( QUrl::fromLocalFile(e.namedItem("location").firstChild().nodeValue()));
+              track->setArtist( e.namedItem("creator").firstChild().nodeValue());
+              track->setTitle( e.namedItem("title").firstChild().nodeValue());
+              track->setAlbum( e.namedItem("album").firstChild().nodeValue());
+              track->setGenre( e.namedItem("extension").toElement().attribute( "genre" ));
+              track->setYear( e.namedItem("extension").toElement().attribute( "year" ));
+              track->setLength( e.namedItem("duration").firstChild().nodeValue());
+              track->setCounter("0");
+              if ( e.namedItem("extension").toElement().attribute( "isAutoDjSelection" ) =="1" )
+                track->setFlags( track->flags() | Track::isAutoDjSelection );
+              if ( e.namedItem("extension").toElement().attribute( "isOnFirstPlayer" ) =="1" )
+                track->setFlags( track->flags() | Track::isOnFirstPlayer );
+              if ( e.namedItem("extension").toElement().attribute( "isOnSecondPlayer" ) =="1" )
+                track->setFlags( track->flags() | Track::isOnSecondPlayer );
+
+              tracks.append(track);
+
+            }
+          n = n.nextSibling();
+      }
+    }
+    file.close();
+
+    qDebug() << "End " << __FUNCTION__;
+}
+
+QPair<int,int> PlaylistBrowser::readFileValues(QString filename)
+{
+    QFile file( filename );
+    QPair<int,int> pair;
+
+    int duration=0;
+    int count=0;
+
+    if( file.open( QFile::ReadOnly ) )
+    {
+      QTextStream stream( &file );
+
+      stream.setCodec( QTextCodec::codecForName("utf8") );
+      QDomDocument d;
+      if( !d.setContent(stream.readAll()) ) { qDebug() << "Could not load XML\n"; return pair; }
+
+      QDomNode n = d.namedItem( "playlist" ).namedItem( "trackList" ).firstChild();
+
+      const QString TRACK( "track" );
+
+
+      while( !n.isNull() )
+      {
+           if( n.nodeName() == TRACK ) {
+              const QDomElement e = n.toElement();
+              if( e.isNull() ) {
+                 qDebug() << "Element '" << n.nodeName() << "' is null, skipping.";
+                 continue;
+              }
+
+              duration+= e.namedItem("duration").firstChild().nodeValue().toInt();
+              count++;
+
+            }
+          n = n.nextSibling();
+      }
+    }
+    file.close();
+
+    pair.first = count;
+    pair.second = duration;
+
+    qDebug() << "End " << __FUNCTION__;
+
+    return pair;
+}
+
+void PlaylistBrowser::playDatabaseList()
 {
     qDebug() << __PRETTY_FUNCTION__ ;
 
     if(PlaylistWidget* item = qobject_cast<PlaylistWidget*>(QObject::sender())){
         onSelectionChanged(item);
 
-        //Retrieve songs from database
-        p->selectedTags = p->database->selectHotTracks();
+        QString senderName = item->objectName();
+
+        if (senderName == "TopTracks")
+            p->selectedTags = p->database->selectHotTracks();
+        else
+            p->selectedTags = p->database->selectLastTracks();
+
 
         emit selectionStarted(selectedTracks());
     }
 }
 
-void PlaylistBrowser::loadPlaylist()
+void PlaylistBrowser::playFileList()
+{
+    qDebug() << __PRETTY_FUNCTION__ ;
+
+    if(PlaylistWidget* item = qobject_cast<PlaylistWidget*>(QObject::sender())){
+
+        onSelectionChanged(item);
+
+        QString senderName = item->objectName();
+
+        emit selectionStarted( readFileList( p->directory+"/"+senderName) );
+    }
+}
+
+void PlaylistBrowser::loadFileList()
+{
+    qDebug() << __PRETTY_FUNCTION__ ;
+
+    if(PlaylistWidget* item = qobject_cast<PlaylistWidget*>(QObject::sender())){
+
+        onSelectionChanged(item);
+
+        QString senderName = item->objectName();
+
+        //Retrieve songs from file
+        emit selectionChanged( readFileList( p->directory+"/"+senderName) );
+    }
+}
+
+void PlaylistBrowser::loadDatabaseList()
 {
     qDebug() << __PRETTY_FUNCTION__ ;
 
@@ -187,4 +363,13 @@ void PlaylistBrowser::onSelectionChanged(PlaylistWidget* item)
         ((PlaylistWidget*)p->listPlaylists->itemWidget(p->listPlaylists->item(d)))->deactivate();
 
     item->activate();
+}
+
+void PlaylistBrowser::onPushSave()
+{
+    QString fileName = QFileDialog::getSaveFileName(this,
+             tr("Save Play List"), p->directory,
+             tr("Playlists (*.xspf);;All Files (*)"));
+    emit savePlaylists(fileName);
+
 }

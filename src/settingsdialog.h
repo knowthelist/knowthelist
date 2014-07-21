@@ -50,8 +50,10 @@ private slots:
         void on_faderEndSlider_sliderMoved(int position);
         void on_faderTimeSlider_sliderMoved(int position);
         void on_pushButton_clicked();
+        void on_pushPlaylistRoot_clicked();
         void onScanNow();
         void loadDjList(int count);
+        void on_pushAbout_clicked();
 
 
 protected:

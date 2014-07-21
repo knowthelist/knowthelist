@@ -59,7 +59,7 @@ struct TrackPrivate
     QString tracknumber;
     int counter;
     int length;
-    int target;
+    Track::Options flags;
 };
 
 Track::Track()
@@ -351,7 +351,7 @@ QString Track::genre()    { return p->genre; }
 QString Track::tracknumber() { return p->tracknumber > 0 ? p->tracknumber : "0"; }
 int Track::counter() { return p->counter; }
 QString Track::prettyLength()  { return prettyLength( p->length ); }
-int Track::target() { return p->target; }
+Track::Options Track::flags()  { return p->flags; }
 
 void Track::setUrl(QUrl url) { p->url = url; }
 void Track::setTitle(QString s) { p->title = s; }
@@ -363,4 +363,4 @@ void Track::setGenre(QString s)   { p->genre = s; }
 void Track::setTracknumber(QString s) { p->tracknumber = s; }
 void Track::setLength(QString s)  { p->length = s.toInt();}
 void Track::setCounter(QString s)  { p->counter = s.toInt();}
-void Track::setTarget(int value)  { p->target = value; }
+void Track::setFlags(Track::Options flags)  { p->flags = flags;}

@@ -35,6 +35,14 @@ class Track
 
 public:
 
+    enum Option {
+        NoOptions = 0x0,
+        isOnFirstPlayer = 0x1,
+        isOnSecondPlayer = 0x2,
+        isAutoDjSelection = 0x4
+    };
+    Q_DECLARE_FLAGS(Options, Option)
+
     Track();
     Track( const QUrl &u);
     Track( const QStringList& list );
@@ -63,6 +71,7 @@ public:
     QString prettyLength();
     QStringList tagList();
     QString dirPath();
+    Track::Options flags();
 
     bool isValid();
 
@@ -77,7 +86,7 @@ public:
     void setLength(QString);
     void setLengthFromPretty(QString);
     void setCounter(QString);
-    void setTarget(int);
+    void setFlags(Track::Options flags);
 
     
     QString prettyTitle() const;
@@ -89,6 +98,8 @@ public:
     static QString zeroPad( uint i ) { return ( i < 10 ) ? QString( "0%1" ).arg( i ) : QString::number( i ); }
     static QString prettyTitle( QString );
 
+
+
 protected:
 
     QString rsqueeze( const QString&, int ) const;
@@ -99,4 +110,5 @@ private:
     struct TrackPrivate *p;
 
 };
+Q_DECLARE_OPERATORS_FOR_FLAGS(Track::Options)
 #endif

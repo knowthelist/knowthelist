@@ -59,7 +59,6 @@ PlayerWidget::PlayerWidget(QWidget *parent) :
    vuMeter->LevelColorNormal.setRgb( 112,146,190 );
    vuMeter->LevelColorHigh.setRgb( 218,59,9 );
    vuMeter->LevelColorOff.setRgb( 31,45,65 );
-   //vuMeter->setBackgroundColor( QColor(33,24,41) );
    vuMeter->setSpacesBetweenSegments( 1 );
    vuMeter->setLinesPerSegment( 2 );
    vuMeter->setLinesPerPeak( 2 );

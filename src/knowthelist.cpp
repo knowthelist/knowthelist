@@ -256,7 +256,7 @@ void Knowthelist::createUI()
     ui->sideTab->AddTab(filetree,QIcon(pixmap3),tr("Folder"));
 
     //Add PlaylistBrowser
-    PlaylistBrowser *playlistBrowser = new PlaylistBrowser();
+    playlistBrowser = new PlaylistBrowser();
 
     splitterPlaylist = new QSplitter();
     splitterPlaylist->addWidget(playlistBrowser);
@@ -268,6 +268,8 @@ void Knowthelist::createUI()
 
     connect(playlistBrowser,SIGNAL(selectionChanged(QList<Track*>)), trackList2, SLOT(changeTracks(QList<Track*>)));
     connect(playlistBrowser,SIGNAL(selectionStarted(QList<Track*>)), djSession, SLOT(forceTracks(QList<Track*>)));
+    connect(playlistBrowser,SIGNAL(savePlaylists(QString)),djSession, SLOT(savePlaylists(QString)));
+    connect(djSession,SIGNAL(savedPlaylists()),playlistBrowser, SLOT(updateLists()));
     connect( trackList2, SIGNAL(trackDoubleClicked(PlaylistItem*)),SLOT(Track_doubleClicked(PlaylistItem*)));
     connect( trackList2, SIGNAL(wantLoad(PlaylistItem*,QString)),SLOT(trackList_wantLoad(PlaylistItem*, QString)));
     connect( trackList2, SIGNAL(trackClicked(PlaylistItem*)),SLOT(Track_selectionChanged(PlaylistItem* )));
@@ -361,11 +363,12 @@ void Knowthelist::loadCurrentSettings()
     }
 
     //Auto DJ
-    //m_AutoDJGenre=settings.value("editAutoDJGenre1","").toString();
     djSession->setMinCount(settings.value("minTracks","6").toInt());
+    djSession->setIsEnabledAutoDJCount(settings.value("isEnabledAutoDJCount",false).toBool());
 
     playList1->setAutoClearOn(settings.value("checkAutoRemove",true).toBool());
     playList2->setAutoClearOn(settings.value("checkAutoRemove",true).toBool());
+    playlistBrowser->updateLists();
 
     //Skip Silents Settings
     player1->setSkipSilentEnd(settings.value("checkSkipSilentEnd",true).toBool());
@@ -458,14 +461,14 @@ void Knowthelist::closeEvent(QCloseEvent* event)
     settings.setValue("Volume2", QString("%1").arg( ui->slider2->value() ) );
     settings.setValue("VolumeMonitor", QString("%1").arg( ui->sliMonitorVolume->value() ) );
 
-    //if (KnowthelistConfig::savePlaylist())
-        savePlaylists();
+    savePlaylists();
 
     // save splitter
     settings.setValue("Splitter",splitter->saveState());
     settings.setValue("SplitterPlaylist",splitterPlaylist->saveState());
 
     //Save AutoDJ
+    settings.setValue("isEnabledAutoDJCount",djSession->isEnabledAutoDJCount());
 
     settings.beginGroup("AutoDJ");
     for (int d=0;d<listDjs->count();d++)
@@ -731,7 +734,7 @@ void Knowthelist::timerAutoFader_timerOut( )
                     playList2->skipForward();
                     }
                   if ( ui->toggleAutoDJ->isChecked() )
-                      djSession->fillPlaylists();
+                      djSession->updatePlaylists();
 
         }
         if ( ui->sliFader->value() >= ui->sliFader->maximum() ) {
@@ -747,7 +750,7 @@ void Knowthelist::timerAutoFader_timerOut( )
                   playList1->skipForward();
                   }
                   if ( ui->toggleAutoDJ->isChecked()  )
-                      djSession->fillPlaylists();
+                      djSession->updatePlaylists();
         }
         changeVolumes();
 
@@ -992,7 +995,7 @@ void Knowthelist::on_toggleAutoDJ_toggled(bool checked)
             playList2->addCurrentTrack(djSession->getRandomTrack());
 
         //Fill both playlists
-        djSession->fillPlaylists();
+        djSession->updatePlaylists();
 
         //Start playing
         if ( !player1->isStarted() && !player2->isStarted() )

@@ -26,6 +26,7 @@
 #include "monitorplayer.h"
 #include "djsession.h"
 #include "filebrowser.h"
+#include "playlistbrowser.h"
 #include "settingsdialog.h"
 
 #include <QMainWindow>
@@ -130,6 +131,7 @@ private:
     PlayerWidget* player1;
     PlayerWidget* player2;
     FileBrowser* filetree;
+    PlaylistBrowser* playlistBrowser;
 
     SettingsDialog *preferences;
 

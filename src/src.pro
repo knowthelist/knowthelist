@@ -153,3 +153,5 @@ lrelease.CONFIG = no_link target_predeps
 QMAKE_EXTRA_COMPILERS += lrelease
 
 DESTDIR = ../
+
+OTHER_FILES +=
