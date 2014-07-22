@@ -36,6 +36,15 @@ DjWidget::DjWidget(QWidget *parent) :
     ui->lblCount->setText( QString::null );
     ui->lblLength->setText( QString::null );
     ui->lblCases->setText( QString::null );
+    QFont font = ui->lblDesciption->font();
+#if defined(Q_OS_DARWIN)
+    int newSize = font.pointSize()-3;
+#else
+    int newSize = font.pointSize()-1;
+#endif
+
+    font.setPointSize(newSize);
+    ui->lblDesciption->setFont(font);
 }
 
 DjWidget::~DjWidget()
@@ -44,16 +53,23 @@ DjWidget::~DjWidget()
     delete p;
 }
 
-void DjWidget::changeEvent(QEvent *e)
+void DjWidget::changeEvent(QEvent* event)
 {
-    QWidget::changeEvent(e);
-    switch (e->type()) {
+    QWidget::changeEvent(event);
+    switch (event->type()) {
     case QEvent::LanguageChange:
         ui->retranslateUi(this);
         break;
     default:
         break;
     }
+}
+
+void DjWidget::mousePressEvent(QMouseEvent* event)
+{
+    QWidget::mousePressEvent(event);
+        qDebug() << __PRETTY_FUNCTION__ ;
+    Q_EMIT activated();
 }
 
 void DjWidget::setDj(Dj* dj)
@@ -74,7 +90,12 @@ Dj* DjWidget::dj()
 // auto connect slot
 void DjWidget::on_lblName_linkActivated(const QString &link)
 {
-    qDebug() << __PRETTY_FUNCTION__ ;
+    Q_UNUSED(link);
+    Q_EMIT activated();
+}
+
+void DjWidget::clicked()
+{
     Q_EMIT activated();
 }
 

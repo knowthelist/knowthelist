@@ -18,11 +18,15 @@ PlaylistWidget::PlaylistWidget(QWidget *parent) :
     ui->setupUi(this);
     p = new PlaylistWidgetPrivate;
     p->isActive=false;
-    QFont font = ui->lblName->font();
+    QFont font = ui->lblDesciption->font();
+#if defined(Q_OS_DARWIN)
+    int newSize = font.pointSize()-3;
+#else
     int newSize = font.pointSize()-1;
+#endif
+
     font.setPointSize(newSize);
     ui->lblDesciption->setFont(font);
-
 }
 
 PlaylistWidget::~PlaylistWidget()
@@ -34,7 +38,7 @@ PlaylistWidget::~PlaylistWidget()
 // auto connect slot
 void PlaylistWidget::on_lblName_linkActivated(const QString &link)
 {
-    qDebug() << __PRETTY_FUNCTION__ ;
+    Q_UNUSED(link);
     Q_EMIT activated();
 }
 
@@ -70,6 +74,12 @@ void PlaylistWidget::deactivate()
 {
     p->isActive = false;
     updateView();
+}
+
+void PlaylistWidget::mousePressEvent(QMouseEvent* event)
+{
+    Q_UNUSED(event);
+    Q_EMIT activated();
 }
 
 void PlaylistWidget::updateView()

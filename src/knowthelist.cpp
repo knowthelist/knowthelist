@@ -447,8 +447,12 @@ void Knowthelist::loadCurrentSettings()
             }
             settings.endGroup();
     listDjs->setCurrentRow(0);
-    dj = ((DjWidget*)listDjs->itemWidget(listDjs->currentItem()))->dj();
-    loadDj();
+
+    DjWidget* djWidget = (DjWidget*)listDjs->itemWidget(listDjs->currentItem());
+    djWidget->activateDJ();
+    //dj = djWidget->dj();
+    //loadDj();
+    djWidget->clicked();
 
 }
 
@@ -541,17 +545,19 @@ void Knowthelist::loadDj()
     DjFilterWidget *djfw;
     QListWidgetItem * itm;
 
+    // deactivate all Djs
     for (int d=0;d<listDjs->count();d++)
         ((DjWidget*)listDjs->itemWidget(listDjs->item(d)))->deactivateDJ();
 
-    Dj* dj = ((DjWidget*)listDjs->itemWidget(listDjs->currentItem()))->dj();
-    ((DjWidget*)listDjs->itemWidget(listDjs->currentItem()))->activateDJ();
 
-    // Filters
-    if (dj)
-    {
+    // Activate current selected DJ
+    if(DjWidget* djWidget = qobject_cast<DjWidget*>(QObject::sender())){
+
+        djWidget->activateDJ();
+        Dj* dj = djWidget->dj();
+
          // Filters
-        qDebug() << __PRETTY_FUNCTION__<<dj->filters().count() ;
+        qDebug() << __PRETTY_FUNCTION__<< "filters="<<dj->filters().count() ;
         for (int i=0;i<dj->filters().count();i++)
         {
 

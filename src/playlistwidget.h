@@ -30,6 +30,7 @@ Q_SIGNALS:
 private:
     Ui::PlaylistWidget *ui;
 
+    void mousePressEvent(QMouseEvent* event);
     class PlaylistWidgetPrivate *p;
 
 private slots:

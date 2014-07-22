@@ -39,6 +39,7 @@ public Q_SLOTS:
     void activateDJ();
     void deactivateDJ();
     void updateView();
+    void clicked();
 
 Q_SIGNALS:
    void activated();
@@ -46,7 +47,8 @@ Q_SIGNALS:
 
 
 protected:
-    void changeEvent(QEvent *e);
+    void changeEvent(QEvent *event);
+    void mousePressEvent(QMouseEvent* event);
 
 private slots:
 
