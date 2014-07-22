@@ -269,7 +269,7 @@ void SettingsDialog::on_pushPlaylistRoot_clicked()
 
 void SettingsDialog::on_pushAbout_clicked()
 {
-    QMessageBox::about(this->parentWidget(),tr("About Knowthelist"),
+    QMessageBox::about(this,tr("About Knowthelist"),
                        tr("<h3>Knowthelist</h3>"
                           "<br />Copyright (C) 2005-2014 Mario Stephan "
                           "<br /><a href='mailto:mstephan@shared-files.de'>mstephan@shared-files.de</a>"

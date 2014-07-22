@@ -100,6 +100,10 @@ PlaylistBrowser::~PlaylistBrowser()
 
 void PlaylistBrowser::updateLists()
 {
+    // Read config values
+    QSettings settings;
+    p->directory = settings.value("editPlaylistRoot","").toString();
+
     // Insert dynamic lists
     PlaylistWidget* list;
     QListWidgetItem* itm;
@@ -367,7 +371,10 @@ void PlaylistBrowser::onSelectionChanged(PlaylistWidget* item)
 
 void PlaylistBrowser::onPushSave()
 {
-    QString fileName = QFileDialog::getSaveFileName(this,
+
+    QFileDialog dialog(this);
+    dialog.setDefaultSuffix("xspf");
+    QString fileName = dialog.getSaveFileName(this,
              tr("Save Play List"), p->directory,
              tr("Playlists (*.xspf);;All Files (*)"));
     emit savePlaylists(fileName);

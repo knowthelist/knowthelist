@@ -19,7 +19,7 @@ PlaylistWidget::PlaylistWidget(QWidget *parent) :
     p = new PlaylistWidgetPrivate;
     p->isActive=false;
     QFont font = ui->lblName->font();
-    int newSize = font.pointSize()-4;
+    int newSize = font.pointSize()-1;
     font.setPixelSize(newSize);
     ui->lblDesciption->setFont(font);
 }
