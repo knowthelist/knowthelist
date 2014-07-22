@@ -47,6 +47,10 @@ PlaylistBrowser::PlaylistBrowser(QWidget *parent) :
     pushSave->setMaximumWidth(60);
     pushSave->setMinimumWidth(60);
     pushSave->setText("+");
+    QFont pushFont = pushSave->font();
+    pushFont.setBold(true);
+    pushFont.setPointSize(pushFont.pointSize()+4);
+    pushSave->setFont(pushFont);
 
     pushSave->setStyleSheet("QPushButton { border: none; padding-top: -3px; margin-left: 8px;max-height: 20px; margin-right: 28px;}");
     pushSave->setToolTip(tr( "Save loaded player lists into a file" ));
@@ -377,6 +381,11 @@ void PlaylistBrowser::onPushSave()
     QString fileName = dialog.getSaveFileName(this,
              tr("Save Play List"), p->directory,
              tr("Playlists (*.xspf);;All Files (*)"));
+
+    // Bad workaround for Linux (Mac and Windows work with defaultSuffix)
+    if (!fileName.endsWith(".xspf"))
+        fileName += ".xspf";
+
     emit savePlaylists(fileName);
 
 }
