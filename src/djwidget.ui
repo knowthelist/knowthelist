@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>446</width>
+    <width>435</width>
     <height>75</height>
    </rect>
   </property>
@@ -23,7 +23,8 @@
    <bool>false</bool>
   </property>
   <property name="styleSheet">
-   <string notr="true">QFrame#frameDj{
+   <string notr="true">
+QFrame#frameDj{
 	background: qlineargradient(
    x1:0, y1:0, x2:0, y2:1,
    stop: 0.01 #202020,
@@ -59,44 +60,31 @@
    </property>
    <item>
     <widget class="QFrame" name="frameDj">
-     <property name="layoutDirection">
-      <enum>Qt::LeftToRight</enum>
-     </property>
-     <property name="styleSheet">
-      <string notr="true">QFrame#frame{
-	background: qlineargradient(
-   x1:0, y1:0, x2:0, y2:1,
-   stop: 0.01 #202020,
-	stop:0.11 #505050,
-   stop:1 #505050
- );
-}</string>
-     </property>
      <property name="frameShape">
       <enum>QFrame::NoFrame</enum>
      </property>
      <property name="frameShadow">
-      <enum>QFrame::Plain</enum>
-     </property>
-     <property name="lineWidth">
-      <number>0</number>
+      <enum>QFrame::Raised</enum>
      </property>
      <layout class="QGridLayout" name="gridLayout">
       <property name="leftMargin">
-       <number>7</number>
+       <number>10</number>
       </property>
-      <property name="horizontalSpacing">
-       <number>6</number>
+      <property name="topMargin">
+       <number>12</number>
+      </property>
+      <property name="rightMargin">
+       <number>0</number>
       </property>
       <property name="verticalSpacing">
-       <number>4</number>
+       <number>0</number>
       </property>
-      <item row="1" column="0" rowspan="2">
+      <item row="0" column="0" rowspan="2">
        <widget class="QLabel" name="label">
         <property name="maximumSize">
          <size>
-          <width>56</width>
-          <height>16777215</height>
+          <width>26</width>
+          <height>26</height>
          </size>
         </property>
         <property name="toolTip">
@@ -108,82 +96,15 @@
         <property name="pixmap">
          <pixmap resource="../images/icons.qrc">:/DJ.png</pixmap>
         </property>
-       </widget>
-      </item>
-      <item row="2" column="1">
-       <widget class="QLabel" name="lblDesciption">
-        <property name="text">
-         <string>TextLabel</string>
+        <property name="scaledContents">
+         <bool>true</bool>
         </property>
-        <property name="alignment">
-         <set>Qt::AlignBottom|Qt::AlignLeading|Qt::AlignLeft</set>
+        <property name="margin">
+         <number>0</number>
         </property>
        </widget>
       </item>
-      <item row="1" column="2">
-       <widget class="QLabel" name="lblLength">
-        <property name="minimumSize">
-         <size>
-          <width>56</width>
-          <height>0</height>
-         </size>
-        </property>
-        <property name="maximumSize">
-         <size>
-          <width>110</width>
-          <height>16777215</height>
-         </size>
-        </property>
-        <property name="font">
-         <font>
-          <pointsize>8</pointsize>
-         </font>
-        </property>
-        <property name="layoutDirection">
-         <enum>Qt::LeftToRight</enum>
-        </property>
-        <property name="styleSheet">
-         <string notr="true">color: rgb(143, 143, 143);</string>
-        </property>
-        <property name="text">
-         <string>TextLabel</string>
-        </property>
-        <property name="alignment">
-         <set>Qt::AlignBottom|Qt::AlignRight|Qt::AlignTrailing</set>
-        </property>
-       </widget>
-      </item>
-      <item row="2" column="2">
-       <widget class="QLabel" name="lblCount">
-        <property name="minimumSize">
-         <size>
-          <width>57</width>
-          <height>0</height>
-         </size>
-        </property>
-        <property name="maximumSize">
-         <size>
-          <width>110</width>
-          <height>14</height>
-         </size>
-        </property>
-        <property name="font">
-         <font>
-          <pointsize>8</pointsize>
-         </font>
-        </property>
-        <property name="styleSheet">
-         <string notr="true">color: rgb(143, 143, 143);</string>
-        </property>
-        <property name="text">
-         <string>TextLabel</string>
-        </property>
-        <property name="alignment">
-         <set>Qt::AlignBottom|Qt::AlignRight|Qt::AlignTrailing</set>
-        </property>
-       </widget>
-      </item>
-      <item row="0" column="1" rowspan="2">
+      <item row="0" column="1">
        <widget class="QLabel" name="lblName">
         <property name="sizePolicy">
          <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
@@ -194,7 +115,7 @@
         <property name="maximumSize">
          <size>
           <width>16777215</width>
-          <height>22</height>
+          <height>27</height>
          </size>
         </property>
         <property name="text">
@@ -212,12 +133,100 @@ p, li { white-space: pre-wrap; }
         </property>
        </widget>
       </item>
-      <item row="0" column="2">
-       <widget class="QLabel" name="lblCases">
-        <property name="font">
-         <font>
-          <pointsize>8</pointsize>
-         </font>
+      <item row="0" column="2" rowspan="3">
+       <widget class="QFrame" name="fraButton">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
+        <property name="minimumSize">
+         <size>
+          <width>55</width>
+          <height>0</height>
+         </size>
+        </property>
+        <property name="frameShape">
+         <enum>QFrame::NoFrame</enum>
+        </property>
+        <property name="frameShadow">
+         <enum>QFrame::Raised</enum>
+        </property>
+        <layout class="QHBoxLayout" name="horizontalLayout_2">
+         <property name="spacing">
+          <number>32</number>
+         </property>
+         <property name="leftMargin">
+          <number>0</number>
+         </property>
+         <property name="rightMargin">
+          <number>0</number>
+         </property>
+         <property name="bottomMargin">
+          <number>6</number>
+         </property>
+         <item>
+          <widget class="QPushButton" name="butPlayWidget">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="minimumSize">
+            <size>
+             <width>35</width>
+             <height>0</height>
+            </size>
+           </property>
+           <property name="maximumSize">
+            <size>
+             <width>16777215</width>
+             <height>16777215</height>
+            </size>
+           </property>
+           <property name="toolTip">
+            <string>Start a session of this DJ</string>
+           </property>
+           <property name="text">
+            <string/>
+           </property>
+           <property name="icon">
+            <iconset resource="../images/icons.qrc">
+             <normaloff>:/play.png</normaloff>:/play.png</iconset>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPushButton" name="pushClose">
+           <property name="toolTip">
+            <string>Remove this DJ</string>
+           </property>
+           <property name="text">
+            <string>x</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </widget>
+      </item>
+      <item row="1" column="1">
+       <widget class="QLabel" name="lblKind">
+        <property name="minimumSize">
+         <size>
+          <width>0</width>
+          <height>0</height>
+         </size>
+        </property>
+        <property name="maximumSize">
+         <size>
+          <width>16777215</width>
+          <height>16777215</height>
+         </size>
+        </property>
+        <property name="layoutDirection">
+         <enum>Qt::LeftToRight</enum>
         </property>
         <property name="styleSheet">
          <string notr="true">color: rgb(143, 143, 143);</string>
@@ -225,8 +234,58 @@ p, li { white-space: pre-wrap; }
         <property name="text">
          <string>TextLabel</string>
         </property>
-        <property name="alignment">
-         <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+       </widget>
+      </item>
+      <item row="2" column="1">
+       <widget class="QLabel" name="lblDesciption">
+        <property name="minimumSize">
+         <size>
+          <width>57</width>
+          <height>0</height>
+         </size>
+        </property>
+        <property name="maximumSize">
+         <size>
+          <width>32000</width>
+          <height>14</height>
+         </size>
+        </property>
+        <property name="styleSheet">
+         <string notr="true">color: rgb(143, 143, 143);</string>
+        </property>
+        <property name="text">
+         <string>TextLabel</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item>
+    <widget class="QWidget" name="widgetClose" native="true">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
+       <horstretch>0</horstretch>
+       <verstretch>0</verstretch>
+      </sizepolicy>
+     </property>
+     <property name="maximumSize">
+      <size>
+       <width>18</width>
+       <height>16777215</height>
+      </size>
+     </property>
+     <property name="toolTip">
+      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Confirm the remove&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+     </property>
+     <property name="styleSheet">
+      <string notr="true">background-color: rgb(255, 65, 87);</string>
+     </property>
+     <layout class="QHBoxLayout" name="horizontalLayout_3">
+      <item>
+       <widget class="QLabel" name="labelClose">
+        <property name="text">
+         <string>Delete</string>
         </property>
        </widget>
       </item>

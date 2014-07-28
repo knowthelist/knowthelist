@@ -22,20 +22,27 @@ public:
     void updateView();
     void activate();
     void deactivate();
+    void slideCloseWidget(bool open);
+    bool isRemovable();
+    void setRemovable(bool value);
 
 Q_SIGNALS:
    void activated();
    void started();
+   void deleted();
 
 private:
     Ui::PlaylistWidget *ui;
 
     void mousePressEvent(QMouseEvent* event);
+    void keyPressEvent(QKeyEvent *e);
     class PlaylistWidgetPrivate *p;
 
 private slots:
     void on_lblName_linkActivated(const QString &link);
-    void on_butPlay_pressed();
+    void on_butPlayWidget_pressed();
+    void timerSlide_timeOut();
+    void on_pushClose_clicked();
 };
 
 #endif // PLAYLISTWIDGET_H

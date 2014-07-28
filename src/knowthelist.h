@@ -25,6 +25,7 @@
 #include "collectionwidget.h"
 #include "monitorplayer.h"
 #include "djsession.h"
+#include "djbrowser.h"
 #include "filebrowser.h"
 #include "playlistbrowser.h"
 #include "settingsdialog.h"
@@ -80,6 +81,7 @@ private Q_SLOTS:
      void savePlaylists();
      void monitorPlayer_trackTimeChanged(qint64, qint64);
      void timerMonitor_loadFinished();
+     void startAutoDj();
 
      void timerGain1_timeOut();
      void timerGain2_timeOut();
@@ -88,7 +90,6 @@ private Q_SLOTS:
      void Track_selectionChanged(PlaylistItem*);
      bool initMonitorPlayer();
      void editSettings();
-     void loadDj();
      void on_cmdOptions_clicked();
      void showCollectionSetup();
     void onWantLoad(QList<Track*>,QString);
@@ -125,8 +126,8 @@ private:
     CollectionWidget* collectionBrowser;
     MonitorPlayer* monitorPlayer;
     DjSession* djSession;
-    QListWidget* listDjFilters;
-    QListWidget* listDjs;
+    DjBrowser* djBrowser;
+
 
     PlayerWidget* player1;
     PlayerWidget* player2;

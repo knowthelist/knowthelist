@@ -29,6 +29,7 @@ public slots:
     void loadFileList();
     void playDatabaseList();
     void playFileList();
+    void removeFileList();
     void onSelectionChanged(PlaylistWidget* item);
     void onPushSave();
     void updateLists();

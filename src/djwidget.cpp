@@ -17,13 +17,18 @@
 
 #include "djwidget.h"
 #include "ui_djwidget.h"
+
 #include <qdebug.h>
 #include <QSettings>;
+#include <QTimer>;
+#include <QMouseEvent>;
 
 struct DjWidgetPrivate
 {
         Dj* dj;
         bool isActive;
+        QTimer* timerSlide;
+        int targetWidth;
 };
 
 DjWidget::DjWidget(QWidget *parent) :
@@ -31,20 +36,25 @@ DjWidget::DjWidget(QWidget *parent) :
     ui(new Ui::DjWidget)
    ,p(new DjWidgetPrivate)
 {
+    setFocusPolicy(Qt::ClickFocus);
     ui->setupUi(this);
     ui->lblDesciption->setText( QString::null );
-    ui->lblCount->setText( QString::null );
-    ui->lblLength->setText( QString::null );
-    ui->lblCases->setText( QString::null );
+    ui->widgetClose->setMinimumWidth(0);
+    ui->widgetClose->setMaximumWidth(0);
+
     QFont font = ui->lblDesciption->font();
 #if defined(Q_OS_DARWIN)
-    int newSize = font.pointSize()-3;
+    int newSize = font.pointSize()-4;
 #else
     int newSize = font.pointSize()-1;
 #endif
-
     font.setPointSize(newSize);
     ui->lblDesciption->setFont(font);
+    ui->lblKind->setFont(font);
+
+    p->timerSlide = new QTimer(this);
+    p->timerSlide->setInterval(10);
+    connect( p->timerSlide, SIGNAL(timeout()), SLOT(timerSlide_timeOut()) );
 }
 
 DjWidget::~DjWidget()
@@ -65,11 +75,18 @@ void DjWidget::changeEvent(QEvent* event)
     }
 }
 
-void DjWidget::mousePressEvent(QMouseEvent* event)
+
+void DjWidget::mousePressEvent(QMouseEvent *event)
 {
-    QWidget::mousePressEvent(event);
-        qDebug() << __PRETTY_FUNCTION__ ;
-    Q_EMIT activated();
+
+     if(ui->widgetClose->geometry().contains(event->pos()))
+     {
+         Q_EMIT deleted();
+     }
+    else{
+        slideCloseWidget(false);
+        Q_EMIT activated();
+     }
 }
 
 void DjWidget::setDj(Dj* dj)
@@ -116,11 +133,14 @@ void DjWidget::updateView()
     // Filter description and count update
 
     // update Labels
-    ui->lblDesciption->setText( p->dj->description() );
-    ui->lblCount->setText(QString::number( p->dj->countTracks() ) + " " + tr("tracks"));
-    ui->lblLength->setText(Track::prettyTime( p->dj->lengthTracks() ,true) + " " + tr("hours"));
+    ui->lblKind->setText( p->dj->description() );
     QString strCase = (p->dj->filters().count() > 1) ? tr("cases") : tr("case");
-    ui->lblCases->setText(QString::number( p->dj->filters().count() ) + " " + strCase);
+
+    ui->lblDesciption->setText( QString::number( p->dj->filters().count() ) + " " + strCase + "    "
+                          + QString::number( p->dj->countTracks() ) + " " + tr("tracks") + "    "
+                          + Track::prettyTime( p->dj->lengthTracks() ,true) + " " + tr("hours"));
+
+
 
     // active/passive look differentiation
     QString activeStyle;
@@ -154,3 +174,46 @@ void DjWidget::updateView()
                          "</span></a></p></body></html>");
 }
 
+// esc key for exit close
+void DjWidget::keyPressEvent(QKeyEvent *e)
+{
+  if( e->key() == Qt::Key_Escape )
+      slideCloseWidget(false);
+   else
+      QWidget::keyPressEvent( e );
+}
+
+void DjWidget::on_butPlayWidget_pressed()
+{
+    Q_EMIT started();
+}
+
+void DjWidget::on_pushClose_clicked()
+{
+    slideCloseWidget( (ui->widgetClose->minimumWidth()<50) );
+}
+
+void DjWidget::slideCloseWidget(bool open)
+{
+    p->targetWidth = (open) ? 70 : 0;
+    p->timerSlide->start();
+}
+
+void DjWidget::timerSlide_timeOut()
+{
+    int mWidth = ui->widgetClose->minimumWidth();
+    if ( p->targetWidth > mWidth ){
+        ui->widgetClose->setMinimumWidth(mWidth+5);
+        ui->widgetClose->setMaximumWidth(mWidth+5);
+    }
+    else if ( p->targetWidth < mWidth ){
+        ui->widgetClose->setMinimumWidth(mWidth-5);
+        ui->widgetClose->setMaximumWidth(mWidth-5);
+    }
+    else{
+        p->timerSlide->stop();
+        QRect geo = ui->pushClose->geometry();
+        geo.setLeft( geo.left()-p->targetWidth/11);
+        ui->pushClose->setGeometry(geo);
+    }
+}

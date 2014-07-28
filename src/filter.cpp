@@ -44,9 +44,10 @@ Filter::Filter()
     p->maxUsage = 0;
     p->count = 0;
     p->length = 0;
-    p->path ="",
-    p->genre="";
-    p->artist="";
+    p->path = "",
+    p->genre = "";
+    p->artist = "";
+    p->isActive = false;
 }
 
 Filter::Filter(QString genre, int maxUsage)

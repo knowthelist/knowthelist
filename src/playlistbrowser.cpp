@@ -29,7 +29,7 @@ class Track;
 class PlaylistBrowsertPrivate
 {
     public:
-    QListWidget *listPlaylists;
+    QListWidget* listPlaylists;
     CollectionDB* database;
     QList<QStringList> selectedTags;
     QString directory;
@@ -42,7 +42,7 @@ PlaylistBrowser::PlaylistBrowser(QWidget *parent) :
 {
     p = new PlaylistBrowsertPrivate;
 
-    QPushButton *pushSave =new QPushButton();
+    QPushButton* pushSave =new QPushButton();
     pushSave->setGeometry(QRect(1,1,60,25));
     pushSave->setMaximumWidth(60);
     pushSave->setMinimumWidth(60);
@@ -84,7 +84,6 @@ PlaylistBrowser::PlaylistBrowser(QWidget *parent) :
     mainLayout->setMargin(0);
     mainLayout->setSpacing(0);
 
-    //setFocusProxy( p->collectiontree ); //default object to get focus
     setMaximumWidth(400);
 
     // Read config values
@@ -117,6 +116,7 @@ void PlaylistBrowser::updateLists()
     list->setName(tr("Top Tracks"));
     list->setObjectName("TopTracks");
     list->setDescription(tr("Most played tracks"));
+    list->setRemovable(false);
     connect(list,SIGNAL(activated()),this,SLOT(loadDatabaseList()));
     connect(list,SIGNAL(started()),this,SLOT(playDatabaseList()));
 
@@ -130,6 +130,7 @@ void PlaylistBrowser::updateLists()
     list->setName(tr("Last Tracks"));
     list->setObjectName("LastTracks");
     list->setDescription(tr("Recently played tracks"));
+    list->setRemovable(false);
     connect(list,SIGNAL(activated()),this,SLOT(loadDatabaseList()));
     connect(list,SIGNAL(started()),this,SLOT(playDatabaseList()));
 
@@ -160,6 +161,7 @@ void PlaylistBrowser::updateLists()
                                       + Track::prettyTime( count.second ,true) + " " + tr("hours"));
                 connect(list,SIGNAL(activated()),this,SLOT(loadFileList()));
                 connect(list,SIGNAL(started()),this,SLOT(playFileList()));
+                connect(list,SIGNAL(deleted()),this,SLOT(removeFileList()));
 
                 itm = new QListWidgetItem(p->listPlaylists);
 
@@ -229,6 +231,8 @@ QList<Track*> PlaylistBrowser::readFileList(QString filename)
     file.close();
 
     qDebug() << "End " << __FUNCTION__;
+
+    return tracks;
 }
 
 QPair<int,int> PlaylistBrowser::readFileValues(QString filename)
@@ -323,6 +327,19 @@ void PlaylistBrowser::loadFileList()
 
         //Retrieve songs from file
         emit selectionChanged( readFileList( p->directory+"/"+senderName) );
+    }
+}
+
+void PlaylistBrowser::removeFileList()
+{
+    qDebug() << __PRETTY_FUNCTION__ ;
+
+    if(PlaylistWidget* item = qobject_cast<PlaylistWidget*>(QObject::sender())){
+
+        QString senderName = item->objectName();
+
+        QFile::remove( p->directory+"/"+senderName );
+        updateLists();
     }
 }
 

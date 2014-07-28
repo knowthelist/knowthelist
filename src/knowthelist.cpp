@@ -91,6 +91,7 @@ void Knowthelist::createUI()
     connect(ui->slider2,SIGNAL(valueChanged(int)),this,SLOT(slider2_valueChanged(int)));
     connect(ui->sliFader,SIGNAL(valueChanged(int)),this,SLOT(sliFader_valueChanged(int)));
 
+    //Add player
     player1 = ui->player_L;
     player2 = ui->player_R;
 
@@ -117,12 +118,11 @@ void Knowthelist::createUI()
     qRegisterMetaType<QList<Track*> > ("QList<Track*>");
 
 
-    //DJ
+    //Add DJ
     djSession = new DjSession();
 
     playList1=ui->playlist_L;
     playList1->setIsCurrentList(true);
-
 
     playList2 = ui->playlist_R;
     playList2->setIsCurrentList(false);
@@ -167,17 +167,13 @@ void Knowthelist::createUI()
     connect( djSession, SIGNAL(foundTracks_Playlist1(QList<Track*>)),playList1, SLOT(appendTracks(QList<Track*>)));
     connect( djSession, SIGNAL(foundTracks_Playlist2(QList<Track*>)),playList2, SLOT(appendTracks(QList<Track*>)));
 
+    //Add Tracklist for Collection
     trackList = new Playlist();
     trackList->setObjectName("tracklist");
     trackList->setAcceptDrops( false );
     trackList->setPlaylistMode(Playlist::Tracklist);
 
-    //ToDo: remove all of this
-    //trackList->setMarkNextTrack( false );
-    //trackList->setMarkCurrentTrack( false );
-
     collectionBrowser=new CollectionWidget(this);
-
 
     splitter= new QSplitter();
     splitter->addWidget(this->collectionBrowser);
@@ -208,7 +204,6 @@ void Knowthelist::createUI()
    connect( playList2, SIGNAL(trackChanged(PlaylistItem*)),SLOT(Track_selectionChanged(PlaylistItem* )));
 
     //AutoFade
-
     ui->ledFade->setLook(QLed::Flat);
     ui->ledFadeRight->setLook(QLed::Flat);
     ui->ledFadeLeft->setLook(QLed::Flat);
@@ -233,22 +228,13 @@ void Knowthelist::createUI()
     //MonitorPlayer
     initMonitorPlayer();
 
-    //AutoDJ
-    listDjFilters = new QListWidget();
-    listDjs = new QListWidget();
-    listDjFilters->setAttribute(Qt::WA_MacShowFocusRect, false);
-    listDjs->setAttribute(Qt::WA_MacShowFocusRect, false);
-    QWidget *djBox = new QWidget(this);
-    QHBoxLayout *layout = new QHBoxLayout;
-    layout->setMargin(0);
-    layout->setSpacing(1);
-    listDjs->setMaximumWidth(width()*.22);
-    layout->addWidget(listDjs);
-    layout->addWidget(listDjFilters);
-    djBox->setLayout(layout);
+    //Add the AutoDJ Browser
+    djBrowser = new DjBrowser();
     QPixmap pixmap2(":DJ.png");
-    ui->sideTab->AddTab(djBox,QIcon(pixmap2),tr("AutoDJ"));
+    ui->sideTab->AddTab(djBrowser,QIcon(pixmap2),tr("AutoDJ"));
     ui->sideTab->setContextMenuPolicy(Qt::NoContextMenu);
+    connect(djBrowser, SIGNAL(selectionChanged(Dj*)),djSession,SLOT(setCurrentDj(Dj*)));
+    connect(djBrowser, SIGNAL(selectionStarted()),this,SLOT(startAutoDj()));
 
     //Add the FileBrowser
     filetree = new FileBrowser(this);
@@ -279,7 +265,7 @@ void Knowthelist::createUI()
     QPixmap pixmap4(":list.png");
     ui->sideTab->AddTab(splitterPlaylist,QIcon(pixmap4),tr("Lists"));
 
-    //SettingsDialog
+    //Add SettingsDialog
     preferences = new SettingsDialog(this);
     connect(preferences,SIGNAL(scanNowPressed()), collectionBrowser,SLOT(scan()));
     connect(preferences, SIGNAL(resetStatsPressed()), djSession, SLOT(onResetStats()));
@@ -296,8 +282,6 @@ void Knowthelist::createUI()
           this->show();
           showCollectionSetup();
     }
-
-
 }
 
 void Knowthelist::loadStartSettings()
@@ -362,9 +346,10 @@ void Knowthelist::loadCurrentSettings()
         }
     }
 
-    //Auto DJ
+    //Auto DJ Settings
     djSession->setMinCount(settings.value("minTracks","6").toInt());
     djSession->setIsEnabledAutoDJCount(settings.value("isEnabledAutoDJCount",false).toBool());
+    djBrowser->updateList();
 
     playList1->setAutoClearOn(settings.value("checkAutoRemove",true).toBool());
     playList2->setAutoClearOn(settings.value("checkAutoRemove",true).toBool());
@@ -382,77 +367,11 @@ void Knowthelist::loadCurrentSettings()
     setFaderModeToPlayer();
     isFading=false;
 
-    //CollectionFolders
+    //CollectionFolders Settings
     collectionBrowser->loadSettings();
 
-    //File Browser
+    //File Browser Settings
     filetree->setRootPath(settings.value("editBrowerRoot","").toString());
-
-    //Dj Widget List
-    listDjs->clear();
-    listDjs->setSelectionMode(QAbstractItemView::ExtendedSelection);
-
-
-    DjWidget* djw;
-    QListWidgetItem* itm;
-    Dj* dj;
-    int maxDj=settings.value("countDJ","3").toInt();
-
-    settings.beginGroup("AutoDJ");
-
-            // Filters
-            for (int d=0;d<maxDj;d++)
-            {
-                settings.beginGroup(QString::number(d));
-                    dj = new Dj();
-                    dj->name = settings.value("Name","Dj%1").toString().arg(d+1);
-
-                    djw  = new DjWidget(listDjs);
-
-                    connect(djw,SIGNAL(activated()),this,SLOT(loadDj()));
-
-                     itm = new QListWidgetItem(listDjs);
-                     itm->setSizeHint(QSize(0,75));
-                     listDjs->addItem(itm);
-                     listDjs->setItemWidget(itm,djw);
-
-
-
-                     // Filters
-                     int countFilter = settings.value("FilterCount","2").toInt();
-                     settings.beginGroup("Filter");
-                     for (int i=0;i<countFilter;i++)
-                     {
-                         settings.beginGroup(QString::number(i));
-                           Filter* f = new Filter();
-                           dj->addFilter(f);
-
-                           f->setPath(settings.value("Path","").toString());
-                           f->setGenre(settings.value("Genre","").toString());
-                           f->setArtist(settings.value("Artist","").toString());
-
-                           // set to active for sum update
-                           djSession->setCurrentDj(dj);
-                           f->update();
-                           f->setMaxUsage(settings.value("Value","2").toInt());
-                         settings.endGroup();
-
-                         f->setUsage(0);
-                     }
-
-                    djw->setDj(dj);
-                    settings.endGroup();
-                    dj->setActiveFilterIdx(settings.value("currentDjActiveFilter","0").toInt());
-                    settings.endGroup();
-            }
-            settings.endGroup();
-    listDjs->setCurrentRow(0);
-
-    DjWidget* djWidget = (DjWidget*)listDjs->itemWidget(listDjs->currentItem());
-    djWidget->activateDJ();
-    //dj = djWidget->dj();
-    //loadDj();
-    djWidget->clicked();
 
 }
 
@@ -467,40 +386,15 @@ void Knowthelist::closeEvent(QCloseEvent* event)
 
     savePlaylists();
 
-    // save splitter
+    //Save splitter
     settings.setValue("Splitter",splitter->saveState());
     settings.setValue("SplitterPlaylist",splitterPlaylist->saveState());
 
     //Save AutoDJ
     settings.setValue("isEnabledAutoDJCount",djSession->isEnabledAutoDJCount());
 
-    settings.beginGroup("AutoDJ");
-    for (int d=0;d<listDjs->count();d++)
-    {
-        settings.beginGroup(QString::number(d));
-        Dj* dj = ((DjWidget*)listDjs->itemWidget(listDjs->item(d)))->dj();
-        QList<Filter*> f=dj->filters();
-
-        settings.setValue("currentDjActiveFilter",QString("%1").arg(djSession->currentDj()->activeFilterIdx()));
-        settings.beginGroup("Filter");
-        for (int i=0; i<f.count();i++)
-        {
-             settings.beginGroup(QString::number(i));
-             settings.setValue("Path",f.at(i)->path());
-             settings.setValue("Genre",f.at(i)->genre());
-             settings.setValue("Artist",f.at(i)->artist());
-             settings.setValue("Value",QString::number(f.at(i)->maxUsage()));
-             settings.endGroup();
-        }
-        settings.endGroup();
-        settings.endGroup();
-    }
-    settings.endGroup();
-
     Dj* dj = djSession->currentDj();
     QList<Filter*> f = dj->filters();
-
-    //Save AutoDJ
 
     settings.setValue("currentDjActiveFilter",QString("%1").arg(djSession->currentDj()->activeFilterIdx()));
 
@@ -535,46 +429,6 @@ void Knowthelist::showCollectionSetup()
              loadCurrentSettings();
 }
 
-void Knowthelist::loadDj()
-{
-    //Fill Filter Widget List
-    qDebug() << __PRETTY_FUNCTION__ ;
-
-    listDjFilters->clear();
-
-    DjFilterWidget *djfw;
-    QListWidgetItem * itm;
-
-    // deactivate all Djs
-    for (int d=0;d<listDjs->count();d++)
-        ((DjWidget*)listDjs->itemWidget(listDjs->item(d)))->deactivateDJ();
-
-
-    // Activate current selected DJ
-    if(DjWidget* djWidget = qobject_cast<DjWidget*>(QObject::sender())){
-
-        djWidget->activateDJ();
-        Dj* dj = djWidget->dj();
-
-         // Filters
-        qDebug() << __PRETTY_FUNCTION__<< "filters="<<dj->filters().count() ;
-        for (int i=0;i<dj->filters().count();i++)
-        {
-
-                           djfw  = new DjFilterWidget(listDjFilters);
-                           djfw->setFilter( dj->filters().at(i) );
-                           djfw->setID(QString::number(i+1));
-                           itm = new QListWidgetItem(listDjFilters);
-                           itm->setSizeHint(QSize(0,75));
-                           listDjFilters->addItem(itm);
-                           listDjFilters->setItemWidget(itm,djfw);
-        }
-
-        dj->setActiveFilterIdx(0);
-        djSession->setCurrentDj(dj);
-    }
-
-}
 
 void Knowthelist::player1_levelChanged(double left, double right)
 {
@@ -866,6 +720,7 @@ void Knowthelist::on_cmdFade_clicked()
 
 bool Knowthelist::initMonitorPlayer()
 {
+    //ToDo: spend a separate widget for Monitor player
     qDebug() << __FUNCTION__ << "BEGIN ";
 
       monitorPlayer= new MonitorPlayer(this);
@@ -880,6 +735,11 @@ bool Knowthelist::initMonitorPlayer()
 
     qDebug()  << __FUNCTION__ << "END " ;
     return true;
+}
+
+void Knowthelist::startAutoDj()
+{
+    ui->toggleAutoDJ->setChecked(true);
 }
 
 void Knowthelist::on_cmdMonitorStop_clicked()

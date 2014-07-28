@@ -37,6 +37,8 @@ Dj::Dj()
     p->rotation=0;
     p->filter=0;
     p->description=QString::null;
+    p->countTracks=0;
+    p->lengthTracks=0;
 }
 
 Dj::~Dj()

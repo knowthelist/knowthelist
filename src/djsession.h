@@ -34,7 +34,6 @@ public:
     Dj mainDJ;
     int minCount();
     void setMinCount(int value);
-    void setCurrentDj(Dj*);
     void setIsEnabledAutoDJCount(bool value);
     bool isEnabledAutoDJCount();
     Track* getRandomTrack();
@@ -54,6 +53,7 @@ public slots:
     void on_dj_filterChanged(Filter* f);
     void onResetStats();
     void savePlaylists( const QString &filename );
+    void setCurrentDj(Dj*);
 
 private:
     class DjSessionPrivate *p;

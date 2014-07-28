@@ -283,7 +283,39 @@ QListWidget::item:focus {
 	padding-bottom: 3px;
      border: 0px solid #6c6c6c;
  }
-</string>
+QPushButton#pushClose {
+ color: #333333; 
+border-style: inset;
+ border: .5px solid #333333;
+ border-radius: 4px;
+ background: #555555;
+ margin-right: -2px;
+max-height: 22px;
+min-height: 22px;
+min-width:10px;
+max-width:10px;
+}
+QPushButton#butPlayWidget {
+ color: white; 
+border-style: inset;
+ border: 1.5px solid #333333;
+ border-radius: 4px;
+ padding: 1px;
+ background: qlineargradient(
+   x1:0, y1:0, x2:0, y2:0.3,
+   stop:0.1 white,
+   stop:1 #666666
+ );
+max-height: 19px;
+min-height: 19px;
+}
+QPushButton#butPlayWidget:pressed {
+ background: qlineargradient(
+   x1:0, y1:0, x2:0, y2:0.3,
+   stop:0.1 white,
+   stop:1 #82df52
+ );
+}</string>
   </property>
   <widget class="QWidget" name="centralwidget">
    <property name="styleSheet">

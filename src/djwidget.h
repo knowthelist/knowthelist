@@ -33,6 +33,7 @@ public:
     ~DjWidget();
 
     void setDj(Dj *dj);
+    void slideCloseWidget(bool open);
     Dj* dj();
 
 public Q_SLOTS:
@@ -43,16 +44,22 @@ public Q_SLOTS:
 
 Q_SIGNALS:
    void activated();
+   void deleted();
+   void started();
    void filterCountChanged(int count);
 
 
 protected:
     void changeEvent(QEvent *event);
     void mousePressEvent(QMouseEvent* event);
+    void keyPressEvent(QKeyEvent *e);
 
 private slots:
 
     void on_lblName_linkActivated(const QString &link);
+    void timerSlide_timeOut();
+    void on_pushClose_clicked();
+    void on_butPlayWidget_pressed();
 
 private:
     Ui::DjWidget *ui;
