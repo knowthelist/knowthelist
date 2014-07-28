@@ -27,6 +27,8 @@ class DjBrowserPrivate
     public:
     QListWidget* listDjs;
     QListWidget* listDjFilters;
+    Dj* currentDj;
+    DjWidget* currentDjw;
 
 
 };
@@ -59,7 +61,7 @@ DjBrowser::DjBrowser(QWidget *parent) :
 
     pushAddFilter->setStyleSheet("QPushButton { border: none; padding-top: -3px; margin-left: 8px;max-height: 20px; margin-right: 28px;}");
     pushAddFilter->setToolTip(tr( "Add a new record case for current AutoDj" ));
-    connect( pushAddFilter,SIGNAL(clicked()),this, SLOT(pushAddFilter()));
+    connect( pushAddFilter,SIGNAL(clicked()),this, SLOT(addFilter()));
 
     QVBoxLayout *mainLayout = new QVBoxLayout;
     QWidget *headWidget = new QWidget(this);
@@ -75,7 +77,7 @@ DjBrowser::DjBrowser(QWidget *parent) :
     headWidgetLayout->addSpacing(width()*.47);
     headWidgetLayout->addWidget(pushAddDj);
     headWidgetLayout->addSpacing(width()*.95);
-//    headWidgetLayout->addWidget(pushAddFilter);
+    headWidgetLayout->addWidget(pushAddFilter);
 
 
     headWidget->setLayout(headWidgetLayout);
@@ -290,10 +292,40 @@ void DjBrowser::loadDj()
                            p->listDjFilters->addItem(itm);
                            p->listDjFilters->setItemWidget(itm,djfw);
                            dj->filters().at(i)->update();
+                           connect(djfw,SIGNAL(deleted()),this,SLOT(removeFilter()));
         }
 
         dj->setActiveFilterIdx(0);
+        p->currentDj=dj;
+        p->currentDjw=djWidget;
 
     }
 
+}
+
+void DjBrowser::addFilter()
+{
+    Filter* f = new Filter();
+    f->setMaxUsage(2);
+    p->currentDj->addFilter(f);
+    p->currentDjw->clicked();
+}
+
+void DjBrowser::removeFilter()
+{
+    if( DjFilterWidget* fw = qobject_cast<DjFilterWidget*>(QObject::sender()) ){
+
+        // search the Filter which to remove
+        for (int d=0;d<p->listDjFilters->count();d++){
+            if ((DjFilterWidget*)p->listDjFilters->itemWidget(p->listDjFilters->item(d)) == fw ){
+
+                p->currentDj->removeFilter(fw->filter());
+
+                p->listDjFilters->removeItemWidget(p->listDjFilters->item(d));
+                delete p->listDjFilters->item(d);
+            }
+        }
+        saveSettings();
+        p->currentDjw->clicked();
+    }
 }

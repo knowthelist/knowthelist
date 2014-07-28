@@ -18,22 +18,26 @@
 #include "djfilterwidget.h"
 #include "ui_djfilterwidget.h"
 #include <qfiledialog.h>
+
 #include <qdebug.h>
+#include <QTimer>;
+#include <QMouseEvent>;
 
-
-struct DjFilterWidget::Private
+struct DjFilterWidgetPrivate
 {
 
         Filter* filter;
-
+        QTimer* timerSlide;
+        int targetWidth;
 };
 
 DjFilterWidget::DjFilterWidget(QWidget *parent) :
     QWidget(parent),
     ui(new Ui::DjFilterWidget)
-    ,p(new Private)
+    ,p(new DjFilterWidgetPrivate)
 
 {
+    setFocusPolicy(Qt::ClickFocus);
     ui->setupUi(this);
     ui->ledActive->setLook(QLed::Flat);
     ui->ledActive->setShape(QLed::Rectangular);
@@ -48,10 +52,15 @@ DjFilterWidget::DjFilterWidget(QWidget *parent) :
     ui->stackDisplay->setCount( 0 );
 
     ui->stackDisplay->setBarColor(QColor( 196,196,210));
-
+    ui->widgetClose->setMinimumWidth(0);
+    ui->widgetClose->setMaximumWidth(0);
 
     timer = new QTimer( this );
     timer->stop();
+
+    p->timerSlide = new QTimer(this);
+    p->timerSlide->setInterval(10);
+    connect( p->timerSlide, SIGNAL(timeout()), SLOT(timerSlide_timeOut()) );
 }
 
 
@@ -59,7 +68,7 @@ DjFilterWidget::DjFilterWidget(QWidget *parent) :
 DjFilterWidget::~DjFilterWidget()
 {
     delete ui;
-    //delete timer;
+    delete p;
 }
 
 void DjFilterWidget::changeEvent(QEvent *e)
@@ -74,6 +83,17 @@ void DjFilterWidget::changeEvent(QEvent *e)
     }
 }
 
+void DjFilterWidget::mousePressEvent(QMouseEvent *event)
+{
+
+     if(ui->widgetClose->geometry().contains(event->pos()))
+     {
+         Q_EMIT deleted();
+     }
+    else{
+        slideCloseWidget(false);
+     }
+}
 void DjFilterWidget::slotSetFilter()
 {
     qDebug() << __PRETTY_FUNCTION__ ;
@@ -179,4 +199,40 @@ void DjFilterWidget::on_lbl1_linkActivated(const QString &link)
     dialog.setFileMode(QFileDialog::DirectoryOnly);
     if (dialog.exec())
          ui->txtPath->setText(dialog.selectedFiles().first());
+}
+
+// esc key for exit close
+void DjFilterWidget::keyPressEvent(QKeyEvent *e)
+{
+  if( e->key() == Qt::Key_Escape )
+      slideCloseWidget(false);
+   else
+      QWidget::keyPressEvent( e );
+}
+
+void DjFilterWidget::on_pushClose_clicked()
+{
+    slideCloseWidget( (ui->widgetClose->minimumWidth()<50) );
+}
+
+void DjFilterWidget::slideCloseWidget(bool open)
+{
+    p->targetWidth = (open) ? 70 : 0;
+    p->timerSlide->start();
+}
+
+void DjFilterWidget::timerSlide_timeOut()
+{
+    int mWidth = ui->widgetClose->minimumWidth();
+    if ( p->targetWidth > mWidth ){
+        ui->widgetClose->setMinimumWidth(mWidth+5);
+        ui->widgetClose->setMaximumWidth(mWidth+5);
+    }
+    else if ( p->targetWidth < mWidth ){
+        ui->widgetClose->setMinimumWidth(mWidth-5);
+        ui->widgetClose->setMaximumWidth(mWidth-5);
+    }
+    else{
+        p->timerSlide->stop();
+    }
 }

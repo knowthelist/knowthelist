@@ -36,18 +36,20 @@ public:
     void setFilter(Filter *filter);
     Filter* filter();
     void setID(QString value);
+    void slideCloseWidget(bool open);
 
 protected:
-    void changeEvent(QEvent *e);
+    void changeEvent(QEvent *event);
+    void mousePressEvent(QMouseEvent* event);
+    void keyPressEvent(QKeyEvent *e);
 
 Q_SIGNALS:
-   //void filterChanged();
+    void deleted();
 
 private:
-    Ui::DjFilterWidget *ui;
+    Ui::DjFilterWidget* ui;
     QTimer* timer;
-    struct Private;
-    Private *p;
+    struct DjFilterWidgetPrivate* p;
 
 private slots:
     void on_pushActivate_clicked();
@@ -61,6 +63,8 @@ private slots:
     void onFilterUsageChanged();
     void onFilterMaxUsageChanged();
     void on_lbl1_linkActivated(const QString &link);
+    void timerSlide_timeOut();
+    void on_pushClose_clicked();
 };
 
 #endif // DJFILTERWIDGET_H

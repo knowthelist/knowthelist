@@ -41,6 +41,8 @@ public slots:
     void loadDj();
     void removeDj();
     void startDj();
+    void addFilter();
+    void removeFilter();
 
 private:
     class DjBrowserPrivate *p;

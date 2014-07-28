@@ -289,7 +289,6 @@ border-style: inset;
  border: .5px solid #333333;
  border-radius: 4px;
  background: #555555;
- margin-right: -2px;
 max-height: 22px;
 min-height: 22px;
 min-width:10px;

@@ -36,6 +36,7 @@ public:
     int lengthTracks();
     void setLengthTracks(int);
     void addFilter(Filter* filter);
+    void removeFilter(Filter* filter);
     void setActiveFilterIdx(int idx);
     int activeFilterIdx();
 

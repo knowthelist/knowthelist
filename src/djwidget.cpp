@@ -212,8 +212,5 @@ void DjWidget::timerSlide_timeOut()
     }
     else{
         p->timerSlide->stop();
-        QRect geo = ui->pushClose->geometry();
-        geo.setLeft( geo.left()-p->targetWidth/11);
-        ui->pushClose->setGeometry(geo);
     }
 }

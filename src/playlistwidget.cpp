@@ -68,7 +68,7 @@ void PlaylistWidget::setRemovable(bool value)
     p->isRemovable=value;
     ui->pushClose->setVisible(value);
     if (!value)
-        ui->horizontalSpacer->changeSize(52,0);
+        ui->horizontalSpacer->changeSize(42,0);
  }
 
 QString PlaylistWidget::name()
@@ -192,8 +192,5 @@ void PlaylistWidget::timerSlide_timeOut()
     }
     else{
         p->timerSlide->stop();
-        QRect geo = ui->pushClose->geometry();
-        geo.setLeft( geo.left()-p->targetWidth/11);
-        ui->pushClose->setGeometry(geo);
     }
 }

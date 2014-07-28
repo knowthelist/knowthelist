@@ -53,10 +53,13 @@ void Dj::addFilter(Filter* filter)
             this,SLOT(on_filter_activated()));
     connect(filter,SIGNAL(filterChanged()),
             this,SLOT(on_filter_filterChanged()));
-//    connect(filter,SIGNAL(countChanged()),
-//            this,SLOT(on_filter_countChanged()));
     connect(filter,SIGNAL(maxUsageChanged()),
             this,SLOT(on_filter_maxUsageChanged()));
+}
+
+void Dj::removeFilter(Filter* filter)
+{
+    p->filters.removeOne(filter);
 }
 
 QList<Filter*> Dj::filters()
