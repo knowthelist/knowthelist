@@ -25,7 +25,6 @@
 
 struct DjFilterWidgetPrivate
 {
-
         Filter* filter;
         QTimer* timerSlide;
         int targetWidth;
@@ -44,8 +43,8 @@ DjFilterWidget::DjFilterWidget(QWidget *parent) :
     ui->ledActive->setColor(QColor(35,119,246));
     ui->ledActive->off();
     ui->txtPath->setAttribute(Qt::WA_MacShowFocusRect, false);
-    ui->txtGenre->setAttribute(Qt::WA_MacShowFocusRect, false);
-    ui->txtArtist->setAttribute(Qt::WA_MacShowFocusRect, false);
+    ui->cmbGenres->setAttribute(Qt::WA_MacShowFocusRect, false);
+    ui->cmbArtists->setAttribute(Qt::WA_MacShowFocusRect, false);
 
     ui->lblFilterValue->setText( QString::null );
     ui->sliFilterValue->setValue( 0 );
@@ -99,9 +98,19 @@ void DjFilterWidget::slotSetFilter()
     qDebug() << __PRETTY_FUNCTION__ ;
     timer->stop();
     p->filter->setPath(ui->txtPath->text());
-    p->filter->setGenre(ui->txtGenre->text());
-    p->filter->setArtist(ui->txtArtist->text());
+    p->filter->setGenre(ui->cmbGenres->currentText());
+    p->filter->setArtist(ui->cmbArtists->currentText());
     p->filter->update();
+}
+
+void DjFilterWidget::setAllArtists(QStringList values)
+{
+    ui->cmbArtists->addItems(values );
+}
+
+void DjFilterWidget::setAllGenres(QStringList& values)
+{
+    ui->cmbGenres->addItems(values );
 }
 
 void DjFilterWidget::setID(QString value)
@@ -117,8 +126,8 @@ void DjFilterWidget::setFilter(Filter* filter)
     onFilterCountChanged();
     onFilterMaxUsageChanged();
     ui->txtPath->setText(p->filter->path());
-    ui->txtGenre->setText(p->filter->genre());
-    ui->txtArtist->setText(p->filter->artist());
+    ui->cmbGenres->setEditText(p->filter->genre());
+    ui->cmbArtists->setEditText(p->filter->artist());
     connect(p->filter,SIGNAL(statusChanged(bool)),
             this,SLOT(onFilterStatusChanged(bool)));
     connect(p->filter,SIGNAL(countChanged()),
@@ -127,8 +136,6 @@ void DjFilterWidget::setFilter(Filter* filter)
             this,SLOT(onFilterUsageChanged()));
     connect(p->filter,SIGNAL(maxUsageChanged()),
             this,SLOT(onFilterMaxUsageChanged()));
-
-
 }
 
 Filter* DjFilterWidget::filter()
@@ -148,13 +155,13 @@ void DjFilterWidget::on_txtPath_textChanged(QString )
         timer->singleShot(500,this, SLOT( slotSetFilter() ));
 }
 
-void DjFilterWidget::on_txtGenre_textChanged(QString )
+void DjFilterWidget::on_cmbGenres_textChanged(QString )
 {
     if ( timer->isActive() ) timer->stop();
         timer->singleShot(500,this, SLOT( slotSetFilter() ));
 }
 
-void DjFilterWidget::on_txtArtist_textChanged(QString )
+void DjFilterWidget::on_cmbArtists_textChanged(QString )
 {
     if ( timer->isActive() ) timer->stop();
         timer->singleShot(500,this, SLOT( slotSetFilter() ));

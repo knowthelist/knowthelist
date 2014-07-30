@@ -103,7 +103,7 @@ CollectionTree::createTrunk()
                     break;
             break;
         default:
-            tags = p->database->selectArtists( "","" );
+            tags = p->database->selectArtists( );
             foreach ( QStringList tag, tags) {
                 CollectionTreeItem* item = new CollectionTreeItem( this );
                 item->setArtist(tag[0]);

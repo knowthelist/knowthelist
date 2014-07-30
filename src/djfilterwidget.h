@@ -37,6 +37,9 @@ public:
     Filter* filter();
     void setID(QString value);
     void slideCloseWidget(bool open);
+    void setAllGenres(QStringList &values);
+    void setAllArtists(QStringList values);
+
 
 protected:
     void changeEvent(QEvent *event);
@@ -54,8 +57,8 @@ private:
 private slots:
     void on_pushActivate_clicked();
     void on_txtPath_textChanged(QString );
-    void on_txtGenre_textChanged(QString );
-    void on_txtArtist_textChanged(QString );
+    void on_cmbGenres_textChanged(QString );
+    void on_cmbArtists_textChanged(QString );
     void on_sliFilterValue_valueChanged(int value);
     void slotSetFilter();
     void onFilterStatusChanged(bool b);

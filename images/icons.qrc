@@ -16,5 +16,6 @@
         <file>backward.png</file>
         <file>forward.png</file>
         <file>list.png</file>
+        <file>down.png</file>
     </qresource>
 </RCC>

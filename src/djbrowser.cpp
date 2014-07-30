@@ -19,6 +19,7 @@
 #include "dj.h"
 #include "djwidget.h"
 #include "djfilterwidget.h"
+#include "collectiondb.h"
 
 #include <Qt>
 
@@ -29,14 +30,26 @@ class DjBrowserPrivate
     QListWidget* listDjFilters;
     Dj* currentDj;
     DjWidget* currentDjw;
-
-
+    QStringList allGenres;
+    QStringList allArtists;
+    CollectionDB* database;
 };
 
 DjBrowser::DjBrowser(QWidget *parent) :
     QWidget(parent)
 {
     p = new DjBrowserPrivate;
+    p->database  = new CollectionDB();
+
+    QList<QStringList> tags = p->database->selectArtists();
+    p->allArtists.append( QString::null );
+    foreach ( QStringList tag, tags)
+        p->allArtists.append( tag[0] );
+
+    tags = p->database->selectGenres();
+    p->allGenres.append( QString::null );
+    foreach ( QStringList tag, tags)
+        p->allGenres.append( tag[0] );
 
     QPushButton* pushAddDj =new QPushButton();
     pushAddDj->setGeometry(QRect(1,1,60,25));
@@ -76,7 +89,7 @@ DjBrowser::DjBrowser(QWidget *parent) :
 
     headWidgetLayout->addSpacing(width()*.47);
     headWidgetLayout->addWidget(pushAddDj);
-    headWidgetLayout->addSpacing(width()*.95);
+    headWidgetLayout->addSpacing(width());
     headWidgetLayout->addWidget(pushAddFilter);
 
 
@@ -285,8 +298,10 @@ void DjBrowser::loadDj()
         {
 
                            djfw  = new DjFilterWidget(p->listDjFilters);
-                           djfw->setFilter( dj->filters().at(i) );
                            djfw->setID(QString::number(i+1));
+                           djfw->setAllGenres( p->allGenres );
+                           djfw->setAllArtists( p->allArtists );
+                           djfw->setFilter( dj->filters().at(i) );
                            itm = new QListWidgetItem(p->listDjFilters);
                            itm->setSizeHint(QSize(0,75));
                            p->listDjFilters->addItem(itm);

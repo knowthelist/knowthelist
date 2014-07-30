@@ -77,7 +77,7 @@ class CollectionDB : public QObject
 
         QList<QStringList> selectTracks(QString year, QString genre, QString artist, QString album );
         QList<QStringList> selectAlbums(QString year, QString genre, QString artist);
-        QList<QStringList> selectArtists(QString year, QString genre);
+        QList<QStringList> selectArtists(QString year="", QString genre="");
         QList<QStringList> selectYears();
         QList<QStringList> selectGenres();
         QList<QStringList> selectHotTracks();

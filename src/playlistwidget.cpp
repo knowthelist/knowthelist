@@ -67,8 +67,8 @@ void PlaylistWidget::setRemovable(bool value)
 {
     p->isRemovable=value;
     ui->pushClose->setVisible(value);
-    if (!value)
-        ui->horizontalSpacer->changeSize(42,0);
+   // if (!value)
+     //r   ui->horizontalSpacer->changeSize(42,0);
  }
 
 QString PlaylistWidget::name()
