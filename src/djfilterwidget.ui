@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>657</width>
-    <height>87</height>
+    <width>754</width>
+    <height>85</height>
    </rect>
   </property>
   <property name="maximumSize">
@@ -34,7 +34,7 @@ QLineEdit {
     selection-color: white;   
     border: 1px groove gray;
     border-radius: 0px;
- margin: 0 0 0 0;
+    margin: 0 0 0 0;
 	font-size: 10px;
 }
 QFrame#fraDisplay&gt;QLabel {
@@ -74,7 +74,7 @@ QFrame#fraDisplay{
     selection-color: white;   
     border: 1px groove gray;
     border-radius: 0px;
-   margin: 0 0 0 0;
+   margin: 0 3 0 3;
 	font-size: 10px;
  }
 
@@ -120,7 +120,7 @@ QComboBox::drop-down {
    <item>
     <widget class="QFrame" name="frame">
      <property name="sizePolicy">
-      <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+      <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
        <horstretch>0</horstretch>
        <verstretch>0</verstretch>
       </sizepolicy>
@@ -238,20 +238,20 @@ QComboBox::drop-down {
       <item row="0" column="2" alignment="Qt::AlignRight">
        <widget class="QFrame" name="fraDisplayAndButtons">
         <property name="sizePolicy">
-         <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+         <sizepolicy hsizetype="Fixed" vsizetype="Expanding">
           <horstretch>0</horstretch>
           <verstretch>0</verstretch>
          </sizepolicy>
         </property>
         <property name="minimumSize">
          <size>
-          <width>300</width>
+          <width>290</width>
           <height>0</height>
          </size>
         </property>
         <property name="maximumSize">
          <size>
-          <width>322</width>
+          <width>290</width>
           <height>16777215</height>
          </size>
         </property>
@@ -267,27 +267,27 @@ QComboBox::drop-down {
         <widget class="QFrame" name="fraDisplay">
          <property name="geometry">
           <rect>
-           <x>9</x>
-           <y>6</y>
-           <width>166</width>
-           <height>65</height>
+           <x>5</x>
+           <y>12</y>
+           <width>156</width>
+           <height>58</height>
           </rect>
          </property>
          <property name="sizePolicy">
-          <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
+          <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
            <horstretch>0</horstretch>
            <verstretch>0</verstretch>
           </sizepolicy>
          </property>
          <property name="minimumSize">
           <size>
-           <width>166</width>
+           <width>156</width>
            <height>0</height>
           </size>
          </property>
          <property name="maximumSize">
           <size>
-           <width>102</width>
+           <width>156</width>
            <height>16777215</height>
           </size>
          </property>
@@ -358,7 +358,7 @@ p, li { white-space: pre-wrap; }
          <widget class="StackDisplay" name="stackDisplay" native="true">
           <property name="geometry">
            <rect>
-            <x>54</x>
+            <x>44</x>
             <y>10</y>
             <width>105</width>
             <height>41</height>
@@ -393,10 +393,10 @@ p, li { white-space: pre-wrap; }
         <widget class="QFrame" name="frame_4">
          <property name="geometry">
           <rect>
-           <x>180</x>
-           <y>0</y>
+           <x>166</x>
+           <y>12</y>
            <width>85</width>
-           <height>89</height>
+           <height>58</height>
           </rect>
          </property>
          <property name="sizePolicy">
@@ -427,7 +427,7 @@ p, li { white-space: pre-wrap; }
           <property name="geometry">
            <rect>
             <x>-4</x>
-            <y>28</y>
+            <y>23</y>
             <width>51</width>
             <height>31</height>
            </rect>
@@ -481,7 +481,7 @@ p, li { white-space: pre-wrap; }
           <property name="geometry">
            <rect>
             <x>63</x>
-            <y>29</y>
+            <y>24</y>
             <width>13</width>
             <height>8</height>
            </rect>
@@ -507,7 +507,7 @@ p, li { white-space: pre-wrap; }
           <property name="geometry">
            <rect>
             <x>52</x>
-            <y>38</y>
+            <y>33</y>
             <width>33</width>
             <height>19</height>
            </rect>
@@ -1159,7 +1159,7 @@ p, li { white-space: pre-wrap; }
           <property name="geometry">
            <rect>
             <x>2</x>
-            <y>10</y>
+            <y>5</y>
             <width>52</width>
             <height>15</height>
            </rect>
@@ -1177,8 +1177,8 @@ p, li { white-space: pre-wrap; }
         <widget class="QPushButton" name="pushClose">
          <property name="geometry">
           <rect>
-           <x>286</x>
-           <y>26</y>
+           <x>276</x>
+           <y>33</y>
            <width>30</width>
            <height>20</height>
           </rect>
@@ -1201,7 +1201,7 @@ p, li { white-space: pre-wrap; }
       <item row="0" column="1">
        <widget class="QFrame" name="fraFilterTextBoxes">
         <property name="sizePolicy">
-         <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+         <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
           <horstretch>0</horstretch>
           <verstretch>0</verstretch>
          </sizepolicy>
@@ -1209,13 +1209,13 @@ p, li { white-space: pre-wrap; }
         <property name="minimumSize">
          <size>
           <width>0</width>
-          <height>0</height>
+          <height>82</height>
          </size>
         </property>
         <property name="maximumSize">
          <size>
           <width>16777215</width>
-          <height>16777215</height>
+          <height>92</height>
          </size>
         </property>
         <property name="frameShape">
@@ -1228,8 +1228,17 @@ p, li { white-space: pre-wrap; }
          <property name="leftMargin">
           <number>0</number>
          </property>
+         <property name="topMargin">
+          <number>7</number>
+         </property>
          <property name="rightMargin">
           <number>4</number>
+         </property>
+         <property name="bottomMargin">
+          <number>17</number>
+         </property>
+         <property name="spacing">
+          <number>-1</number>
          </property>
          <item row="0" column="0">
           <widget class="QLabel" name="lbl1">
@@ -1678,6 +1687,25 @@ p, li { white-space: pre-wrap; }
            </property>
            <property name="alignment">
             <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+           </property>
+          </widget>
+         </item>
+         <item row="2" column="1">
+          <widget class="QComboBox" name="cmbArtists">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="minimumSize">
+            <size>
+             <width>0</width>
+             <height>18</height>
+            </size>
+           </property>
+           <property name="editable">
+            <bool>true</bool>
            </property>
           </widget>
          </item>
@@ -2596,25 +2624,6 @@ p, li { white-space: pre-wrap; }
          </item>
          <item row="1" column="1">
           <widget class="QComboBox" name="cmbGenres">
-           <property name="sizePolicy">
-            <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
-             <horstretch>0</horstretch>
-             <verstretch>0</verstretch>
-            </sizepolicy>
-           </property>
-           <property name="minimumSize">
-            <size>
-             <width>0</width>
-             <height>18</height>
-            </size>
-           </property>
-           <property name="editable">
-            <bool>true</bool>
-           </property>
-          </widget>
-         </item>
-         <item row="2" column="1">
-          <widget class="QComboBox" name="cmbArtists">
            <property name="sizePolicy">
             <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
              <horstretch>0</horstretch>

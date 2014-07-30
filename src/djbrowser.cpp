@@ -139,9 +139,11 @@ DjBrowser::DjBrowser(QWidget *parent) :
     setLayout(mainLayout);
 
     QSettings settings;
-   // p->splitter->restoreState(settings.value("SplitterDjBrowser").toByteArray());
     p->splitter->setStretchFactor(0, 5);
     p->splitter->setStretchFactor(1, 9);
+    p->splitter->restoreState(settings.value("SplitterDjBrowser").toByteArray());
+
+    //ToDo: restore last DJ from settings
 }
 
 DjBrowser::~DjBrowser()
