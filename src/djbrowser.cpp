@@ -26,6 +26,7 @@
 class DjBrowserPrivate
 {
     public:
+    QSplitter* splitter;
     QListWidget* listDjs;
     QListWidget* listDjFilters;
     Dj* currentDj;
@@ -76,51 +77,71 @@ DjBrowser::DjBrowser(QWidget *parent) :
     pushAddFilter->setToolTip(tr( "Add a new record case for current AutoDj" ));
     connect( pushAddFilter,SIGNAL(clicked()),this, SLOT(addFilter()));
 
-    QVBoxLayout *mainLayout = new QVBoxLayout;
-    QWidget *headWidget = new QWidget(this);
-    headWidget->setMaximumHeight(35);
-    headWidget->setMinimumHeight(25);
-
-    QHBoxLayout *headWidgetLayout = new QHBoxLayout;
-    headWidgetLayout->setMargin(0);
-    headWidgetLayout->setSpacing(1);
-    headWidgetLayout->setAlignment(Qt::AlignLeft);
-
-
-    headWidgetLayout->addSpacing(width()*.47);
-    headWidgetLayout->addWidget(pushAddDj);
-    headWidgetLayout->addSpacing(width());
-    headWidgetLayout->addWidget(pushAddFilter);
-
-
-    headWidget->setLayout(headWidgetLayout);
-
     p->listDjFilters = new QListWidget();
     p->listDjs = new QListWidget();
     p->listDjFilters->setAttribute(Qt::WA_MacShowFocusRect, false);
     p->listDjs->setAttribute(Qt::WA_MacShowFocusRect, false);
-    p->listDjs->setMaximumWidth(width()*.22);
     p->listDjs->setItemSelected(p->listDjs->currentItem(),false);
 
-    QWidget *djBox = new QWidget(this);
-    QHBoxLayout *layout = new QHBoxLayout;
-    layout->setMargin(0);
-    layout->setSpacing(1);
-    p->listDjs->setMaximumWidth(350);
-    layout->addWidget(p->listDjs);
-    layout->addWidget(p->listDjFilters);
-    djBox->setLayout(layout);
+    QVBoxLayout *mainLayout = new QVBoxLayout;
 
-    headWidget->raise();
+    QVBoxLayout *headWidgetLeftLayout = new QVBoxLayout;
+    headWidgetLeftLayout->setMargin(0);
+    headWidgetLeftLayout->setSpacing(1);
+    headWidgetLeftLayout->setAlignment(Qt::AlignRight);
+    headWidgetLeftLayout->addWidget(pushAddDj);
 
-    mainLayout->addWidget(headWidget);
-    mainLayout->addWidget(djBox);
+    QWidget *headWidgetLeft = new QWidget(this);
+    headWidgetLeft->setMaximumHeight(20);
+    headWidgetLeft->setMinimumHeight(20);
+    headWidgetLeft->setLayout(headWidgetLeftLayout);
 
+    QVBoxLayout *headWidgetRightLayout = new QVBoxLayout;
+    headWidgetRightLayout->setMargin(0);
+    headWidgetRightLayout->setSpacing(1);
+    headWidgetRightLayout->setAlignment(Qt::AlignRight);
+    headWidgetRightLayout->addWidget(pushAddFilter);
+
+    QWidget *headWidgetRight = new QWidget(this);
+    headWidgetRight->setMaximumHeight(20);
+    headWidgetRight->setMinimumHeight(20);
+    headWidgetRight->setLayout(headWidgetRightLayout);
+
+    QVBoxLayout *widgetLeftLayout = new QVBoxLayout;
+    widgetLeftLayout->setMargin(0);
+    widgetLeftLayout->setSpacing(1);
+    widgetLeftLayout->setAlignment(Qt::AlignRight);
+    widgetLeftLayout->addWidget(headWidgetLeft);
+    widgetLeftLayout->addWidget(p->listDjs);
+
+    QVBoxLayout *widgetRightLayout = new QVBoxLayout;
+    widgetRightLayout->setMargin(0);
+    widgetRightLayout->setSpacing(1);
+    widgetRightLayout->setAlignment(Qt::AlignRight);
+    widgetRightLayout->addWidget(headWidgetRight);
+    widgetRightLayout->addWidget(p->listDjFilters);
+
+    QWidget *widgetLeft = new QWidget(this);
+    widgetLeft->setLayout(widgetLeftLayout);
+
+    QWidget *widgetRight = new QWidget(this);
+    widgetRight->setLayout(widgetRightLayout);
+
+    p->splitter = new QSplitter();
+    p->splitter->addWidget(widgetLeft);
+    p->splitter->addWidget(widgetRight);
+
+    mainLayout->addWidget(p->splitter);
 
     mainLayout->setMargin(0);
     mainLayout->setSpacing(0);
 
     setLayout(mainLayout);
+
+    QSettings settings;
+   // p->splitter->restoreState(settings.value("SplitterDjBrowser").toByteArray());
+    p->splitter->setStretchFactor(0, 5);
+    p->splitter->setStretchFactor(1, 9);
 }
 
 DjBrowser::~DjBrowser()
@@ -133,6 +154,8 @@ DjBrowser::~DjBrowser()
 void DjBrowser::saveSettings()
 {
     QSettings settings;
+    settings.setValue("SplitterDjBrowser",p->splitter->saveState());
+
     settings.setValue("countDJ",p->listDjs->count());
     settings.remove("AutoDJ");
     settings.beginGroup("AutoDJ");

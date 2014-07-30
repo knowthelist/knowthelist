@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1023</width>
+    <width>403</width>
     <height>130</height>
    </rect>
   </property>
@@ -301,7 +301,7 @@ QFrame#fraDisplay{
             <item>
              <widget class="QLabel" name="lblTitle">
               <property name="sizePolicy">
-               <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
+               <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
                 <horstretch>0</horstretch>
                 <verstretch>0</verstretch>
                </sizepolicy>
@@ -738,7 +738,7 @@ QFrame#fraDisplay{
                <enum>QFrame::Plain</enum>
               </property>
               <property name="text">
-               <string>texttexttexttexttexttexttexttexttexttexttexttexttexttexttexttexttexttexttexttexttexttexttext</string>
+               <string>texttexttextt</string>
               </property>
               <property name="scaledContents">
                <bool>false</bool>
@@ -747,14 +747,14 @@ QFrame#fraDisplay{
                <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
               </property>
               <property name="wordWrap">
-               <bool>false</bool>
+               <bool>true</bool>
               </property>
              </widget>
             </item>
             <item>
              <widget class="VUMeter" name="vuMeter" native="true">
               <property name="sizePolicy">
-               <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
+               <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
                 <horstretch>0</horstretch>
                 <verstretch>0</verstretch>
                </sizepolicy>
@@ -783,7 +783,7 @@ QFrame#fraDisplay{
               </property>
               <property name="minimumSize">
                <size>
-                <width>33</width>
+                <width>0</width>
                 <height>27</height>
                </size>
               </property>
@@ -2669,7 +2669,7 @@ QFrame#fraDisplay{
         </layout>
        </widget>
       </item>
-      <item>
+      <item alignment="Qt::AlignHCenter">
        <widget class="QFrame" name="frame_2">
         <property name="sizePolicy">
          <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
@@ -2679,7 +2679,7 @@ QFrame#fraDisplay{
         </property>
         <property name="minimumSize">
          <size>
-          <width>10</width>
+          <width>95</width>
           <height>0</height>
          </size>
         </property>
@@ -2700,7 +2700,7 @@ QFrame#fraDisplay{
           <enum>QLayout::SetDefaultConstraint</enum>
          </property>
          <property name="leftMargin">
-          <number>16</number>
+          <number>8</number>
          </property>
          <property name="topMargin">
           <number>0</number>
