@@ -48,6 +48,8 @@ DjFilterWidget::DjFilterWidget(QWidget *parent) :
 #if defined(Q_OS_DARWIN)
     ui->cmbArtists->setStyleSheet("QComboBox { margin: 0 3 0 3;}");
     ui->cmbGenres->setStyleSheet("QComboBox { margin: 0 3 0 3;}");
+    ui->fraFilterTextBoxes->layout()->setContentsMargins(0,13,13,14);
+    ui->fraFilterTextBoxes->layout()->setSpacing(-1);
 #endif
 
 
