@@ -8,5 +8,6 @@
         <file>knowthelist_nl.qm</file>
         <file>knowthelist_fr.qm</file>
         <file>knowthelist_es.qm</file>
+        <file>knowthelist_it.qm</file>
     </qresource>
 </RCC>
