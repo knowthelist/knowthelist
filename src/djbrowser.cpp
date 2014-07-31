@@ -204,7 +204,7 @@ void DjBrowser::updateList()
 
     settings.beginGroup("AutoDJ");
 
-            // Filters
+            // DJs
             for (int d=0;d<maxDj;d++)
             {
                 settings.beginGroup(QString::number(d));
@@ -226,6 +226,7 @@ void DjBrowser::updateList()
 
                      // Filters
                      int countFilter = settings.value("FilterCount","2").toInt();
+                     if (countFilter==0) countFilter=1;
                      settings.beginGroup("Filter");
                      for (int i=0;i<countFilter;i++)
                      {
@@ -236,7 +237,7 @@ void DjBrowser::updateList()
                            f->setPath(settings.value("Path","").toString());
                            f->setGenre(settings.value("Genre","").toString());
                            f->setArtist(settings.value("Artist","").toString());
-                           f->setMaxUsage(settings.value("Value","2").toInt());
+                           f->setMaxUsage(settings.value("Value","4").toInt());
                          settings.endGroup();
 
                          f->setUsage(0);
@@ -318,7 +319,13 @@ void DjBrowser::loadDj()
         Q_EMIT selectionChanged(dj);
 
          // Filters
-        qDebug() << __PRETTY_FUNCTION__<< "name="<<dj->name << "filters="<<dj->filters().count() ;
+        if (dj->filters().count()==0) {
+            //last filter has been removed
+            Filter* f = new Filter();
+            f->setMaxUsage(4);
+            dj->addFilter(f);
+        }
+        qDebug() << __PRETTY_FUNCTION__<< "name="<<dj->name << "filters="<< dj->filters().count();
         for (int i=0;i<dj->filters().count();i++)
         {
 
@@ -346,7 +353,7 @@ void DjBrowser::loadDj()
 void DjBrowser::addFilter()
 {
     Filter* f = new Filter();
-    f->setMaxUsage(2);
+    f->setMaxUsage(4);
     p->currentDj->addFilter(f);
     p->currentDjw->clicked();
 }
