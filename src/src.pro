@@ -94,7 +94,9 @@ TRANSLATIONS += \
     ../locale/knowthelist_hu.ts \
     ../locale/knowthelist_fr.ts \
     ../locale/knowthelist_nl.ts \
-    ../locale/knowthelist_ru.ts
+    ../locale/knowthelist_ru.ts \
+    ../locale/knowthelist_es.ts \
+    ../locale/knowthelist_tr.ts
 
 win32 { 
     INCLUDEPATH += $$quote(C:\Program Files (x86)\gstreamer-sdk\0.10\x86\include\gstreamer-0.10) \
