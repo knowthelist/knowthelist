@@ -3,5 +3,10 @@
         <file>knowthelist_cs.qm</file>
         <file>knowthelist_de.qm</file>
         <file>knowthelist_hu.qm</file>
+        <file>knowthelist_tr.qm</file>
+        <file>knowthelist_ru.qm</file>
+        <file>knowthelist_nl.qm</file>
+        <file>knowthelist_fr.qm</file>
+        <file>knowthelist_es.qm</file>
     </qresource>
 </RCC>
