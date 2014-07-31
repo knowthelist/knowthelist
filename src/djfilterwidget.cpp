@@ -45,6 +45,11 @@ DjFilterWidget::DjFilterWidget(QWidget *parent) :
     ui->txtPath->setAttribute(Qt::WA_MacShowFocusRect, false);
     ui->cmbGenres->setAttribute(Qt::WA_MacShowFocusRect, false);
     ui->cmbArtists->setAttribute(Qt::WA_MacShowFocusRect, false);
+#if defined(Q_OS_DARWIN)
+    ui->cmbArtists->setStyleSheet("QComboBox { margin: 0 3 0 3;}");
+    ui->cmbGenres->setStyleSheet("QComboBox { margin: 0 3 0 3;}");
+#endif
+
 
     ui->lblFilterValue->setText( QString::null );
     ui->sliFilterValue->setValue( 0 );

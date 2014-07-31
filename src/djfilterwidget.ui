@@ -74,7 +74,6 @@ QFrame#fraDisplay{
     selection-color: white;   
     border: 1px groove gray;
     border-radius: 0px;
-   margin: 0 3 0 3;
 	font-size: 10px;
  }
 
@@ -1178,7 +1177,7 @@ p, li { white-space: pre-wrap; }
          <property name="geometry">
           <rect>
            <x>276</x>
-           <y>33</y>
+           <y>30</y>
            <width>30</width>
            <height>20</height>
           </rect>
@@ -1229,16 +1228,16 @@ p, li { white-space: pre-wrap; }
           <number>0</number>
          </property>
          <property name="topMargin">
-          <number>7</number>
+          <number>13</number>
          </property>
          <property name="rightMargin">
-          <number>4</number>
+          <number>13</number>
          </property>
          <property name="bottomMargin">
-          <number>17</number>
+          <number>13</number>
          </property>
          <property name="spacing">
-          <number>-1</number>
+          <number>3</number>
          </property>
          <item row="0" column="0">
           <widget class="QLabel" name="lbl1">
@@ -1250,7 +1249,7 @@ p, li { white-space: pre-wrap; }
            </property>
            <property name="minimumSize">
             <size>
-             <width>49</width>
+             <width>60</width>
              <height>11</height>
             </size>
            </property>
@@ -1686,7 +1685,7 @@ p, li { white-space: pre-wrap; }
             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;a href=&quot;#&quot;&gt;&lt;span style=&quot; text-decoration: underline; color:#e1e1e1;&quot;&gt;Path&lt;/span&gt;&lt;/a&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
            </property>
            <property name="alignment">
-            <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+            <set>Qt::AlignCenter</set>
            </property>
           </widget>
          </item>
@@ -1701,7 +1700,7 @@ p, li { white-space: pre-wrap; }
            <property name="minimumSize">
             <size>
              <width>0</width>
-             <height>18</height>
+             <height>17</height>
             </size>
            </property>
            <property name="editable">
@@ -1714,7 +1713,7 @@ p, li { white-space: pre-wrap; }
            <property name="minimumSize">
             <size>
              <width>0</width>
-             <height>18</height>
+             <height>17</height>
             </size>
            </property>
            <property name="cursorPosition">
@@ -1732,7 +1731,7 @@ p, li { white-space: pre-wrap; }
            </property>
            <property name="minimumSize">
             <size>
-             <width>50</width>
+             <width>60</width>
              <height>11</height>
             </size>
            </property>
@@ -2168,7 +2167,7 @@ p, li { white-space: pre-wrap; }
             <string>Genre</string>
            </property>
            <property name="alignment">
-            <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+            <set>Qt::AlignCenter</set>
            </property>
           </widget>
          </item>
@@ -2182,7 +2181,7 @@ p, li { white-space: pre-wrap; }
            </property>
            <property name="minimumSize">
             <size>
-             <width>50</width>
+             <width>60</width>
              <height>11</height>
             </size>
            </property>
@@ -2618,7 +2617,7 @@ p, li { white-space: pre-wrap; }
             <string>Artist</string>
            </property>
            <property name="alignment">
-            <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+            <set>Qt::AlignCenter</set>
            </property>
           </widget>
          </item>
@@ -2633,7 +2632,7 @@ p, li { white-space: pre-wrap; }
            <property name="minimumSize">
             <size>
              <width>0</width>
-             <height>18</height>
+             <height>17</height>
             </size>
            </property>
            <property name="editable">
