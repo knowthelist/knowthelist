@@ -20,10 +20,12 @@
 
  #include <QTreeWidgetItem>
 #include <QColorGroup>
+#include <Qt>
 #include <qurl.h>
 #include "track.h"
 #include "playlistitem.h"
 #include "playlist.h"
+#include "ratingwidget.h"
 
 class PlaylistItem : public QTreeWidgetItem
 {
@@ -34,9 +36,10 @@ public:
     QString urlString() const { return text(Column_Url ); }
     QString title() const { return text( Column_Title ); }
     QString artist() const { return text( Column_Artist ); }
+    int rate();
     Playlist *listView() const { return (Playlist*)treeWidget(); }
     PlaylistItem *nextSibling() const { return (PlaylistItem*)treeWidget()->itemBelow(this); }
-
+    //ratingWidget()
 
     Track *track() { return m_track ; }
     void setTrack( Track*);
@@ -60,12 +63,15 @@ public:
                       Column_Year = 6,
                       Column_Genre = 7,
                       Column_Tracknumber = 8,
-                      Column_Length = 9};
-                      
+                      Column_Length = 9,
+                      Column_Rate = 10};
+signals:
+
     private:
-        //static QString trackUrl( const QUrl &u ) { return u.protocol() == "file" ? u.fileName() : u.toString(); }
         Track *m_track;
         QColor m_foreColor;
+        RatingWidget *rating;
+        Playlist* m_parent;
         bool operator< (const QTreeWidgetItem &other) const;
 };
 

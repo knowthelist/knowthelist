@@ -51,6 +51,7 @@ public slots:
     void forceTracks(QList<Track*> tracks);
     void on_dj_filterChanged(Filter* f);
     void onResetStats();
+    void onTrackPropertyChanged(Track* track);
     void savePlaylists( const QString &filename );
     void setCurrentDj(Dj*);
 

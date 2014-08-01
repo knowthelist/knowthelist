@@ -314,6 +314,9 @@ QPushButton#butPlayWidget:pressed {
    stop:0.1 white,
    stop:1 #82df52
  );
+}
+RatingWidget {
+background-color: #333333;
 }</string>
   </property>
   <widget class="QWidget" name="centralwidget">
@@ -7608,7 +7611,7 @@ p, li { white-space: pre-wrap; }
      <x>0</x>
      <y>0</y>
      <width>1280</width>
-     <height>23</height>
+     <height>22</height>
     </rect>
    </property>
   </widget>

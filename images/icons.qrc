@@ -17,5 +17,7 @@
         <file>forward.png</file>
         <file>list.png</file>
         <file>down.png</file>
+        <file>star-on.png</file>
+        <file>star-off.png</file>
     </qresource>
 </RCC>

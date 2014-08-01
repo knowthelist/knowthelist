@@ -39,6 +39,7 @@ class CollectionDB : public QObject
         bool isEmpty();
         
         void incSongCounter( const QString url );
+        void setSongRate( const QString url, int rate );
         void updateDirStats( QString path, const long datetime );
         void removeSongsInDir( QString path );
         bool isDirInCollection( QString path );
@@ -82,6 +83,7 @@ class CollectionDB : public QObject
         QList<QStringList> selectGenres();
         QList<QStringList> selectHotTracks();
         QList<QStringList> selectLastTracks();
+        QList<QStringList> selectFavoritesTracks();
 
     signals:
         void scanDone( bool changed );

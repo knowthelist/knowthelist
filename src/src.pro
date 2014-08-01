@@ -45,7 +45,8 @@ SOURCES += main.cpp \
     modeselector.cpp \
     playlistbrowser.cpp \
     playlistwidget.cpp \
-    djbrowser.cpp
+    djbrowser.cpp \
+    ratingwidget.cpp
 HEADERS += knowthelist.h \
     vumeter.h \
     qvumeter.h \
@@ -78,7 +79,8 @@ HEADERS += knowthelist.h \
     modeselector.h \
     playlistbrowser.h \
     playlistwidget.h \
-    djbrowser.h
+    djbrowser.h \
+    ratingwidget.h
 FORMS += \
     settingsdialog.ui \
     djwidget.ui \

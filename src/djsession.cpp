@@ -228,6 +228,13 @@ void DjSession::onTrackFinished(Track *track)
     }
 }
 
+void DjSession::onTrackPropertyChanged(Track* track)
+{
+    if ( track ){
+        p->database->setSongRate( track->url().toLocalFile(), track->rate() );
+    }
+}
+
 void DjSession::onTracksChanged_Playlist1(QList<Track*> tracks)
 {
     p->playList1_Tracks = tracks;
@@ -287,6 +294,7 @@ void DjSession::savePlaylists( const QString &filename )
               extElem.setAttribute("isOnFirstPlayer", "1");
             if ( (*i)->flags().testFlag(Track::isOnSecondPlayer ))
               extElem.setAttribute("isOnSecondPlayer", "1");
+              extElem.setAttribute("Rating", (*i)->rate());
 
             QStringList tag = (*i)->tagList();
 

@@ -112,6 +112,7 @@ void PlaylistBrowser::updateLists()
     QListWidgetItem* itm;
     p->listPlaylists->clear();
 
+    //Top Tracks List
     list = new PlaylistWidget(p->listPlaylists);
     list->setName(tr("Top Tracks"));
     list->setObjectName("TopTracks");
@@ -126,10 +127,26 @@ void PlaylistBrowser::updateLists()
     p->listPlaylists->addItem(itm);
     p->listPlaylists->setItemWidget(itm,list);
 
+    //Last Tracks List
     list = new PlaylistWidget(p->listPlaylists);
     list->setName(tr("Last Tracks"));
     list->setObjectName("LastTracks");
     list->setDescription(tr("Recently played tracks"));
+    list->setRemovable(false);
+    connect(list,SIGNAL(activated()),this,SLOT(loadDatabaseList()));
+    connect(list,SIGNAL(started()),this,SLOT(playDatabaseList()));
+
+    itm = new QListWidgetItem(p->listPlaylists);
+
+    itm->setSizeHint(QSize(0,70));
+    p->listPlaylists->addItem(itm);
+    p->listPlaylists->setItemWidget(itm,list);
+
+    //Favorites Tracks List
+    list = new PlaylistWidget(p->listPlaylists);
+    list->setName(tr("Favorites Tracks"));
+    list->setObjectName("FavoritesTracks");
+    list->setDescription(tr("Favorites tracks"));
     list->setRemovable(false);
     connect(list,SIGNAL(activated()),this,SLOT(loadDatabaseList()));
     connect(list,SIGNAL(started()),this,SLOT(playDatabaseList()));
@@ -221,6 +238,7 @@ QList<Track*> PlaylistBrowser::readFileList(QString filename)
                 track->setFlags( track->flags() | Track::isOnFirstPlayer );
               if ( e.namedItem("extension").toElement().attribute( "isOnSecondPlayer" ) =="1" )
                 track->setFlags( track->flags() | Track::isOnSecondPlayer );
+              track->setRate( e.namedItem("extension").toElement().attribute("Rating").toInt() );
 
               tracks.append(track);
 
@@ -293,6 +311,8 @@ void PlaylistBrowser::playDatabaseList()
 
         if (senderName == "TopTracks")
             p->selectedTags = p->database->selectHotTracks();
+        else if (senderName == "FavoritesTracks")
+            p->selectedTags = p->database->selectFavoritesTracks();
         else
             p->selectedTags = p->database->selectLastTracks();
 
@@ -356,6 +376,8 @@ void PlaylistBrowser::loadDatabaseList()
         //Retrieve songs from database
         if (senderName == "TopTracks")
             p->selectedTags = p->database->selectHotTracks();
+        else if (senderName == "FavoritesTracks")
+            p->selectedTags = p->database->selectFavoritesTracks();
         else
             p->selectedTags = p->database->selectLastTracks();
 

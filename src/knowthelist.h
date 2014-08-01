@@ -85,14 +85,14 @@ private Q_SLOTS:
 
      void timerGain1_timeOut();
      void timerGain2_timeOut();
-     void Track_doubleClicked( PlaylistItem* );
-     void trackList_wantLoad(PlaylistItem*,QString target);
-     void Track_selectionChanged(PlaylistItem*);
+     void Track_doubleClicked( Track* );
+     void trackList_wantLoad(Track*,QString target);
+     void Track_selectionChanged(Track*);
      bool initMonitorPlayer();
      void editSettings();
      void on_cmdOptions_clicked();
      void showCollectionSetup();
-    void onWantLoad(QList<Track*>,QString);
+     void onWantLoad(QList<Track*>,QString);
      void on_lblSoundcard_linkActivated(const QString &link);
 
      void on_sliMonitor_actionTriggered(int action);

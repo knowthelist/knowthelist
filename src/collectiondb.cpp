@@ -111,9 +111,9 @@ CollectionDB::CollectionDB()
             " INNER JOIN album ON tags.album = album.id "
             " INNER JOIN year ON tags.year = year.id "
             " INNER JOIN genre ON tags.genre = genre.id "
-            " LEFT OUTER JOIN statistics ON tags.url = statistics.url WHERE 1=1 ";
+            " LEFT OUTER JOIN statistics ON tags.url = statistics.url "
+            " LEFT OUTER JOIN favorites ON tags.url = favorites.url WHERE 1=1 ";
 }
-
 
 CollectionDB::~CollectionDB()
 {
@@ -142,7 +142,10 @@ void CollectionDB::setFilterString( QString string )
 
 bool CollectionDB::isDbValid()
 {
-    if ( ( !executeSql( "SELECT COUNT( url ) FROM tags;" ) ) || ( !executeSql( "SELECT COUNT( url ) FROM statistics;" ) ) )
+    if ( ( !executeSql( "SELECT COUNT( url ) FROM tags;" ) )
+         || ( !executeSql( "SELECT COUNT( url ) FROM statistics;" ) )
+         || ( !executeSql( "SELECT COUNT( url ) FROM favorites;" ) )
+         )
         return false;
     else
         return true;
@@ -175,6 +178,14 @@ void CollectionDB::incSongCounter( const QString url )
         executeSql( QString( "INSERT INTO statistics ( url, createdate, accessdate, playcounter ) VALUES ( '%1', strftime('%s', 'now'), strftime('%s', 'now'), 1 );" )
                 .arg( escapeString( url ) ) );
     }
+}
+
+void CollectionDB::setSongRate( const QString url, int rate )
+{
+        // insert or update increment favorites
+        executeSql( QString( "INSERT OR REPLACE INTO favorites ( url, changedate, rate ) VALUES ( '%1', strftime('%s', 'now'), %2 );" )
+                .arg( escapeString( url ) )
+                .arg( rate ) );
 }
 
 void CollectionDB::resetSongCounter()
@@ -251,8 +262,6 @@ bool CollectionDB::executeSql( const QString& statement )
 
 QList<QStringList> CollectionDB::selectSql( const QString& statement)
 {
-    //qDebug() << __FUNCTION__<< " SQL-query: " << statement;
-
     QList<QStringList> tags;
     tags.clear();
     int count;
@@ -267,9 +276,10 @@ QList<QStringList> CollectionDB::selectSql( const QString& statement)
             tags << tag;
         }
     }
-    else
+    else{
        qDebug() << p->db->lastError() << "\n" << p->query->lastError();
-
+       qDebug() << "SQL-query: " << statement;
+    }
     return tags;
 }
 
@@ -391,8 +401,7 @@ void CollectionDB::moveTempTables()
 }
 
 
-void
-CollectionDB::createStatsTable()
+void CollectionDB::createStatsTable()
 {
     qDebug() << __FUNCTION__;
 
@@ -402,20 +411,24 @@ CollectionDB::createStatsTable()
                       "createdate INTEGER,"
                       "accessdate INTEGER,"
                       "playcounter INTEGER );" ) );
+
+    // create music favorites database
+    executeSql( QString( "CREATE TABLE favorites ("
+                      "url VARCHAR(100) UNIQUE,"
+                      "changedate INTEGER,"
+                      "rate INTEGER );" ) );
 }
 
-
-void
-CollectionDB::dropStatsTable()
+void CollectionDB::dropStatsTable()
 {
     qDebug() << __FUNCTION__;
 
     executeSql( "DROP TABLE statistics;" );
+    executeSql( "DROP TABLE favorites;" );
 }
 
 
-void
-CollectionDB::purgeDirCache()
+void CollectionDB::purgeDirCache()
 {
     executeSql( QString( "DELETE FROM directories;") );
 }
@@ -555,7 +568,7 @@ uint CollectionDB::lastMaxCount()
 
 QList<QStringList> CollectionDB::selectRandomEntry( QString rownum, QString path, QString genre, QString artist)
 {
-    QString command = "SELECT tags.url, artist.name, tags.title, album.name, year.name, genre.name, tags.track, tags.length, statistics.playcounter "
+    QString command = "SELECT tags.url, artist.name, tags.title, album.name, year.name, genre.name, tags.track, tags.length, statistics.playcounter, favorites.rate "
             + p->sqlFromString
             + p->sqlQuickFilter
             + p->selectionFilterForRandom(path, genre, artist) +
@@ -615,7 +628,7 @@ QList<QStringList> CollectionDB::selectAlbums(QString year, QString genre, QStri
 
 QList<QStringList> CollectionDB::selectTracks(QString year, QString genre, QString artist, QString album)
 {
-  QString command = "SELECT DISTINCT tags.url, artist.name, tags.title, album.name, year.name, genre.name, tags.track, tags.length, statistics.playcounter "
+  QString command = "SELECT DISTINCT tags.url, artist.name, tags.title, album.name, year.name, genre.name, tags.track, tags.length, statistics.playcounter, favorites.rate "
           + p->sqlFromString
           + p->sqlQuickFilter
           + p->selectionFilter(year,genre,artist,album) +
@@ -626,7 +639,7 @@ QList<QStringList> CollectionDB::selectTracks(QString year, QString genre, QStri
 
 QList<QStringList> CollectionDB::selectHotTracks()
 {
-  QString command = "SELECT DISTINCT tags.url, artist.name, tags.title, album.name, year.name, genre.name, tags.track, tags.length, statistics.playcounter "
+  QString command = "SELECT DISTINCT tags.url, artist.name, tags.title, album.name, year.name, genre.name, tags.track, tags.length, statistics.playcounter, favorites.rate "
           + p->sqlFromString +
           "AND statistics.playcounter>0 "
           "ORDER BY statistics.playcounter DESC "
@@ -635,14 +648,23 @@ QList<QStringList> CollectionDB::selectHotTracks()
   return selectSql(command);
 }
 
-
 QList<QStringList> CollectionDB::selectLastTracks()
 {
-  QString command = "SELECT DISTINCT tags.url, artist.name, tags.title, album.name, year.name, genre.name, tags.track, tags.length, statistics.playcounter "
+  QString command = "SELECT DISTINCT tags.url, artist.name, tags.title, album.name, year.name, genre.name, tags.track, tags.length, statistics.playcounter, favorites.rate "
           + p->sqlFromString +
           "AND statistics.playcounter>0 "
           "ORDER BY statistics.accessdate DESC "
           "LIMIT 20 OFFSET 0;";
+
+  return selectSql(command);
+}
+
+QList<QStringList> CollectionDB::selectFavoritesTracks()
+{
+  QString command = "SELECT DISTINCT tags.url, artist.name, tags.title, album.name, year.name, genre.name, tags.track, tags.length, statistics.playcounter, favorites.rate "
+          + p->sqlFromString +
+          "AND favorites.rate>0 "
+          "ORDER BY favorites.rate DESC ";
 
   return selectSql(command);
 }

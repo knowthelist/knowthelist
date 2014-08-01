@@ -106,17 +106,18 @@ class Playlist: public QTreeWidget
      void setAlternateMax(int max) { m_alternateMax = max; fillNoColumn(); }
      void skipForward();
      void skipRewind();
-
+     void onRatingChanged(float);
 
         Q_SIGNALS:
           void  currentTrackChanged(Track*);
-          void  trackDoubleClicked( PlaylistItem* );
-          void  trackClicked( PlaylistItem* );
-          void  trackChanged( PlaylistItem* );
+          void  trackDoubleClicked( Track* );
+          void  trackPropertyChanged( Track* );
+          void  trackSelected( Track* );
           void  wantSearch(QString);
-          void  wantLoad(PlaylistItem*, QString);
+          void  wantLoad(Track*, QString);
           void  countChanged(int);
           void  countChanged(QList<Track*>);
+
       
    private:
     
@@ -168,7 +169,7 @@ class Playlist: public QTreeWidget
 
         void showContextMenu( PlaylistItem *, int );
         void slotItemClicked(QTreeWidgetItem*,int);
-        void slotItemDoubleClicked ( QTreeWidgetItem *item, int column );
+        void slotItemDoubleClicked (QTreeWidgetItem *sender, int column );
         void emitClicked();
         void timeoutDragLock();
         void handleChanges();

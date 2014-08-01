@@ -190,18 +190,16 @@ void Knowthelist::createUI()
     connect( playList2, SIGNAL(wantSearch( QString )),collectionBrowser,SLOT(setFilterText(QString)));
 
 
-   connect( trackList, SIGNAL(trackDoubleClicked(PlaylistItem*)),SLOT(Track_doubleClicked(PlaylistItem*)));
-   connect( trackList, SIGNAL(wantLoad(PlaylistItem*,QString)),SLOT(trackList_wantLoad(PlaylistItem*, QString)));
-   connect( trackList, SIGNAL(trackClicked(PlaylistItem*)),SLOT(Track_selectionChanged(PlaylistItem* )));
-   connect( trackList, SIGNAL(trackChanged(PlaylistItem*)),SLOT(Track_selectionChanged(PlaylistItem* )));
+   connect( trackList, SIGNAL(trackDoubleClicked(Track*)),SLOT(Track_doubleClicked(Track*)));
+   connect( trackList, SIGNAL(wantLoad(Track*,QString)),SLOT(trackList_wantLoad(Track*, QString)));
+   connect( trackList, SIGNAL(trackSelected(Track*)),SLOT(Track_selectionChanged(Track* )));
+   connect( trackList, SIGNAL(trackPropertyChanged(Track*)),djSession, SLOT(onTrackPropertyChanged(Track* )));
 
-   connect( playList1, SIGNAL(trackDoubleClicked(PlaylistItem*)),SLOT(Track_doubleClicked(PlaylistItem*)));
-   connect( playList2, SIGNAL(trackDoubleClicked(PlaylistItem*)),SLOT(Track_doubleClicked(PlaylistItem*)));
+   connect( playList1, SIGNAL(trackDoubleClicked(Track*)),SLOT(Track_doubleClicked(Track*)));
+   connect( playList2, SIGNAL(trackDoubleClicked(Track*)),SLOT(Track_doubleClicked(Track*)));
 
-   connect( playList1, SIGNAL(trackClicked(PlaylistItem*)),SLOT(Track_selectionChanged(PlaylistItem* )));
-   connect( playList2, SIGNAL(trackClicked(PlaylistItem*)),SLOT(Track_selectionChanged(PlaylistItem* )));
-   connect( playList1, SIGNAL(trackChanged(PlaylistItem*)),SLOT(Track_selectionChanged(PlaylistItem* )));
-   connect( playList2, SIGNAL(trackChanged(PlaylistItem*)),SLOT(Track_selectionChanged(PlaylistItem* )));
+   connect( playList1, SIGNAL(trackSelected(Track*)),SLOT(Track_selectionChanged(Track* )));
+   connect( playList2, SIGNAL(trackSelected(Track*)),SLOT(Track_selectionChanged(Track* )));
 
     //AutoFade
     ui->ledFade->setLook(QLed::Flat);
@@ -256,10 +254,10 @@ void Knowthelist::createUI()
     connect(playlistBrowser,SIGNAL(selectionStarted(QList<Track*>)), djSession, SLOT(forceTracks(QList<Track*>)));
     connect(playlistBrowser,SIGNAL(savePlaylists(QString)),djSession, SLOT(savePlaylists(QString)));
     connect(djSession,SIGNAL(savedPlaylists()),playlistBrowser, SLOT(updateLists()));
-    connect( trackList2, SIGNAL(trackDoubleClicked(PlaylistItem*)),SLOT(Track_doubleClicked(PlaylistItem*)));
-    connect( trackList2, SIGNAL(wantLoad(PlaylistItem*,QString)),SLOT(trackList_wantLoad(PlaylistItem*, QString)));
-    connect( trackList2, SIGNAL(trackClicked(PlaylistItem*)),SLOT(Track_selectionChanged(PlaylistItem* )));
-    connect( trackList2, SIGNAL(trackChanged(PlaylistItem*)),SLOT(Track_selectionChanged(PlaylistItem* )));
+    connect( trackList2, SIGNAL(trackDoubleClicked(Track*)),SLOT(Track_doubleClicked(Track*)));
+    connect( trackList2, SIGNAL(wantLoad(Track*,QString)),SLOT(trackList_wantLoad(Track*, QString)));
+    connect( trackList2, SIGNAL(trackSelected(Track*)),SLOT(Track_selectionChanged(Track* )));
+    connect( trackList2, SIGNAL(trackPropertyChanged(Track*)),djSession, SLOT(onTrackPropertyChanged(Track* )));
 
     splitterPlaylist->addWidget(trackList2);
     QPixmap pixmap4(":list.png");
@@ -622,18 +620,18 @@ void Knowthelist::savePlaylists()
     playList2->saveXML( playList2->defaultPlaylistPath() );
 }
 
-void Knowthelist::Track_selectionChanged(  PlaylistItem *item )
+void Knowthelist::Track_selectionChanged(  Track* track )
 {
-    if ( item ){
+    if ( track ){
 
-        ui->lblMonitorArtist->setText( item->track()->prettyArtist(20) );
-        ui->lblMonitorTrack->setText( item->track()->prettyTitle(60) );
+        ui->lblMonitorArtist->setText( track->prettyArtist(20) );
+        ui->lblMonitorTrack->setText( track->prettyTitle(60) );
         wantSeek=false;
 
         if ( monitorPlayer ) {
              on_cmdMonitorStop_clicked();
-         monitorPlayer->open(item->track()->url() );
-         QPixmap pix = QPixmap::fromImage(item->track()->coverImage());
+         monitorPlayer->open(track->url() );
+         QPixmap pix = QPixmap::fromImage(track->coverImage());
                  if (!pix.isNull())
                  ui->pixMonitorCover->setPixmap(pix);
                  timerMonitor_timeOut();
@@ -656,9 +654,9 @@ void Knowthelist::timerMonitor_loadFinished()
         }
 }
 
-void Knowthelist::Track_doubleClicked(PlaylistItem* item)
+void Knowthelist::Track_doubleClicked(Track* track)
 {
-    Track_selectionChanged(item );
+    Track_selectionChanged(track );
     if ( monitorPlayer )
     {
         wantSeek=true;
@@ -666,14 +664,14 @@ void Knowthelist::Track_doubleClicked(PlaylistItem* item)
     }
 }
 
-void Knowthelist::trackList_wantLoad(PlaylistItem *pli, QString target)
+void Knowthelist::trackList_wantLoad(Track* track, QString target)
 {
     //ToDo: enable for multiple tracks like drag/drop
     qDebug() << __FUNCTION__ << "target=" << target;
     if ( target == "Right" )
-      playList2->appendSong( pli->track() );
+      playList2->appendSong( track );
     else if ( target ==  "Left" )
-      playList1->appendSong( pli->track() );
+      playList1->appendSong( track );
 }
 
 //ToDo: find a better name
@@ -729,8 +727,6 @@ bool Knowthelist::initMonitorPlayer()
 
       ui->cmdMonitorStop->setIcon(QIcon(":stop.png"));
       ui->cmdMonitorPlay->setIcon(QIcon(":play.png"));
-      //connect(monitorPlayer,SIGNAL(trackTimeChanged(qint64,qint64)),this,SLOT(monitorPlayer_trackTimeChanged(qint64,qint64)));
-      //connect(monitorPlayer,SIGNAL(foundCover(QImage*)),this,SLOT(monitorPlayer_foundCover(QImage*)));
       connect(monitorPlayer,SIGNAL(loadFinished()),this,SLOT(timerMonitor_loadFinished()));
 
     qDebug()  << __FUNCTION__ << "END " ;

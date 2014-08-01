@@ -66,7 +66,7 @@ public:
     QString genre();
     int length();
     int counter();
-    int target();
+    int rate();
     QString tracknumber();
     QString prettyLength();
     QStringList tagList();
@@ -86,6 +86,7 @@ public:
     void setLength(QString);
     void setLengthFromPretty(QString);
     void setCounter(QString);
+    void setRate(int);
     void setFlags(Track::Options flags);
 
     
@@ -97,8 +98,6 @@ public:
     static QString prettyTime( int, bool showHours = true );
     static QString zeroPad( uint i ) { return ( i < 10 ) ? QString( "0%1" ).arg( i ) : QString::number( i ); }
     static QString prettyTitle( QString );
-
-
 
 protected:
 

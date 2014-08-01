@@ -15,6 +15,10 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+
+#include "playlist.h"
+#include "playlistitem.h"
+
 #include <qdebug.h>
 #include <QMenu>
 #include <Qt>
@@ -24,8 +28,6 @@
 #include <qprogressdialog.h>
 #include <qscrollbar.h>
 
-#include "playlist.h"
-#include "playlistitem.h"
 #include <qfile.h>
 #include <QPainter>
 
@@ -67,7 +69,7 @@ Playlist::Playlist(QWidget* parent)
     QStringList headers;
      headers << tr("Url")<<tr("No")<<tr("Played")<<tr("Artist")<<tr("Title");
      headers <<tr("Album")<<tr("Year")<<tr("Genre")<<tr("Track");
-     headers <<tr("Length");
+     headers <<tr("Length")<<tr("Rate");
 
     QTreeWidgetItem *headeritem = new QTreeWidgetItem(headers);
     setHeaderItem(headeritem);
@@ -119,7 +121,11 @@ void Playlist::addTrack( Track* track, PlaylistItem* after )
     PlaylistItem* item =  new PlaylistItem( this, after );
     item->setTexts( track );
     newPlaylistItem  = item;
-    //handleChanges();
+
+    RatingWidget* rating= new RatingWidget();
+    rating->setRating( track->rate() * 0.1 );
+    QObject::connect(rating,SIGNAL(RatingChanged(float)),SLOT(onRatingChanged(float)));
+    setItemWidget(item, PlaylistItem::Column_Rate, rating);
 }
 
 /** Add a track and set it as current item */
@@ -245,6 +251,7 @@ void Playlist::setPlaylistMode(Mode newMode)
     header()->showSection( PlaylistItem::Column_Genre );
     header()->showSection( PlaylistItem::Column_Tracknumber );
     header()->showSection( PlaylistItem::Column_Album );
+    header()->showSection( PlaylistItem::Column_Rate );
     header()->resizeSection(PlaylistItem::Column_Artist,22*percent);
     header()->resizeSection(PlaylistItem::Column_Title,22*percent);
     header()->resizeSection(PlaylistItem::Column_Album,20*percent);
@@ -253,6 +260,7 @@ void Playlist::setPlaylistMode(Mode newMode)
     header()->resizeSection(PlaylistItem::Column_Year,8*percent);
     header()->resizeSection(PlaylistItem::Column_Tracknumber,5*percent);
     header()->resizeSection(PlaylistItem::Column_Played,5*percent);
+    header()->resizeSection(PlaylistItem::Column_Rate,75);
     setSortingEnabled(true);
     sortByColumn(PlaylistItem::Column_Played,Qt::DescendingOrder);
     m_CurrentTrackColor = Qt::white;
@@ -265,6 +273,7 @@ void Playlist::setPlaylistMode(Mode newMode)
     header()->hideSection( PlaylistItem::Column_Genre );
     header()->hideSection( PlaylistItem::Column_Tracknumber );
     header()->hideSection( PlaylistItem::Column_Album );
+    header()->hideSection( PlaylistItem::Column_Rate );
     header()->resizeSection(PlaylistItem::Column_No,6*percent);
     header()->resizeSection(PlaylistItem::Column_Artist,40*percent);
     header()->resizeSection(PlaylistItem::Column_Title,40*percent);
@@ -640,6 +649,23 @@ void Playlist::fillNoColumn()
 }
 
 
+void Playlist::onRatingChanged(float rate)
+{
+    if(RatingWidget* rateWidget = dynamic_cast<RatingWidget*>(QObject::sender())){
+
+        QModelIndex modidx = indexAt( rateWidget->pos() );
+        (PlaylistItem*)this->itemFromIndex(modidx);
+        if(PlaylistItem* item = (PlaylistItem*)this->itemFromIndex(modidx)){
+            Track* track = item->track();
+            if (track){
+                track->setRate(rate * 10);
+                qDebug() << __FUNCTION__<<item->track()->url();
+                emit trackPropertyChanged(track);
+            }
+        }
+    }
+}
+
 void Playlist::slotItemChanged( QTreeWidgetItem * current, QTreeWidgetItem * previous )
 {
     Q_UNUSED(previous);
@@ -649,13 +675,16 @@ void Playlist::slotItemChanged( QTreeWidgetItem * current, QTreeWidgetItem * pre
     PlaylistItem* item = static_cast<PlaylistItem*>(current);
 
     if (item && isChangeSignalEnabled )
-        emit trackChanged(item);
+        emit trackSelected(item->track());
 }
 
-void Playlist::slotItemDoubleClicked( QTreeWidgetItem *item, int column )
+void Playlist::slotItemDoubleClicked( QTreeWidgetItem *sender, int column )
 {
     Q_UNUSED(column);
-    emit trackDoubleClicked( static_cast<PlaylistItem*>(item) );
+    PlaylistItem* item = static_cast<PlaylistItem*>(sender);
+
+    if (item)
+        emit trackDoubleClicked( item->track() );
 }
 
 void Playlist::slotItemClicked(QTreeWidgetItem *after,int col)
@@ -665,7 +694,7 @@ void Playlist::slotItemClicked(QTreeWidgetItem *after,int col)
     PlaylistItem* item = static_cast<PlaylistItem*>(after);
 
     if (item)
-        emit trackClicked(item);
+        emit trackSelected( item->track() );
 }
 
 // avoid multiple drops on quick drags
@@ -745,7 +774,7 @@ void Playlist::performDrag()
              tags << tag;
              if (i==0){
                  cover=QPixmap::fromImage( item->track()->coverImage());
-                 emit trackClicked( item );
+                 emit trackSelected(item->track());
              }
              i++;
 
@@ -899,6 +928,9 @@ void Playlist::paintEvent ( QPaintEvent* event )
 void Playlist::keyPressEvent   (   QKeyEvent* e    )
 {
   qDebug() << __FUNCTION__ << "  " << e->key() << "del="<<Qt::Key_Delete;
+
+  PlaylistItem* item = static_cast<PlaylistItem*>(currentItem());
+
   if( (e->key() == Qt::Key_Delete) || (e->key() == 0x1000003) ) //also for Mac
         {
              this->removeSelectedItems();
@@ -906,11 +938,11 @@ void Playlist::keyPressEvent   (   QKeyEvent* e    )
    //else if( e->key() == Qt::Key_Return)
           //Q_EMIT this->clicked( currentItem());
    else if( e->key() == Qt::Key_1)
-     Q_EMIT wantLoad( (PlaylistItem*)currentItem(),"Left" );
+     Q_EMIT wantLoad( item->track(),"Left" );
    else if( e->key() == Qt::Key_2)
-     Q_EMIT wantLoad( (PlaylistItem*)currentItem(),"Right" );
+     Q_EMIT wantLoad( item->track(),"Right" );
    else if( e->key() == Qt::Key_P)
-     Q_EMIT trackDoubleClicked( (PlaylistItem*)currentItem() );
+     Q_EMIT trackDoubleClicked( item->track() );
    else if( e->key() == Qt::CTRL + Qt::Key_S)
      Q_EMIT wantSearch(QString::null);
    else
@@ -975,11 +1007,11 @@ void Playlist::showContextMenu( PlaylistItem *item, int col )
             break;
 
         case Qt::Key_1:
-            Q_EMIT wantLoad(item,"Left" );
+            Q_EMIT wantLoad(item->track(),"Left" );
             break;
 
         case Qt::Key_2:
-            Q_EMIT wantLoad(item,"Right" );
+            Q_EMIT wantLoad(item->track(),"Right" );
             break;
 
         case Qt::Key_P:

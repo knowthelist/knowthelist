@@ -17,14 +17,17 @@
 
  #include "playlistitem.h"
  #include "playlist.h"
+ #include "ratingwidget.h"
+
  #include <qdebug.h>
  #include <qlistview.h>
-
  #include <QColorGroup>
+ #include <QObject>
  
 PlaylistItem::PlaylistItem( Playlist* parent, QTreeWidgetItem *lvi )
       : QTreeWidgetItem( parent, lvi )
       , m_track(new Track())
+      , m_parent(parent)
 {
         //qDebug() << u << " 2."<<m_url;
 }
@@ -45,6 +48,7 @@ void PlaylistItem::setTrack( Track *track )
 void PlaylistItem::setTexts( Track *track )
 {
     //qDebug()<<track->url();
+
     setText( Column_Url,   track->url().toString() );
     setText( Column_Artist,  ( track->artist() != "" ) ? track->artist() : QObject::tr("Unknown")  );
     setText( Column_Title,   ( track->title() != "" ) ? track->title() : QObject::tr("Unknown") );
@@ -54,6 +58,7 @@ void PlaylistItem::setTexts( Track *track )
     setText( Column_Length,  track->prettyLength() );
     setText( Column_Tracknumber,  track->tracknumber() );
     setText( Column_Played,   QString::number(track->counter()) );
+
     m_track = track;
 }
 
@@ -90,6 +95,11 @@ void PlaylistItem::update()
     // paint  item in special color
     for(int i = 0; i<=columnCount()-1; i++)
         setForeground(i,QBrush(m_foreColor));
+}
+
+
+int PlaylistItem::rate() {
+    return ((RatingWidget*)m_parent->itemWidget(this,Column_Rate))->rating()*0.1;
 }
 
 bool PlaylistItem::operator< (const QTreeWidgetItem &other) const

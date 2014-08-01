@@ -98,42 +98,42 @@
        </attribute>
        <row>
         <property name="text">
-         <string>New Row</string>
+         <string notr="true">Row1</string>
         </property>
        </row>
        <row>
         <property name="text">
-         <string>New Row</string>
+         <string notr="true">Row2</string>
         </property>
        </row>
        <row>
         <property name="text">
-         <string>New Row</string>
+         <string notr="true">Row3</string>
         </property>
        </row>
        <row>
         <property name="text">
-         <string>New Row</string>
+         <string notr="true">Row4</string>
         </property>
        </row>
        <row>
         <property name="text">
-         <string>New Row</string>
+         <string notr="true">Row5</string>
         </property>
        </row>
        <row>
         <property name="text">
-         <string>Neue Zeile</string>
+         <string notr="true">Row6</string>
         </property>
        </row>
        <row>
         <property name="text">
-         <string>Neue Zeile</string>
+         <string notr="true">Row7</string>
         </property>
        </row>
        <column>
         <property name="text">
-         <string>New Column</string>
+         <string notr="true">Column1</string>
         </property>
        </column>
        <item row="0" column="0">

@@ -51,7 +51,8 @@ CollectionWidget::CollectionWidget( QWidget* parent ):
     QPushButton *pushRandom =new QPushButton();
     QPixmap pixmap2(":shuffle.png");
     pushRandom->setIcon(QIcon(pixmap2));
-    pushRandom->setIconSize(QSize(32,32));
+    pushRandom->setIconSize(QSize(27,27));
+    pushRandom->setMaximumWidth(36);
     pushRandom->setStyleSheet("QPushButton { border: none; padding: 0px; margin-left: 8px;max-height: 20px; margin-right: 8px;}");
     pushRandom->setToolTip(tr( "Random Tracks" ));
 
