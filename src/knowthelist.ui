@@ -5949,13 +5949,13 @@ min-height: 16px;
           </property>
           <property name="minimumSize">
            <size>
-            <width>142</width>
+            <width>132</width>
             <height>0</height>
            </size>
           </property>
           <property name="maximumSize">
            <size>
-            <width>136</width>
+            <width>132</width>
             <height>16777215</height>
            </size>
           </property>
@@ -5964,7 +5964,7 @@ min-height: 16px;
             <number>0</number>
            </property>
            <property name="leftMargin">
-            <number>13</number>
+            <number>10</number>
            </property>
            <property name="topMargin">
             <number>0</number>
