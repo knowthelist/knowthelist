@@ -65,6 +65,7 @@ Playlist::Playlist(QWidget* parent)
     setDragDropMode(QAbstractItemView::InternalMove);
     setAcceptDrops(true);
     setAttribute(Qt::WA_MacShowFocusRect, false);
+    setUniformRowHeights(true);
 
     QStringList headers;
      headers << tr("Url")<<tr("No")<<tr("Played")<<tr("Artist")<<tr("Title");
@@ -121,7 +122,6 @@ void Playlist::addTrack( Track* track, PlaylistItem* after )
     PlaylistItem* item =  new PlaylistItem( this, after );
     item->setTexts( track );
     newPlaylistItem  = item;
-
     RatingWidget* rating= new RatingWidget();
     rating->setRating( track->rate() * 0.1 );
     QObject::connect(rating,SIGNAL(RatingChanged(float)),SLOT(onRatingChanged(float)));
@@ -219,12 +219,22 @@ void Playlist::appendList( const QList<QUrl> urls, PlaylistItem* after )
 void Playlist::changeTracks( const QList<Track*> tracks )
 {
     clear();
-    appendTracks( tracks,(PlaylistItem*)lastChild());
+    appendTracks( tracks);
 }
 
 void Playlist::appendTracks( const QList<Track*> tracks )
 {
+    // a week attempt to speed up the setItemWidget time issue
+    setUpdatesEnabled(false);
+    bool doSort = isSortingEnabled();
+    setSortingEnabled(false);
+    hide();
+
     appendTracks( tracks,(PlaylistItem*)lastChild());
+
+    setSortingEnabled(doSort);
+    setUpdatesEnabled(true);
+    show();
 }
 
 void Playlist::appendTracks( QList<Track*> tracks, PlaylistItem* after )
@@ -278,6 +288,7 @@ void Playlist::setPlaylistMode(Mode newMode)
     header()->resizeSection(PlaylistItem::Column_Artist,40*percent);
     header()->resizeSection(PlaylistItem::Column_Title,40*percent);
     header()->resizeSection(PlaylistItem::Column_Length,10*percent);
+    header()->resizeSection(PlaylistItem::Column_Rate,0);
     setSortingEnabled(false);
     m_CurrentTrackColor = QColor( 255,100,100 );
     m_NextTrackColor = QColor( 200,200,255 );

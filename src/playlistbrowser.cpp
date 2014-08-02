@@ -228,6 +228,7 @@ QList<Track*> PlaylistBrowser::readFileList(QString filename)
               track->setArtist( e.namedItem("creator").firstChild().nodeValue());
               track->setTitle( e.namedItem("title").firstChild().nodeValue());
               track->setAlbum( e.namedItem("album").firstChild().nodeValue());
+              track->setTracknumber( e.namedItem("trackNum").firstChild().nodeValue());
               track->setGenre( e.namedItem("extension").toElement().attribute( "genre" ));
               track->setYear( e.namedItem("extension").toElement().attribute( "year" ));
               track->setLength( e.namedItem("duration").firstChild().nodeValue());
