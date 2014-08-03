@@ -368,19 +368,19 @@ p, li { white-space: pre-wrap; }
         <location filename="../src/knowthelist.ui" line="5765"/>
         <location filename="../src/knowthelist.ui" line="5789"/>
         <source>Low</source>
-        <translation>Grave</translation>
+        <translation>Graves</translation>
     </message>
     <message>
         <location filename="../src/knowthelist.ui" line="5810"/>
         <location filename="../src/knowthelist.ui" line="5834"/>
         <source>Mid</source>
-        <translation>Médium</translation>
+        <translation>Médiums</translation>
     </message>
     <message>
         <location filename="../src/knowthelist.ui" line="5858"/>
         <location filename="../src/knowthelist.ui" line="5882"/>
         <source>High</source>
-        <translation>Aigu</translation>
+        <translation>Aigus</translation>
     </message>
     <message>
         <location filename="../src/knowthelist.ui" line="6857"/>
@@ -965,7 +965,7 @@ p, li { white-space: pre-wrap; }
     <message>
         <location filename="../src/settingsdialog.ui" line="872"/>
         <source>Change the language of the application (needs restart)</source>
-        <translation>Change la langue de l&apos;application (nécessite un redémarrage)</translation>
+        <translation>Changer la langue de l&apos;application (nécessite un redémarrage)</translation>
     </message>
     <message>
         <location filename="../src/settingsdialog.ui" line="898"/>
