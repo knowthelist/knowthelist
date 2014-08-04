@@ -347,7 +347,8 @@ void DjBrowser::loadDj()
         p->currentDjw=djWidget;
 
     }
-
+    // give a chance to update the labels
+    qApp->processEvents();
 }
 
 void DjBrowser::addFilter()
