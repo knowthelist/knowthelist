@@ -42,7 +42,7 @@ int main(int argc, char *argv[])
 
     QSettings settings;
     QStringList languages;
-    languages << "" << "en" << "de" << "cs" << "hu";
+    languages << "" << "en" << "de" << "cs" << "hu" << "fr";
     QString lang = languages[ settings.value("language",0 ).toInt() ];
     if (lang.isEmpty())
         lang = QLocale::system().name();

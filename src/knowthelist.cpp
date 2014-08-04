@@ -270,7 +270,6 @@ void Knowthelist::createUI()
 
     loadStartSettings();
 
-    //ToDo: load from Settings
     ui->sideTab->SetCurrentIndex(0);
     ui->sideTab->SetMode(FancyTabWidget::Mode_LargeSidebar);
 

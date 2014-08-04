@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>630</width>
+    <width>652</width>
     <height>512</height>
    </rect>
   </property>
@@ -182,7 +182,7 @@
         </sizepolicy>
        </property>
        <property name="currentIndex">
-        <number>6</number>
+        <number>3</number>
        </property>
        <widget class="QWidget" name="page">
         <widget class="QLabel" name="label">
@@ -516,7 +516,7 @@
          <property name="geometry">
           <rect>
            <x>10</x>
-           <y>360</y>
+           <y>380</y>
            <width>42</width>
            <height>22</height>
           </rect>
@@ -528,9 +528,9 @@
         <widget class="QLabel" name="label_9">
          <property name="geometry">
           <rect>
-           <x>70</x>
+           <x>10</x>
            <y>360</y>
-           <width>321</width>
+           <width>371</width>
            <height>20</height>
           </rect>
          </property>
@@ -599,9 +599,9 @@
         <widget class="QLabel" name="label_11">
          <property name="geometry">
           <rect>
-           <x>295</x>
+           <x>279</x>
            <y>70</y>
-           <width>91</width>
+           <width>121</width>
            <height>16</height>
           </rect>
          </property>
@@ -613,8 +613,8 @@
          <property name="geometry">
           <rect>
            <x>10</x>
-           <y>390</y>
-           <width>361</width>
+           <y>410</y>
+           <width>411</width>
            <height>20</height>
           </rect>
          </property>
@@ -805,6 +805,11 @@
            <string notr="true" comment="hu">magyar</string>
           </property>
          </item>
+         <item>
+          <property name="text">
+           <string notr="true" comment="fr">français</string>
+          </property>
+         </item>
         </widget>
         <widget class="QLabel" name="label_14">
          <property name="geometry">
@@ -901,7 +906,7 @@
      <widget class="QDialogButtonBox" name="buttonBox">
       <property name="geometry">
        <rect>
-        <x>443</x>
+        <x>470</x>
         <y>-2</y>
         <width>164</width>
         <height>32</height>

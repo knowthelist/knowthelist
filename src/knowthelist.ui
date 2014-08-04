@@ -5795,9 +5795,9 @@ min-height: 16px;
           <widget class="QLabel" name="label_4">
            <property name="geometry">
             <rect>
-             <x>5</x>
+             <x>2</x>
              <y>37</y>
-             <width>35</width>
+             <width>40</width>
              <height>16</height>
             </rect>
            </property>
@@ -5821,7 +5821,7 @@ min-height: 16px;
             <rect>
              <x>149</x>
              <y>37</y>
-             <width>36</width>
+             <width>40</width>
              <height>16</height>
             </rect>
            </property>
