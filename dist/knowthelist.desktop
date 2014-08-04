@@ -1,10 +1,13 @@
 [Desktop Entry]
 Name=Knowthelist
 Name[de]=Knowthelist
+Name[fr]=Knowthelist
 GenericName=Party Music Player
 GenericName[de]=Party Musik Player
+GenericName[fr]=Lecteur de musique pour les soirées
 Comment=Party Music Player
 Comment[de]=Party Musik Player
+Comment[fr]=Lecteur de musique pour les soirées
 Exec=knowthelist
 Icon=knowthelist
 Terminal=false
