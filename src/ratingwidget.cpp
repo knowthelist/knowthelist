@@ -26,41 +26,7 @@ const int RatingPainter::kStarCount;
 const int RatingPainter::kStarSize;
 
 RatingPainter::RatingPainter() {
-  // Load the base pixmaps
-  QPixmap on(":/star-on.png");
-  QPixmap off(":/star-off.png");
 
-  // Generate the 10 states, better to do it now than on the fly
-  for (int i=0 ; i<kStarCount*2+1 ; ++i) {
-    const float rating = float(i) / 2.0;
-
-    // Clear the pixmap
-    stars_[i] = QPixmap(kStarSize * kStarCount, kStarSize);
-    stars_[i].fill(Qt::transparent);
-    QPainter p(&stars_[i]);
-
-    // Draw the stars
-    int x = 0;
-    for (int i=0 ; i<kStarCount ; ++i, x+=kStarSize) {
-      const QRect rect(x, 0, kStarSize, kStarSize);
-
-      if (rating - 0.25 <= i) {
-        // Totally empty
-        p.drawPixmap(rect, off);
-      } else if (rating - 0.75 <= i) {
-        // Half full
-        const QRect target_left(rect.x(), rect.y(), kStarSize/2, kStarSize);
-        const QRect target_right(rect.x() + kStarSize/2, rect.y(), kStarSize/2, kStarSize);
-        const QRect source_left(0, 0, kStarSize/2, kStarSize);
-        const QRect source_right(kStarSize/2, 0, kStarSize/2, kStarSize);
-        p.drawPixmap(target_left, on, source_left);
-        p.drawPixmap(target_right, off, source_right);
-      } else {
-        // Totally full
-        p.drawPixmap(rect, on);
-      }
-    }
-  }
 }
 
 QRect RatingPainter::Contents(const QRect& rect) {
@@ -76,16 +42,38 @@ double RatingPainter::RatingForPos(const QPoint& pos, const QRect& rect) {
   return double(int(raw * kStarCount * 2 + 0.5)) / (kStarCount * 2);
 }
 
-void RatingPainter::Paint(QPainter* painter, const QRect& rect, float rating) const {
-  QSize size(qMin(kStarSize*kStarCount, rect.width()),
-             qMin(kStarSize, rect.height()));
-  QPoint pos(rect.x(), rect.y());
+void RatingPainter::Paint(QPainter* painter, const QRect& rect, float rating) const
+{
+    // save some time here
+    if (rating==0)
+        return;
 
-  rating *= kStarCount;
+    rating *= kStarCount;
+  QPixmap on(":/star-on.png");
+  QPixmap off(":/star-off.png");
 
-  // Draw the stars
-  const int star = qBound(0, int(rating*2.0 + 0.5), kStarCount*2);
-  painter->drawPixmap(QRect(pos, size), stars_[star], QRect(QPoint(0,0), size));
+   // Draw the stars
+    int x=kStarSize/2;
+    for(int i=0; i<kStarCount; i++, x+=kStarSize)
+    {
+        const QRect t_rect(x, 0, kStarSize, kStarSize);
+
+        if (rating - 0.25 <= i) {
+          // Totally empty
+          painter->drawPixmap(t_rect, off);
+        } else if (rating - 0.75 <= i) {
+          // Half full
+          const QRect target_left(t_rect.x(), t_rect.y(), kStarSize/2, kStarSize);
+          const QRect target_right(t_rect.x() + kStarSize/2, t_rect.y(), kStarSize/2, kStarSize);
+          const QRect source_left(0, 0, kStarSize/2, kStarSize);
+          const QRect source_right(kStarSize/2, 0, kStarSize/2, kStarSize);
+          painter->drawPixmap(target_left, on, source_left);
+          painter->drawPixmap(target_right, off, source_right);
+        } else {
+          // Totally full
+          painter->drawPixmap(t_rect, on);
+        }
+    }
 }
 
 

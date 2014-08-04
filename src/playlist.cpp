@@ -52,7 +52,7 @@ Playlist::Playlist(QWidget* parent)
     , isChangeSignalEnabled(true)
 {
 
-    setSortingEnabled(false);
+    setSortingEnabled( false );
     setAcceptDrops( true );
     setDragEnabled( true );
     setAllColumnsShowFocus( false );
@@ -61,9 +61,7 @@ Playlist::Playlist(QWidget* parent)
     setDragEnabled(true);
     setSelectionBehavior(QAbstractItemView::SelectRows);
     setSelectionMode(QAbstractItemView::ExtendedSelection);
-    setDragEnabled(true);
     setDragDropMode(QAbstractItemView::InternalMove);
-    setAcceptDrops(true);
     setAttribute(Qt::WA_MacShowFocusRect, false);
     setUniformRowHeights(true);
 
@@ -75,7 +73,6 @@ Playlist::Playlist(QWidget* parent)
     QTreeWidgetItem *headeritem = new QTreeWidgetItem(headers);
     setHeaderItem(headeritem);
     setHeaderLabels(headers);
-    setSelectionBehavior(QAbstractItemView::SelectRows);
 
     header()->setResizeMode(QHeaderView::Interactive);
     header()->hideSection(PlaylistItem::Column_Url);
@@ -742,9 +739,10 @@ void Playlist::mouseDoubleClickEvent(QMouseEvent *event)
 
 void Playlist::mousePressEvent( QMouseEvent *e )
 {
-    if (e->button() == Qt::LeftButton)
+    if (e->button() == Qt::LeftButton){
         startPos = e->pos();
 
+    }
     QTreeWidget::mousePressEvent(e);
 
     if (e->button() == Qt::RightButton)
@@ -753,7 +751,6 @@ void Playlist::mousePressEvent( QMouseEvent *e )
 
 void Playlist::mouseMoveEvent(QMouseEvent *event)
 {
-
     if(event->buttons() & Qt::LeftButton)
         {
             int distance = (event->pos() - startPos).manhattanLength();
