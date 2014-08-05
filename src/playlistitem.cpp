@@ -59,7 +59,7 @@ void PlaylistItem::setTexts( Track *track )
     setText( Column_Tracknumber,  track->tracknumber() );
     setText( Column_Played,   QString::number(track->counter()) );
 
-    const QString body = "<tr><td>%1</td><td>%2</td></tr>";
+    const QString body = "<tr><td><b>%1</b></td><td>%2</td></tr>";
 
     QString
             str  = "<html><body><table STYLE=\"border-collapse: collapse\"> width=\"100%\" border=\"1\">";

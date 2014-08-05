@@ -307,7 +307,7 @@ void PlaylistBrowser::onPushSave()
 //    emit savePlaylists(fileName);
 
     QString listName = QInputDialog::getText(this,tr("Save Play List"),tr("Ente name of the new List"));
-    if ( listName!=QString::null )
+    if ( !listName.isEmpty() )
         emit storePlaylists(listName);
 }
 

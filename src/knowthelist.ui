@@ -318,6 +318,15 @@ QPushButton#butPlayWidget:pressed {
 }
 RatingWidget {
 background-color: #333333;
+}
+QMessageBox,QInputDialog{
+background-color: #aaaaaa;
+}
+
+QToolTip{
+color: #ffffff;
+background-color: #623dff;
+border: 1px solid white;
 }</string>
   </property>
   <widget class="QWidget" name="centralwidget">
