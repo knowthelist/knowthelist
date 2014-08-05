@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>652</width>
+    <width>703</width>
     <height>512</height>
    </rect>
   </property>
@@ -182,7 +182,7 @@
         </sizepolicy>
        </property>
        <property name="currentIndex">
-        <number>4</number>
+        <number>3</number>
        </property>
        <widget class="QWidget" name="page">
         <widget class="QLabel" name="label">
@@ -241,7 +241,7 @@
           <rect>
            <x>10</x>
            <y>40</y>
-           <width>371</width>
+           <width>388</width>
            <height>16</height>
           </rect>
          </property>
@@ -470,7 +470,7 @@
           <rect>
            <x>10</x>
            <y>40</y>
-           <width>371</width>
+           <width>388</width>
            <height>16</height>
           </rect>
          </property>
@@ -501,7 +501,7 @@
           <rect>
            <x>10</x>
            <y>40</y>
-           <width>371</width>
+           <width>388</width>
            <height>16</height>
           </rect>
          </property>
@@ -515,7 +515,7 @@
         <widget class="QSpinBox" name="minTracks">
          <property name="geometry">
           <rect>
-           <x>10</x>
+           <x>6</x>
            <y>380</y>
            <width>42</width>
            <height>22</height>
@@ -528,9 +528,9 @@
         <widget class="QLabel" name="label_9">
          <property name="geometry">
           <rect>
-           <x>10</x>
+           <x>7</x>
            <y>360</y>
-           <width>371</width>
+           <width>421</width>
            <height>20</height>
           </rect>
          </property>
@@ -541,7 +541,7 @@
         <widget class="QSpinBox" name="countDJ">
          <property name="geometry">
           <rect>
-           <x>10</x>
+           <x>7</x>
            <y>90</y>
            <width>42</width>
            <height>22</height>
@@ -554,7 +554,7 @@
         <widget class="QLabel" name="label_10">
          <property name="geometry">
           <rect>
-           <x>10</x>
+           <x>7</x>
            <y>70</y>
            <width>131</width>
            <height>16</height>
@@ -569,7 +569,7 @@
           <rect>
            <x>120</x>
            <y>90</y>
-           <width>256</width>
+           <width>281</width>
            <height>251</height>
           </rect>
          </property>
@@ -612,9 +612,9 @@
         <widget class="QCheckBox" name="checkAutoDjCountPlayed">
          <property name="geometry">
           <rect>
-           <x>10</x>
+           <x>5</x>
            <y>410</y>
-           <width>411</width>
+           <width>461</width>
            <height>20</height>
           </rect>
          </property>
@@ -629,7 +629,7 @@
           <rect>
            <x>10</x>
            <y>40</y>
-           <width>371</width>
+           <width>388</width>
            <height>16</height>
           </rect>
          </property>
@@ -722,7 +722,7 @@
           <rect>
            <x>10</x>
            <y>40</y>
-           <width>371</width>
+           <width>388</width>
            <height>16</height>
           </rect>
          </property>
@@ -812,7 +812,7 @@
           <rect>
            <x>10</x>
            <y>40</y>
-           <width>371</width>
+           <width>388</width>
            <height>16</height>
           </rect>
          </property>
@@ -828,7 +828,7 @@
           <rect>
            <x>10</x>
            <y>100</y>
-           <width>351</width>
+           <width>411</width>
            <height>16</height>
           </rect>
          </property>
@@ -870,7 +870,7 @@
      <widget class="QDialogButtonBox" name="buttonBox">
       <property name="geometry">
        <rect>
-        <x>470</x>
+        <x>516</x>
         <y>-2</y>
         <width>164</width>
         <height>32</height>
