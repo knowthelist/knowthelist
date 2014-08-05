@@ -463,22 +463,7 @@ QString Playlist::defaultPlaylistPath()
     return  path.absolutePath() + "/" + this->objectName()+".xspf";
 }
 
-//ToDo: save as xspf
-/*
- *<?xml version="1.0" encoding="UTF-8"?>
-<playlist version="1" xmlns="http://xspf.org/ns/0/">
-  <trackList>
-    <track><location>file:///music/song_1.ogg</location></track>
-    <track><location>file:///music/song_2.flac</location></track>
-    <track><location>file:///music/song_3.mp3</location></track>
-  </trackList>
-</playlist>
-*/
-/*
- *
- * create content as a xspf playlist
- **/
-
+// Export content as a xspf playlist
 void Playlist::saveXML( const QString &path ) const
 {
     qDebug() << __FUNCTION__ << "BEGIN " ;
@@ -545,9 +530,6 @@ void Playlist::saveXML( const QString &path ) const
     file.close();
     qDebug() << __FUNCTION__<< "END "  ;
 }
-
-//ToDo: load from xspf("spiff")
-
 
 void Playlist::loadXML( const QString &path )
 {

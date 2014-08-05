@@ -98,6 +98,8 @@ Track::Track( const QStringList& list )
         p->counter = QString(list.at(8)).toInt();
         p->rate = QString(list.at(9)).toInt();
     }
+    if (list.count()>10)
+        p->flags = QFlag(list.at(10).toInt());
 }
 
 

@@ -252,7 +252,8 @@ QScrollBar::handle:vertical {
    stop:1 gray
  );
          max-height: 16px;
-              margin: 15px 0px 15px 0px;
+		 min-height: 16px;
+              margin: 17px 0px 17px 0px;
      }
 
 

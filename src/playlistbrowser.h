@@ -23,6 +23,7 @@ signals:
     void selectionStarted(QList<Track*>);
     void selectionChanged(QList<Track*>);
     void savePlaylists(QString);
+    void storePlaylists(QString);
     
 public slots:
     void loadDatabaseList();
@@ -30,6 +31,7 @@ public slots:
     void playDatabaseList();
     void playFileList();
     void removeFileList();
+    void removeDatabaseList();
     void onSelectionChanged(PlaylistWidget* item);
     void onPushSave();
     void updateLists();

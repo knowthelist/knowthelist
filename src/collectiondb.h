@@ -44,6 +44,7 @@ class CollectionDB : public QObject
         void removeSongsInDir( QString path );
         bool isDirInCollection( QString path );
         void removeDirFromCollection( QString path );
+        void removePlaylist( QString name );
         void setFilterString( QString string );
 
         bool executeSql(const QString& statement);
@@ -84,6 +85,8 @@ class CollectionDB : public QObject
         QList<QStringList> selectHotTracks();
         QList<QStringList> selectLastTracks();
         QList<QStringList> selectFavoritesTracks();
+        QList<QStringList> selectPlaylistData();
+        QList<QStringList> selectPlaylistTracks(QString name);
 
     signals:
         void scanDone( bool changed );

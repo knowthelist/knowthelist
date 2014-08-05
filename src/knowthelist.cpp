@@ -252,7 +252,8 @@ void Knowthelist::createUI()
 
     connect(playlistBrowser,SIGNAL(selectionChanged(QList<Track*>)), trackList2, SLOT(changeTracks(QList<Track*>)));
     connect(playlistBrowser,SIGNAL(selectionStarted(QList<Track*>)), djSession, SLOT(forceTracks(QList<Track*>)));
-    connect(playlistBrowser,SIGNAL(savePlaylists(QString)),djSession, SLOT(savePlaylists(QString)));
+    //connect(playlistBrowser,SIGNAL(savePlaylists(QString)),djSession, SLOT(savePlaylists(QString)));
+    connect(playlistBrowser,SIGNAL(storePlaylists(QString)),djSession, SLOT(storePlaylists(QString)));
     connect(djSession,SIGNAL(savedPlaylists()),playlistBrowser, SLOT(updateLists()));
     connect( trackList2, SIGNAL(trackDoubleClicked(Track*)),SLOT(Track_doubleClicked(Track*)));
     connect( trackList2, SIGNAL(wantLoad(Track*,QString)),SLOT(trackList_wantLoad(Track*, QString)));
@@ -303,8 +304,9 @@ void Knowthelist::loadStartSettings()
 
     if ( settings.value("loadPlaylists","true" )=="true")
     {
-       playList1->loadXML( playList1->defaultPlaylistPath() );
-       playList2->loadXML( playList2->defaultPlaylistPath() );
+        djSession->playDefaultList();
+//       playList1->loadXML( playList1->defaultPlaylistPath() );
+//       playList2->loadXML( playList2->defaultPlaylistPath() );
     }
 
     //AutoFade, AGC ...
@@ -615,8 +617,9 @@ void Knowthelist::timerAutoFader_timerOut( )
 
 void Knowthelist::savePlaylists()
 {
-    playList1->saveXML( playList1->defaultPlaylistPath() );
-    playList2->saveXML( playList2->defaultPlaylistPath() );
+    djSession->storePlaylists("defaultKnowthelist",true);
+//    playList1->saveXML( playList1->defaultPlaylistPath() );
+//    playList2->saveXML( playList2->defaultPlaylistPath() );
 }
 
 void Knowthelist::Track_selectionChanged(  Track* track )

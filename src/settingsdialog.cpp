@@ -148,7 +148,6 @@ void SettingsDialog::accept()
 
     //Playlist settings
     settings.setValue("checkAutoRemove",p->ui.checkAutoRemove->isChecked());
-    settings.setValue("editPlaylistRoot",p->ui.txtPlaylistRoot->text());
 
     //Silent settings
     settings.setValue("checkAutoCue",p->ui.checkAutoCue->isChecked());
@@ -203,7 +202,6 @@ bool SettingsDialog::loadSettings()
 
     //Playlist setting
     p->ui.checkAutoRemove->setChecked(settings.value("checkAutoRemove",true).toBool());
-    p->ui.txtPlaylistRoot->setText(settings.value("editPlaylistRoot","").toString());
 
     //Silent setting
     p->ui.checkSkipSilentEnd->setChecked(settings.value("checkSkipSilentEnd",true).toBool());
@@ -257,14 +255,6 @@ void SettingsDialog::on_pushButton_clicked()
     dialog.setFileMode(QFileDialog::DirectoryOnly);
     if (dialog.exec())
          p->ui.txtBrowserRoot->setText(dialog.selectedFiles().first());
-}
-
-void SettingsDialog::on_pushPlaylistRoot_clicked()
-{
-    QFileDialog dialog(this);
-    dialog.setFileMode(QFileDialog::DirectoryOnly);
-    if (dialog.exec())
-         p->ui.txtPlaylistRoot->setText(dialog.selectedFiles().first());
 }
 
 void SettingsDialog::on_pushAbout_clicked()

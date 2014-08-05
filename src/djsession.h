@@ -45,6 +45,7 @@ Q_SIGNALS:
 
 public slots:
     void updatePlaylists();
+    void playDefaultList();
     void onTracksChanged_Playlist1(QList<Track*> tracks);
     void onTracksChanged_Playlist2(QList<Track*> tracks);
     void onTrackFinished(Track *track);
@@ -53,6 +54,7 @@ public slots:
     void onResetStats();
     void onTrackPropertyChanged(Track* track);
     void savePlaylists( const QString &filename );
+    void storePlaylists(const QString &name , bool replace=false);
     void setCurrentDj(Dj*);
 
 private:

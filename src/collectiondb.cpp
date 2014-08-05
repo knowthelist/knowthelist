@@ -38,6 +38,7 @@ class CollectionDbPrivate
         ulong resultLength;
         QString sqlQuickFilter;
         QString sqlFromString;
+        QString sqlFromStringPL;
         QSqlDatabase *db;
         QSqlQuery *query;
 
@@ -113,6 +114,15 @@ CollectionDB::CollectionDB()
             " INNER JOIN genre ON tags.genre = genre.id "
             " LEFT OUTER JOIN statistics ON tags.url = statistics.url "
             " LEFT OUTER JOIN favorites ON tags.url = favorites.url WHERE 1=1 ";
+
+    p->sqlFromStringPL = "FROM tags "
+            " INNER JOIN artist ON tags.artist = artist.id "
+            " INNER JOIN album ON tags.album = album.id "
+            " INNER JOIN year ON tags.year = year.id "
+            " INNER JOIN genre ON tags.genre = genre.id "
+            " INNER JOIN playlists ON tags.url = playlists.url "
+            " LEFT OUTER JOIN statistics ON tags.url = statistics.url "
+            " LEFT OUTER JOIN favorites ON tags.url = favorites.url WHERE 1=1 ";
 }
 
 CollectionDB::~CollectionDB()
@@ -145,6 +155,7 @@ bool CollectionDB::isDbValid()
     if ( ( !executeSql( "SELECT COUNT( url ) FROM tags;" ) )
          || ( !executeSql( "SELECT COUNT( url ) FROM statistics;" ) )
          || ( !executeSql( "SELECT COUNT( url ) FROM favorites;" ) )
+         || ( !executeSql( "SELECT COUNT( url ) FROM playlists;" ) )
          )
         return false;
     else
@@ -236,6 +247,12 @@ void CollectionDB::removeDirFromCollection( QString path )
              .arg( escapeString( path ) ) );
 }
 
+void CollectionDB::removePlaylist( QString name )
+{
+    executeSql( QString( "DELETE FROM playlists WHERE name = '%1';" )
+             .arg( escapeString( name ) ) );
+}
+
 long CollectionDB::selectSqlNumber( const QString& statement )
 {
     if (p->query->exec(statement)) {
@@ -290,7 +307,7 @@ void CollectionDB::createTables( bool temporary )
     //create tag table
     executeSql( QString( "CREATE %1 TABLE tags%2 ("
                         "%3"
-                        "url VARCHAR(100),"
+                        "url VARCHAR(120),"
                         "dir VARCHAR(100),"
                         "artist INTEGER,"
                         "title VARCHAR(100),"
@@ -407,16 +424,26 @@ void CollectionDB::createStatsTable()
 
     // create music statistics database
     executeSql( QString( "CREATE TABLE statistics ("
-                      "url VARCHAR(100) UNIQUE,"
+                      "url VARCHAR(120) UNIQUE,"
                       "createdate INTEGER,"
                       "accessdate INTEGER,"
                       "playcounter INTEGER );" ) );
 
     // create music favorites database
     executeSql( QString( "CREATE TABLE favorites ("
-                      "url VARCHAR(100) UNIQUE,"
+                      "url VARCHAR(120) UNIQUE,"
                       "changedate INTEGER,"
                       "rate INTEGER );" ) );
+
+    // create playlist database
+    executeSql( QString( "CREATE TABLE playlists ("
+                      "url VARCHAR(120),"
+                      "name VARCHAR(60),"
+                      "length INTEGER,"
+                      "changedate INTEGER,"
+                      "flags INTEGER,"
+                      "norder INTEGER,"
+                      "UNIQUE(url, name) ON CONFLICT REPLACE);" ) );
 }
 
 void CollectionDB::dropStatsTable()
@@ -425,6 +452,7 @@ void CollectionDB::dropStatsTable()
 
     executeSql( "DROP TABLE statistics;" );
     executeSql( "DROP TABLE favorites;" );
+    executeSql( "DROP TABLE playlists;" );
 }
 
 
@@ -577,6 +605,7 @@ QList<QStringList> CollectionDB::selectRandomEntry( QString rownum, QString path
   return selectSql(command);
 }
 
+
 QList<QStringList> CollectionDB::selectYears()
 {
     QString command = "SELECT DISTINCT year.name "
@@ -665,6 +694,28 @@ QList<QStringList> CollectionDB::selectFavoritesTracks()
           + p->sqlFromString +
           "AND favorites.rate>0 "
           "ORDER BY favorites.rate DESC ";
+
+  return selectSql(command);
+}
+
+
+QList<QStringList> CollectionDB::selectPlaylistData()
+{
+    QString command = "SELECT name, COUNT(name), SUM(length), changedate "
+         "from playlists "
+         "WHERE name <> 'defaultKnowthelist' "
+         "GROUP BY name, changedate "
+         "ORDER BY changedate DESC;";
+
+  return selectSql(command);
+}
+
+QList<QStringList> CollectionDB::selectPlaylistTracks(QString name)
+{
+  QString command = "SELECT tags.url, artist.name, tags.title, album.name, year.name, genre.name, tags.track, tags.length, statistics.playcounter, favorites.rate, playlists.flags  "
+          + p->sqlFromStringPL +
+          "AND playlists.name ='" + escapeString(name) + "' "
+          "ORDER BY playlists.norder";
 
   return selectSql(command);
 }

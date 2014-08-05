@@ -161,7 +161,6 @@ void DjSession::updatePlaylists()
     QFuture<void> future = QtConcurrent::run( this, &DjSession::searchTracks);
 }
 
-//ToDo: distribute according track->target
 void DjSession::forceTracks(QList<Track*> tracks)
 {
     int count1 = p->playList1_Tracks.count();
@@ -207,6 +206,29 @@ void DjSession::forceTracks(QList<Track*> tracks)
 
 }
 
+void DjSession::playDefaultList()
+{
+    qDebug() << __PRETTY_FUNCTION__ ;
+
+    QList<QStringList> selectedTags;
+
+    //Retrieve songs from database
+    selectedTags = p->database->selectPlaylistTracks("defaultKnowthelist");
+
+    QList<Track*> tracks;
+
+    tracks.clear();
+
+    qDebug() << __FUNCTION__ << "Song count: " << selectedTags.count();
+
+    //add tags to this track list
+    foreach ( QStringList tag, selectedTags) {
+        tracks.append( new Track(tag));
+    }
+
+    forceTracks(tracks);
+}
+
 void DjSession::on_dj_filterChanged(Filter* f)
 {
     //qDebug() << __PRETTY_FUNCTION__ ;
@@ -241,7 +263,7 @@ void DjSession::onTracksChanged_Playlist1(QList<Track*> tracks)
     foreach (Track* track, p->playList1_Tracks){
         Track::Options flags = track->flags();
         flags|=Track::isOnFirstPlayer;
-        flags^=Track::isOnSecondPlayer;
+        flags&= ~Track::isOnSecondPlayer;
         track->setFlags( flags );
     }
 }
@@ -251,12 +273,91 @@ void DjSession::onTracksChanged_Playlist2(QList<Track*> tracks)
     p->playList2_Tracks = tracks;
     foreach (Track* track, p->playList2_Tracks){
         Track::Options flags = track->flags();
-        flags^=Track::isOnFirstPlayer;
-        flags|=Track::isOnSecondPlayer;
+        flags&= ~Track::isOnFirstPlayer;
+        flags|= Track::isOnSecondPlayer;
         track->setFlags( flags );
     }
 }
 
+void DjSession::storePlaylists( const QString &name, bool replace )
+{
+    qDebug() << __PRETTY_FUNCTION__ << " Start";
+
+    QList<Track*> listToStore;
+    listToStore.append( p->playList1_Tracks );
+    listToStore.append( p->playList2_Tracks );
+
+    if (replace)
+        p->database->executeSql( QString("DELETE FROM playlists WHERE name ='%1';")
+                                 .arg(p->database->escapeString( name )));
+
+    int n=0;
+    QList<Track*>::Iterator i = listToStore.begin();
+    while (i != listToStore.end()) {
+
+            QString command = QString("INSERT OR REPLACE INTO playlists "
+                              "( url, name, length, flags, norder, changedate ) "
+                              "VALUES('%1','%2', %3, %4, %5, strftime('%s', 'now'));")
+                    .arg(p->database->escapeString( (*i)->url().toLocalFile() ))
+                    .arg(p->database->escapeString( name ))
+                    .arg( (*i)->length() )
+                    .arg( (*i)->flags() )
+                    .arg( n );
+
+            p->database->executeSql( command );
+            i++;
+            n++;
+
+    }
+
+    Q_EMIT savedPlaylists();
+    qDebug() << __PRETTY_FUNCTION__ << " Insert finish";
+}
+
+void DjSession::summariseCount()
+{
+    QString res;
+    QStringList genres;
+    QStringList paths;
+    QStringList artists;
+    int filterCount = p->currentDj->filters().count();
+    for (int i=0;i<filterCount;i++)
+    {
+        Filter* f=p->currentDj->filters().at(i);
+            qDebug() << __PRETTY_FUNCTION__ << " countOfFilter= "<<f->count();
+        res+=f->description();
+        genres.append(f->genre());
+        paths.append(f->path());
+        artists.append(f->artist());
+    }
+    QPair<int,int> counts = p->database->getCount(paths,genres,artists);
+    p->currentDj->setLengthTracks( counts.second );
+    p->currentDj->setDescription(res);
+    p->currentDj->setCountTracks( counts.first );
+
+}
+
+bool DjSession::isEnabledAutoDJCount()
+{
+    return p->isEnabledAutoDJCount;
+}
+
+void DjSession::setIsEnabledAutoDJCount(bool value)
+{
+    p->isEnabledAutoDJCount=value;
+}
+
+int DjSession::minCount()
+{
+    return p->minCount;
+}
+
+void DjSession::setMinCount(int value)
+{
+    p->minCount=value;
+}
+
+// obsolate: keep this just in case we need an export function later
 void DjSession::savePlaylists( const QString &filename )
 {
     qDebug() << __FUNCTION__ << "BEGIN " ;
@@ -328,48 +429,5 @@ void DjSession::savePlaylists( const QString &filename )
     Q_EMIT savedPlaylists();
     qDebug() << __FUNCTION__<< "END "  ;
 
-}
-
-void DjSession::summariseCount()
-{
-    QString res;
-    QStringList genres;
-    QStringList paths;
-    QStringList artists;
-    int filterCount = p->currentDj->filters().count();
-    for (int i=0;i<filterCount;i++)
-    {
-        Filter* f=p->currentDj->filters().at(i);
-            qDebug() << __PRETTY_FUNCTION__ << " countOfFilter= "<<f->count();
-        res+=f->description();
-        genres.append(f->genre());
-        paths.append(f->path());
-        artists.append(f->artist());
-    }
-    QPair<int,int> counts = p->database->getCount(paths,genres,artists);
-    p->currentDj->setLengthTracks( counts.second );
-    p->currentDj->setDescription(res);
-    p->currentDj->setCountTracks( counts.first );
-
-}
-
-bool DjSession::isEnabledAutoDJCount()
-{
-    return p->isEnabledAutoDJCount;
-}
-
-void DjSession::setIsEnabledAutoDJCount(bool value)
-{
-    p->isEnabledAutoDJCount=value;
-}
-
-int DjSession::minCount()
-{
-    return p->minCount;
-}
-
-void DjSession::setMinCount(int value)
-{
-    p->minCount=value;
 }
 

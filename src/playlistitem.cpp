@@ -59,6 +59,20 @@ void PlaylistItem::setTexts( Track *track )
     setText( Column_Tracknumber,  track->tracknumber() );
     setText( Column_Played,   QString::number(track->counter()) );
 
+    const QString body = "<tr><td>%1</td><td>%2</td></tr>";
+
+    QString
+            str  = "<html><body><table STYLE=\"border-collapse: collapse\"> width=\"100%\" border=\"1\">";
+    str += body.arg( QObject::tr( "Title" ),      track->title() );
+    str += body.arg( QObject::tr( "Artist" ),     track->artist() );
+    str += body.arg( QObject::tr( "Album" ),      track->album() );
+    str += body.arg( QObject::tr( "Genre" ),      track->genre() );
+    str += body.arg( QObject::tr( "Year" ),       track->year() );
+    str += body.arg( QObject::tr( "Location" ),   track->url().toString() );
+    str += "</table></body></html>";
+
+    setToolTip(Column_Artist,str);
+
     m_track = track;
 }
 

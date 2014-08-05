@@ -30,8 +30,8 @@ class PlaylistBrowsertPrivate
 {
     public:
     QListWidget* listPlaylists;
+    PlaylistWidget* currentPlaylist;
     CollectionDB* database;
-    QList<QStringList> selectedTags;
     QString directory;
 
 };
@@ -86,9 +86,7 @@ PlaylistBrowser::PlaylistBrowser(QWidget *parent) :
 
     setMaximumWidth(400);
 
-    // Read config values
-    QSettings settings;
-    p->directory = settings.value("editPlaylistRoot","").toString();
+    p->directory = "";
 
     setLayout(mainLayout);
 
@@ -157,38 +155,163 @@ void PlaylistBrowser::updateLists()
     p->listPlaylists->addItem(itm);
     p->listPlaylists->setItemWidget(itm,list);
 
-    // read saved lists
-    QDir rDir( p->directory );
-    rDir.setFilter(QDir::Files | QDir::NoDotDot | QDir::NoDot | QDir::Readable);
-    QStringList filters;
-         filters << "*.xspf";
-    rDir.setNameFilters(filters);
-    QFileInfoList filelist = rDir.entryInfoList();
+    // read stored lists
+    QList<QStringList> listData = p->database->selectPlaylistData();
+    foreach ( QStringList data, listData) {
+        QString name = data[0];
+        int count = data[1].toInt();
+        int sum = data[2].toInt();
+        QDateTime date(QDateTime::fromTime_t( data[3].toInt() ));
 
-    Q_FOREACH (const QFileInfo fi, filelist) {
-            if ( fi.isFile() ) {
-                qDebug() << __PRETTY_FUNCTION__ << "add playlist: " << fi.fileName();
-                list = new PlaylistWidget(p->listPlaylists);
-                list->setName(fi.fileName().replace(".xspf",""));
-                list->setObjectName(fi.fileName());
+        qDebug() << __PRETTY_FUNCTION__ << "add playlist: " << name;
+        list = new PlaylistWidget(p->listPlaylists);
+        list->setName( name );
+        list->setObjectName( name );
+        list->setDescription( date.toString("yyyy-MM-dd") + "    "
+                              + QString::number(count) + " " + tr("tracks") + "    "
+                              + Track::prettyTime( sum ,true) + " " + tr("hours"));
+        connect(list,SIGNAL(activated()),this,SLOT(loadDatabaseList()));
+        connect(list,SIGNAL(started()),this,SLOT(playDatabaseList()));
+        connect(list,SIGNAL(deleted()),this,SLOT(removeDatabaseList()));
 
-                QPair<int,int> count = readFileValues( p->directory+"/"+fi.fileName());
-                list->setDescription( fi.lastModified().toString("yyyy-MM-dd") + "    "
-                                      + QString::number(count.first) + " " + tr("tracks") + "    "
-                                      + Track::prettyTime( count.second ,true) + " " + tr("hours"));
-                connect(list,SIGNAL(activated()),this,SLOT(loadFileList()));
-                connect(list,SIGNAL(started()),this,SLOT(playFileList()));
-                connect(list,SIGNAL(deleted()),this,SLOT(removeFileList()));
+        itm = new QListWidgetItem(p->listPlaylists);
 
-                itm = new QListWidgetItem(p->listPlaylists);
+        itm->setSizeHint(QSize(0,70));
+        p->listPlaylists->addItem(itm);
+        p->listPlaylists->setItemWidget(itm,list);
+    }
 
-                itm->setSizeHint(QSize(0,70));
-                p->listPlaylists->addItem(itm);
-                p->listPlaylists->setItemWidget(itm,list);
-            }
+    //// read saved lists
+    //QDir rDir( p->directory );
+    //rDir.setFilter(QDir::Files | QDir::NoDotDot | QDir::NoDot | QDir::Readable);
+    //QStringList filters;
+    //     filters << "*.xspf";
+    //rDir.setNameFilters(filters);
+    //QFileInfoList filelist = rDir.entryInfoList();
 
+    //Q_FOREACH (const QFileInfo fi, filelist) {
+    //        if ( fi.isFile() ) {
+    //            qDebug() << __PRETTY_FUNCTION__ << "add playlist: " << fi.fileName();
+    //            list = new PlaylistWidget(p->listPlaylists);
+    //            list->setName(fi.fileName().replace(".xspf",""));
+    //            list->setObjectName(fi.fileName());
+
+    //            QPair<int,int> count = readFileValues( p->directory+"/"+fi.fileName());
+    //            list->setDescription( fi.lastModified().toString("yyyy-MM-dd") + "    "
+    //                                  + QString::number(count.first) + " " + tr("tracks") + "    "
+    //                                  + Track::prettyTime( count.second ,true) + " " + tr("hours"));
+    //            connect(list,SIGNAL(activated()),this,SLOT(loadFileList()));
+    //            connect(list,SIGNAL(started()),this,SLOT(playFileList()));
+    //            connect(list,SIGNAL(deleted()),this,SLOT(removeFileList()));
+
+    //            itm = new QListWidgetItem(p->listPlaylists);
+
+    //            itm->setSizeHint(QSize(0,70));
+    //            p->listPlaylists->addItem(itm);
+    //            p->listPlaylists->setItemWidget(itm,list);
+    //        }
+
+    //}
+
+
+}
+
+void PlaylistBrowser::playDatabaseList()
+{
+    qDebug() << __PRETTY_FUNCTION__ ;
+
+    if(PlaylistWidget* item = qobject_cast<PlaylistWidget*>(QObject::sender())){
+
+        onSelectionChanged(item);
+
+        emit selectionStarted(selectedTracks());
     }
 }
+
+void PlaylistBrowser::loadDatabaseList()
+{
+    qDebug() << __PRETTY_FUNCTION__ ;
+
+    if(PlaylistWidget* item = qobject_cast<PlaylistWidget*>(QObject::sender())){
+        onSelectionChanged(item);
+
+        emit selectionChanged(selectedTracks());
+    }
+}
+
+
+void PlaylistBrowser::removeDatabaseList()
+{
+    qDebug() << __PRETTY_FUNCTION__ ;
+
+    if(PlaylistWidget* item = qobject_cast<PlaylistWidget*>(QObject::sender())){
+
+        QString senderName = item->objectName();
+
+        p->database->removePlaylist(senderName);
+        updateLists();
+    }
+}
+
+QList<Track*> PlaylistBrowser::selectedTracks()
+{
+    QString senderName = p->currentPlaylist->objectName();
+    QList<QStringList> selectedTags;
+
+    //Retrieve songs from database
+    if (senderName == "TopTracks")
+        selectedTags = p->database->selectHotTracks();
+    else if (senderName == "FavoritesTracks")
+        selectedTags = p->database->selectFavoritesTracks();
+    else if (senderName == "LastTracks")
+        selectedTags = p->database->selectLastTracks();
+    else
+        selectedTags = p->database->selectPlaylistTracks(senderName);
+
+    QList<Track*> tracks;
+
+    tracks.clear();
+
+    qDebug() << __FUNCTION__ << "Song count: " << selectedTags.count();
+
+    //add tags to this track list
+    foreach ( QStringList tag, selectedTags) {
+        tracks.append( new Track(tag));
+    }
+
+    return tracks ;
+}
+
+void PlaylistBrowser::onSelectionChanged(PlaylistWidget* item)
+{
+    p->currentPlaylist = item;
+    for (int d=0;d<p->listPlaylists->count();d++)
+        ((PlaylistWidget*)p->listPlaylists->itemWidget(p->listPlaylists->item(d)))->deactivate();
+
+    item->activate();
+}
+
+void PlaylistBrowser::onPushSave()
+{
+
+//    QFileDialog dialog(this);
+//    dialog.setDefaultSuffix("xspf");
+//    QString fileName = dialog.getSaveFileName(this,
+//             tr("Save Play List"), p->directory,
+//             tr("Playlists (*.xspf);;All Files (*)"));
+
+//    // Bad workaround for Linux (Mac and Windows work with defaultSuffix)
+//    if (!fileName.endsWith(".xspf"))
+//        fileName += ".xspf";
+
+//    emit savePlaylists(fileName);
+
+    QString listName = QInputDialog::getText(this,tr("Save Play List"),tr("Ente name of the new List"));
+    if ( listName!=QString::null )
+        emit storePlaylists(listName);
+}
+
+// obsolate: save list into files
 
 QList<Track*> PlaylistBrowser::readFileList(QString filename)
 {
@@ -301,26 +424,6 @@ QPair<int,int> PlaylistBrowser::readFileValues(QString filename)
     return pair;
 }
 
-void PlaylistBrowser::playDatabaseList()
-{
-    qDebug() << __PRETTY_FUNCTION__ ;
-
-    if(PlaylistWidget* item = qobject_cast<PlaylistWidget*>(QObject::sender())){
-        onSelectionChanged(item);
-
-        QString senderName = item->objectName();
-
-        if (senderName == "TopTracks")
-            p->selectedTags = p->database->selectHotTracks();
-        else if (senderName == "FavoritesTracks")
-            p->selectedTags = p->database->selectFavoritesTracks();
-        else
-            p->selectedTags = p->database->selectLastTracks();
-
-
-        emit selectionStarted(selectedTracks());
-    }
-}
 
 void PlaylistBrowser::playFileList()
 {
@@ -362,70 +465,4 @@ void PlaylistBrowser::removeFileList()
         QFile::remove( p->directory+"/"+senderName );
         updateLists();
     }
-}
-
-void PlaylistBrowser::loadDatabaseList()
-{
-    qDebug() << __PRETTY_FUNCTION__ ;
-
-    if(PlaylistWidget* item = qobject_cast<PlaylistWidget*>(QObject::sender())){
-
-        onSelectionChanged(item);
-
-        QString senderName = item->objectName();
-
-        //Retrieve songs from database
-        if (senderName == "TopTracks")
-            p->selectedTags = p->database->selectHotTracks();
-        else if (senderName == "FavoritesTracks")
-            p->selectedTags = p->database->selectFavoritesTracks();
-        else
-            p->selectedTags = p->database->selectLastTracks();
-
-        //ToDo: Add some more
-
-        emit selectionChanged(selectedTracks());
-    }
-}
-
-QList<Track*> PlaylistBrowser::selectedTracks()
-{
-    QList<Track*> tracks;
-
-    tracks.clear();
-
-    qDebug() << __FUNCTION__ << "Song count: " << p->selectedTags.count();
-
-    //add tags to this track list
-    foreach ( QStringList tag, p->selectedTags) {
-        tracks.append( new Track(tag));
-    }
-
-    return tracks ;
-}
-
-void PlaylistBrowser::onSelectionChanged(PlaylistWidget* item)
-{
-
-    for (int d=0;d<p->listPlaylists->count();d++)
-        ((PlaylistWidget*)p->listPlaylists->itemWidget(p->listPlaylists->item(d)))->deactivate();
-
-    item->activate();
-}
-
-void PlaylistBrowser::onPushSave()
-{
-
-    QFileDialog dialog(this);
-    dialog.setDefaultSuffix("xspf");
-    QString fileName = dialog.getSaveFileName(this,
-             tr("Save Play List"), p->directory,
-             tr("Playlists (*.xspf);;All Files (*)"));
-
-    // Bad workaround for Linux (Mac and Windows work with defaultSuffix)
-    if (!fileName.endsWith(".xspf"))
-        fileName += ".xspf";
-
-    emit savePlaylists(fileName);
-
 }
