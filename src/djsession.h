@@ -41,6 +41,8 @@ public:
 Q_SIGNALS:
     void foundTracks_Playlist1(QList<Track*>);
     void foundTracks_Playlist2(QList<Track*>);
+    void changed_Playlist1(QPair<int,int>);
+    void changed_Playlist2(QPair<int,int>);
     void savedPlaylists();
 
 public slots:

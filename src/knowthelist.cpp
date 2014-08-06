@@ -167,6 +167,9 @@ void Knowthelist::createUI()
     connect( djSession, SIGNAL(foundTracks_Playlist1(QList<Track*>)),playList1, SLOT(appendTracks(QList<Track*>)));
     connect( djSession, SIGNAL(foundTracks_Playlist2(QList<Track*>)),playList2, SLOT(appendTracks(QList<Track*>)));
 
+    connect( djSession, SIGNAL(changed_Playlist1(QPair<int,int>)),player1,SLOT(setInfo(QPair<int,int>)));
+    connect( djSession, SIGNAL(changed_Playlist2(QPair<int,int>)),player2,SLOT(setInfo(QPair<int,int>)));
+
     //Add Tracklist for Collection
     trackList = new Playlist();
     trackList->setObjectName("tracklist");
@@ -189,17 +192,16 @@ void Knowthelist::createUI()
     connect( playList1, SIGNAL(wantSearch( QString )),collectionBrowser,SLOT(setFilterText(QString)));
     connect( playList2, SIGNAL(wantSearch( QString )),collectionBrowser,SLOT(setFilterText(QString)));
 
+    connect( trackList, SIGNAL(trackDoubleClicked(Track*)),SLOT(Track_doubleClicked(Track*)));
+    connect( trackList, SIGNAL(wantLoad(Track*,QString)),SLOT(trackList_wantLoad(Track*, QString)));
+    connect( trackList, SIGNAL(trackSelected(Track*)),SLOT(Track_selectionChanged(Track* )));
+    connect( trackList, SIGNAL(trackPropertyChanged(Track*)),djSession, SLOT(onTrackPropertyChanged(Track* )));
 
-   connect( trackList, SIGNAL(trackDoubleClicked(Track*)),SLOT(Track_doubleClicked(Track*)));
-   connect( trackList, SIGNAL(wantLoad(Track*,QString)),SLOT(trackList_wantLoad(Track*, QString)));
-   connect( trackList, SIGNAL(trackSelected(Track*)),SLOT(Track_selectionChanged(Track* )));
-   connect( trackList, SIGNAL(trackPropertyChanged(Track*)),djSession, SLOT(onTrackPropertyChanged(Track* )));
+    connect( playList1, SIGNAL(trackDoubleClicked(Track*)),SLOT(Track_doubleClicked(Track*)));
+    connect( playList2, SIGNAL(trackDoubleClicked(Track*)),SLOT(Track_doubleClicked(Track*)));
 
-   connect( playList1, SIGNAL(trackDoubleClicked(Track*)),SLOT(Track_doubleClicked(Track*)));
-   connect( playList2, SIGNAL(trackDoubleClicked(Track*)),SLOT(Track_doubleClicked(Track*)));
-
-   connect( playList1, SIGNAL(trackSelected(Track*)),SLOT(Track_selectionChanged(Track* )));
-   connect( playList2, SIGNAL(trackSelected(Track*)),SLOT(Track_selectionChanged(Track* )));
+    connect( playList1, SIGNAL(trackSelected(Track*)),SLOT(Track_selectionChanged(Track* )));
+    connect( playList2, SIGNAL(trackSelected(Track*)),SLOT(Track_selectionChanged(Track* )));
 
     //AutoFade
     ui->ledFade->setLook(QLed::Flat);

@@ -31,6 +31,8 @@ struct DjSessionPrivate
         CollectionDB* database;
         QList<Track*> playList1_Tracks;
         QList<Track*> playList2_Tracks;
+        QPair<int,int> playList1_Info;
+        QPair<int,int> playList2_Info;
         QStringList seenUrls;
         bool isEnabledAutoDJCount;
 };
@@ -259,24 +261,32 @@ void DjSession::onTrackPropertyChanged(Track* track)
 
 void DjSession::onTracksChanged_Playlist1(QList<Track*> tracks)
 {
+    p->playList1_Info.second=0;
     p->playList1_Tracks = tracks;
     foreach (Track* track, p->playList1_Tracks){
         Track::Options flags = track->flags();
         flags|=Track::isOnFirstPlayer;
         flags&= ~Track::isOnSecondPlayer;
         track->setFlags( flags );
+        p->playList1_Info.second+=track->length();
     }
+    p->playList1_Info.first=p->playList1_Tracks.count();
+    Q_EMIT changed_Playlist1(p->playList1_Info);
 }
 
 void DjSession::onTracksChanged_Playlist2(QList<Track*> tracks)
 {
+    p->playList2_Info.second=0;
     p->playList2_Tracks = tracks;
     foreach (Track* track, p->playList2_Tracks){
         Track::Options flags = track->flags();
         flags&= ~Track::isOnFirstPlayer;
         flags|= Track::isOnSecondPlayer;
         track->setFlags( flags );
+        p->playList2_Info.second+=track->length();
     }
+    p->playList2_Info.first=p->playList2_Tracks.count();
+    Q_EMIT changed_Playlist2(p->playList2_Info);
 }
 
 void DjSession::storePlaylists( const QString &name, bool replace )

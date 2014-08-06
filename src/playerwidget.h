@@ -65,6 +65,7 @@ public:
     void loadTrack( Track* );
     void analyseFinished();
     void setEqualizer(EqBand, int);
+    void setInfo(QPair<int,int> info);
 
  Q_SIGNALS:
     void trackFinished();

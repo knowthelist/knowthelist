@@ -233,7 +233,7 @@ p, li { white-space: pre-wrap; }
          <item>
           <widget class="QPushButton" name="pushClose">
            <property name="toolTip">
-            <string>Remove this playlist</string>
+            <string>Remove this list</string>
            </property>
            <property name="text">
             <string>x</string>

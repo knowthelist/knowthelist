@@ -7589,7 +7589,7 @@ min-height: 16px;
                 <property name="maximumSize">
                  <size>
                   <width>16777215</width>
-                  <height>25</height>
+                  <height>35</height>
                  </size>
                 </property>
                 <property name="styleSheet">

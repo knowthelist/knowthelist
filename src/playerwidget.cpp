@@ -76,6 +76,14 @@ PlayerWidget::PlayerWidget(QWidget *parent) :
    connect(player, SIGNAL(loadFinished()), this, SLOT(playerLoaded()));
 
    ui->lblTitle->setText( "" );
+   QFont font = ui->lblInfo->font();
+#if defined(Q_OS_DARWIN)
+   int newSize = font.pointSize()-4;
+#else
+   int newSize = font.pointSize()-1;
+#endif
+   font.setPointSize(newSize);
+   ui->lblInfo->setFont(font);
 
    m_isStarted = false;
    setAcceptDrops( true );
@@ -105,6 +113,16 @@ void PlayerWidget::setVolume(double volume)
 void PlayerWidget::setGain(double gain)
 {
   player->setGain(gain);
+}
+
+void PlayerWidget::setInfo(QPair<int,int> info)
+{
+    QString strTrack = (info.first > 1) ? tr("Tracks") : tr("Track");
+    ui->lblInfo->setText(QString("%1 %2       %3 %4")
+                         .arg(info.first)
+                         .arg(strTrack)
+                         .arg(Track::prettyTime( info.second))
+                         .arg(tr("Hours")));
 }
 
 void PlayerWidget::setEqualizer(EqBand band, int value)
