@@ -118,7 +118,7 @@ void PlayerWidget::setGain(double gain)
 void PlayerWidget::setInfo(QPair<int,int> info)
 {
     QString strTrack = (info.first > 1) ? tr("Tracks") : tr("Track");
-    ui->lblInfo->setText(QString("%1 %2       %3 %4")
+    ui->lblInfo->setText(QString("   %1 %2       %3 %4")
                          .arg(info.first)
                          .arg(strTrack)
                          .arg(Track::prettyTime( info.second))

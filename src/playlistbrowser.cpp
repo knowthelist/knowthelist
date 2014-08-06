@@ -53,7 +53,7 @@ PlaylistBrowser::PlaylistBrowser(QWidget *parent) :
     pushSave->setFont(pushFont);
 
     pushSave->setStyleSheet("QPushButton { border: none; padding-top: -3px; margin-left: 8px;max-height: 20px; margin-right: 28px;}");
-    pushSave->setToolTip(tr( "Save loaded player lists into a file" ));
+    pushSave->setToolTip(tr( "Add a new list and store current tracks" ));
     connect( pushSave,SIGNAL(clicked()),this, SLOT(onPushSave()));
 
     QVBoxLayout *mainLayout = new QVBoxLayout;

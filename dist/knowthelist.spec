@@ -91,7 +91,24 @@ Auto DJ function with multiple filters for random play
 Monitor player for pre listen tracks (via 2nd sound card e.g. USB)
 
 %changelog
+* Thu Aug 06 2014 Mario Stephan <mstephan@shared-files.de>
+- 2.2.0
+- Added a new left side tab "Lists" to manage lists, dynamic and stored lists
+- Added a new feature to handle track ratings
+- Added a combo box for AutoDJ artist and genre filters to be able to select also from a list
+- Added a new way in how to add and remove items of AutoDj and lists
+- Added "Open File Location" at playlist context menu
+- Added a playlist info label (count,time) to player
+- Added French translation (thanks to Geiger David and Adrien D.)
+- Changed to a better way to summarise count and length of tracks for AutoDJ
+- Optimized for smaller screens
+- Fix to be more flexible for empty tags
+- Enhanced algorithm to fill playlist and simplified handling of current and next item
+- Fixed some size issues and cosmetical issues
+- Stabilized to avoid crashed in some cases 
+
 * Thu Jul 03 2014 Mario Stephan <mstephan@shared-files.de>
+- 2.1.3
 -  Added new widget ModeSelector to select collection tree mode
 -  Added a counter for played songs
 -  New: Generate a default cover image if the tag provides none

@@ -261,7 +261,8 @@ void SettingsDialog::on_pushAbout_clicked()
 {
     QMessageBox msgBox;
     msgBox.setIconPixmap(QIcon(":knowthelist.png").pixmap(65,65));
-    msgBox.setText(tr("<h3>Knowthelist</h3>"
+    msgBox.setText(QString("<h3>Knowthelist</h3>"
+                      "         Version " + QApplication::applicationVersion() +
                       "<br />Copyright (C) 2005-2014 Mario Stephan "
                       "<br /><a href='mailto:mstephan@shared-files.de'>mstephan@shared-files.de</a>"
                       "<br /><br /><a href='http://knowthelist.github.io/knowthelist'>"
