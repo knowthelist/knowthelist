@@ -481,53 +481,53 @@ p, li { white-space: pre-wrap; }
         <translation>Formulaire</translation>
     </message>
     <message>
-        <location filename="../src/playerwidget.ui" line="747"/>
+        <location filename="../src/playerwidget.ui" line="750"/>
         <source>texttexttextt</source>
         <translation>textetextetexte</translation>
     </message>
     <message>
-        <location filename="../src/playerwidget.ui" line="791"/>
+        <location filename="../src/playerwidget.ui" line="848"/>
         <source>TextLabel</source>
         <translation type="unfinished">Texte de l&apos;étiquette</translation>
     </message>
     <message>
-        <location filename="../src/playerwidget.ui" line="1278"/>
+        <location filename="../src/playerwidget.ui" line="1344"/>
         <source>00:00</source>
         <translation>00:00</translation>
     </message>
     <message>
-        <location filename="../src/playerwidget.ui" line="1730"/>
-        <location filename="../src/playerwidget.ui" line="2670"/>
+        <location filename="../src/playerwidget.ui" line="1802"/>
+        <location filename="../src/playerwidget.ui" line="2745"/>
         <source>.00</source>
         <translation>.00</translation>
     </message>
     <message>
-        <location filename="../src/playerwidget.ui" line="2212"/>
+        <location filename="../src/playerwidget.ui" line="2284"/>
         <source>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;Time remain&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</source>
         <translation type="unfinished">&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;Durée restante&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</translation>
     </message>
     <message>
-        <location filename="../src/playerwidget.ui" line="2218"/>
+        <location filename="../src/playerwidget.ui" line="2290"/>
         <source>-00:00</source>
         <translation>-00:00</translation>
     </message>
     <message>
-        <location filename="../src/playerwidget.ui" line="2698"/>
+        <location filename="../src/playerwidget.ui" line="2773"/>
         <source>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;Seconds of silence at the end &lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</source>
         <translation type="unfinished">&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;Secondes de silence à la fin &lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</translation>
     </message>
     <message>
-        <location filename="../src/playerwidget.ui" line="2704"/>
+        <location filename="../src/playerwidget.ui" line="2779"/>
         <source>-00</source>
         <translation>-00</translation>
     </message>
     <message>
-        <location filename="../src/playerwidget.ui" line="2956"/>
+        <location filename="../src/playerwidget.ui" line="3031"/>
         <source>Jump to start position</source>
         <translation type="unfinished">Aller à la position de départ</translation>
     </message>
     <message>
-        <location filename="../src/playerwidget.ui" line="2959"/>
+        <location filename="../src/playerwidget.ui" line="3034"/>
         <source>Cue</source>
         <translation>CUE</translation>
     </message>
@@ -673,9 +673,13 @@ p, li { white-space: pre-wrap; }
 <context>
     <name>PlaylistBrowser</name>
     <message>
-        <location filename="../src/playlistbrowser.cpp" line="56"/>
         <source>Save loaded player lists into a file</source>
-        <translation>Sauvegarder dans un fichier les listes de lecture chargées</translation>
+        <translation type="obsolete">Sauvegarder dans un fichier les listes de lecture chargées</translation>
+    </message>
+    <message>
+        <location filename="../src/playlistbrowser.cpp" line="56"/>
+        <source>Add a new list and store current tracks</source>
+        <translation type="unfinished">Ajouter un nouvel liste</translation>
     </message>
     <message>
         <location filename="../src/playlistbrowser.cpp" line="115"/>
@@ -1055,14 +1059,13 @@ p, li { white-space: pre-wrap; }
         <translation>À Propos</translation>
     </message>
     <message>
-        <location filename="../src/settingsdialog.cpp" line="269"/>
+        <location filename="../src/settingsdialog.cpp" line="270"/>
         <source>About Knowthelist</source>
         <translation>À Propos de Knowthelist</translation>
     </message>
     <message>
-        <location filename="../src/settingsdialog.cpp" line="264"/>
         <source>&lt;h3&gt;Knowthelist&lt;/h3&gt;&lt;br /&gt;Copyright (C) 2005-2014 Mario Stephan &lt;br /&gt;&lt;a href=&apos;mailto:mstephan@shared-files.de&apos;&gt;mstephan@shared-files.de&lt;/a&gt;&lt;br /&gt;&lt;br /&gt;&lt;a href=&apos;http://knowthelist.github.io/knowthelist&apos;&gt;http://knowthelist.github.io/knowthelist&lt;/a&gt;</source>
-        <translation>&lt;h3&gt;Knowthelist&lt;/h3&gt;&lt;br /&gt;Copyright (C) 2005-2014 Mario Stephan &lt;br /&gt;&lt;a href=&apos;mailto:mstephan@shared-files.de&apos;&gt;mstephan@shared-files.de&lt;/a&gt;&lt;br /&gt;&lt;br /&gt;&lt;a href=&apos;http://knowthelist.github.io/knowthelist&apos;&gt;http://knowthelist.github.io/knowthelist&lt;/a&gt;</translation>
+        <translation type="obsolete">&lt;h3&gt;Knowthelist&lt;/h3&gt;&lt;br /&gt;Copyright (C) 2005-2014 Mario Stephan &lt;br /&gt;&lt;a href=&apos;mailto:mstephan@shared-files.de&apos;&gt;mstephan@shared-files.de&lt;/a&gt;&lt;br /&gt;&lt;br /&gt;&lt;a href=&apos;http://knowthelist.github.io/knowthelist&apos;&gt;http://knowthelist.github.io/knowthelist&lt;/a&gt;</translation>
     </message>
 </context>
 </TS>

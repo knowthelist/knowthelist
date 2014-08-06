@@ -191,7 +191,7 @@
     <message>
         <location filename="../src/djfilterwidget.ui" line="2676"/>
         <source>Delete</source>
-        <translation type="unfinished"></translation>
+        <translation type="unfinished">töröl</translation>
     </message>
     <message>
         <location filename="../src/djfilterwidget.ui" line="452"/>
@@ -307,7 +307,7 @@ p, li { white-space: pre-wrap; }
     <message>
         <location filename="../src/djwidget.ui" line="290"/>
         <source>Delete</source>
-        <translation type="unfinished"></translation>
+        <translation type="unfinished">töröl</translation>
     </message>
     <message>
         <source>&lt;!DOCTYPE HTML PUBLIC &quot;-//W3C//DTD HTML 4.0//EN&quot; &quot;http://www.w3.org/TR/REC-html40/strict.dtd&quot;&gt;
@@ -516,22 +516,22 @@ p, li { white-space: pre-wrap; }
         <translation>Form</translation>
     </message>
     <message>
-        <location filename="../src/playerwidget.ui" line="747"/>
+        <location filename="../src/playerwidget.ui" line="750"/>
         <source>texttexttextt</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/playerwidget.ui" line="791"/>
+        <location filename="../src/playerwidget.ui" line="848"/>
         <source>TextLabel</source>
         <translation type="unfinished">Szövegcimke</translation>
     </message>
     <message>
-        <location filename="../src/playerwidget.ui" line="1278"/>
+        <location filename="../src/playerwidget.ui" line="1344"/>
         <source>00:00</source>
         <translation>00:00</translation>
     </message>
     <message>
-        <location filename="../src/playerwidget.ui" line="2212"/>
+        <location filename="../src/playerwidget.ui" line="2284"/>
         <source>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;Time remain&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</source>
         <translation type="unfinished"></translation>
     </message>
@@ -540,8 +540,8 @@ p, li { white-space: pre-wrap; }
         <translation type="obsolete">Cueval</translation>
     </message>
     <message>
-        <location filename="../src/playerwidget.ui" line="1730"/>
-        <location filename="../src/playerwidget.ui" line="2670"/>
+        <location filename="../src/playerwidget.ui" line="1802"/>
+        <location filename="../src/playerwidget.ui" line="2745"/>
         <source>.00</source>
         <translation>.00</translation>
     </message>
@@ -550,27 +550,27 @@ p, li { white-space: pre-wrap; }
         <translation type="obsolete">texttexttexttexttexttexttexttexttexttexttexttexttexttexttexttexttexttexttexttexttexttexttext</translation>
     </message>
     <message>
-        <location filename="../src/playerwidget.ui" line="2218"/>
+        <location filename="../src/playerwidget.ui" line="2290"/>
         <source>-00:00</source>
         <translation>-00:00</translation>
     </message>
     <message>
-        <location filename="../src/playerwidget.ui" line="2698"/>
+        <location filename="../src/playerwidget.ui" line="2773"/>
         <source>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;Seconds of silence at the end &lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/playerwidget.ui" line="2704"/>
+        <location filename="../src/playerwidget.ui" line="2779"/>
         <source>-00</source>
         <translation type="unfinished">-00</translation>
     </message>
     <message>
-        <location filename="../src/playerwidget.ui" line="2956"/>
+        <location filename="../src/playerwidget.ui" line="3031"/>
         <source>Jump to start position</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/playerwidget.ui" line="2959"/>
+        <location filename="../src/playerwidget.ui" line="3034"/>
         <source>Cue</source>
         <translation>Jel</translation>
     </message>
@@ -737,7 +737,7 @@ p, li { white-space: pre-wrap; }
     <name>PlaylistBrowser</name>
     <message>
         <location filename="../src/playlistbrowser.cpp" line="56"/>
-        <source>Save loaded player lists into a file</source>
+        <source>Add a new list and store current tracks</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -1106,13 +1106,8 @@ p, li { white-space: pre-wrap; }
         <translation>...</translation>
     </message>
     <message>
-        <location filename="../src/settingsdialog.cpp" line="269"/>
+        <location filename="../src/settingsdialog.cpp" line="270"/>
         <source>About Knowthelist</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../src/settingsdialog.cpp" line="264"/>
-        <source>&lt;h3&gt;Knowthelist&lt;/h3&gt;&lt;br /&gt;Copyright (C) 2005-2014 Mario Stephan &lt;br /&gt;&lt;a href=&apos;mailto:mstephan@shared-files.de&apos;&gt;mstephan@shared-files.de&lt;/a&gt;&lt;br /&gt;&lt;br /&gt;&lt;a href=&apos;http://knowthelist.github.io/knowthelist&apos;&gt;http://knowthelist.github.io/knowthelist&lt;/a&gt;</source>
         <translation type="unfinished"></translation>
     </message>
 </context>
