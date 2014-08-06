@@ -259,13 +259,15 @@ void SettingsDialog::on_pushButton_clicked()
 
 void SettingsDialog::on_pushAbout_clicked()
 {
-    QMessageBox::about(this,tr("About Knowthelist"),
-                       tr("<h3>Knowthelist</h3>"
-                          "<br />Copyright (C) 2005-2014 Mario Stephan "
-                          "<br /><a href='mailto:mstephan@shared-files.de'>mstephan@shared-files.de</a>"
-                          "<br /><br /><a href='http://knowthelist.github.io/knowthelist'>"
-                          "http://knowthelist.github.io/knowthelist</a>"));
-
+    QMessageBox msgBox;
+    msgBox.setIconPixmap(QIcon(":knowthelist.png").pixmap(65,65));
+    msgBox.setText(tr("<h3>Knowthelist</h3>"
+                      "<br />Copyright (C) 2005-2014 Mario Stephan "
+                      "<br /><a href='mailto:mstephan@shared-files.de'>mstephan@shared-files.de</a>"
+                      "<br /><br /><a href='http://knowthelist.github.io/knowthelist'>"
+                      "http://knowthelist.github.io/knowthelist</a>"));
+    msgBox.setWindowTitle(tr("About Knowthelist"));
+    msgBox.exec();
 }
 
 void SettingsDialog::onScanNow()

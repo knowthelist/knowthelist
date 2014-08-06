@@ -320,12 +320,13 @@ RatingWidget {
 background-color: #333333;
 }
 QMessageBox,QInputDialog{
-background-color: #aaaaaa;
+  background-color: #bbbbbb;
+  color: #1c1c1c;
 }
 
 QToolTip{
 color: #ffffff;
-background-color: #623dff;
+background-color: #2a82da;
 border: 1px solid white;
 }</string>
   </property>

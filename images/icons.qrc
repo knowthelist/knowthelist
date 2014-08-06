@@ -19,5 +19,6 @@
         <file>down.png</file>
         <file>star-on.png</file>
         <file>star-off.png</file>
+        <file>knowthelist.png</file>
     </qresource>
 </RCC>
