@@ -166,6 +166,7 @@ void Playlist::appendSong( QString songFileName )
 void Playlist::appendSong( Track* track )
 {
    addTrack( track, lastChild() );
+   handleChanges();
 }
 
 
@@ -420,8 +421,8 @@ void Playlist::removePlaylistItem( PlaylistItem *item )
          setCurrentPlaylistItem(0);
      if ( item == nextPlaylistItem )
          setNextPlaylistItem(0);
-     if ( item == newPlaylistItem )
-         newPlaylistItem=0;
+
+     newPlaylistItem=0;
 
      takeTopLevelItem(indexOfTopLevelItem(item));
      delete item;     
@@ -925,8 +926,13 @@ void Playlist::keyPressEvent   (   QKeyEvent* e    )
         {
              this->removeSelectedItems();
         }
-   //else if( e->key() == Qt::Key_Return)
-          //Q_EMIT this->clicked( currentItem());
+   else if( e->key() == Qt::Key_L){
+      setCurrentPlaylistItem( item );
+      handleChanges();
+    }
+   else if( e->key() == Qt::Key_N){
+      setNextPlaylistItem( item );
+    }
    else if( e->key() == Qt::Key_1)
      Q_EMIT wantLoad( item->track(),"Left" );
    else if( e->key() == Qt::Key_2)
@@ -990,6 +996,7 @@ void Playlist::showContextMenu( PlaylistItem *item, int col )
     {
         case Qt::Key_L:
             setCurrentPlaylistItem( item );
+            handleChanges();
             break;
 
         case Qt::Key_N:
