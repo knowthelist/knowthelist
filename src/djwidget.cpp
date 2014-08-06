@@ -50,7 +50,6 @@ DjWidget::DjWidget(QWidget *parent) :
 #endif
     font.setPointSize(newSize);
     ui->lblDesciption->setFont(font);
-    ui->lblKind->setFont(font);
 
     p->timerSlide = new QTimer(this);
     p->timerSlide->setInterval(10);
@@ -133,7 +132,7 @@ void DjWidget::updateView()
     // Filter description and count update
 
     // update Labels
-    ui->lblKind->setText( p->dj->description() );
+    setToolTip( tr("This Dj plays: ") + p->dj->description() );
     QString strCase = (p->dj->filters().count() > 1) ? tr("cases") : tr("case");
 
     ui->lblDesciption->setText( QString::number( p->dj->filters().count() ) + " " + strCase + "    "
