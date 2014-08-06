@@ -144,7 +144,7 @@ void PlaylistBrowser::updateLists()
     list = new PlaylistWidget(p->listPlaylists);
     list->setName(tr("Favorites Tracks"));
     list->setObjectName("FavoritesTracks");
-    list->setDescription(tr("Favorites tracks"));
+    list->setDescription(tr("High rated tracks"));
     list->setRemovable(false);
     connect(list,SIGNAL(activated()),this,SLOT(loadDatabaseList()));
     connect(list,SIGNAL(started()),this,SLOT(playDatabaseList()));
@@ -306,7 +306,12 @@ void PlaylistBrowser::onPushSave()
 
 //    emit savePlaylists(fileName);
 
-    QString listName = QInputDialog::getText(this,tr("Save Play List"),tr("Ente name of the new List"));
+    QInputDialog* dialog = new QInputDialog(this, Qt::Dialog);
+    dialog->setWindowTitle( tr("Save Play List") );
+    dialog->setLabelText( tr("Enter a name for the new list") );
+    dialog->resize(350,100);
+    dialog->exec();
+    QString listName = dialog->textValue();
     if ( !listName.isEmpty() )
         emit storePlaylists(listName);
 }
