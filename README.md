@@ -15,6 +15,8 @@ Knowthelist - the awesome party music player
 
 Runs under Linux, MacOS and Windows
 
+![](http://kde-apps.org/CONTENT/content-pre1/165440-1.png)
+
 Needed packages for building:
 ------------------
 - QT4.8			http://qt-project.org
@@ -41,6 +43,7 @@ Prebuilt packages can be found here: http://opendesktop.org/content/show.php/Kno
 
 Versions:
 ----------
-- 2.1 (2014-05):	without qt3support
+- 2.2 (2014-08):	support for stored lists
+- 2.1 (2014-05):	removed qt3support
 - 2.0 (2011)   :	qt-only + gstreamer version for multiple OS support
-- 1.x (2005)   :    only for KDE Linux	with arts sound framework
+- 1.x (2005)   :    	only for KDE Linux with arts sound framework
