@@ -15,7 +15,7 @@ Knowthelist - the awesome party music player
 
 Runs under Linux, MacOS and Windows
 
-![](http://kde-apps.org/CONTENT/content-pre1/165440-1.png)
+![](https://github.com/knowthelist/knowthelist/blob/gh-pages/images/knowthelist_2.2_mac_s.png)
 
 Needed packages for building:
 ------------------
