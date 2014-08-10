@@ -296,7 +296,7 @@ p, li { white-space: pre-wrap; }
     <message>
         <location filename="../src/djwidget.cpp" line="135"/>
         <source>This Dj plays: </source>
-        <translation type="unfinished">Ce Dj joue: </translation>
+        <translation>Ce Dj joue: </translation>
     </message>
     <message>
         <location filename="../src/djwidget.cpp" line="136"/>
@@ -488,7 +488,7 @@ p, li { white-space: pre-wrap; }
     <message>
         <location filename="../src/playerwidget.ui" line="848"/>
         <source>TextLabel</source>
-        <translation type="unfinished">Texte de l&apos;étiquette</translation>
+        <translation>Texte de l&apos;étiquette</translation>
     </message>
     <message>
         <location filename="../src/playerwidget.ui" line="1344"/>
@@ -504,7 +504,7 @@ p, li { white-space: pre-wrap; }
     <message>
         <location filename="../src/playerwidget.ui" line="2284"/>
         <source>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;Time remain&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</source>
-        <translation type="unfinished">&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;Durée restante&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</translation>
+        <translation>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;Durée restante&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</translation>
     </message>
     <message>
         <location filename="../src/playerwidget.ui" line="2290"/>
@@ -514,7 +514,7 @@ p, li { white-space: pre-wrap; }
     <message>
         <location filename="../src/playerwidget.ui" line="2773"/>
         <source>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;Seconds of silence at the end &lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</source>
-        <translation type="unfinished">&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;Secondes de silence à la fin &lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</translation>
+        <translation>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;Secondes de silence à la fin&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</translation>
     </message>
     <message>
         <location filename="../src/playerwidget.ui" line="2779"/>
@@ -524,7 +524,7 @@ p, li { white-space: pre-wrap; }
     <message>
         <location filename="../src/playerwidget.ui" line="3031"/>
         <source>Jump to start position</source>
-        <translation type="unfinished">Aller à la position de départ</translation>
+        <translation>Aller à la position de départ</translation>
     </message>
     <message>
         <location filename="../src/playerwidget.ui" line="3034"/>
@@ -534,17 +534,17 @@ p, li { white-space: pre-wrap; }
     <message>
         <location filename="../src/playerwidget.cpp" line="120"/>
         <source>Tracks</source>
-        <translation type="unfinished">Pistes</translation>
+        <translation>Pistes</translation>
     </message>
     <message>
         <location filename="../src/playerwidget.cpp" line="120"/>
         <source>Track</source>
-        <translation type="unfinished">Piste</translation>
+        <translation>Piste</translation>
     </message>
     <message>
         <location filename="../src/playerwidget.cpp" line="125"/>
         <source>Hours</source>
-        <translation type="unfinished">Heures</translation>
+        <translation>Heures</translation>
     </message>
     <message>
         <location filename="../src/playerwidget.cpp" line="347"/>
@@ -612,7 +612,7 @@ p, li { white-space: pre-wrap; }
     <message>
         <location filename="../src/playlist.cpp" line="71"/>
         <source>Rate</source>
-        <translation type="unfinished">Taux</translation>
+        <translation>Note</translation>
     </message>
     <message>
         <location filename="../src/playlist.cpp" line="966"/>
@@ -657,7 +657,7 @@ p, li { white-space: pre-wrap; }
     <message>
         <location filename="../src/playlist.cpp" line="989"/>
         <source>&amp;View Tag Information</source>
-        <translation>&amp;Voir l&apos;information du Tag</translation>
+        <translation>&amp;Afficher les informations du Tag</translation>
     </message>
     <message>
         <location filename="../src/playlist.cpp" line="1053"/>
@@ -679,12 +679,12 @@ p, li { white-space: pre-wrap; }
     <message>
         <location filename="../src/playlistbrowser.cpp" line="56"/>
         <source>Add a new list and store current tracks</source>
-        <translation type="unfinished">Ajouter un nouvel liste</translation>
+        <translation>Ajouter une nouvelle liste et stocker les pistes en cours</translation>
     </message>
     <message>
         <location filename="../src/playlistbrowser.cpp" line="115"/>
         <source>Top Tracks</source>
-        <translation>Titres favoris</translation>
+        <translation>Top titres</translation>
     </message>
     <message>
         <location filename="../src/playlistbrowser.cpp" line="117"/>
@@ -704,12 +704,12 @@ p, li { white-space: pre-wrap; }
     <message>
         <location filename="../src/playlistbrowser.cpp" line="145"/>
         <source>Favorites Tracks</source>
-        <translation type="unfinished">Titres favoris</translation>
+        <translation>Titres favoris</translation>
     </message>
     <message>
         <location filename="../src/playlistbrowser.cpp" line="147"/>
         <source>High rated tracks</source>
-        <translation type="unfinished">Hautes pistes notés</translation>
+        <translation>Titres les mieux notés</translation>
     </message>
     <message>
         <location filename="../src/playlistbrowser.cpp" line="171"/>
@@ -729,7 +729,7 @@ p, li { white-space: pre-wrap; }
     <message>
         <location filename="../src/playlistbrowser.cpp" line="311"/>
         <source>Enter a name for the new list</source>
-        <translation type="unfinished">Entrez un nom pour la nouvelle liste</translation>
+        <translation>Entrer un nom pour la nouvelle liste</translation>
     </message>
     <message>
         <source>Playlists (*.xspf);;All Files (*)</source>
@@ -774,7 +774,7 @@ p, li { white-space: pre-wrap; }
     <message>
         <location filename="../src/playlistwidget.ui" line="236"/>
         <source>Remove this list</source>
-        <translation type="unfinished">Supprimer cette liste</translation>
+        <translation>Supprimer cette liste</translation>
     </message>
     <message>
         <source>Remove this playlist</source>
@@ -826,32 +826,32 @@ p, li { white-space: pre-wrap; }
     <message>
         <location filename="../src/playlistitem.cpp" line="66"/>
         <source>Title</source>
-        <translation type="unfinished">Titre</translation>
+        <translation>Titre</translation>
     </message>
     <message>
         <location filename="../src/playlistitem.cpp" line="67"/>
         <source>Artist</source>
-        <translation type="unfinished">Artiste</translation>
+        <translation>Artiste</translation>
     </message>
     <message>
         <location filename="../src/playlistitem.cpp" line="68"/>
         <source>Album</source>
-        <translation type="unfinished">Album</translation>
+        <translation>Album</translation>
     </message>
     <message>
         <location filename="../src/playlistitem.cpp" line="69"/>
         <source>Genre</source>
-        <translation type="unfinished">Genre</translation>
+        <translation>Genre</translation>
     </message>
     <message>
         <location filename="../src/playlistitem.cpp" line="70"/>
         <source>Year</source>
-        <translation type="unfinished">Année</translation>
+        <translation>Année</translation>
     </message>
     <message>
         <location filename="../src/playlistitem.cpp" line="71"/>
         <source>Location</source>
-        <translation type="unfinished">Emplacement</translation>
+        <translation>Emplacement</translation>
     </message>
 </context>
 <context>
