@@ -25,7 +25,6 @@ Needed packages for building:
 - taglib		http://taglib.github.io 
 - gstreamer-0.10	http://gstreamer.freedesktop.org 
 - gstreamer-0.10-plugins-* http://docs.gstreamer.com/display/GstSDK/Home 
-- boost-devel
 - alsa-devel		(Linux only)
 
 Build:
@@ -37,6 +36,25 @@ Build:
 - make
 - ./knowthelist
 
+## MacOS X
+
+Knowthelist works well on MacOS X.
+
+* OSX 10.6.8 is tested and known to work
+
+It can be compiled to a .app bundle, suitable for placing in /Applications.
+Compiling is incredibly easy using [Homebrew](http://brew.sh).  Just run this command:
+
+    $ brew install knowthelist
+
+And you're done. 
+
+Until knowthelist is available in the brew repo, copy the formula by hand:
+
+    $ cp ./dist/knowthelist.rb /usr/local/Library/Formula
+
+
+
 Install packages:
 -----------------
 Prebuilt packages can be found here: http://opendesktop.org/content/show.php/Knowthelist?content=165335
@@ -44,6 +62,6 @@ Prebuilt packages can be found here: http://opendesktop.org/content/show.php/Kno
 Versions:
 ----------
 - 2.2 (2014-08):	support for stored lists
-- 2.1 (2014-05):	removed qt3support
+- 2.1 (2014-05):	First public version; removed qt3support
 - 2.0 (2011)   :	qt-only + gstreamer version for multiple OS support
 - 1.x (2005)   :    	only for KDE Linux with arts sound framework
