@@ -74,6 +74,7 @@ QPushButton#butCue {
  );
 max-height: 29px;
 min-height: 10px;
+font-weight: bold;
 }
 
 QPushButton#butCue:checked {
@@ -3024,14 +3025,15 @@ QLabel{
               </property>
               <property name="font">
                <font>
-                <pointsize>9</pointsize>
+                <weight>75</weight>
+                <bold>true</bold>
                </font>
               </property>
               <property name="toolTip">
-               <string>Jump to start position</string>
+               <string>Jump to the point where the music starts mainly</string>
               </property>
               <property name="text">
-               <string>Cue</string>
+               <string notr="true">CUE</string>
               </property>
               <property name="checkable">
                <bool>true</bool>
