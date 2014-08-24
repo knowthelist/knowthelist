@@ -673,9 +673,9 @@ void Knowthelist::trackList_wantLoad(Track* track, QString target)
     //ToDo: enable for multiple tracks like drag/drop
     qDebug() << __FUNCTION__ << "target=" << target;
     if ( target == "Right" )
-      playList2->appendSong( track );
+      playList2->appendSong( new Track(track->tagList()) );
     else if ( target ==  "Left" )
-      playList1->appendSong( track );
+      playList1->appendSong( new Track(track->tagList()) );
 }
 
 //ToDo: find a better name

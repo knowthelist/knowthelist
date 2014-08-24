@@ -166,7 +166,7 @@ void Playlist::appendSong( QString songFileName )
 void Playlist::appendSong( Track* track )
 {
    addTrack( track, lastChild() );
-   handleChanges();
+   checkCurrentItem();
 }
 
 
@@ -404,9 +404,10 @@ QList<Track*> Playlist::allTracks()
 {
     QList<Track*> trackList;
     for(int i=0;i<this->topLevelItemCount();i++){
-         PlaylistItem *item = dynamic_cast<PlaylistItem *>(this->topLevelItem(i));
-         if ( item && item->track()->isValid()  )
-             trackList.append(item->track());
+         if ( PlaylistItem *item = dynamic_cast<PlaylistItem *>(this->topLevelItem(i))){
+            if ( item->track()->isValid()  )
+              trackList.append(item->track());
+         }
     }
     return trackList;
 }

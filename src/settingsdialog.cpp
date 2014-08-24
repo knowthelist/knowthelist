@@ -261,12 +261,17 @@ void SettingsDialog::on_pushAbout_clicked()
 {
     QMessageBox msgBox;
     msgBox.setIconPixmap(QIcon(":knowthelist.png").pixmap(65,65));
-    msgBox.setText(QString("<h3>Knowthelist</h3>"
+    msgBox.setText(QString::fromUtf8("%1").arg("<h3>Knowthelist</h3>"
                       "         Version " + QApplication::applicationVersion() +
                       "<br />Copyright (C) 2005-2014 Mario Stephan "
                       "<br /><a href='mailto:mstephan@shared-files.de'>mstephan@shared-files.de</a>"
                       "<br /><br /><a href='http://knowthelist.github.io/knowthelist'>"
-                      "http://knowthelist.github.io/knowthelist</a>"));
+                      "http://knowthelist.github.io/knowthelist</a>"
+                      "<br /><br /><div style='font-size:9px;'>Thanks to :"
+                      "<br />* Heiko Fischer   (for testing and new ideas)"
+                      "<br />* David Geiger and Adrien D.   (for French translation and issue reports)"
+                      "<br />* Pavel Fric   (for Czech translation)"
+                      "<br />* László Farkas   (for Hungarian translation)</div>"       ));
     msgBox.setWindowTitle(tr("About Knowthelist"));
     msgBox.exec();
 }
