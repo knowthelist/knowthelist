@@ -158,6 +158,7 @@ bool Player::prepare()
       }
     #endif
 
+      //setenv("GST_DEBUG", "*:3", 1);
       gst_init (0, 0);
 
     //prepare

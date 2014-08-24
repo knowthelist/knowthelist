@@ -679,7 +679,7 @@ void FancyTabWidget::MakeTabBar(QTabBar::Shape shape, bool text, bool icons,
   }
 
   if (fancy) {
-    bar->setStyle(proxy_style_.get());
+    bar->setStyle(proxy_style_.data());
   }
 
   if (shape == QTabBar::RoundedNorth)

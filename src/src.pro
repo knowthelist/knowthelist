@@ -118,12 +118,11 @@ win32 {
     RC_FILE = knowthelist.rc
 }
 macx { 
-    INCLUDEPATH += /opt/local/include/gstreamer-0.10 \
-        /opt/local/include/glib-2.0 \
-        /opt/local/lib/glib-2.0/include \
-        /opt/local/include
+    INCLUDEPATH += /usr/local/include/gstreamer-0.10 \
+        /usr/local/include/glib-2.0 \
+        /usr/local/lib/glib-2.0/include \
+        /usr/local/include
     LIBS += -L/usr/local/lib \
-        -L/opt/local/lib \
         -lgstreamer-0.10 \
         -lglib-2.0 \
         -lgobject-2.0 \
