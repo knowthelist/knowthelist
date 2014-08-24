@@ -116,12 +116,12 @@
     <message>
         <location filename="../src/djbrowser.cpp" line="66"/>
         <source>Add a new AutoDj</source>
-        <translation type="unfinished"></translation>
+        <translation>Přidat nového automatického diskžokeje</translation>
     </message>
     <message>
         <location filename="../src/djbrowser.cpp" line="77"/>
         <source>Add a new record case for current AutoDj</source>
-        <translation type="unfinished"></translation>
+        <translation>Přidat nový kufr s deskami pro nynějšího automatického diskžokeje</translation>
     </message>
 </context>
 <context>
@@ -144,12 +144,12 @@
     <message>
         <location filename="../src/djfilterwidget.ui" line="1192"/>
         <source>Remove this record case</source>
-        <translation type="unfinished"></translation>
+        <translation>Odstranit tento kufr s deskami</translation>
     </message>
     <message>
         <location filename="../src/djfilterwidget.ui" line="1195"/>
         <source>x</source>
-        <translation type="unfinished"></translation>
+        <translation>x</translation>
     </message>
     <message>
         <location filename="../src/djfilterwidget.ui" line="1685"/>
@@ -185,12 +185,12 @@
     <message>
         <location filename="../src/djfilterwidget.ui" line="2664"/>
         <source>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Confirm the remove&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</source>
-        <translation type="unfinished">&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;potvrdit&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</translation>
+        <translation>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Potvrdit odstranění&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</translation>
     </message>
     <message>
         <location filename="../src/djfilterwidget.ui" line="2676"/>
         <source>Delete</source>
-        <translation type="unfinished">smazat</translation>
+        <translation>Smazat</translation>
     </message>
     <message>
         <location filename="../src/djfilterwidget.ui" line="452"/>
@@ -242,7 +242,7 @@ p, li { white-space: pre-wrap; }
         <location filename="../src/djfilterwidget.cpp" line="155"/>
         <location filename="../src/djfilterwidget.cpp" line="198"/>
         <source>of</source>
-        <translation>od</translation>
+        <translation>z</translation>
     </message>
 </context>
 <context>
@@ -268,7 +268,7 @@ p, li { white-space: pre-wrap; }
     <message>
         <location filename="../src/djwidget.ui" line="100"/>
         <source>AutoDJ</source>
-        <translation type="unfinished">Diskžokej</translation>
+        <translation>Diskžokej</translation>
     </message>
     <message>
         <location filename="../src/djwidget.ui" line="137"/>
@@ -286,27 +286,27 @@ p, li { white-space: pre-wrap; }
     <message>
         <location filename="../src/djwidget.ui" line="208"/>
         <source>Start a session of this DJ</source>
-        <translation type="unfinished">Zahájení zasedání tohoto DJ</translation>
+        <translation>Zahájení zasedání tohoto diskžokeje</translation>
     </message>
     <message>
         <location filename="../src/djwidget.ui" line="222"/>
         <source>Remove this DJ</source>
-        <translation type="unfinished">Odstranit tento DJ</translation>
+        <translation>Odstranit tohoto diskžokeje</translation>
     </message>
     <message>
         <location filename="../src/djwidget.ui" line="225"/>
         <source>x</source>
-        <translation type="unfinished"></translation>
+        <translation>x</translation>
     </message>
     <message>
         <location filename="../src/djwidget.ui" line="281"/>
         <source>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Confirm the remove&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</source>
-        <translation type="unfinished">&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;potvrdit&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</translation>
+        <translation>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Potvrdit odstranění&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</translation>
     </message>
     <message>
         <location filename="../src/djwidget.ui" line="290"/>
         <source>Delete</source>
-        <translation type="unfinished">smazat</translation>
+        <translation>Smazat</translation>
     </message>
     <message>
         <source>&lt;!DOCTYPE HTML PUBLIC &quot;-//W3C//DTD HTML 4.0//EN&quot; &quot;http://www.w3.org/TR/REC-html40/strict.dtd&quot;&gt;
@@ -329,27 +329,27 @@ p, li { white-space: pre-wrap; }
     <message>
         <location filename="../src/djwidget.cpp" line="139"/>
         <source>tracks</source>
-        <translation>Skladba</translation>
+        <translation>skladeb</translation>
     </message>
     <message>
         <location filename="../src/djwidget.cpp" line="140"/>
         <source>hours</source>
-        <translation>Hodiny</translation>
+        <translation>hodin</translation>
     </message>
     <message>
         <location filename="../src/djwidget.cpp" line="136"/>
         <source>cases</source>
-        <translation>Kufrs</translation>
+        <translation>kufrů</translation>
     </message>
     <message>
         <location filename="../src/djwidget.cpp" line="135"/>
         <source>This Dj plays: </source>
-        <translation type="unfinished">Tento Dj hraje:</translation>
+        <translation>Tento diskžokej hraje:</translation>
     </message>
     <message>
         <location filename="../src/djwidget.cpp" line="136"/>
         <source>case</source>
-        <translation>Kufr</translation>
+        <translation>kufr</translation>
     </message>
 </context>
 <context>
@@ -378,7 +378,7 @@ p, li { white-space: pre-wrap; }
     <message>
         <location filename="../src/knowthelist.ui" line="2489"/>
         <source>Set</source>
-        <translation>Nastavit</translation>
+        <translation>Nastav</translation>
     </message>
     <message>
         <location filename="../src/knowthelist.ui" line="4829"/>
@@ -440,7 +440,7 @@ p, li { white-space: pre-wrap; }
 &lt;html&gt;&lt;head&gt;&lt;meta name=&quot;qrichtext&quot; content=&quot;1&quot; /&gt;&lt;style type=&quot;text/css&quot;&gt;
 p, li { white-space: pre-wrap; }
 &lt;/style&gt;&lt;/head&gt;&lt;body style=&quot; font-size:8.25pt; font-weight:400; font-style:normal;&quot;&gt;
-&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;a href=&quot;settings&quot;&gt;&lt;span style=&quot; font-size:8pt; color:#df0000;&quot;&gt;Žádná druhá zvuková karta není vybrána!&lt;/span&gt;&lt;/a&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</translation>
+&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;a href=&quot;settings&quot;&gt;&lt;span style=&quot; font-size:8pt; color:#df0000;&quot;&gt;Není vybrána žádná druhá zvuková karta!&lt;/span&gt;&lt;/a&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</translation>
     </message>
     <message>
         <location filename="../src/knowthelist.ui" line="7176"/>
@@ -470,7 +470,7 @@ p, li { white-space: pre-wrap; }
     <message>
         <location filename="../src/knowthelist.cpp" line="267"/>
         <source>Lists</source>
-        <translation type="unfinished"></translation>
+        <translation>Seznamy</translation>
     </message>
 </context>
 <context>
@@ -484,12 +484,12 @@ p, li { white-space: pre-wrap; }
     <message>
         <location filename="../src/modeselector.ui" line="57"/>
         <source>View: Artist &gt; Album</source>
-        <translation>názor: Umělec &gt;Alba </translation>
+        <translation>Pohled: Umělec &gt;Alba </translation>
     </message>
     <message>
         <location filename="../src/modeselector.ui" line="88"/>
         <source>View: Year &gt; Artist &gt; Album</source>
-        <translation>názor: Rok &gt; Umělec &gt;Alba</translation>
+        <translation>Pohled: Rok &gt; Umělec &gt;Alba</translation>
     </message>
     <message>
         <location filename="../src/modeselector.ui" line="91"/>
@@ -499,7 +499,7 @@ p, li { white-space: pre-wrap; }
     <message>
         <location filename="../src/modeselector.ui" line="119"/>
         <source>View: Genre &gt; Artist &gt; Album</source>
-        <translation>názor: Žánr &gt; Umělec &gt;Alba</translation>
+        <translation>Pohled: Žánr &gt; Umělec &gt;Alba</translation>
     </message>
     <message>
         <location filename="../src/modeselector.ui" line="122"/>
@@ -517,12 +517,12 @@ p, li { white-space: pre-wrap; }
     <message>
         <location filename="../src/playerwidget.ui" line="750"/>
         <source>texttexttextt</source>
-        <translation type="unfinished"></translation>
+        <translation>Text</translation>
     </message>
     <message>
         <location filename="../src/playerwidget.ui" line="848"/>
         <source>TextLabel</source>
-        <translation type="unfinished">Textový štítek</translation>
+        <translation>Textový štítek</translation>
     </message>
     <message>
         <location filename="../src/playerwidget.ui" line="1344"/>
@@ -532,12 +532,12 @@ p, li { white-space: pre-wrap; }
     <message>
         <location filename="../src/playerwidget.ui" line="2284"/>
         <source>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;Time remain&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</source>
-        <translation type="unfinished"></translation>
+        <translation>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;Zbývající čas&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</translation>
     </message>
     <message>
         <location filename="../src/playerwidget.ui" line="2773"/>
         <source>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;Seconds of silence at the end &lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</source>
-        <translation type="unfinished"></translation>
+        <translation>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;Ticho na konci vyjádřeno počtem sekund &lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</translation>
     </message>
     <message>
         <location filename="../src/playerwidget.ui" line="2779"/>
@@ -547,7 +547,7 @@ p, li { white-space: pre-wrap; }
     <message>
         <location filename="../src/playerwidget.ui" line="3031"/>
         <source>Jump to start position</source>
-        <translation type="unfinished"></translation>
+        <translation>Skočit na začáteční polohu</translation>
     </message>
     <message>
         <source>texttexttexttexttexttexttexttexttexttexttexttexttexttexttexttexttexttexttexttexttexttexttext</source>
@@ -571,22 +571,22 @@ p, li { white-space: pre-wrap; }
     <message>
         <location filename="../src/playerwidget.ui" line="3034"/>
         <source>Cue</source>
-        <translation>CUE</translation>
+        <translation>ZNAČKA</translation>
     </message>
     <message>
         <location filename="../src/playerwidget.cpp" line="120"/>
         <source>Tracks</source>
-        <translation type="unfinished">Skladba</translation>
+        <translation>skladeb</translation>
     </message>
     <message>
         <location filename="../src/playerwidget.cpp" line="120"/>
         <source>Track</source>
-        <translation type="unfinished">Skladba</translation>
+        <translation>skladba</translation>
     </message>
     <message>
         <location filename="../src/playerwidget.cpp" line="125"/>
         <source>Hours</source>
-        <translation type="unfinished">Hodiny</translation>
+        <translation>hodin</translation>
     </message>
     <message>
         <location filename="../src/playerwidget.cpp" line="347"/>
@@ -642,7 +642,7 @@ p, li { white-space: pre-wrap; }
     <message>
         <location filename="../src/playlist.cpp" line="71"/>
         <source>Rate</source>
-        <translation type="unfinished">Hodnotit</translation>
+        <translation>Hodnocení</translation>
     </message>
     <message>
         <source>Comment</source>
@@ -714,12 +714,12 @@ p, li { white-space: pre-wrap; }
     <message>
         <location filename="../src/playlist.cpp" line="987"/>
         <source>&amp;Open File Location</source>
-        <translation type="unfinished"></translation>
+        <translation>Otevřít souborové umístění</translation>
     </message>
     <message>
         <location filename="../src/playlist.cpp" line="989"/>
         <source>&amp;View Tag Information</source>
-        <translation type="unfinished"></translation>
+        <translation>&amp;Zobrazit informace o skladbě</translation>
     </message>
     <message>
         <location filename="../src/playlist.cpp" line="1053"/>
@@ -737,57 +737,57 @@ p, li { white-space: pre-wrap; }
     <message>
         <location filename="../src/playlistbrowser.cpp" line="56"/>
         <source>Add a new list and store current tracks</source>
-        <translation type="unfinished"></translation>
+        <translation>Přidat nový seznam a uložit nynější skladby</translation>
     </message>
     <message>
         <location filename="../src/playlistbrowser.cpp" line="115"/>
         <source>Top Tracks</source>
-        <translation type="unfinished"></translation>
+        <translation>Nejlepší skladby</translation>
     </message>
     <message>
         <location filename="../src/playlistbrowser.cpp" line="117"/>
         <source>Most played tracks</source>
-        <translation type="unfinished"></translation>
+        <translation>Nejhranější skladby</translation>
     </message>
     <message>
         <location filename="../src/playlistbrowser.cpp" line="130"/>
         <source>Last Tracks</source>
-        <translation type="unfinished"></translation>
+        <translation>Poslední skladby</translation>
     </message>
     <message>
         <location filename="../src/playlistbrowser.cpp" line="132"/>
         <source>Recently played tracks</source>
-        <translation type="unfinished"></translation>
+        <translation>Nedávno přehrávané skladby</translation>
     </message>
     <message>
         <location filename="../src/playlistbrowser.cpp" line="145"/>
         <source>Favorites Tracks</source>
-        <translation type="unfinished"></translation>
+        <translation>Oblíbené skladby</translation>
     </message>
     <message>
         <location filename="../src/playlistbrowser.cpp" line="147"/>
         <source>High rated tracks</source>
-        <translation type="unfinished"></translation>
+        <translation>Vysoce hodnocené skladby</translation>
     </message>
     <message>
         <location filename="../src/playlistbrowser.cpp" line="171"/>
         <source>tracks</source>
-        <translation type="unfinished">Skladba</translation>
+        <translation>skladeb</translation>
     </message>
     <message>
         <location filename="../src/playlistbrowser.cpp" line="172"/>
         <source>hours</source>
-        <translation type="unfinished">Hodiny</translation>
+        <translation>hodin</translation>
     </message>
     <message>
         <location filename="../src/playlistbrowser.cpp" line="310"/>
         <source>Save Play List</source>
-        <translation type="unfinished"></translation>
+        <translation>Uložit seznam skladeb</translation>
     </message>
     <message>
         <location filename="../src/playlistbrowser.cpp" line="311"/>
         <source>Enter a name for the new list</source>
-        <translation type="unfinished"></translation>
+        <translation>Zadejte název pro nový seznam</translation>
     </message>
 </context>
 <context>
@@ -795,12 +795,12 @@ p, li { white-space: pre-wrap; }
     <message>
         <location filename="../src/playlistwidget.ui" line="14"/>
         <source>Frame</source>
-        <translation type="unfinished"></translation>
+        <translation>Rámeček</translation>
     </message>
     <message>
         <location filename="../src/playlistwidget.ui" line="111"/>
         <source>Click here to show the content of this list</source>
-        <translation type="unfinished"></translation>
+        <translation>Klepněte sem pro ukázání obsahu tohoto seznamu</translation>
     </message>
     <message>
         <location filename="../src/playlistwidget.ui" line="114"/>
@@ -809,37 +809,41 @@ p, li { white-space: pre-wrap; }
 p, li { white-space: pre-wrap; }
 &lt;/style&gt;&lt;/head&gt;&lt;body style=&quot; font-family:&apos;MS Shell Dlg 2&apos;; font-size:8.25pt; font-weight:400; font-style:normal;&quot;&gt;
 &lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;a href=&quot;charts&quot;&gt;&lt;span style=&quot; font-size:8pt; text-decoration: underline; color:#d0fff8;&quot;&gt;Most Played&lt;/span&gt;&lt;/a&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</source>
-        <translation type="unfinished"></translation>
+        <translation>&lt;!DOCTYPE HTML PUBLIC &quot;-//W3C//DTD HTML 4.0//EN&quot; &quot;http://www.w3.org/TR/REC-html40/strict.dtd&quot;&gt;
+&lt;html&gt;&lt;head&gt;&lt;meta name=&quot;qrichtext&quot; content=&quot;1&quot; /&gt;&lt;style type=&quot;text/css&quot;&gt;
+p, li { white-space: pre-wrap; }
+&lt;/style&gt;&lt;/head&gt;&lt;body style=&quot; font-family:&apos;MS Shell Dlg 2&apos;; font-size:8.25pt; font-weight:400; font-style:normal;&quot;&gt;
+&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;a href=&quot;charts&quot;&gt;&lt;span style=&quot; font-size:8pt; text-decoration: underline; color:#d0fff8;&quot;&gt;Nejhranější&lt;/span&gt;&lt;/a&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</translation>
     </message>
     <message>
         <location filename="../src/playlistwidget.ui" line="137"/>
         <source>TextLabel</source>
-        <translation type="unfinished">Textový štítek</translation>
+        <translation>Textový štítek</translation>
     </message>
     <message>
         <location filename="../src/playlistwidget.ui" line="209"/>
         <source>Load all tracks of this list directly into player playlists</source>
-        <translation type="unfinished"></translation>
+        <translation>Nahrát všechny skladby tohoto seznamu přímo do seznamů skladeb přehrávače</translation>
     </message>
     <message>
         <location filename="../src/playlistwidget.ui" line="236"/>
         <source>Remove this list</source>
-        <translation type="unfinished"></translation>
+        <translation>Odstranit tento seznam</translation>
     </message>
     <message>
         <location filename="../src/playlistwidget.ui" line="239"/>
         <source>x</source>
-        <translation type="unfinished"></translation>
+        <translation>x</translation>
     </message>
     <message>
         <location filename="../src/playlistwidget.ui" line="264"/>
         <source>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Confirm the remove&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</source>
-        <translation type="unfinished">&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;potvrdit&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</translation>
+        <translation>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Potvrdit odstranění&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</translation>
     </message>
     <message>
         <location filename="../src/playlistwidget.ui" line="273"/>
         <source>Delete</source>
-        <translation type="unfinished">smazat</translation>
+        <translation>Smazat</translation>
     </message>
 </context>
 <context>
@@ -876,32 +880,32 @@ p, li { white-space: pre-wrap; }
     <message>
         <location filename="../src/playlistitem.cpp" line="66"/>
         <source>Title</source>
-        <translation type="unfinished">Název</translation>
+        <translation>Název</translation>
     </message>
     <message>
         <location filename="../src/playlistitem.cpp" line="67"/>
         <source>Artist</source>
-        <translation type="unfinished">Umělec</translation>
+        <translation>Umělec</translation>
     </message>
     <message>
         <location filename="../src/playlistitem.cpp" line="68"/>
         <source>Album</source>
-        <translation type="unfinished"></translation>
+        <translation>Album</translation>
     </message>
     <message>
         <location filename="../src/playlistitem.cpp" line="69"/>
         <source>Genre</source>
-        <translation type="unfinished">Žánr</translation>
+        <translation>Žánr</translation>
     </message>
     <message>
         <location filename="../src/playlistitem.cpp" line="70"/>
         <source>Year</source>
-        <translation type="unfinished">Rok</translation>
+        <translation>Rok</translation>
     </message>
     <message>
         <location filename="../src/playlistitem.cpp" line="71"/>
         <source>Location</source>
-        <translation type="unfinished">Umístění</translation>
+        <translation>Umístění</translation>
     </message>
 </context>
 <context>
@@ -956,7 +960,7 @@ p, li { white-space: pre-wrap; }
     <message>
         <location filename="../src/settingsdialog.ui" line="171"/>
         <source>Common</source>
-        <translation type="unfinished"></translation>
+        <translation>Obecné</translation>
     </message>
     <message>
         <location filename="../src/settingsdialog.ui" line="198"/>
@@ -982,7 +986,7 @@ p, li { white-space: pre-wrap; }
     <message>
         <location filename="../src/settingsdialog.ui" line="326"/>
         <source>Skip silent at start (AutoCue)</source>
-        <translation>Přeskočit ticho na začátku (AutoCue)</translation>
+        <translation>Přeskočit ticho na začátku</translation>
     </message>
     <message>
         <location filename="../src/settingsdialog.ui" line="342"/>
@@ -1007,7 +1011,7 @@ p, li { white-space: pre-wrap; }
     <message>
         <location filename="../src/settingsdialog.ui" line="406"/>
         <source>Scan folders for songs</source>
-        <translation>Prohledat složky na písně</translation>
+        <translation>Hledat písně ve složkách</translation>
     </message>
     <message>
         <location filename="../src/settingsdialog.ui" line="413"/>
@@ -1027,7 +1031,7 @@ p, li { white-space: pre-wrap; }
     <message>
         <location filename="../src/settingsdialog.ui" line="465"/>
         <source>Device Settings</source>
-        <translation type="unfinished"></translation>
+        <translation>Nastavení zařízení</translation>
     </message>
     <message>
         <location filename="../src/settingsdialog.ui" line="496"/>
@@ -1042,27 +1046,27 @@ p, li { white-space: pre-wrap; }
     <message>
         <location filename="../src/settingsdialog.ui" line="717"/>
         <source>File Browser Settings</source>
-        <translation type="unfinished"></translation>
+        <translation>Nastavení prohlížeče souborů</translation>
     </message>
     <message>
         <location filename="../src/settingsdialog.ui" line="794"/>
         <source>Language</source>
-        <translation type="unfinished"></translation>
+        <translation>Jazyk</translation>
     </message>
     <message>
         <location filename="../src/settingsdialog.ui" line="807"/>
         <source>Common Settings</source>
-        <translation type="unfinished"></translation>
+        <translation>Obecná nastavení</translation>
     </message>
     <message>
         <location filename="../src/settingsdialog.ui" line="841"/>
         <source>Change the language of the application (needs restart)</source>
-        <translation type="unfinished"></translation>
+        <translation>Změnit jazyk aplikace (vyžaduje opětovné spuštění programu)</translation>
     </message>
     <message>
         <location filename="../src/settingsdialog.ui" line="867"/>
         <source>About</source>
-        <translation type="unfinished"></translation>
+        <translation>Program</translation>
     </message>
     <message>
         <source>Minimum Tracks</source>
@@ -1086,7 +1090,7 @@ p, li { white-space: pre-wrap; }
     <message>
         <location filename="../src/settingsdialog.ui" line="622"/>
         <source>Increment play counter for AutoDj selected tracks</source>
-        <translation type="unfinished"></translation>
+        <translation>Čítač přehrávaných skladeb vybraných automatickým diskžokejem</translation>
     </message>
     <message>
         <location filename="../src/settingsdialog.ui" line="653"/>
@@ -1111,7 +1115,7 @@ p, li { white-space: pre-wrap; }
     <message>
         <location filename="../src/settingsdialog.cpp" line="270"/>
         <source>About Knowthelist</source>
-        <translation type="unfinished"></translation>
+        <translation>O programu Knowthelist</translation>
     </message>
 </context>
 </TS>
