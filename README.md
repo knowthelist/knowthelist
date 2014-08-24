@@ -44,15 +44,12 @@ Knowthelist works well on MacOS X.
 
 It can be compiled to a .app bundle, suitable for placing in /Applications.
 Compiling is incredibly easy using [Homebrew](http://brew.sh).  Just run this command:
-
+    
+    $ cp ./dist/knowthelist.rb /usr/local/Library/Formula
     $ brew install knowthelist
 
 And you're done. 
-
-Until knowthelist is available in the brew repo, copy the formula by hand:
-
-    $ cp ./dist/knowthelist.rb /usr/local/Library/Formula
-
+An icon for "knowthelist" should now be in your main OSX Applications list, ready to launch.
 
 
 Install packages:
