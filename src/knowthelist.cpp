@@ -52,7 +52,6 @@ Knowthelist::~Knowthelist()
         delete playList1;
 
         player2->stop();
-
         delete player2;
         player2 = 0;
 
