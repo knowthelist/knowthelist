@@ -326,8 +326,9 @@ QMessageBox,QInputDialog{
 
 QToolTip{
 color: #ffffff;
-background-color: #2a82da;
-border: 1px solid white;
+background-color: #444444;
+ border: 1px solid #cccccc;
+ border-radius: 12px;
 }</string>
   </property>
   <widget class="QWidget" name="centralwidget">
@@ -7625,7 +7626,7 @@ p, li { white-space: pre-wrap; }
      <x>0</x>
      <y>0</y>
      <width>1280</width>
-     <height>22</height>
+     <height>23</height>
     </rect>
    </property>
   </widget>
