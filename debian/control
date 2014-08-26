@@ -2,12 +2,12 @@ Source: knowthelist
 Section: sound
 Priority: optional
 Maintainer: Mario Stephan <mstephan@shared-files.de>
-Build-Depends: cdbs, qt4-qmake, libqt4-dev, debhelper (>= 8),
+Build-Depends: cdbs, qt5-qmake, libqt5-dev, debhelper (>= 8),
  libc6 (>= 2.2), libgcc1 (>= 1:4.1.1), libglib2.0-0 (>= 2.12.0),
- libgstreamer0.10-0 (>= 0.10.0), libgstreamer0.10-dev,
- libqt4-sql (>= 4:4.5.3), libqt4-xml (>= 4:4.5.3),
- libqtcore4 (>= 4:4.7.0~beta2), libqtgui4 (>= 4:4.7.0~beta1),
- libstdc++6 (>= 4.6), libtag1c2a (>= 1.5),
+ libgstreamer1.0-0, libgstreamer1.0-dev,
+ libqt5-sql, libqt5-xml,
+ libqtcore5, libqtgui5 ,
+ libstdc++6, libtag1c2a (>= 1.5),
  libtag1-dev, libasound2, libasound2-dev
 Standards-Version: 3.9.5
 Homepage: http://knowthelist.github.io/knowthelist

@@ -7,7 +7,7 @@
 %if 0%{?suse_version}
 %define qmake /usr/bin/qmake
 %else
-%define qmake qmake-qt4
+%define qmake qmake-qt5
 
 %endif
 
@@ -27,15 +27,15 @@ BuildRoot:      %{_tmppath}/%{name}-%{version}-build
 %if 0%{?suse_version}
 BuildRequires: update-desktop-files
 BuildRequires: libtag-devel
-BuildRequires: libqt4-devel >= 4.8 qwt6-devel
-Requires:       gstreamer-0_10-plugins-base
-Requires:       gstreamer-0_10-plugins-ugly
-Requires:       gstreamer-0_10-plugins-good
-Requires:       gstreamer-0_10-plugins-bad
-Requires:       libgstreamer-0_10-0
-Requires:       gstreamer-0_10
+BuildRequires: libqt5-devel
+Requires:       gstreamer-10-plugins-base
+Requires:       gstreamer-10-plugins-ugly
+Requires:       gstreamer-10-plugins-good
+Requires:       gstreamer-10-plugins-bad
+Requires:       libgstreamer-10-0
+Requires:       gstreamer-10
 %else
-BuildRequires: qt-devel >= 4.8
+BuildRequires: qt-devel >= 5.0
 BuildRequires: taglib-devel      
 Requires:       gstreamer-plugins-base
 Requires:       gstreamer-plugins-good
@@ -44,7 +44,7 @@ Requires:       gstreamer
 %endif
 
 BuildRequires: glib2-devel
-BuildRequires: pkgconfig(gstreamer-0.10)
+BuildRequires: pkgconfig(gstreamer-1.0)
 BuildRequires: gcc-c++
 BuildRequires: alsa-devel
 

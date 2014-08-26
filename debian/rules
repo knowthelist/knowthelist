@@ -6,6 +6,6 @@
 include /usr/share/cdbs/1/rules/debhelper.mk
 include /usr/share/cdbs/1/class/qmake.mk
 
-QMAKE=qmake-qt4
+QMAKE=qmake-qt5
 CFLAGS=-O3
 CXXFLAGS=-O3
