@@ -319,7 +319,7 @@ void PlayerWidget::loadTrack( Track *track)
       if (player->lastError!="")
           ui->lblTitle->setText( player->lastError );
       else
-          ui->lblTitle->setText( "no track" );
+          ui->lblTitle->setText( tr("No track") );
 
       ui->lblTime->setText("-:-");
       ui->lblTimeMs->setText(".-");
