@@ -15,10 +15,10 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include <QtGui>
-
 #include "progressbar.h"
 
+#include <QtGui>
+#include <QHBoxLayout>
 
 ProgressBar::ProgressBar(  QWidget* parent, const char* name):
         QWidget(parent)

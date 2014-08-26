@@ -31,6 +31,7 @@
 #include "settingsdialog.h"
 
 #include <QMainWindow>
+#include <QSplitter>
 
 namespace Ui {
     class Knowthelist;

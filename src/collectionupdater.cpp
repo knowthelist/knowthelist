@@ -19,7 +19,7 @@
 #include "collectionupdater.h"
 
 #include "collectiondb.h"
-#include <QtConcurrentRun>
+#include <QtConcurrent/QtConcurrent>
 
 
 class CollectionUpdaterPrivate

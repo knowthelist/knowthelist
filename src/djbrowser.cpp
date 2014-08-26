@@ -21,7 +21,10 @@
 #include "djfilterwidget.h"
 #include "collectiondb.h"
 
-#include <Qt>
+#include <QSplitter>
+#include <QListWidget>
+#include <QPushButton>
+#include <QVBoxLayout>
 
 class DjBrowserPrivate
 {

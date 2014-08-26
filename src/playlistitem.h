@@ -18,8 +18,7 @@
 #ifndef PLAYLISTITEM_H
 #define PLAYLISTITEM_H
 
- #include <QTreeWidgetItem>
-#include <QColorGroup>
+#include <QTreeWidgetItem>
 #include <Qt>
 #include <qurl.h>
 #include "track.h"

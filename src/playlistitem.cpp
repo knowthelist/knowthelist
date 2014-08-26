@@ -21,7 +21,6 @@
 
  #include <qdebug.h>
  #include <qlistview.h>
- #include <QColorGroup>
  #include <QObject>
  
 PlaylistItem::PlaylistItem( Playlist* parent, QTreeWidgetItem *lvi )

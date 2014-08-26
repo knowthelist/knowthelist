@@ -18,7 +18,7 @@
 #ifndef STACKDISPLAY_H
 #define STACKDISPLAY_H
 
-#include <QtGui>
+#include <QWidget>
 
 class StackDisplay : public QWidget
 {

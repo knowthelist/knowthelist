@@ -16,7 +16,7 @@
 */
 
 #include <QtGui>
-#include <QtConcurrentRun>
+#include <QtConcurrent/QtConcurrent>
 
 #if defined(Q_OS_DARWIN)
     #include <CoreAudio/CoreAudio.h>
@@ -54,17 +54,15 @@ struct MonitorPlayer::Private
 
 void cb_newpad_mp (GstElement *decodebin,
                    GstPad     *pad,
-                   gboolean    last,
                    gpointer    data)
 {
     MonitorPlayer* instance = (MonitorPlayer*)data;
-            instance->newpad(decodebin, pad, last, data);
+            instance->newpad(decodebin, pad, data);
 }
 
 
 void MonitorPlayer::newpad (GstElement *decodebin,
                    GstPad     *pad,
-                   gboolean    last,
                    gpointer    data)
 {
         GstCaps *caps;
@@ -82,7 +80,7 @@ void MonitorPlayer::newpad (GstElement *decodebin,
         }
 
         /* check media type */
-        caps = gst_pad_get_caps (pad);
+        caps = gst_pad_query_caps (pad, NULL);
         str = gst_caps_get_structure (caps, 0);
         if (!g_strrstr (gst_structure_get_name (str), "audio")) {
                 gst_caps_unref (caps);
@@ -103,6 +101,7 @@ MonitorPlayer::MonitorPlayer(QWidget *parent):
     p->isStarted=false;
     p->isLoaded=false;
     readDevices();
+    p->deviceID=defaultDeviceID();
 
     connect(&p->watcher, SIGNAL(finished()), this, SLOT(loadThreadFinished()));
 }
@@ -112,7 +111,6 @@ MonitorPlayer::~MonitorPlayer()
     delete p;
     p=0;
     cleanup();
-    gst_deinit();
 }
 
 GstBusSyncReply MonitorPlayer::bus_cb (GstBus *bus, GstMessage *msg, gpointer data)
@@ -135,14 +133,7 @@ bool MonitorPlayer::prepare()
 {
     //Init Gst
     //
-    QString caps_value = "audio/x-raw-int";
-
-      // On mac
-    #if defined(Q_OS_DARWIN)
-
-      caps_value = "audio/x-raw-float";
-
-    #endif
+    QString caps_value = "audio/x-raw";
 
       gst_init (0, 0);
 
@@ -156,8 +147,8 @@ bool MonitorPlayer::prepare()
         caps = gst_caps_new_simple (caps_value.toLatin1().data(),
                                     "channels", G_TYPE_INT, 2, NULL);
 
-        dec = gst_element_factory_make ("decodebin2", "decoder");
-        g_signal_connect (dec, "new-decoded-pad", G_CALLBACK (cb_newpad_mp), this);
+        dec = gst_element_factory_make ("decodebin", "decoder");
+        g_signal_connect (dec, "pad-added", G_CALLBACK (cb_newpad_mp), this);
         gst_bin_add (GST_BIN (pipeline), dec);
 
         audio = gst_bin_new ("audiobin");
@@ -200,7 +191,7 @@ bool MonitorPlayer::prepare()
         gst_element_set_state (l_src, GST_STATE_NULL);
         gst_element_link ( l_src,dec);
 
-        gst_bus_set_sync_handler (bus, bus_cb, this);
+        gst_bus_set_sync_handler (bus, bus_cb, this, NULL);
 
         gst_object_unref (audiopad);
 
@@ -223,7 +214,6 @@ void MonitorPlayer::open(QUrl url)
 void MonitorPlayer::asyncOpen(QUrl url)
 {
     p->mutex.lock();
-    QString filename = url.toLocalFile().toUtf8();
     m_length = 0;
     p->isLoaded=false;
     p->error="";
@@ -231,8 +221,7 @@ void MonitorPlayer::asyncOpen(QUrl url)
     sync_set_state (GST_ELEMENT (pipeline), GST_STATE_NULL);
 
     GstElement *l_src = gst_bin_get_by_name(GST_BIN(pipeline), "localsrc");
-    g_object_set (G_OBJECT (l_src), "location", filename.toLatin1().data(), NULL);
-    qDebug()<<"MonitorPlayerGst load file:"<<filename.toLatin1().data();
+    g_object_set (G_OBJECT (l_src), "location", (const char*)url.toLocalFile().toUtf8(), NULL);
     sync_set_state (GST_ELEMENT (pipeline), GST_STATE_PAUSED);
     setPosition(QTime(0,0));
 
@@ -295,9 +284,8 @@ QTime MonitorPlayer::position()
     if (pipeline) {
 
         gint64 value=0;
-        GstFormat fmt = GST_FORMAT_TIME;
 
-        if(gst_element_query_position(pipeline, &fmt, &value)) {
+        if(gst_element_query_position(pipeline, GST_FORMAT_TIME, &value)) {
 
             m_position = static_cast<uint>( ( value / GST_MSECOND ) );
             return QTime(0,0).addMSecs( m_position ); // nanosec -> msec
@@ -310,11 +298,10 @@ QTime MonitorPlayer::position()
 QTime MonitorPlayer::length()
 {
     gint64 value=0;
-    GstFormat fmt = GST_FORMAT_TIME;
 
     if ( m_length == 0 && pipeline){
 
-        if(gst_element_query_duration(pipeline, &fmt, &value)) {
+        if(gst_element_query_duration(pipeline, GST_FORMAT_TIME, &value)) {
             m_length = static_cast<uint>( ( value / GST_MSECOND ));
         }
     }
@@ -554,18 +541,18 @@ void MonitorPlayer::messageReceived(GstMessage *message)
                             gint channels;
                             gdouble peak_dB;
                             gdouble rms;
-                            const GValue *list;
+                            const GValue *array_val;
                             const GValue *value;
+                            GValueArray *peak_arr;
                             gint i;
 
-                            list = gst_structure_get_value (s, "peak");
-                            channels = gst_value_list_get_size (list);
+                            array_val = gst_structure_get_value (s, "peak");
+                            peak_arr = (GValueArray *) g_value_get_boxed (array_val);
+                            channels = peak_arr->n_values;
 
                             for (i = 0; i < channels; ++i) {
-                              list = gst_structure_get_value (s, "peak");
-                              value = gst_value_list_get_value (list, i);
-                              peak_dB = g_value_get_double (value);/*
-
+                              value = g_value_array_get_nth  (peak_arr, i);
+                              peak_dB = g_value_get_double (value);
                               /* converting from dB to normal gives us a value between 0.0 and 1.0 */
                               rms = pow (10, peak_dB / 20);
                               if (i==0)

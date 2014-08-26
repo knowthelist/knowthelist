@@ -16,8 +16,12 @@
 */
 
 #include "filebrowser.h"
-#include <Qt>
-#include <QtGui>
+#include <QFileSystemModel>
+#include <QTreeView>
+#include <QVBoxLayout>
+#include <QHeaderView>
+#include <QApplication>
+#include <QStandardPaths>
 
 struct FileBrowserPrivate
 {
@@ -41,7 +45,7 @@ FileBrowser::FileBrowser(QWidget *parent) :
       p->filetree->setDragEnabled(true);
       p->filetree->setSelectionMode(QAbstractItemView::ContiguousSelection);
       p->filetree->header()->resizeSection(0,400);
-      p->filetree->setRootIndex(p->model->index(QDesktopServices::storageLocation(QDesktopServices::MusicLocation)));
+      p->filetree->setRootIndex(p->model->index(QStandardPaths::standardLocations(QStandardPaths::MusicLocation).at(0)));
       p->filetree->setAttribute(Qt::WA_MacShowFocusRect, false);
       p->layout->addWidget(p->filetree);
 

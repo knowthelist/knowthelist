@@ -22,7 +22,10 @@
 #include "track.h"
 
 #include <QtXml>
-#include <Qt>
+#include <QListWidget>
+#include <QPushButton>
+#include <QVBoxLayout>
+#include <QInputDialog>
 
 class Track;
 

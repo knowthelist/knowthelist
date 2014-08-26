@@ -21,6 +21,8 @@
 #include "trackanalyser.h"
 #include "vumeter.h"
 
+#include <QDragEnterEvent>
+
 struct PlayerWidgetPrivate
 {
     bool isEndAnnounced;
@@ -376,11 +378,11 @@ void PlayerWidget::updateTimeAndPositionDisplay(bool isPassive)
 
     QTime length = player->length();
     QTime curpos = player->position();
-    QTime remain(0,0);
+    QTime remain(0,0,0);
     long remainMs;
 
     remainMs=curpos.msecsTo(length);
-    remain = QTime(0,0).addMSecs(remainMs);
+    remain = QTime(0,0,0).addMSecs(remainMs);
 
     //qDebug()<<remainMs << " :" <<remain;
 
@@ -414,8 +416,8 @@ void PlayerWidget::updateTimeAndPositionDisplay(bool isPassive)
 
     //update position slider only if triggerd by timer
     if (isPassive) {
-        if (length != QTime(0,0))
-            ui->sliPosition->setValue(curpos.msecsTo(QTime()) * 1000 / length.msecsTo(QTime()));
+        if (length != QTime(0,0,0))
+            ui->sliPosition->setValue(curpos.msecsTo(QTime(0,0,0)) * 1000 / length.msecsTo(QTime(0,0,0)));
         else
             ui->sliPosition->setValue(0);
     }
@@ -459,9 +461,9 @@ void PlayerWidget::setTrackFinishEmitTime( const int sec )
 
 void PlayerWidget::on_sliPosition_sliderMoved(int value)
 {
-    uint length = -player->length().msecsTo(QTime());
+    uint length = -player->length().msecsTo(QTime(0,0,0));
     if (length != 0 && value > 0) {
-        QTime pos;
+        QTime pos = QTime(0, 0, 0);
         pos = pos.addMSecs(length * (value / 1000.0));
                 qDebug()<<"pos:"<<pos;
         player->setPosition(pos);

@@ -18,7 +18,7 @@
 #include "player.h"
 
 #include <QtGui>
-#include <QtConcurrentRun>
+#include <QtConcurrent/QtConcurrent>
 
 
 void Player::sync_set_state(GstElement* element, GstState state)
@@ -42,21 +42,18 @@ struct Player::Private
 
 void cb_newpad (GstElement *decodebin,
                    GstPad     *pad,
-                   gboolean    last,
                    gpointer    data)
 {
     Player* instance = (Player*)data;
-            instance->newpad(decodebin, pad, last, data);
+            instance->newpad(decodebin, pad, data);
 }
 
 
 void Player::newpad (GstElement *decodebin,
                    GstPad     *pad,
-                   gboolean    last,
                    gpointer    data)
 {
     Q_UNUSED(decodebin);
-    Q_UNUSED(last);
     Q_UNUSED(data);
 
         GstCaps *caps;
@@ -74,7 +71,7 @@ void Player::newpad (GstElement *decodebin,
         }
 
         /* check media type */
-        caps = gst_pad_get_caps (pad);
+        caps = gst_pad_query_caps (pad,NULL);
         str = gst_caps_get_structure (caps, 0);
         if (!g_strrstr (gst_structure_get_name (str), "audio")) {
                 gst_caps_unref (caps);
@@ -106,8 +103,7 @@ Player::~Player()
 {
     delete p;
     p=0;
-        cleanup();
-        gst_deinit();
+    cleanup();
 }
 
 GstBusSyncReply Player::bus_cb (GstBus *bus, GstMessage *msg, gpointer data)
@@ -129,7 +125,7 @@ bool Player::prepare()
 {
     //Init Gst
     //
-    QString caps_value = "audio/x-raw-int";
+    QString caps_value = "audio/x-raw";
 
       // On mac we bundle the gstreamer plugins with knowthelist
     #if defined(Q_OS_DARWIN)
@@ -137,7 +133,6 @@ bool Player::prepare()
       QString plugin_path;
       QString registry_filename;
 
-      caps_value = "audio/x-raw-float";
       QDir pd(QCoreApplication::applicationDirPath() + "/../plugins");
       scanner_path = QCoreApplication::applicationDirPath() + "/../plugins/gst-plugin-scanner";
       plugin_path = QCoreApplication::applicationDirPath() + "/../plugins/gstreamer";
@@ -173,8 +168,8 @@ bool Player::prepare()
                                     "channels", G_TYPE_INT, 2, NULL);
 
 
-        dec = gst_element_factory_make ("decodebin2", "decoder");
-        g_signal_connect (dec, "new-decoded-pad", G_CALLBACK (cb_newpad), this);
+        dec = gst_element_factory_make ("decodebin", "decoder");
+        g_signal_connect (dec, "pad-added", G_CALLBACK (cb_newpad), this);
         gst_bin_add (GST_BIN (pipeline), dec);
 
         audio = gst_bin_new ("audiobin");
@@ -212,7 +207,7 @@ bool Player::prepare()
         gst_element_set_state (l_src, GST_STATE_NULL);
         gst_element_link ( l_src,dec);
 
-        gst_bus_set_sync_handler (bus, bus_cb, this);
+        gst_bus_set_sync_handler (bus, bus_cb, this, NULL);
 
         gst_object_unref (audiopad);
 
@@ -254,7 +249,6 @@ void Player::open(QUrl url)
 void Player::asyncOpen(QUrl url)
 {
     p->mutex.lock();
-    QString filename = url.toLocalFile().toUtf8();
     m_length = 0;
     m_position = 0;
     p->isLoaded=false;
@@ -264,8 +258,7 @@ void Player::asyncOpen(QUrl url)
     sync_set_state (GST_ELEMENT (pipeline), GST_STATE_NULL);
 
     GstElement *l_src = gst_bin_get_by_name(GST_BIN(pipeline), "localsrc");
-    g_object_set (G_OBJECT (l_src), "location", filename.toLatin1().data(), NULL);
-    qDebug()<<"player load file:"<<filename.toLatin1().data();
+    g_object_set (G_OBJECT (l_src), "location", (const char*)url.toLocalFile().toUtf8(), NULL);
     sync_set_state (GST_ELEMENT (pipeline), GST_STATE_PAUSED);
     setPosition(QTime(0,0));
 
@@ -329,9 +322,8 @@ QTime Player::position()
     if (pipeline) {
 
         gint64 value=0;
-        GstFormat fmt = GST_FORMAT_TIME;
 
-        if(gst_element_query_position(pipeline, &fmt, &value)) {
+        if(gst_element_query_position(pipeline, GST_FORMAT_TIME, &value)) {
 
             m_position = static_cast<uint>( ( value / GST_MSECOND ) );
             return QTime(0,0).addMSecs( m_position ); // nanosec -> msec
@@ -344,11 +336,10 @@ QTime Player::position()
 QTime Player::length()
 {
     gint64 value=0;
-    GstFormat fmt = GST_FORMAT_TIME;
 
     if ( m_length == 0 && pipeline){
 
-        if(gst_element_query_duration(pipeline, &fmt, &value)) {
+        if(gst_element_query_duration(pipeline, GST_FORMAT_TIME, &value)) {
             m_length = static_cast<uint>( ( value / GST_MSECOND ));
         }
     }
@@ -406,7 +397,7 @@ void Player::messageReceived(GstMessage *message)
                             gst_message_parse_error (message, &err, &debug);
                             p->error = "Error #"+QString::number(err->code)+" in module "+QString::number(err->domain)+"\n"+QString::fromUtf8(err->message);
                             if(err->domain != GST_STREAM_ERROR && err->code != GST_STREAM_ERROR_FAILED) {
-                                    p->error += "\nMay be you should install more of gstreamer0.10-plugin-*";
+                                    p->error += "\nMay be you should install more of gstreamer plugins";
                                     lastError = QString::fromUtf8(err->message);
                             }
                             qDebug()<< "Gstreamer error:"<< p->error;
@@ -443,16 +434,17 @@ void Player::messageReceived(GstMessage *message)
                             gint channels;
                             gdouble peak_dB;
                             gdouble rms;
-                            const GValue *list;
+                            const GValue *array_val;
                             const GValue *value;
+                            GValueArray *peak_arr;
                             gint i;
 
-                            list = gst_structure_get_value (s, "peak");
-                            channels = gst_value_list_get_size (list);
+                            array_val = gst_structure_get_value (s, "peak");
+                            peak_arr = (GValueArray *) g_value_get_boxed (array_val);
+                            channels = peak_arr->n_values;
 
                             for (i = 0; i < channels; ++i) {
-                              list = gst_structure_get_value (s, "peak");
-                              value = gst_value_list_get_value (list, i);
+                              value = g_value_array_get_nth  (peak_arr, i);
                               peak_dB = g_value_get_double (value);
 
                               /* converting from dB to normal gives us a value between 0.0 and 1.0 */
@@ -467,17 +459,17 @@ void Player::messageReceived(GstMessage *message)
                             gint channels;
                             gdouble peak_dB;
                             gdouble rms;
-                            const GValue *list;
+                            const GValue *array_val;
                             const GValue *value;
-
+                            GValueArray *peak_arr;
                             gint i;
 
-                            list = gst_structure_get_value (s, "peak");
-                            channels = gst_value_list_get_size (list);
+                            array_val = gst_structure_get_value (s, "peak");
+                            peak_arr = (GValueArray *) g_value_get_boxed (array_val);
+                            channels = peak_arr->n_values;
 
                             for (i = 0; i < channels; ++i) {
-                              list = gst_structure_get_value (s, "peak");
-                              value = gst_value_list_get_value (list, i);
+                              value = g_value_array_get_nth  (peak_arr, i);
                               peak_dB = g_value_get_double (value);
 
                               /* converting from dB to normal gives us a value between 0.0 and 1.0 */

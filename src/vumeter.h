@@ -18,7 +18,8 @@
 #ifndef VUMETER_H
 #define VUMETER_H
 
-#include <QtGui>
+#include <QWidget>
+#include <QTime>
 #include <math.h>
 
 // helper functions

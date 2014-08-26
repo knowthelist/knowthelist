@@ -24,8 +24,8 @@
 
 #include <QtGui/QPainter>
 #include <QtGui/QImage>
-#include <QtGui/QStyle>
-#include <QtGui/QStyleOption>
+#include <QStyle>
+#include <QStyleOption>
 
 class QLed::Private
 {

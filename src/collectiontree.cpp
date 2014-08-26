@@ -21,7 +21,9 @@
 #include <QApplication>
 #include <QMenu>
 #include <QtGui>
-#include <QtConcurrentRun>
+#include <QHeaderView>
+#include <QMessageBox>
+#include <QtConcurrent/QtConcurrent>
 
 struct CollectionTreePrivate
 {
@@ -62,9 +64,6 @@ CollectionTree::CollectionTree(QWidget *parent) :
 
     connect( this, SIGNAL(itemExpanded( QTreeWidgetItem*)),
              this,   SLOT( on_itemExpanded( QTreeWidgetItem* ) ) );
-
-    connect( this,     SIGNAL(itemClicked(QTreeWidgetItem*,int)) ,
-             this,       SLOT(on_itemClicked(QTreeWidgetItem*,int)));
 }
 
 CollectionTree::~CollectionTree()
@@ -225,12 +224,13 @@ void CollectionTree::setFilter( QString filter )
 
 void CollectionTree::mousePressEvent( QMouseEvent *e )
 {
-    openContext = (e->button() == Qt::RightButton);
-
     if (e->button() == Qt::LeftButton)
         startPos = e->pos();
 
     QTreeWidget::mousePressEvent(e);
+
+    if (e->button() == Qt::RightButton)
+           showContextMenu( currentItem(), currentColumn() );
 
 }
 
@@ -287,17 +287,7 @@ void CollectionTree::performDrag() {
     }
 }
 
-void CollectionTree::on_itemClicked(QTreeWidgetItem *after,int col)
-{
-    QTreeWidgetItem* item = static_cast<QTreeWidgetItem*>(after);
-    if (item){
-        if (openContext)
-            showContextMenu( item, col );
-    }
-
-}
-
-void CollectionTree::showContextMenu( QTreeWidgetItem *&item, int col )
+void CollectionTree::showContextMenu(QTreeWidgetItem *item, int col )
 {
 
     Q_UNUSED(col);

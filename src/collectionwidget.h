@@ -28,9 +28,8 @@
 #include <QtGui>
 #include <QPixmap>
 #include <QDropEvent>
-#include <QCustomEvent>
 #include <QTimerEvent>
-
+#include <QLineEdit>
 
 //class CollectionUpdater;
 class QCustomEvent;

@@ -30,7 +30,9 @@
 
 #include <qfile.h>
 #include <QPainter>
-
+#include <QHeaderView>
+#include <QApplication>
+#include <QMessageBox>
 
 
 Playlist::Playlist(QWidget* parent)
@@ -74,7 +76,7 @@ Playlist::Playlist(QWidget* parent)
     setHeaderItem(headeritem);
     setHeaderLabels(headers);
 
-    header()->setResizeMode(QHeaderView::Interactive);
+    //header()->setResizeMode(QHeaderView::Interactive);
     header()->hideSection(PlaylistItem::Column_Url);
 
     // prevent click event if doubleclicked
@@ -119,7 +121,7 @@ void Playlist::addTrack( Track* track, PlaylistItem* after )
     PlaylistItem* item =  new PlaylistItem( this, after );
     item->setTexts( track );
     newPlaylistItem  = item;
-    RatingWidget* rating= new RatingWidget();
+    RatingWidget* rating= new RatingWidget(this);
     rating->setRating( track->rate() * 0.1 );
     QObject::connect(rating,SIGNAL(RatingChanged(float)),SLOT(onRatingChanged(float)));
     setItemWidget(item, PlaylistItem::Column_Rate, rating);
@@ -456,7 +458,7 @@ void Playlist::skipRewind()
 
 QString Playlist::defaultPlaylistPath()
 {
-    QString pathName = QDesktopServices::storageLocation(QDesktopServices::DataLocation);
+    QString pathName = QStandardPaths::standardLocations(QStandardPaths::DataLocation).at(0);
     QDir path(pathName);
 
     if (!path.exists())
@@ -645,7 +647,7 @@ void Playlist::onRatingChanged(float rate)
 {
     if(RatingWidget* rateWidget = dynamic_cast<RatingWidget*>(QObject::sender())){
 
-        QModelIndex modidx = indexAt( rateWidget->pos() );
+        QModelIndex modidx = indexAt( QPoint(0,rateWidget->pos().y()) );
         (PlaylistItem*)this->itemFromIndex(modidx);
         if(PlaylistItem* item = (PlaylistItem*)this->itemFromIndex(modidx)){
             Track* track = item->track();
@@ -993,50 +995,36 @@ void Playlist::showContextMenu( PlaylistItem *item, int col )
     QAction *a = popup.exec( QCursor::pos());
     if (!a)
         return;
-    switch( a->shortcut() )
-    {
-        case Qt::Key_L:
+
+        if(  a->shortcut() == Qt::Key_L ){
             setCurrentPlaylistItem( item );
             handleChanges();
-            break;
-
-        case Qt::Key_N:
+        }
+        else if(  a->shortcut() == Qt::Key_N ){
             setNextPlaylistItem( item );
-            break;
-
-        case Qt::Key_1:
+        }
+        else if( a->shortcut() ==  Qt::Key_1 ){
             Q_EMIT wantLoad(item->track(),"Left" );
-            break;
-
-        case Qt::Key_2:
+        }
+        else if(  a->shortcut() == Qt::Key_2 ){
             Q_EMIT wantLoad(item->track(),"Right" );
-            break;
-
-        case Qt::Key_P:
+        }
+        else if(  a->shortcut() == Qt::Key_P ){
             Q_EMIT itemDoubleClicked(item,col);
-            break;
-
-        case Qt::Key_S:
+        }
+        else if(  a->shortcut() == Qt::Key_S ){
             Q_EMIT wantSearch( item->text(col) );
-            break;
-
-        case Qt::Key_V:
+        }
+        else if(  a->shortcut() == Qt::Key_V ){
             showTrackInfo( item->track() );
-            break;
-
-        case Qt::Key_O:
+        }
+        else if(  a->shortcut() == Qt::Key_O ){
             if ( item->track())
                 QDesktopServices::openUrl( QUrl(QString("file://%1").arg(item->track()->dirPath())));
-            break;
-
-        case Qt::Key_F2:
-            //rename( item, col );
-            break;
-        case Qt::Key_Delete:
+        }
+        else if(  a->shortcut() == Qt::Key_Delete ){
             item=0;
-            break;
-
-    }
+        }
 
 }
 

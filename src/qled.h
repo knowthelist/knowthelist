@@ -23,7 +23,7 @@
 #ifndef QLed_H
 #define QLed_H
 
-#include <QtGui/QWidget>
+#include <QWidget>
 #include <QPainter>
 
 class QColor;

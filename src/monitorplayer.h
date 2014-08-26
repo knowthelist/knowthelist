@@ -19,7 +19,7 @@
 #define MONITORPLAYER_H
 
 #include <QtCore>
-#include <QtGui/QWidget>
+#include <QWidget>
 
 #if defined(Q_OS_WIN32)
     #include <windows.h>
@@ -68,7 +68,7 @@ public:
      double levelLeft() {return rms_l;}
      double levelRight() {return rms_r;}
 
-        void newpad (GstElement *decodebin, GstPad *pad, gboolean last, gpointer data);
+        void newpad (GstElement *decodebin, GstPad *pad, gpointer data);
         static GstBusSyncReply  bus_cb (GstBus *bus, GstMessage *msg, gpointer data);
  Q_SIGNALS:
         void finish();

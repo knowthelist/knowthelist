@@ -44,8 +44,7 @@ Q_SIGNALS:
 public slots:
     void on_currentItemChanged( QTreeWidgetItem* item );
     void on_itemExpanded( QTreeWidgetItem* item );
-    void showContextMenu(QTreeWidgetItem *&, int );
-    void on_itemClicked(QTreeWidgetItem*,int);
+    void showContextMenu(QTreeWidgetItem *, int );
     void triggerRandomSelection();
     void setFilter( QString filter );
     void createTrunk();

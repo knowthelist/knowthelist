@@ -15,12 +15,12 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include <QtConcurrentRun>
-#include <QtXml>
-
 #include "djsession.h"
 #include "track.h"
 #include "dj.h"
+
+#include <QtConcurrent/QtConcurrent>
+#include <QtXml>
 
 struct DjSessionPrivate
 {

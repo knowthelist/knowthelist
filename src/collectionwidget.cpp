@@ -26,8 +26,11 @@
 #include <QTimerEvent>
 #include <QPixmap>
 #include <QDropEvent>
-#include <Qt>
+#include <QPushButton>
 #include <QtGui>
+#include <QVBoxLayout>
+#include <QMenu>
+#include <QLabel>
 
 class CollectionWidgetPrivate
 {

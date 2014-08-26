@@ -22,7 +22,6 @@
 
 #include <QDesktopServices>
 #include <qimage.h>
-#include <QCustomEvent>
 
 class CollectionDbPrivate
 {

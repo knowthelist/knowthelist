@@ -18,7 +18,7 @@
 #define PLAYER_H
 
 #include <QtCore>
-#include <QtGui/QWidget>
+#include <QWidget>
 
 #define GST_DISABLE_LOADSAVE 1
 #define GST_DISABLE_REGISTRY 1
@@ -57,7 +57,7 @@ public:
      double levelOutLeft() {return rmsout_l;}
      double levelOutRight() {return rmsout_r;}
 
-        void newpad (GstElement *decodebin, GstPad *pad, gboolean last, gpointer data);
+        void newpad (GstElement *decodebin, GstPad *pad, gpointer data);
         static GstBusSyncReply  bus_cb (GstBus *bus, GstMessage *msg, gpointer data);
  Q_SIGNALS:
         void finish();

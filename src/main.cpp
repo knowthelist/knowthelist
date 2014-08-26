@@ -17,9 +17,11 @@
 
 #include "knowthelist.h"
 
-#include <QtGui/QApplication>
+#include <QApplication>
 #include <QtSql>
 #include <QTranslator>
+#include <QMessageBox>
+#include <QTextCodec>
 
 int main(int argc, char *argv[])
 {
@@ -32,13 +34,13 @@ int main(int argc, char *argv[])
     qsrand((uint)time.msec());
 
 
-    QTextCodec::setCodecForTr(QTextCodec::codecForName("UTF-8"));
+    QTextCodec::setCodecForLocale(QTextCodec::codecForName("UTF-8"));
     a.setQuitOnLastWindowClosed(true);
 
     QCoreApplication::setOrganizationName("knowthelist-org");
     QCoreApplication::setOrganizationDomain("");
     QCoreApplication::setApplicationName("knowthelist");
-    QCoreApplication::setApplicationVersion("2.2.3");
+    QCoreApplication::setApplicationVersion("2.3.0");
 
     QSettings settings;
     QStringList languages;
@@ -60,11 +62,11 @@ int main(int argc, char *argv[])
 
 if (!QSqlDatabase::drivers().contains("QSQLITE")) {
     QMessageBox::critical(0, QObject::tr("Unable to load database"),
-                          QObject::tr("This application needs the QT4 SQLITE driver (libqt4-sql-sqlite)"));
+                          QObject::tr("This application needs the QT5 SQLITE driver (libqt5-sql-sqlite)"));
     return 1;
 }
 
-QString pathName = QDesktopServices::storageLocation(QDesktopServices::DataLocation);
+QString pathName = QStandardPaths::standardLocations(QStandardPaths::DataLocation).at(0);
 QDir path(pathName);
 
 if (!path.exists())
@@ -77,7 +79,7 @@ if ( !db.open() ) {
     QMessageBox::critical(0, "fatal database error", db.lastError().text());
     return 1;
 }
-
+qDebug() << db.databaseName();
     Knowthelist w;
     w.show();
 

@@ -4,12 +4,14 @@
 # License: LGPL-3.0+
 #
 
-DEFINES += APP_VERSION="\\\"2.2.3\\\""
+DEFINES += APP_VERSION="\\\"2.3.0\\\""
 QT += core \
     gui \
     xml \
-    sql \
-    location
+    sql
+
+greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
+
 TARGET = knowthelist
 TEMPLATE = app
 SOURCES += main.cpp \
@@ -106,8 +108,7 @@ win32 {
         $$quote(C:\Program Files (x86)\gstreamer-sdk\0.10\x86\include\glib-2.0) \
         $$quote(C:\Program Files (x86)\gstreamer-sdk\0.10\x86\lib\glib-2.0\include) \
         $$quote(C:\Program Files (x86)\taglib-1.6.1\include) \
-        $$quote(C:\Program Files (x86)\gstreamer-sdk\0.10\x86\include\dsound) \
-        $$quote(C:\Program Files (x86)\boost_1_50_0)
+        $$quote(C:\Program Files (x86)\gstreamer-sdk\0.10\x86\include\dsound)
     LIBS += $$quote(C:\Program Files (x86)\gstreamer-sdk\0.10\x86\lib\gstreamer-0.10.lib) \
         $$quote(C:\Program Files (x86)\gstreamer-sdk\0.10\x86\lib\gobject-2.0.lib) \
         $$quote(C:\Program Files (x86)\gstreamer-sdk\0.10\x86\lib\glib-2.0.lib) \
@@ -118,12 +119,12 @@ win32 {
     RC_FILE = knowthelist.rc
 }
 macx { 
-    INCLUDEPATH += /usr/local/include/gstreamer-0.10 \
+    INCLUDEPATH += /usr/local/include/gstreamer-1.0 \
         /usr/local/include/glib-2.0 \
         /usr/local/lib/glib-2.0/include \
         /usr/local/include
     LIBS += -L/usr/local/lib \
-        -lgstreamer-0.10 \
+        -lgstreamer-1.0 \
         -lglib-2.0 \
         -lgobject-2.0 \
         -ltag \
@@ -142,8 +143,8 @@ unix:!macx {
             desktop.files += ../dist/Knowthelist.desktop
             INSTALLS += target icon desktop
     CONFIG += link_pkgconfig \
-        gstreamer
-    PKGCONFIG += gstreamer-0.10 \
+        gstreamer-1.0
+    PKGCONFIG += gstreamer-1.0 \
         taglib alsa
 }
 RESOURCES += ../images/icons.qrc \

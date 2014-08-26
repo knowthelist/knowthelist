@@ -24,9 +24,9 @@
 #include "djwidget.h"
 #include "djfilterwidget.h"
 
-#include <QtGui/QBoxLayout>
+#include <QBoxLayout>
 #include <QSettings>
-#include <QtConcurrentRun>
+#include <QtConcurrent/QtConcurrent>
 #include <QMetaType>
 
 
@@ -803,11 +803,11 @@ void Knowthelist::timerMonitor_timeOut()
     ui->lblMonitorLength->setText(length.toString("mm:ss"));
 
     //update position slider
-    if (length != QTime(0,0)) {
-        ui->sliMonitor->setValue(curpos.msecsTo(QTime()) * 1000 / length.msecsTo(QTime()));
-    } else {
+    if (length != QTime(0,0))
+        ui->sliMonitor->setValue(curpos.msecsTo(QTime(0,0,0)) * 1000 / length.msecsTo(QTime(0,0,0)));
+    else
         ui->sliMonitor->setValue(0);
-    }
+
 
     ui->monitorMeter->setLeftValue( monitorPlayer->levelLeft() * 100.0 );
     ui->monitorMeter->setRightValue( monitorPlayer->levelRight() * 100.0);
@@ -815,9 +815,9 @@ void Knowthelist::timerMonitor_timeOut()
 
 void Knowthelist::on_sliMonitor_sliderMoved(int value)
 {
-        uint length = -monitorPlayer->length().msecsTo(QTime());
+        uint length = -monitorPlayer->length().msecsTo(QTime(0,0,0));
         if (length != 0 && value > 0) {
-            QTime pos;
+            QTime pos = QTime(0,0,0);
             pos = pos.addMSecs(length * (value / 1000.0));
                     qDebug()<<"pos:"<<pos;
     monitorPlayer->setPosition(pos);
