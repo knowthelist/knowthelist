@@ -1,3 +1,13 @@
+knowthelist (2.2.3-1) unstable; urgency=low
+
+  * Get rid of dependency to Boost
+  * Bugfix where adding a song caused a segmentation fault
+  * Switched to Homebrew package installer for MacOS
+  * Set CUE button to untranslatable
+  * Translation updates
+
+ -- Mario Stephan <mstephan@shared-files.de>  Thu, 26 Aug 2014 07:06:00 +0200
+
 knowthelist (2.2.0-1) unstable; urgency=low
 
   * Added a new left side tab "Lists" to manage lists, dynamic and stored lists

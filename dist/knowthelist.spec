@@ -46,7 +46,6 @@ Requires:       gstreamer
 BuildRequires: glib2-devel
 BuildRequires: pkgconfig(gstreamer-0.10)
 BuildRequires: gcc-c++
-BuildRequires: boost-devel
 BuildRequires: alsa-devel
 
 Requires:       taglib
@@ -91,6 +90,14 @@ Auto DJ function with multiple filters for random play
 Monitor player for pre listen tracks (via 2nd sound card e.g. USB)
 
 %changelog
+* Thu Aug 26 2014 Mario Stephan <mstephan@shared-files.de>
+- 2.2.3
+- Get rid of dependency to Boost
+- Bugfix where adding a song caused a segmentation fault
+- Switched to Homebrew package installer for MacOS
+- Set CUE button to untranslatable
+- Translation updates
+
 * Thu Aug 06 2014 Mario Stephan <mstephan@shared-files.de>
 - 2.2.0
 - Added a new left side tab "Lists" to manage lists, dynamic and stored lists

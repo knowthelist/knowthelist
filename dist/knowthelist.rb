@@ -4,8 +4,8 @@ require "formula"
 
 class Knowthelist < Formula
   homepage "http://knowthelist.github.io/knowthelist"
-  url "https://github.com/knowthelist/knowthelist/archive/v2.2.2.tar.gz"
-  sha1 "0019ddabe094b057b2c150bd50b7fd4b077ff897"
+  url "https://github.com/knowthelist/knowthelist/archive/v2.2.3.tar.gz"
+  #sha1 "0019ddabe094b057b2c150bd50b7fd4b077ff897"
   head "https://github.com/knowthelist/knowthelist.git"
 
   depends_on "homebrew/versions/gstreamer010"
