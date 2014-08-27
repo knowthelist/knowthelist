@@ -458,7 +458,11 @@ void Playlist::skipRewind()
 
 QString Playlist::defaultPlaylistPath()
 {
+#if QT_VERSION >= 0x050000
     QString pathName = QStandardPaths::standardLocations(QStandardPaths::DataLocation).at(0);
+#else
+    QString pathName = QDesktopServices::storageLocation(QDesktopServices::DataLocation);
+#endif
     QDir path(pathName);
 
     if (!path.exists())
@@ -995,34 +999,35 @@ void Playlist::showContextMenu( PlaylistItem *item, int col )
     QAction *a = popup.exec( QCursor::pos());
     if (!a)
         return;
+    QKeySequence shortcut = a->shortcut();
 
-        if(  a->shortcut() == Qt::Key_L ){
+        if( shortcut == QKeySequence(Qt::Key_L) ){
             setCurrentPlaylistItem( item );
             handleChanges();
         }
-        else if(  a->shortcut() == Qt::Key_N ){
+        else if( shortcut == QKeySequence(Qt::Key_N) ){
             setNextPlaylistItem( item );
         }
-        else if( a->shortcut() ==  Qt::Key_1 ){
+        else if( shortcut == QKeySequence(Qt::Key_1) ){
             Q_EMIT wantLoad(item->track(),"Left" );
         }
-        else if(  a->shortcut() == Qt::Key_2 ){
+        else if( shortcut == QKeySequence(Qt::Key_2) ){
             Q_EMIT wantLoad(item->track(),"Right" );
         }
-        else if(  a->shortcut() == Qt::Key_P ){
+        else if( shortcut == QKeySequence(Qt::Key_P) ){
             Q_EMIT itemDoubleClicked(item,col);
         }
-        else if(  a->shortcut() == Qt::Key_S ){
+        else if( shortcut == QKeySequence(Qt::Key_S) ){
             Q_EMIT wantSearch( item->text(col) );
         }
-        else if(  a->shortcut() == Qt::Key_V ){
+        else if( shortcut == QKeySequence(Qt::Key_V) ){
             showTrackInfo( item->track() );
         }
-        else if(  a->shortcut() == Qt::Key_O ){
+        else if( shortcut == QKeySequence(Qt::Key_O) ){
             if ( item->track())
                 QDesktopServices::openUrl( QUrl(QString("file://%1").arg(item->track()->dirPath())));
         }
-        else if(  a->shortcut() == Qt::Key_Delete ){
+        else if( shortcut == QKeySequence(Qt::Key_Delete) ){
             item=0;
         }
 

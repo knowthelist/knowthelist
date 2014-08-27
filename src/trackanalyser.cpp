@@ -18,7 +18,11 @@
 #include "trackanalyser.h"
 
 #include <QtGui>
-#include <QtConcurrent/QtConcurrent>
+#if QT_VERSION >= 0x050000
+ #include <QtConcurrent/QtConcurrent>
+#else
+ #include <QtConcurrentRun>
+#endif
 
 struct TrackAnalyser::Private
 {

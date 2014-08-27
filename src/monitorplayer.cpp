@@ -16,7 +16,11 @@
 */
 
 #include <QtGui>
-#include <QtConcurrent/QtConcurrent>
+#if QT_VERSION >= 0x050000
+ #include <QtConcurrent/QtConcurrent>
+#else
+ #include <QtConcurrentRun>
+#endif
 
 #if defined(Q_OS_DARWIN)
     #include <CoreAudio/CoreAudio.h>

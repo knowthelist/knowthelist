@@ -21,7 +21,12 @@
 #include <QVBoxLayout>
 #include <QHeaderView>
 #include <QApplication>
-#include <QStandardPaths>
+#if QT_VERSION >= 0x050000
+    #include <QStandardPaths>
+#else
+    #include <QDesktopServices>
+#endif
+
 
 struct FileBrowserPrivate
 {
@@ -45,7 +50,14 @@ FileBrowser::FileBrowser(QWidget *parent) :
       p->filetree->setDragEnabled(true);
       p->filetree->setSelectionMode(QAbstractItemView::ContiguousSelection);
       p->filetree->header()->resizeSection(0,400);
+
+#if QT_VERSION >= 0x050000
       p->filetree->setRootIndex(p->model->index(QStandardPaths::standardLocations(QStandardPaths::MusicLocation).at(0)));
+#else
+      p->filetree->setRootIndex(p->model->index(QDesktopServices::storageLocation(QDesktopServices::MusicLocation)));
+#endif
+
+
       p->filetree->setAttribute(Qt::WA_MacShowFocusRect, false);
       p->layout->addWidget(p->filetree);
 

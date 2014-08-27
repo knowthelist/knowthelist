@@ -61,12 +61,22 @@ int main(int argc, char *argv[])
 
 
 if (!QSqlDatabase::drivers().contains("QSQLITE")) {
+#if QT_VERSION >= 0x050000
     QMessageBox::critical(0, QObject::tr("Unable to load database"),
                           QObject::tr("This application needs the QT5 SQLITE driver (libqt5-sql-sqlite)"));
+#else
+    QMessageBox::critical(0, QObject::tr("Unable to load database"),
+                          QObject::tr("This application needs the QT4 SQLITE driver (libqt4-sql-sqlite)"));
+#endif
+
     return 1;
 }
 
-QString pathName = QStandardPaths::standardLocations(QStandardPaths::DataLocation).at(0);
+#if QT_VERSION >= 0x050000
+    QString pathName = QStandardPaths::standardLocations(QStandardPaths::DataLocation).at(0);
+#else
+    QString pathName = QDesktopServices::storageLocation(QDesktopServices::DataLocation);
+#endif
 QDir path(pathName);
 
 if (!path.exists())

@@ -18,7 +18,11 @@
 #include "player.h"
 
 #include <QtGui>
-#include <QtConcurrent/QtConcurrent>
+#if QT_VERSION >= 0x050000
+ #include <QtConcurrent/QtConcurrent>
+#else
+ #include <QtConcurrentRun>
+#endif
 
 
 void Player::sync_set_state(GstElement* element, GstState state)
