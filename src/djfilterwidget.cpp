@@ -162,13 +162,13 @@ void DjFilterWidget::on_txtPath_textChanged(QString )
         timer->singleShot(500,this, SLOT( slotSetFilter() ));
 }
 
-void DjFilterWidget::on_cmbGenres_textChanged(QString )
+void DjFilterWidget::on_cmbGenres_editTextChanged(QString )
 {
     if ( timer->isActive() ) timer->stop();
         timer->singleShot(500,this, SLOT( slotSetFilter() ));
 }
 
-void DjFilterWidget::on_cmbArtists_textChanged(QString )
+void DjFilterWidget::on_cmbArtists_editTextChanged(QString )
 {
     if ( timer->isActive() ) timer->stop();
         timer->singleShot(500,this, SLOT( slotSetFilter() ));
