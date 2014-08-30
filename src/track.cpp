@@ -305,6 +305,7 @@ QString Track::prettyTime( int seconds, bool showHours )
 
     if( showHours )
     {
+        s.clear();
         s.prepend( zeroPad( seconds % 60 ) );
         s.prepend( ':' );
         seconds /= 60;
