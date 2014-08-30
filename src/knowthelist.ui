@@ -75,10 +75,12 @@ min-height: 32px;
 }
 QSlider::handle:horizontal {
           background: qlineargradient(
-   x1:0, y1:0, x2:0, y2:1,
-   stop: 0.1 #999999,
-	stop:0.5 #505050,
-   stop:1 black
+   x1:0, y1:0, x2:1, y2:0,
+stop: 0 #000000,
+   stop: 0.4 #222222,
+	stop:0.5 #bababa,
+   stop:0.6 #444444,
+stop:1 #000000
  );
          border: 1px solid #5c5c5c;
          width: 18px;
@@ -86,19 +88,40 @@ QSlider::handle:horizontal {
          border-radius: 3px;
      }
 
+
 QSlider::handle:vertical {
           background: qlineargradient(
    x1:0, y1:0, x2:0, y2:1,
-   stop: 0.1 #999999,
-	stop:0.5 #505050,
-   stop:1 black
+stop: 0 #000000,
+   stop: 0.4 #222222,
+	stop:0.5 #bababa,
+   stop:0.6 #444444,
+stop:1 #000000
  );
-         border: 1px solid #5c5c5c;
+         border: 1px solid #454545;
          width: 12px; height: 18px;
 max-height:15px;
          margin: 0 2px; /* handle is placed by default on the contents rect of the groove. Expand outside the groove */
          border-radius: 3px;
      }
+
+QSlider::sub-page:vertical,QSlider::add-page:vertical  {
+
+background: qlineargradient(x1: 0, y1: 0, x2:1, y2: 0,
+    stop: 0 #111, 
+	stop: 1 #555
+);
+border: 1px solid #303030;
+border-radius: 2px;
+}
+
+QSlider::sub-page:horizontal,QSlider::add-page:horizontal  {
+background: qlineargradient(x1: 0, y1: 0.4,    x2: 0, y2: 1,
+    stop: 0 #111, stop: 1 #444);
+
+border: 1px solid #111111;
+border-radius: 2px;
+}
 
 QFrame#frameMixer{
           background: qlineargradient(
@@ -7243,7 +7266,16 @@ min-height: 16px;
               <property name="spacing">
                <number>0</number>
               </property>
-              <property name="margin">
+              <property name="leftMargin">
+               <number>0</number>
+              </property>
+              <property name="topMargin">
+               <number>0</number>
+              </property>
+              <property name="rightMargin">
+               <number>0</number>
+              </property>
+              <property name="bottomMargin">
                <number>0</number>
               </property>
               <item>
@@ -7626,9 +7658,20 @@ p, li { white-space: pre-wrap; }
      <x>0</x>
      <y>0</y>
      <width>1280</width>
-     <height>23</height>
+     <height>20</height>
     </rect>
    </property>
+  </widget>
+  <widget class="QToolBar" name="toolBar">
+   <property name="windowTitle">
+    <string>toolBar</string>
+   </property>
+   <attribute name="toolBarArea">
+    <enum>TopToolBarArea</enum>
+   </attribute>
+   <attribute name="toolBarBreak">
+    <bool>false</bool>
+   </attribute>
   </widget>
   <action name="actionSettings">
    <property name="text">
