@@ -19,12 +19,12 @@ Runs under Linux, MacOS and Windows
 
 Needed packages for building:
 ------------------
-- QT4.8			http://qt-project.org
-			core,gui,
-			xml,sql 
+- Qt5 or Qt4	http://qt-project.org
+			core,gui,xml,sql
+            widgets (Qt5 only)
 - taglib		http://taglib.github.io 
-- gstreamer-0.10	http://gstreamer.freedesktop.org 
-- gstreamer-0.10-plugins-* http://docs.gstreamer.com/display/GstSDK/Home 
+- gstreamer-1.0	http://gstreamer.freedesktop.org 
+- gstreamer-1.0-plugins-* http://docs.gstreamer.com/display/GstSDK/Home 
 - alsa-devel		(Linux only)
 
 Build:
@@ -58,7 +58,8 @@ Prebuilt packages can be found here: http://opendesktop.org/content/show.php/Kno
 
 Versions:
 ----------
-- 2.2 (2014-08):	support for stored lists
+- 2.3 (2014-09):	Qt5 compatibility and usage of GStreamer 1.x
+- 2.2 (2014-08):	Support for stored lists
 - 2.1 (2014-05):	First public version; removed qt3support
-- 2.0 (2011)   :	qt-only + gstreamer version for multiple OS support
-- 1.x (2005)   :    	only for KDE Linux with arts sound framework
+- 2.0 (2011)   :	Qt-only + gstreamer version for multiple OS support
+- 1.x (2005)   :    Only for KDE Linux with arts sound framework
