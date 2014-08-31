@@ -231,6 +231,21 @@ void Knowthelist::createUI()
     //MonitorPlayer
     initMonitorPlayer();
 
+    //change slider style for linux
+#if defined(Q_OS_UNIX)
+    QString sliderStyle = QString(
+    "QSlider::sub-page:vertical { background: qlineargradient(x1: 0, y1: 0, x2:1, y2: 0,"
+    "   stop: 0.4 #666, stop: 0 #111111 ); border: 1px solid #444; border-radius: 2px;}"
+    "QSlider::add-page:vertical {background: qlineargradient(x1: 0, y1: 0, x2:1, y2: 0,"
+    "   stop: 0 #111,stop: 0.4 #666); border: 1px solid #333; border-radius: 2px;}"
+    "QSlider::sub-page:horizontal,QSlider::add-page:horizontal  {"
+    "   background: qlineargradient(x1: 0, y1: 0,    x2: 0, y2: 1,"
+    "   stop: 0 #111, stop: 0.6 #666 ); border: 1px solid #222; border-radius: 2px;}");
+
+    ui->frameMixer->setStyleSheet(sliderStyle);
+    ui->MonitorPlayer->setStyleSheet(sliderStyle);
+#endif
+
     //Add the AutoDJ Browser
     djBrowser = new DjBrowser();
     QPixmap pixmap2(":DJ.png");
@@ -285,6 +300,7 @@ void Knowthelist::createUI()
           this->show();
           showCollectionSetup();
     }
+
 }
 
 void Knowthelist::loadStartSettings()
