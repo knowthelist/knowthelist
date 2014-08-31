@@ -269,7 +269,7 @@ void SettingsDialog::on_pushAbout_clicked()
                       "http://knowthelist.github.io/knowthelist</a>"
                       "<br /><br /><div style='font-size:9px;'>Thanks to :"
                       "<br />* Heiko Fischer   (for testing and new ideas)"
-                      "<br />* David Geiger and Adrien D.   (for French translation and issue reports)"
+                      "<br />* David Geiger and Adrien Daugabel   (for French translation and issue reports)"
                       "<br />* Pavel Fric   (for Czech translation)"
                       "<br />* L\xe1szl\xf3 Farkas   (for Hungarian translation)</div>"       ));
     msgBox.setWindowTitle(tr("About Knowthelist"));

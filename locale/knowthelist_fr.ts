@@ -327,82 +327,82 @@ p, li { white-space: pre-wrap; }
         <translation>Knowthelist</translation>
     </message>
     <message>
-        <location filename="../src/knowthelist.ui" line="1131"/>
+        <location filename="../src/knowthelist.ui" line="1132"/>
         <source>Fader</source>
         <translation>Fondu</translation>
     </message>
     <message>
-        <location filename="../src/knowthelist.ui" line="1826"/>
+        <location filename="../src/knowthelist.ui" line="1827"/>
         <source>AutoD&amp;J</source>
         <translation>AutoD&amp;J</translation>
     </message>
     <message>
-        <location filename="../src/knowthelist.ui" line="1829"/>
-        <location filename="../src/knowthelist.ui" line="5708"/>
+        <location filename="../src/knowthelist.ui" line="1830"/>
+        <location filename="../src/knowthelist.ui" line="5709"/>
         <source>Alt+J</source>
         <translation>Alt+J</translation>
     </message>
     <message>
-        <location filename="../src/knowthelist.ui" line="2489"/>
+        <location filename="../src/knowthelist.ui" line="2490"/>
         <source>Set</source>
         <translation>Set</translation>
     </message>
     <message>
-        <location filename="../src/knowthelist.ui" line="4829"/>
+        <location filename="../src/knowthelist.ui" line="4830"/>
         <source>FadeNo&amp;w</source>
         <translation>Fondr&amp;e (Fader)</translation>
     </message>
     <message>
-        <location filename="../src/knowthelist.ui" line="4832"/>
+        <location filename="../src/knowthelist.ui" line="4833"/>
         <source>Alt+W</source>
         <translation>Alt+W</translation>
     </message>
     <message>
-        <location filename="../src/knowthelist.ui" line="5080"/>
-        <location filename="../src/knowthelist.ui" line="5761"/>
+        <location filename="../src/knowthelist.ui" line="5081"/>
+        <location filename="../src/knowthelist.ui" line="5762"/>
         <source>Gain</source>
         <translation>Volume</translation>
     </message>
     <message>
-        <location filename="../src/knowthelist.ui" line="5705"/>
+        <location filename="../src/knowthelist.ui" line="5706"/>
         <source>AGC</source>
         <translation>AGC</translation>
     </message>
     <message>
-        <location filename="../src/knowthelist.ui" line="5782"/>
-        <location filename="../src/knowthelist.ui" line="5806"/>
+        <location filename="../src/knowthelist.ui" line="5783"/>
+        <location filename="../src/knowthelist.ui" line="5807"/>
         <source>Low</source>
         <translation>Graves</translation>
     </message>
     <message>
-        <location filename="../src/knowthelist.ui" line="5827"/>
-        <location filename="../src/knowthelist.ui" line="5851"/>
+        <location filename="../src/knowthelist.ui" line="5828"/>
+        <location filename="../src/knowthelist.ui" line="5852"/>
         <source>Mid</source>
         <translation>Médiums</translation>
     </message>
     <message>
-        <location filename="../src/knowthelist.ui" line="5875"/>
-        <location filename="../src/knowthelist.ui" line="5899"/>
+        <location filename="../src/knowthelist.ui" line="5876"/>
+        <location filename="../src/knowthelist.ui" line="5900"/>
         <source>High</source>
         <translation>Aigus</translation>
     </message>
     <message>
-        <location filename="../src/knowthelist.ui" line="6874"/>
+        <location filename="../src/knowthelist.ui" line="6875"/>
         <source>0:00.0</source>
         <translation>0:00.0</translation>
     </message>
     <message>
-        <location filename="../src/knowthelist.ui" line="7176"/>
+        <location filename="../src/knowthelist.ui" line="7177"/>
         <source>-0:00.0</source>
         <translation>-0:00.0</translation>
     </message>
     <message>
-        <location filename="../src/knowthelist.ui" line="7543"/>
+        <location filename="../src/knowthelist.ui" line="7544"/>
         <source>MonitorPlayer</source>
         <translation>Lecteur Audio</translation>
     </message>
     <message>
-        <location filename="../src/knowthelist.ui" line="7599"/>
+        <location filename="../src/knowthelist.ui" line="7600"/>
         <source>&lt;!DOCTYPE HTML PUBLIC &quot;-//W3C//DTD HTML 4.0//EN&quot; &quot;http://www.w3.org/TR/REC-html40/strict.dtd&quot;&gt;
 &lt;html&gt;&lt;head&gt;&lt;meta name=&quot;qrichtext&quot; content=&quot;1&quot; /&gt;&lt;style type=&quot;text/css&quot;&gt;
 p, li { white-space: pre-wrap; }
@@ -415,27 +415,27 @@ p, li { white-space: pre-wrap; }
 &lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;a href=&quot;settings&quot;&gt;&lt;span style=&quot; font-size:8pt; color:#df0000;&quot;&gt;Pas de seconde carte son sélectionnée!&lt;/span&gt;&lt;/a&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</translation>
     </message>
     <message>
-        <location filename="../src/knowthelist.ui" line="7634"/>
+        <location filename="../src/knowthelist.ui" line="7635"/>
         <source>Settings</source>
         <translation>Réglages</translation>
     </message>
     <message>
-        <location filename="../src/knowthelist.cpp" line="185"/>
+        <location filename="../src/knowthelist.cpp" line="184"/>
         <source>Collection</source>
         <translation>Bibliothèque</translation>
     </message>
     <message>
-        <location filename="../src/knowthelist.cpp" line="234"/>
+        <location filename="../src/knowthelist.cpp" line="233"/>
         <source>AutoDJ</source>
         <translation>AutoDJ</translation>
     </message>
     <message>
-        <location filename="../src/knowthelist.cpp" line="242"/>
+        <location filename="../src/knowthelist.cpp" line="241"/>
         <source>Folder</source>
         <translation>Dossier</translation>
     </message>
     <message>
-        <location filename="../src/knowthelist.cpp" line="267"/>
+        <location filename="../src/knowthelist.cpp" line="266"/>
         <source>Lists</source>
         <translation>Listes</translation>
     </message>
@@ -481,73 +481,77 @@ p, li { white-space: pre-wrap; }
         <translation>Formulaire</translation>
     </message>
     <message>
-        <location filename="../src/playerwidget.ui" line="750"/>
+        <location filename="../src/playerwidget.ui" line="751"/>
         <source>texttexttextt</source>
         <translation>textetextetexte</translation>
     </message>
     <message>
-        <location filename="../src/playerwidget.ui" line="848"/>
+        <location filename="../src/playerwidget.ui" line="849"/>
         <source>TextLabel</source>
         <translation>Texte de l&apos;étiquette</translation>
     </message>
     <message>
-        <location filename="../src/playerwidget.ui" line="1344"/>
+        <location filename="../src/playerwidget.ui" line="1345"/>
         <source>00:00</source>
         <translation>00:00</translation>
     </message>
     <message>
-        <location filename="../src/playerwidget.ui" line="1802"/>
-        <location filename="../src/playerwidget.ui" line="2745"/>
+        <location filename="../src/playerwidget.ui" line="1803"/>
+        <location filename="../src/playerwidget.ui" line="2746"/>
         <source>.00</source>
         <translation>.00</translation>
     </message>
     <message>
-        <location filename="../src/playerwidget.ui" line="2284"/>
+        <location filename="../src/playerwidget.ui" line="2285"/>
         <source>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;Time remain&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</source>
         <translation>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;Durée restante&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</translation>
     </message>
     <message>
-        <location filename="../src/playerwidget.ui" line="2290"/>
+        <location filename="../src/playerwidget.ui" line="2291"/>
         <source>-00:00</source>
         <translation>-00:00</translation>
     </message>
     <message>
-        <location filename="../src/playerwidget.ui" line="2773"/>
+        <location filename="../src/playerwidget.ui" line="2774"/>
         <source>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;Seconds of silence at the end &lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</source>
         <translation>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; color:#ffffff;&quot;&gt;Secondes de silence à la fin&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</translation>
     </message>
     <message>
-        <location filename="../src/playerwidget.ui" line="2779"/>
+        <location filename="../src/playerwidget.ui" line="2780"/>
         <source>-00</source>
         <translation>-00</translation>
     </message>
     <message>
-        <location filename="../src/playerwidget.ui" line="3031"/>
+        <location filename="../src/playerwidget.ui" line="3033"/>
+        <source>Jump to the point where the music starts mainly</source>
+        <translation>Sauter le blanc du début de la musique</translation>
+    </message>
+    <message>
         <source>Jump to start position</source>
-        <translation>Aller à la position de départ</translation>
+        <translation type="obsolete">Aller à la position de départ</translation>
     </message>
     <message>
-        <location filename="../src/playerwidget.ui" line="3034"/>
         <source>Cue</source>
-        <translation>CUE</translation>
+        <translation type="obsolete">CUE</translation>
     </message>
     <message>
-        <location filename="../src/playerwidget.cpp" line="120"/>
+        <location filename="../src/playerwidget.cpp" line="130"/>
         <source>Tracks</source>
         <translation>Pistes</translation>
     </message>
     <message>
-        <location filename="../src/playerwidget.cpp" line="120"/>
+        <location filename="../src/playerwidget.cpp" line="130"/>
         <source>Track</source>
         <translation>Piste</translation>
     </message>
     <message>
-        <location filename="../src/playerwidget.cpp" line="125"/>
+        <location filename="../src/playerwidget.cpp" line="135"/>
         <source>Hours</source>
         <translation>Heures</translation>
     </message>
     <message>
-        <location filename="../src/playerwidget.cpp" line="347"/>
+        <location filename="../src/playerwidget.cpp" line="322"/>
+        <location filename="../src/playerwidget.cpp" line="357"/>
         <source>No track</source>
         <translation>Aucune piste</translation>
     </message>
@@ -571,31 +575,31 @@ p, li { white-space: pre-wrap; }
     </message>
     <message>
         <location filename="../src/playlist.cpp" line="69"/>
-        <location filename="../src/playlist.cpp" line="1049"/>
+        <location filename="../src/playlist.cpp" line="1050"/>
         <source>Artist</source>
         <translation>Artiste</translation>
     </message>
     <message>
         <location filename="../src/playlist.cpp" line="69"/>
-        <location filename="../src/playlist.cpp" line="1048"/>
+        <location filename="../src/playlist.cpp" line="1049"/>
         <source>Title</source>
         <translation>Titre</translation>
     </message>
     <message>
         <location filename="../src/playlist.cpp" line="70"/>
-        <location filename="../src/playlist.cpp" line="1050"/>
+        <location filename="../src/playlist.cpp" line="1051"/>
         <source>Album</source>
         <translation>Album</translation>
     </message>
     <message>
         <location filename="../src/playlist.cpp" line="70"/>
-        <location filename="../src/playlist.cpp" line="1052"/>
+        <location filename="../src/playlist.cpp" line="1053"/>
         <source>Year</source>
         <translation>Année</translation>
     </message>
     <message>
         <location filename="../src/playlist.cpp" line="70"/>
-        <location filename="../src/playlist.cpp" line="1051"/>
+        <location filename="../src/playlist.cpp" line="1052"/>
         <source>Genre</source>
         <translation>Genre</translation>
     </message>
@@ -615,57 +619,57 @@ p, li { white-space: pre-wrap; }
         <translation>Note</translation>
     </message>
     <message>
-        <location filename="../src/playlist.cpp" line="966"/>
+        <location filename="../src/playlist.cpp" line="967"/>
         <source>Add to PlayList&amp;1</source>
         <translation>Ajouter à la liste de lecture&amp;1</translation>
     </message>
     <message>
-        <location filename="../src/playlist.cpp" line="968"/>
+        <location filename="../src/playlist.cpp" line="969"/>
         <source>Add to PlayList&amp;2</source>
         <translation>Ajouter à la liste de lecture&amp;2</translation>
     </message>
     <message>
-        <location filename="../src/playlist.cpp" line="972"/>
+        <location filename="../src/playlist.cpp" line="973"/>
         <source>&amp;Load</source>
         <translation>&amp;Charger</translation>
     </message>
     <message>
-        <location filename="../src/playlist.cpp" line="975"/>
+        <location filename="../src/playlist.cpp" line="976"/>
         <source>Load as &amp;Next</source>
         <translation>Chargement &amp;Suivant</translation>
     </message>
     <message>
-        <location filename="../src/playlist.cpp" line="978"/>
+        <location filename="../src/playlist.cpp" line="979"/>
         <source>&amp;Prelisten Track</source>
         <translation>&amp;Pré-écouter la piste</translation>
     </message>
     <message>
-        <location filename="../src/playlist.cpp" line="981"/>
+        <location filename="../src/playlist.cpp" line="982"/>
         <source>&amp;Search for: &apos;%1&apos;</source>
         <translation>&amp;Rechercher:&apos;%1&apos;</translation>
     </message>
     <message>
-        <location filename="../src/playlist.cpp" line="985"/>
+        <location filename="../src/playlist.cpp" line="986"/>
         <source>&amp;Remove Selected</source>
         <translation>&amp;Supprimer la sélection</translation>
     </message>
     <message>
-        <location filename="../src/playlist.cpp" line="987"/>
+        <location filename="../src/playlist.cpp" line="988"/>
         <source>&amp;Open File Location</source>
         <translation>&amp;Ouvrir l&apos;emplacement du fichier</translation>
     </message>
     <message>
-        <location filename="../src/playlist.cpp" line="989"/>
+        <location filename="../src/playlist.cpp" line="990"/>
         <source>&amp;View Tag Information</source>
         <translation>&amp;Afficher les informations du Tag</translation>
     </message>
     <message>
-        <location filename="../src/playlist.cpp" line="1053"/>
+        <location filename="../src/playlist.cpp" line="1054"/>
         <source>Location</source>
         <translation>Emplacement</translation>
     </message>
     <message>
-        <location filename="../src/playlist.cpp" line="1056"/>
+        <location filename="../src/playlist.cpp" line="1057"/>
         <source>Meta Information</source>
         <translation>Méta information</translation>
     </message>
@@ -1059,7 +1063,7 @@ p, li { white-space: pre-wrap; }
         <translation>À Propos</translation>
     </message>
     <message>
-        <location filename="../src/settingsdialog.cpp" line="270"/>
+        <location filename="../src/settingsdialog.cpp" line="275"/>
         <source>About Knowthelist</source>
         <translation>À Propos de Knowthelist</translation>
     </message>
