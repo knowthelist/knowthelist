@@ -19,9 +19,7 @@ Runs under Linux, MacOS and Windows
 
 Needed packages for building:
 ------------------
-- Qt5 or Qt4	http://qt-project.org
-			core,gui,xml,sql
-            widgets (Qt5 only)
+- Qt5 or Qt4	core,gui,xml,sql,widgets (Qt5 only) http://qt-project.org
 - taglib		http://taglib.github.io 
 - gstreamer-1.0	http://gstreamer.freedesktop.org 
 - gstreamer-1.0-plugins-* http://docs.gstreamer.com/display/GstSDK/Home 
