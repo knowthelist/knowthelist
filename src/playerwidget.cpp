@@ -78,6 +78,8 @@ PlayerWidget::PlayerWidget(QWidget *parent) :
    connect(player, SIGNAL(loadFinished()), this, SLOT(playerLoaded()));
 
    ui->lblTitle->setText( "" );
+   ui->lblInfo->setText( "" );
+
    QFont font = ui->lblInfo->font();
    QFont fonttime = ui->lblTime->font();
 #if defined(Q_OS_DARWIN)

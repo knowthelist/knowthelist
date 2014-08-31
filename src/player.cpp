@@ -439,7 +439,6 @@ void Player::messageReceived(GstMessage *message)
                             gdouble peak_dB;
                             gdouble rms;
                             const GValue *array_val;
-                            const GValue *value;
                             GValueArray *peak_arr;
                             gint i;
 
@@ -448,8 +447,7 @@ void Player::messageReceived(GstMessage *message)
                             channels = peak_arr->n_values;
 
                             for (i = 0; i < channels; ++i) {
-                              value = g_value_array_get_nth  (peak_arr, i);
-                              peak_dB = g_value_get_double (value);
+                              peak_dB = g_value_get_double (peak_arr->values+i);
 
                               /* converting from dB to normal gives us a value between 0.0 and 1.0 */
                               rms = pow (10, peak_dB / 20);
@@ -464,7 +462,6 @@ void Player::messageReceived(GstMessage *message)
                             gdouble peak_dB;
                             gdouble rms;
                             const GValue *array_val;
-                            const GValue *value;
                             GValueArray *peak_arr;
                             gint i;
 
@@ -473,8 +470,7 @@ void Player::messageReceived(GstMessage *message)
                             channels = peak_arr->n_values;
 
                             for (i = 0; i < channels; ++i) {
-                              value = g_value_array_get_nth  (peak_arr, i);
-                              peak_dB = g_value_get_double (value);
+                              peak_dB = g_value_get_double (peak_arr->values+i);
 
                               /* converting from dB to normal gives us a value between 0.0 and 1.0 */
                               rms = pow (10, peak_dB / 20);
@@ -482,7 +478,6 @@ void Player::messageReceived(GstMessage *message)
                                   rmsout_l=rms;
                               else
                                   rmsout_r=rms;
-
 
                             }
 
