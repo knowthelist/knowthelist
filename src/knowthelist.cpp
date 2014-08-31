@@ -232,7 +232,7 @@ void Knowthelist::createUI()
     initMonitorPlayer();
 
     //change slider style for linux
-#if defined(Q_OS_UNIX)
+#if defined(Q_OS_LINUX)
     QString sliderStyle = QString(
     "QSlider::sub-page:vertical { background: qlineargradient(x1: 0, y1: 0, x2:1, y2: 0,"
     "   stop: 0.4 #666, stop: 0 #111111 ); border: 1px solid #444; border-radius: 2px;}"
