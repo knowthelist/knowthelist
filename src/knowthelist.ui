@@ -73,37 +73,41 @@ QDial {
 max-height: 32px;
 min-height: 32px;
 }
+
 QSlider::handle:horizontal {
           background: qlineargradient(
    x1:0, y1:0, x2:1, y2:0,
-stop: 0 #000000,
-   stop: 0.4 #222222,
-	stop:0.5 #bababa,
-   stop:0.6 #444444,
-stop:1 #000000
+	stop: 0 #000,
+	stop: 0.1 #222,
+   	stop: 0.38 #444,
+	stop:0.5 #ccc,
+   	stop:0.6 #444,
+	stop:0.9 #222,
+	stop:1 #000
  );
          border: 1px solid #5c5c5c;
          width: 18px;
          margin: 1px 0; /* handle is placed by default on the contents rect of the groove. Expand outside the groove */
          border-radius: 3px;
-     }
-
+}
 
 QSlider::handle:vertical {
           background: qlineargradient(
-   x1:0, y1:0, x2:0, y2:1,
-stop: 0 #000000,
-   stop: 0.38 #333333,
-	stop:0.5 #bbbbbb,
-   stop:0.6 #444444,
-stop:1 #000000
+   x1:0, y1:0, x2:0, y2:1,	
+	stop: 0 #000,
+	stop: 0.1 #222,
+   	stop: 0.38 #444,
+	stop:0.5 #ccc,
+   	stop:0.6 #444,
+	stop:0.9 #222,
+	stop:1 #000
  );
-         border: 1px solid #454545;
+         border: 1px solid #5c5c5c;
          width: 12px; height: 18px;
 max-height:15px;
          margin: 0 2px; /* handle is placed by default on the contents rect of the groove. Expand outside the groove */
          border-radius: 3px;
-     }
+}
 
 QFrame#frameMixer{
           background: qlineargradient(
@@ -3618,7 +3622,7 @@ background-color: #444444;
             <number>200</number>
            </property>
            <property name="value">
-            <number>0</number>
+            <number>21</number>
            </property>
            <property name="orientation">
             <enum>Qt::Horizontal</enum>
@@ -4179,6 +4183,9 @@ background-color: #444444;
            </property>
            <property name="maximum">
             <number>100</number>
+           </property>
+           <property name="value">
+            <number>11</number>
            </property>
            <property name="orientation">
             <enum>Qt::Vertical</enum>
@@ -7251,16 +7258,7 @@ min-height: 16px;
               <property name="spacing">
                <number>0</number>
               </property>
-              <property name="leftMargin">
-               <number>0</number>
-              </property>
-              <property name="topMargin">
-               <number>0</number>
-              </property>
-              <property name="rightMargin">
-               <number>0</number>
-              </property>
-              <property name="bottomMargin">
+              <property name="margin">
                <number>0</number>
               </property>
               <item>
