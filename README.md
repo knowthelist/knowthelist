@@ -35,7 +35,7 @@ Build:
 - ./knowthelist
 
 MacOS X:
-
+----------
 Knowthelist works well on MacOS X.
 
 * OSX 10.6.8 is tested and known to work
@@ -50,7 +50,7 @@ And you're done.
 An icon for "knowthelist" should now be in your main OSX Applications list, ready to launch.
 
 Windows:
-
+----------
 Build taglib
 - Get [CMake](http://www.cmake.org/cmake/resources/software.html) and install
 - Get [taglib](http://taglib.github.io) and unzip
