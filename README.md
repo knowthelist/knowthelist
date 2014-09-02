@@ -34,7 +34,7 @@ Build:
 - make
 - ./knowthelist
 
-## MacOS X
+MacOS X:
 
 Knowthelist works well on MacOS X.
 
@@ -49,10 +49,22 @@ Compiling is incredibly easy using [Homebrew](http://brew.sh).  Just run this co
 And you're done. 
 An icon for "knowthelist" should now be in your main OSX Applications list, ready to launch.
 
+Windows:
+
+Build taglib
+- Get [CMake](http://www.cmake.org/cmake/resources/software.html) and install
+- Get [taglib](http://taglib.github.io) and unzip
+- Open CMake GUI, select taglib folder, press Configure and Generate
+- Download MinGW version of QtCreator [here](https://qt-project.org/downloads)
+    e.g.   qt-opensource-windows-x86-mingw482_opengl-5.3.1.exe
+- Add C:\Qt\Qt5.3.1\Tools\mingw482_32\bin to your PATH variable
+
+... to be continued
+
 
 Install packages:
 -----------------
-Prebuilt packages can be found here: http://opendesktop.org/content/show.php/Knowthelist?content=165335
+Prebuilt packages for Linux can be found here: http://opendesktop.org/content/show.php/Knowthelist?content=165335
 
 Versions:
 ----------
