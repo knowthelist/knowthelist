@@ -117,7 +117,7 @@ void Playlist::addTrack( Track* track, PlaylistItem* after )
 {
     if (!track || !track->isValid())
         return;
-    //qDebug() << __PRETTY_FUNCTION__ <<":"<<objectName()<<" url="<<track->url();
+    //qDebug() << Q_FUNC_INFO <<":"<<objectName()<<" url="<<track->url();
     PlaylistItem* item =  new PlaylistItem( this, after );
     item->setTexts( track );
     newPlaylistItem  = item;
@@ -434,7 +434,7 @@ void Playlist::removePlaylistItem( PlaylistItem *item )
 
 void Playlist::skipForward()
 {
-    qDebug() << __PRETTY_FUNCTION__ <<":"<<objectName() ;
+    qDebug() << Q_FUNC_INFO <<":"<<objectName() ;
 
     //remove previous item at last due to keep playing
     if ( autoClearOn ){
@@ -767,7 +767,7 @@ void Playlist::performDrag()
          PlaylistItem *item = dynamic_cast<PlaylistItem *>(it.next());
          if ( (item != currentPlaylistItem || (!m_isPlaying)) && item->track()->isValid()  )
          {
-             qDebug() << __PRETTY_FUNCTION__ <<": send Data:"<<item->track()->url();
+             qDebug() << Q_FUNC_INFO <<": send Data:"<<item->track()->url();
              QStringList tag = item->track()->tagList();
              tags << tag;
              if (i==0){
@@ -835,7 +835,7 @@ void Playlist::dropEvent(QDropEvent *event)
 
         //add Tracks to this playlist
         foreach ( QStringList tag, tags) {
-            qDebug() << __PRETTY_FUNCTION__ <<": is playlistitem; tags:"<<tags;
+            qDebug() << Q_FUNC_INFO <<": is playlistitem; tags:"<<tags;
             addTrack(new Track(tag),m_marker);
             m_marker = this->newTrack();
         }
@@ -905,7 +905,7 @@ void Playlist::paintEvent ( QPaintEvent* event )
           }
       }
 
-     // qDebug() << __PRETTY_FUNCTION__ <<": modidx:"<<modidx;
+     // qDebug() << Q_FUNC_INFO <<": modidx:"<<modidx;
 
       //draw the drop point hightlighter
       QRect arect = visualRect ( modidx );

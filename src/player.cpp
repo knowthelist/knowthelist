@@ -132,7 +132,7 @@ bool Player::prepare()
     QString caps_value = "audio/x-raw";
 
       // On mac we bundle the gstreamer plugins with knowthelist
-    #if defined(Q_OS_DARWIN)
+#if defined(Q_OS_DARWIN)
       QString scanner_path;
       QString plugin_path;
       QString registry_filename;
@@ -155,9 +155,12 @@ bool Player::prepare()
       if (!registry_filename.isEmpty()) {
         setenv("GST_REGISTRY", registry_filename.toLocal8Bit().constData(), 1);
       }
-    #endif
+#endif
 
-      //setenv("GST_DEBUG", "*:3", 1);
+      //_putenv_s("GST_DEBUG", "*:4"); //win
+      //setenv("GST_DEBUG", "*:3", 1); //unix
+
+
       gst_init (0, 0);
 
     //prepare
@@ -245,7 +248,7 @@ void Player::setEqualizer(QString band, double gain)
 void Player::open(QUrl url)
 {
     //To avoid delays load track in another thread
-    qDebug() << __PRETTY_FUNCTION__ <<":"<<parentWidget()->objectName()<<" url="<<url;
+    qDebug() << Q_FUNC_INFO <<":"<<parentWidget()->objectName()<<" url="<<url;
     QFuture<void> future = QtConcurrent::run( this, &Player::asyncOpen,url);
     p->watcher.setFuture(future);
 }
@@ -273,7 +276,7 @@ void Player::asyncOpen(QUrl url)
 void Player::loadThreadFinished()
 {
     // async load in player done
-    qDebug() << __PRETTY_FUNCTION__ <<":"<<parentWidget()->objectName();
+    qDebug() << Q_FUNC_INFO <<":"<<parentWidget()->objectName();
     p->isLoaded=true;
     emit loadFinished();
 
@@ -285,7 +288,7 @@ void Player::loadThreadFinished()
 void Player::play()
 {
     p->isStarted=true;
-    qDebug() << __PRETTY_FUNCTION__ <<":"<<parentWidget()->objectName();
+    qDebug() << Q_FUNC_INFO <<":"<<parentWidget()->objectName();
     if (p->isLoaded) {
           gst_element_set_state (GST_ELEMENT (pipeline), GST_STATE_PLAYING);
     }
@@ -412,7 +415,7 @@ void Player::messageReceived(GstMessage *message)
                         break;
                 }
                 case GST_MESSAGE_EOS:{
-                    qDebug() << __PRETTY_FUNCTION__ <<":"<<parentWidget()->objectName()<<" End of track reached";
+                    qDebug() << Q_FUNC_INFO <<":"<<parentWidget()->objectName()<<" End of track reached";
                     Q_EMIT finish();
                     break;
                 }

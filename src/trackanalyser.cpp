@@ -189,7 +189,7 @@ QTime TrackAnalyser::endPosition()
 void TrackAnalyser::open(QUrl url)
 {
     //To avoid delays load track in another thread
-    qDebug() << __PRETTY_FUNCTION__ <<":"<<parentWidget()->objectName()<<" url="<<url;
+    qDebug() << Q_FUNC_INFO <<":"<<parentWidget()->objectName()<<" url="<<url;
     QFuture<void> future = QtConcurrent::run( this, &TrackAnalyser::asyncOpen,url);
     p->watcher.setFuture(future);
 }
@@ -219,13 +219,13 @@ void TrackAnalyser::asyncOpen(QUrl url)
 void TrackAnalyser::loadThreadFinished()
 {
     // async load in player done
-    qDebug() << __PRETTY_FUNCTION__ <<":"<<parentWidget()->objectName();
+    qDebug() << Q_FUNC_INFO <<":"<<parentWidget()->objectName();
     start();
 }
 
 void TrackAnalyser::start()
 {
-    qDebug() << __PRETTY_FUNCTION__ <<":"<<parentWidget()->objectName();
+    qDebug() << Q_FUNC_INFO <<":"<<parentWidget()->objectName();
     gst_element_set_state (GST_ELEMENT (pipeline), GST_STATE_PLAYING);
 }
 
@@ -271,7 +271,7 @@ void TrackAnalyser::messageReceived(GstMessage *message)
                 break;
         }
         case GST_MESSAGE_EOS:{
-                qDebug() << __PRETTY_FUNCTION__ <<":"<<parentWidget()->objectName()<<" End of track reached";
+                qDebug() << Q_FUNC_INFO <<":"<<parentWidget()->objectName()<<" End of track reached";
                 need_finish();
                 break;
         }
@@ -299,7 +299,7 @@ void TrackAnalyser::messageReceived(GstMessage *message)
                         //if we detect a rising edge, set EndPostion to track end
                         m_EndPosition=m_MaxPosition;
                     }
-                    //qDebug() << __PRETTY_FUNCTION__ <<QTime(0,0).addMSecs( static_cast<uint>( ( timestamp / GST_MSECOND ) ))<< " silent:" << isSilent;
+                    //qDebug() << Q_FUNC_INFO <<QTime(0,0).addMSecs( static_cast<uint>( ( timestamp / GST_MSECOND ) ))<< " silent:" << isSilent;
                 }
             break;
           }

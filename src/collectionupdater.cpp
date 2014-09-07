@@ -216,7 +216,7 @@ void CollectionUpdater::readDir( const QString& dir, QStringList& entries )
 
 void CollectionUpdater::readTags( const QStringList& entries )
 {
-    qDebug() << __PRETTY_FUNCTION__ << " Start";
+    qDebug() << Q_FUNC_INFO << " Start";
 
     QUrl url;
     p->collectionDB->createTables( true );
@@ -254,7 +254,7 @@ void CollectionUpdater::readTags( const QStringList& entries )
           }
     }
 
-    qDebug() << __PRETTY_FUNCTION__ << " Insert finish";
+    qDebug() << Q_FUNC_INFO << " Insert finish";
 
     //update database only if not stoped
     if ( !p->isStoped )
@@ -282,10 +282,10 @@ void CollectionUpdater::readTags( const QStringList& entries )
     else
     {
 
-      qDebug() << __PRETTY_FUNCTION__ << " Stop";
+      qDebug() << Q_FUNC_INFO << " Stop";
     }
 
-    qDebug() << __PRETTY_FUNCTION__ << " End";
+    qDebug() << Q_FUNC_INFO << " End";
 }
 
 

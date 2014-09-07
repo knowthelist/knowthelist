@@ -210,7 +210,7 @@ bool MonitorPlayer::ready()
 void MonitorPlayer::open(QUrl url)
 {
     //To avoid delays load track in another thread
-    qDebug() << __PRETTY_FUNCTION__ <<":"<<parentWidget()->objectName()<<" url="<<url;
+    qDebug() << Q_FUNC_INFO <<":"<<parentWidget()->objectName()<<" url="<<url;
     QFuture<void> future = QtConcurrent::run( this, &MonitorPlayer::asyncOpen,url);
     p->watcher.setFuture(future);
 }
@@ -236,7 +236,7 @@ void MonitorPlayer::asyncOpen(QUrl url)
 void MonitorPlayer::loadThreadFinished()
 {
     // async load in MonitorPlayerGst done
-    qDebug() << __PRETTY_FUNCTION__ <<":"<<parentWidget()->objectName();
+    qDebug() << Q_FUNC_INFO <<":"<<parentWidget()->objectName();
     p->isLoaded=true;
     if (p->isStarted) {
         play();
@@ -247,7 +247,7 @@ void MonitorPlayer::loadThreadFinished()
 void MonitorPlayer::play()
 {
     p->isStarted=true;
-    qDebug() << __PRETTY_FUNCTION__ <<":"<<parentWidget()->objectName();
+    qDebug() << Q_FUNC_INFO <<":"<<parentWidget()->objectName();
     if (p->isLoaded) {
           gst_element_set_state (GST_ELEMENT (pipeline), GST_STATE_PLAYING);
     }
@@ -520,7 +520,7 @@ void MonitorPlayer::messageReceived(GstMessage *message)
                         break;
                 }
                 case GST_MESSAGE_EOS:{
-                    qDebug() << __PRETTY_FUNCTION__ <<":"<<parentWidget()->objectName()<<" End of track reached";
+                    qDebug() << Q_FUNC_INFO <<":"<<parentWidget()->objectName()<<" End of track reached";
                     Q_EMIT finish();
                     break;
                 }

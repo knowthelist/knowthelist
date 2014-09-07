@@ -20,8 +20,8 @@
 #include <qfiledialog.h>
 
 #include <qdebug.h>
-#include <QTimer>;
-#include <QMouseEvent>;
+#include <QTimer>
+#include <QMouseEvent>
 
 struct DjFilterWidgetPrivate
 {
@@ -102,7 +102,7 @@ void DjFilterWidget::mousePressEvent(QMouseEvent *event)
 }
 void DjFilterWidget::slotSetFilter()
 {
-    qDebug() << __PRETTY_FUNCTION__ ;
+    qDebug() << Q_FUNC_INFO ;
     timer->stop();
     p->filter->setPath(ui->txtPath->text());
     p->filter->setGenre(ui->cmbGenres->currentText());

@@ -2,8 +2,8 @@
 #include "ui_playlistwidget.h"
 
 #include <qdebug.h>
-#include <QTimer>;
-#include <QMouseEvent>;
+#include <QTimer>
+#include <QMouseEvent>
 
 class PlaylistWidgetPrivate
 {

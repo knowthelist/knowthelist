@@ -24,7 +24,7 @@
 #include <QFileInfo>
 #include <QPainter>
 #include <qdebug.h>
-    
+
 #include <taglib/tag.h>
 #include <taglib/fileref.h>
 #include <taglib/tstring.h>

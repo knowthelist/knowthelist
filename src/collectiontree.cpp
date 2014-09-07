@@ -205,7 +205,7 @@ void CollectionTree::asynchronCurrentItemChanged( QTreeWidgetItem* item )
 
     //add tags to this track list
     foreach ( QStringList tag, tags) {
-        //qDebug() << __PRETTY_FUNCTION__ <<": is playlistitem; tags:"<<tags;
+        //qDebug() << Q_FUNC_INFO <<": is playlistitem; tags:"<<tags;
         p->tracks.append( new Track(tag));
     }
 
@@ -265,7 +265,7 @@ void CollectionTree::performDrag() {
          Track *track = dynamic_cast<Track *>(it.next());
          if ( track->isValid()  )
          {
-             qDebug() << __PRETTY_FUNCTION__ <<": send Data:"<<track->url();
+             qDebug() << Q_FUNC_INFO <<": send Data:"<<track->url();
              QStringList tag = track->tagList();
              tags << tag;
              if (i==0)

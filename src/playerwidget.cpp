@@ -149,8 +149,8 @@ void PlayerWidget::setPositionMarkers()
 {
     if ( trackanalyser->finished()) {
         if (m_skipSilentEnd){
-            qDebug() << __PRETTY_FUNCTION__ <<"endPosition:"<<trackanalyser->endPosition();
-            qDebug() << __PRETTY_FUNCTION__ <<"length:"<<trackanalyser->length();
+            qDebug() << Q_FUNC_INFO <<"endPosition:"<<trackanalyser->endPosition();
+            qDebug() << Q_FUNC_INFO <<"length:"<<trackanalyser->length();
             remainCueTime=trackanalyser->endPosition().msecsTo(trackanalyser->length());
         }
         else
@@ -220,7 +220,7 @@ void PlayerWidget::on_butPlay_clicked()
 
 void PlayerWidget::analyseFinished()
 {
-    qDebug() << __PRETTY_FUNCTION__ <<":"<<objectName();
+    qDebug() << Q_FUNC_INFO <<":"<<objectName();
     // got gain factor -> emit
     if (trackanalyser->gainDB()!=TrackAnalyser::GAIN_INVALID){
         Q_EMIT gainChanged(trackanalyser->gainFactor());
@@ -299,7 +299,7 @@ void PlayerWidget::loadFile( QUrl file)
 void PlayerWidget::loadTrack( Track *track)
 {
     if ( track )
-        qDebug() << __PRETTY_FUNCTION__ <<":"<<objectName()<< " track="<<track->url();
+        qDebug() << Q_FUNC_INFO <<":"<<objectName()<< " track="<<track->url();
 
     m_CurrentTrack = track;
 
@@ -400,12 +400,12 @@ void PlayerWidget::updateTimeAndPositionDisplay(bool isPassive)
                 && 0 < remainMs )
                 || m_isHanging )    {
         if (!p->isEndAnnounced ) {
-            qDebug() << __PRETTY_FUNCTION__ <<":"<<objectName()<<" EMIT aboutFinished";
-            qDebug() << __PRETTY_FUNCTION__ <<": curpos:"<< curpos;
-            qDebug() << __PRETTY_FUNCTION__ <<": remainMs:"<< remainMs;
-            qDebug() << __PRETTY_FUNCTION__ <<": remainCueTime:"<< remainCueTime;
-            qDebug() << __PRETTY_FUNCTION__ <<": mTrackFinishEmitTime:"<< mTrackFinishEmitTime;
-            qDebug() << __PRETTY_FUNCTION__ <<": m_isHanging:"<< m_isHanging;
+            qDebug() << Q_FUNC_INFO <<":"<<objectName()<<" EMIT aboutFinished";
+            qDebug() << Q_FUNC_INFO <<": curpos:"<< curpos;
+            qDebug() << Q_FUNC_INFO <<": remainMs:"<< remainMs;
+            qDebug() << Q_FUNC_INFO <<": remainCueTime:"<< remainCueTime;
+            qDebug() << Q_FUNC_INFO <<": mTrackFinishEmitTime:"<< mTrackFinishEmitTime;
+            qDebug() << Q_FUNC_INFO <<": m_isHanging:"<< m_isHanging;
 
             //send signals only once
             p->isEndAnnounced = true;

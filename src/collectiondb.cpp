@@ -18,10 +18,11 @@
 */
 
 #include "collectiondb.h"
-#include <QtSql>
 
+#include <QtSql>
 #include <QDesktopServices>
 #include <qimage.h>
+#include <QMutex>
 
 class CollectionDbPrivate
 {
@@ -40,7 +41,7 @@ class CollectionDbPrivate
         QString sqlFromStringPL;
         QSqlDatabase *db;
         QSqlQuery *query;
-
+        QMutex mutex;
 
         QString selectionFilter(QString year="", QString genre="", QString artist="", QString album="")
         {
@@ -254,24 +255,33 @@ void CollectionDB::removePlaylist( QString name )
 
 long CollectionDB::selectSqlNumber( const QString& statement )
 {
+    p->mutex.lock();
+
     if (p->query->exec(statement)) {
         while (p->query->next()) {
+            p->mutex.unlock();
             return p->query->value(0).toInt();
         }
     }
     else
         qDebug() << p->query->lastError();
+    p->mutex.unlock();
     return -1;
 }
 
 
 bool CollectionDB::executeSql( const QString& statement )
 {
-    if (p->query->exec(statement))
+    p->mutex.lock();
+
+    if (p->query->exec(statement)){
+        p->mutex.unlock();
         return true;
+    }
     else {
        qDebug() << p->query->lastError();
        qDebug() << "Statement: " <<  statement;
+       p->mutex.unlock();
        return false;
     }
 }
@@ -279,6 +289,7 @@ bool CollectionDB::executeSql( const QString& statement )
 QList<QStringList> CollectionDB::selectSql( const QString& statement)
 {
     QList<QStringList> tags;
+    p->mutex.lock();
     tags.clear();
     int count;
 
@@ -296,6 +307,8 @@ QList<QStringList> CollectionDB::selectSql( const QString& statement)
        qDebug() << p->db->lastError() << "\n" << p->query->lastError();
        qDebug() << "SQL-query: " << statement;
     }
+
+    p->mutex.unlock();
     return tags;
 }
 

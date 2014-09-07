@@ -46,7 +46,7 @@ public:
      bool finished() {return m_finished;}
 
      QTime length();
-     static const double GAIN_INVALID=-99.9;
+     static const int GAIN_INVALID=-99;
 
         void need_finish();
         void newpad (GstElement *decodebin, GstPad *pad, gpointer data);

@@ -89,7 +89,7 @@ if ( !db.open() ) {
     QMessageBox::critical(0, "fatal database error", db.lastError().text());
     return 1;
 }
-qDebug() << db.databaseName();
+    qDebug() << "load database: " << db.databaseName();
     Knowthelist w;
     w.show();
 

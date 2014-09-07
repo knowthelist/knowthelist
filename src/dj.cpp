@@ -82,14 +82,14 @@ int Dj::activeFilterIdx()
 
 void Dj::on_filter_filterChanged()
 {
-    //qDebug() << __PRETTY_FUNCTION__ ;
+    //qDebug() << Q_FUNC_INFO ;
     Filter* f = qobject_cast<Filter*>(QObject::sender());
     Q_EMIT filterChanged(f);
 }
 
 void Dj::on_filter_countChanged()
 {
-    //qDebug() << __PRETTY_FUNCTION__ ;
+    //qDebug() << Q_FUNC_INFO ;
     //Filter* f = qobject_cast<Filter*>(QObject::sender());
     //Q_EMIT countChanged();
 }

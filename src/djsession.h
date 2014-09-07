@@ -18,9 +18,12 @@
 #ifndef DJSESSION_H
 #define DJSESSION_H
 
-#include <QObject>
-#include <dj.h>
+
+#include "dj.h"
 #include "collectiondb.h"
+
+#include <QObject>
+
 class Track;
 
 class DjSession : public QObject
