@@ -5,7 +5,10 @@
 #
 # Patched version of GStreamer sink plugin for Windows to enable selection of audio output device
 
-DEFINES += PACKAGE="\\\"knowthelist\\\""
+DEFINES += PACKAGE="\\\"knowthelist\\\"" \
+            VERSION="\\\"1.0\\\"" \
+            GST_PACKAGE_NAME="\\\"knowthelist\\\"" \
+            GST_PACKAGE_ORIGIN="\\\"gst-plugins-good\\\"" \
 
 TARGET = libgstdirectsoundsink
 

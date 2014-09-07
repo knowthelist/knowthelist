@@ -42,14 +42,9 @@ plugin_init (GstPlugin * plugin)
   return TRUE;
 }
 
-/*GST_PLUGIN_DEFINE (GST_VERSION_MAJOR,
-    GST_VERSION_MINOR,
-    directsound,
-    "Direct Sound plugin library",
-    plugin_init, VERSION, "LGPL", GST_PACKAGE_NAME, GST_PACKAGE_ORIGIN)
-*/
 GST_PLUGIN_DEFINE (GST_VERSION_MAJOR,
     GST_VERSION_MINOR,
     directsound,
     "Direct Sound plugin library",
-    plugin_init, "1.4", "LGPL", "directsoundsink", "directsoundsink")
+    plugin_init, VERSION, "LGPL", GST_PACKAGE_NAME, GST_PACKAGE_ORIGIN)
+
