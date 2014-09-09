@@ -86,9 +86,7 @@ PlayerWidget::PlayerWidget(QWidget *parent) :
    int newSize = font.pointSize()-4;
    fonttime.setPointSize(fonttime.pointSize()+2);
    ui->lblInfo->setAlignment(Qt::AlignVCenter);
-   ui->lblTime->setAlignment(Qt::AlignTop);
    ui->lblTimeMs->setAlignment(Qt::AlignVCenter);
-   ui->lblTimeRemain->setAlignment(Qt::AlignTop);
    ui->lblTimeRemainMs->setAlignment(Qt::AlignVCenter);
    ui->lblTitle->setAlignment(Qt::AlignVCenter);
 #else
@@ -98,6 +96,7 @@ PlayerWidget::PlayerWidget(QWidget *parent) :
    font.setPointSize(newSize);
    ui->lblInfo->setFont(font);
    ui->lblTime->setFont(fonttime);
+   ui->lblTimeRemain->setFont(fonttime);
 
    m_isStarted = false;
    setAcceptDrops( true );
