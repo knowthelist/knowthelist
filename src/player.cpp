@@ -156,7 +156,7 @@ bool Player::prepare()
         setenv("GST_REGISTRY", registry_filename.toLocal8Bit().constData(), 1);
       }
 #elif defined(Q_OS_WIN32)
-      QString plugin_path = QProcessEnvironment::systemEnvironment().value("GSTREAMER_1_0_ROOT_X86") + "/lib/gstreamer-1.0";
+      QString plugin_path = QCoreApplication::applicationDirPath() + "/plugins";
       QDir pluginDir(plugin_path);
       if ( pluginDir.exists())
         _putenv_s("GST_PLUGIN_PATH", plugin_path.toLocal8Bit());
