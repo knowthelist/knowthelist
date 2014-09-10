@@ -25,6 +25,7 @@
 * The development of this code was made possible due to the involvement
 * of Pioneers of the Inevitable, the creators of the Songbird Music player
 *
+* Patched version of GStreamer sink plugin for Windows to enable selection of audio output device
 */
 
 /**

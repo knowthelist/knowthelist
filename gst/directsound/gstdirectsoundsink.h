@@ -2,6 +2,7 @@
  * Copyright (C)  2005 Sebastien Moutte <sebastien@moutte.net>
  * Copyright (C) 2007 Pioneers of the Inevitable <songbird@songbirdnest.com>
  * Copyright (C) 2010 Fluendo S.A. <support@fluendo.com>
+ * Copyright (C) 2014 Mario Stephan <mstephan@shared-files.de>
  *
  * gstdirectsoundsink.h: 
  *
@@ -23,7 +24,7 @@
  * The development of this code was made possible due to the involvement
  * of Pioneers of the Inevitable, the creators of the Songbird Music player
  *
- * 
+ * Patched version of GStreamer sink plugin for Windows to enable selection of audio output device
  */
 
 #ifndef __GST_DIRECTSOUNDSINK_H__
