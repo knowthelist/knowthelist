@@ -626,3 +626,8 @@ Small Device Styles
   background-color: #003399 \9;
 }
 
+#donate {
+	  position: absolute;
+ right: 10px;
+ top: 310px;
+}
