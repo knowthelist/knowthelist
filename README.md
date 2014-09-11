@@ -51,16 +51,10 @@ An icon for "knowthelist" should now be in your main OSX Applications list, read
 
 Windows:
 ----------
-Build static version for release:
-- Install [gstreamer-x86 $ devel](http://gstreamer.freedesktop.org/data/pkg/windows)
-- Build a [Qt static environment](http://qt-project.org/wiki/How-to-build-a-static-Qt-for-Windows-MinGW) 
-- Build knowthelist via QtCreator (qmake, build release)
-- Copy *.dll of the gstreamer's bin folder into the target folder together with knowthelist.exe
-- Copy *.dll of the gstreamer's plugin  folder (e.g. C:\gstreamer\1.0\x86\lib\gstreamer-1.0) into an new folder named 'plugin' in parallel to knowthelist.exe.
-- Run knowthelist.exe
+A prebuilt package for windows is available in the release section on this page. The only prerequisite is a installed GStreamer runtime. But if you what to build Knowthelist on Windows for your self, you can do this like this:
 
 Build dynamic version to debug project:
-- Install [gstreamer-x86 $ devel](http://gstreamer.freedesktop.org/data/pkg/windows)
+- Install [gstreamer-x86 runtime & devel](http://gstreamer.freedesktop.org/data/pkg/windows)
 - Install [Qt5 MinGW incl. QtCreator](http://qt-project.org/downloads)
 Due to different exception handling versions (SJLJ, DWARF) of used MinGW comiler for GStreamer and Qt5, it is neccessary to use an own version of taglib. To get this, do this:  
 - Get [CMake](http://www.cmake.org/cmake/resources/software.html) and install
@@ -71,7 +65,13 @@ Due to different exception handling versions (SJLJ, DWARF) of used MinGW comiler
 - Rename libtag.dll and libstdc++-6.dll in GStreamer bin path to _libtag.dll and _libstdc++-6.dll
 - Build and run knowthelist project within QtCreator (Ctrl-R)
 
-
+Build static version for release:
+- Install [gstreamer-x86 runtime & devel](http://gstreamer.freedesktop.org/data/pkg/windows)
+- Build a [Qt static environment](http://qt-project.org/wiki/How-to-build-a-static-Qt-for-Windows-MinGW) 
+- Build knowthelist via QtCreator (qmake, build release)
+- Copy all dll files of the gstreamer's bin folder (e.g. C:\gstreamer\1.0\x86\bin) into the target folder together with knowthelist.exe
+- Copy all dll files of the gstreamer's plugin  folder (e.g. C:\gstreamer\1.0\x86\lib\gstreamer-1.0) into an new folder named 'plugin' in parallel to knowthelist.exe.
+- Run knowthelist.exe
 
 Install packages:
 -----------------
