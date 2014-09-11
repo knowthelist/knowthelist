@@ -64,8 +64,7 @@ int ProgressBar::value()
 }
 
 void ProgressBar::resizeEvent(QResizeEvent *ev)
-   {
-        qDebug() << "size " << ev->size().width();
+{
     bar->setGeometry(0,0,ev->size().width(),20);
-   }
+}
 

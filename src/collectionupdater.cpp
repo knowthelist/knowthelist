@@ -51,7 +51,7 @@ CollectionUpdater::CollectionUpdater()
 
         p->collectionDB = new CollectionDB();
         if ( !p->collectionDB )
-            qWarning() << __FUNCTION__ << "Could not open SQLite database\n";
+            qWarning() << Q_FUNC_INFO << "Could not open SQLite database\n";
 
         //optimization for speeding up SQLite
         p->collectionDB->executeSql( "PRAGMA synchronous = OFF;" );
@@ -71,7 +71,6 @@ CollectionUpdater::CollectionUpdater()
         connect(p->timer,SIGNAL(timeout()),this,SLOT(monitor()));
         if ( p->doMonitor)
            p->timer->start();
-
 }
 
 
@@ -83,7 +82,9 @@ CollectionUpdater::~CollectionUpdater()
 void CollectionUpdater::setDoMonitor(bool value)
 {
     p->doMonitor = value;
-    if ( !p->doMonitor)
+    if ( p->doMonitor)
+       p->timer->start();
+    else
        p->timer->stop();
 }
 
@@ -103,23 +104,23 @@ void CollectionUpdater::setDirectoryList(QStringList dirs, bool force)
 
 void CollectionUpdater::monitor()
 {
+    qDebug() << Q_FUNC_INFO;
+
     p->incremental = true;
     p->isStoped = false;
 
-        Q_EMIT progressChanged(1);
-
-        QStringList folders;
+    QStringList folders;
 
             QList<QStringList> entries = p->collectionDB->selectSql( "SELECT dir, changedate FROM directories;" );
 
             foreach ( QStringList entry, entries) {
                 QString dir(entry[0]);
-                QString changedate(entry[0]);
+                QString changedate(entry[1]);
                 QFileInfo fi(dir);
 
                 if ( fi.exists() )
                 {
-                    if ( fi.lastModified().toString() != changedate )
+                    if ( QString::number(fi.lastModified().toTime_t()) != changedate )
                     {
                         folders << dir;
                         qDebug() << "Collection dir changed: " << dir;
@@ -133,11 +134,8 @@ void CollectionUpdater::monitor()
                 }
             }
 
-            if ( !folders.isEmpty() ){
-                //scan ->    not incremental
-                p->incremental = false;
-            }
-            QFuture<void> future = QtConcurrent::run( this, &CollectionUpdater::asynchronScan, folders);
+            if ( !folders.isEmpty() )
+                QFuture<void> future = QtConcurrent::run( this, &CollectionUpdater::asynchronScan, folders);
 }
 
 void CollectionUpdater::scan()
@@ -149,12 +147,12 @@ void CollectionUpdater::scan()
 
 void CollectionUpdater::asynchronScan(QStringList dirs)
 {
-    qDebug() << __FUNCTION__ << dirs << endl;
+    qDebug() << Q_FUNC_INFO << dirs.count() << "dirs" << endl;
 
     // avoid multiple runs
     p->timer->stop();
 
-    Q_EMIT progressChanged(2);
+    Q_EMIT progressChanged(1);
 
     if ( !p->incremental )
         p->collectionDB->purgeDirCache();

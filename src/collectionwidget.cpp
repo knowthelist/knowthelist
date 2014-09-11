@@ -80,6 +80,8 @@ CollectionWidget::CollectionWidget( QWidget* parent ):
     p->updater = new CollectionUpdater();
 
     p->timer = new QTimer( this );
+    p->timer->setInterval(300);
+    p->timer->setSingleShot(true);
 
     p->collectiontree = new CollectionTree(this);
 
@@ -109,6 +111,8 @@ CollectionWidget::CollectionWidget( QWidget* parent ):
 
     connect( p->updater, SIGNAL(changesDone()), p->collectiontree, SLOT(createTrunk()));
     connect( p->collectiontree, SIGNAL(rescan()), p->updater, SLOT(scan()));
+
+    connect( p->timer, SIGNAL(timeout()), SLOT(onSetFilter())  );
 
     setFocusProxy( p->collectiontree ); //default object to get focus
     setMaximumWidth(400);
@@ -156,8 +160,9 @@ void CollectionWidget::onModeSelected(ModeSelector::modeType value)
 
 void CollectionWidget::onSetFilterTimeout()
 {
-    if ( p->timer->isActive() ) p->timer->stop();
-        p->timer->singleShot(200,this,SLOT(onSetFilter()) );
+    if ( p->timer->isActive() )
+        p->timer->stop();
+    p->timer->start();
 }
 
 void CollectionWidget::onSetFilter()
