@@ -78,7 +78,7 @@ CollectionTree::~CollectionTree()
 void
 CollectionTree::createTrunk()
 {
-    //qDebug() << __FUNCTION__;
+    //qDebug() << Q_FUNC_INFO;
 
     clear();
 
@@ -120,7 +120,7 @@ CollectionTree::createTrunk()
 void
 CollectionTree::on_itemExpanded( QTreeWidgetItem* item )
 {
-    qDebug() << __FUNCTION__ << endl;
+    qDebug() << Q_FUNC_INFO << endl;
     if ( !item ) return ;
 
     if  ( item->childCount() == 0 ) {
@@ -176,7 +176,7 @@ void CollectionTree::triggerRandomSelection()
         p->tracks.append(track);
     }
 
-    qDebug() << __FUNCTION__ << p->tracks.count();
+    qDebug() << Q_FUNC_INFO << p->tracks.count();
     emit selectionChanged(p->tracks);
 }
 
@@ -193,7 +193,7 @@ void CollectionTree::asynchronCurrentItemChanged( QTreeWidgetItem* item )
     QList<QStringList> tags;
 
     CollectionTreeItem* collItem = static_cast<CollectionTreeItem*>(item);
-    qDebug() << __FUNCTION__ << "Artist: " << collItem->artist() << " Album: " << collItem->album() << endl;
+    qDebug() << Q_FUNC_INFO << "Artist: " << collItem->artist() << " Album: " << collItem->album() << endl;
 
     //Retrieve songs from database
     tags = p->database->selectTracks( collItem->year(), collItem->genre(), collItem->artist(), collItem->album() );
@@ -201,7 +201,7 @@ void CollectionTree::asynchronCurrentItemChanged( QTreeWidgetItem* item )
     //Show songs in parent's tracklist
     p->tracks.clear();
 
-    qDebug() << __FUNCTION__ << "Song count: " << tags.count();
+    qDebug() << Q_FUNC_INFO << "Song count: " << tags.count();
 
     //add tags to this track list
     foreach ( QStringList tag, tags) {
@@ -211,7 +211,7 @@ void CollectionTree::asynchronCurrentItemChanged( QTreeWidgetItem* item )
 
     emit selectionChanged(p->tracks);
 
-    //qDebug() << __FUNCTION__ << "[End]" << endl;
+    //qDebug() << Q_FUNC_INFO << "[End]" << endl;
 }
 
 QString CollectionTree::filter()

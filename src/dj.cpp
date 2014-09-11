@@ -122,7 +122,7 @@ void Dj::on_filter_maxUsageChanged()
 void Dj::checkSequence()
 {
 
-    qDebug() << __FUNCTION__ << "rotation=" << p->rotation << "/" << p->filters.count()
+    qDebug() << Q_FUNC_INFO << "rotation=" << p->rotation << "/" << p->filters.count()
              << " repeat=" << p->filter->usage() << "/" <<  p->filter->maxUsage() ;
 
     if ( p->filter->usage() >= p->filter->maxUsage() )
@@ -160,10 +160,10 @@ Filter* Dj::requestFilter()
 
     checkSequence();
 
-    qDebug() << __FUNCTION__ << "rotation=" << p->rotation << "/" << p->filters.count()
+    qDebug() << Q_FUNC_INFO << "rotation=" << p->rotation << "/" << p->filters.count()
              << " repeat=" << p->filter->usage() << "/" <<  p->filter->maxUsage() ;
 
-    qDebug() << __FUNCTION__ << "return filter=" << p->filters.at(p->rotation)->path()
+    qDebug() << Q_FUNC_INFO << "return filter=" << p->filters.at(p->rotation)->path()
             << "/" << p->filters.at(p->rotation)->genre()
             << "/" << p->filters.at(p->rotation)->artist();
 

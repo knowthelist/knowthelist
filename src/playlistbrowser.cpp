@@ -275,7 +275,7 @@ QList<Track*> PlaylistBrowser::selectedTracks()
 
     tracks.clear();
 
-    qDebug() << __FUNCTION__ << "Song count: " << selectedTags.count();
+    qDebug() << Q_FUNC_INFO << "Song count: " << selectedTags.count();
 
     //add tags to this track list
     foreach ( QStringList tag, selectedTags) {
@@ -380,7 +380,7 @@ QList<Track*> PlaylistBrowser::readFileList(QString filename)
     }
     file.close();
 
-    qDebug() << "End " << __FUNCTION__;
+    qDebug() << "End " << Q_FUNC_INFO;
 
     return tracks;
 }
@@ -427,7 +427,7 @@ QPair<int,int> PlaylistBrowser::readFileValues(QString filename)
     pair.first = count;
     pair.second = duration;
 
-    qDebug() << "End " << __FUNCTION__;
+    qDebug() << "End " << Q_FUNC_INFO;
 
     return pair;
 }

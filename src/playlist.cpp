@@ -180,7 +180,7 @@ void Playlist::appendList(QList<QUrl> list)
 
 void Playlist::appendList( const QList<QUrl> urls, PlaylistItem* after )
 {
-   qDebug() << __FUNCTION__;
+   qDebug() << Q_FUNC_INFO;
 
    int droppedUrlCnt = urls.size();
    for(int i = droppedUrlCnt-1; i > -1 ; i--) {
@@ -417,7 +417,7 @@ QList<Track*> Playlist::allTracks()
 void Playlist::removePlaylistItem( PlaylistItem *item )
 {
    if ( item )  {
-     qDebug() << __FUNCTION__ << ":"<<item->track()->url();
+     qDebug() << Q_FUNC_INFO << ":"<<item->track()->url();
 
      //unset if not available any more
      if ( item == currentPlaylistItem )
@@ -474,7 +474,7 @@ QString Playlist::defaultPlaylistPath()
 // Export content as a xspf playlist
 void Playlist::saveXML( const QString &path ) const
 {
-    qDebug() << __FUNCTION__ << "BEGIN " ;
+    qDebug() << Q_FUNC_INFO << "BEGIN " ;
     QFile file( path );
 
     if( !file.open(QFile::WriteOnly) ) return;
@@ -536,7 +536,7 @@ void Playlist::saveXML( const QString &path ) const
     stream << "<?xml version=\"1.0\" encoding=\"utf8\"?>\n";
     stream << newdoc.toString();
     file.close();
-    qDebug() << __FUNCTION__<< "END "  ;
+    qDebug() << Q_FUNC_INFO<< "END "  ;
 }
 
 void Playlist::loadXML( const QString &path )
@@ -593,7 +593,7 @@ void Playlist::loadXML( const QString &path )
     }
     file.close();
 
-    qDebug() << "End " << __FUNCTION__;
+    qDebug() << "End " << Q_FUNC_INFO;
 }
 
 void Playlist::removeSelectedItems()
@@ -657,7 +657,7 @@ void Playlist::onRatingChanged(float rate)
             Track* track = item->track();
             if (track){
                 track->setRate(rate * 10);
-                qDebug() << __FUNCTION__<<item->track()->url();
+                qDebug() << Q_FUNC_INFO<<item->track()->url();
                 emit trackPropertyChanged(track);
             }
         }
@@ -925,7 +925,7 @@ void Playlist::paintEvent ( QPaintEvent* event )
 
 void Playlist::keyPressEvent   (   QKeyEvent* e    )
 {
-  qDebug() << __FUNCTION__ << "  " << e->key() << "del="<<Qt::Key_Delete;
+  qDebug() << Q_FUNC_INFO << "  " << e->key() << "del="<<Qt::Key_Delete;
 
   PlaylistItem* item = static_cast<PlaylistItem*>(currentItem());
 

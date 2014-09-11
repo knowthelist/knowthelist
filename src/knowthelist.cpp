@@ -76,7 +76,7 @@ Knowthelist::~Knowthelist()
         delete collectionBrowser;
 
         delete ui;
-        qDebug() << "The end" << __FUNCTION__ ;
+        qDebug() << "The end" << Q_FUNC_INFO ;
 }
 
 void Knowthelist::createUI()
@@ -397,7 +397,7 @@ void Knowthelist::loadCurrentSettings()
 
 void Knowthelist::closeEvent(QCloseEvent* event)
 {
-    qDebug() << __FUNCTION__ << "for Knowthelist" ;
+    qDebug() << Q_FUNC_INFO << "for Knowthelist" ;
 
     QSettings settings;
     settings.setValue("Volume1", QString("%1").arg( ui->slider1->value() ) );
@@ -690,7 +690,7 @@ void Knowthelist::Track_doubleClicked(Track* track)
 void Knowthelist::trackList_wantLoad(Track* track, QString target)
 {
     //ToDo: enable for multiple tracks like drag/drop
-    qDebug() << __FUNCTION__ << "target=" << target;
+    qDebug() << Q_FUNC_INFO << "target=" << target;
     if ( target == "Right" )
       playList2->appendSong( new Track(track->tagList()) );
     else if ( target ==  "Left" )
@@ -742,7 +742,7 @@ void Knowthelist::on_cmdFade_clicked()
 bool Knowthelist::initMonitorPlayer()
 {
     //ToDo: spend a separate widget for Monitor player
-    qDebug() << __FUNCTION__ << "BEGIN ";
+    qDebug() << Q_FUNC_INFO << "BEGIN ";
 
       monitorPlayer= new MonitorPlayer(this);
       monitorPlayer->prepare();
@@ -752,7 +752,7 @@ bool Knowthelist::initMonitorPlayer()
       ui->cmdMonitorPlay->setIcon(QIcon(":play.png"));
       connect(monitorPlayer,SIGNAL(loadFinished()),this,SLOT(timerMonitor_loadFinished()));
 
-    qDebug()  << __FUNCTION__ << "END " ;
+    qDebug()  << Q_FUNC_INFO << "END " ;
     return true;
 }
 

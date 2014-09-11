@@ -291,7 +291,7 @@ void PlayerWidget::dropEvent( QDropEvent *event )
 
 void PlayerWidget::loadFile( QUrl file)
 {
-    qDebug() << __FUNCTION__ << "url=" << file;
+    qDebug() << Q_FUNC_INFO << "url=" << file;
     loadTrack( new Track(file));
 }
 

@@ -225,7 +225,7 @@ void DjSession::playDefaultList()
 
     tracks.clear();
 
-    qDebug() << __FUNCTION__ << "Song count: " << selectedTags.count();
+    qDebug() << Q_FUNC_INFO << "Song count: " << selectedTags.count();
 
     //add tags to this track list
     foreach ( QStringList tag, selectedTags) {
@@ -374,7 +374,7 @@ void DjSession::setMinCount(int value)
 // obsolate: keep this just in case we need an export function later
 void DjSession::savePlaylists( const QString &filename )
 {
-    qDebug() << __FUNCTION__ << "BEGIN " ;
+    qDebug() << Q_FUNC_INFO << "BEGIN " ;
     QFile file( filename );
 
     if( !file.open(QFile::WriteOnly) ) return;
@@ -441,7 +441,7 @@ void DjSession::savePlaylists( const QString &filename )
     file.close();
 
     Q_EMIT savedPlaylists();
-    qDebug() << __FUNCTION__<< "END "  ;
+    qDebug() << Q_FUNC_INFO<< "END "  ;
 
 }
 
