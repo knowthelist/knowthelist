@@ -63,6 +63,9 @@ DjFilterWidget::DjFilterWidget(QWidget *parent) :
 
     timer = new QTimer( this );
     timer->stop();
+    timer->setInterval(300);
+    timer->setSingleShot(true);
+    connect( timer,SIGNAL(timeout()),this,SLOT( slotSetFilter() ));
 
     p->timerSlide = new QTimer(this);
     p->timerSlide->setInterval(10);
@@ -158,21 +161,25 @@ void DjFilterWidget::on_sliFilterValue_valueChanged(int value)
 
 void DjFilterWidget::on_txtPath_textChanged(QString )
 {
-    if ( timer->isActive() ) timer->stop();
-        timer->singleShot(500,this, SLOT( slotSetFilter() ));
+    if ( timer->isActive() )
+        timer->stop();
+    timer->start();
 }
 
 void DjFilterWidget::on_cmbGenres_textChanged(QString )
 {
-    if ( timer->isActive() ) timer->stop();
-        timer->singleShot(500,this, SLOT( slotSetFilter() ));
+    if ( timer->isActive() )
+        timer->stop();
+    timer->start();
 }
 
 void DjFilterWidget::on_cmbArtists_textChanged(QString )
 {
-    if ( timer->isActive() ) timer->stop();
-        timer->singleShot(500,this, SLOT( slotSetFilter() ));
+    if ( timer->isActive() )
+        timer->stop();
+    timer->start();
 }
+
 void DjFilterWidget::on_pushActivate_clicked()
 {
     p->filter->setActive(true);

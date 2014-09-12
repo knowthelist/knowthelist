@@ -144,12 +144,17 @@ CollectionDB::escapeString( QString string )
 void CollectionDB::setFilterString( QString string )
 {
     string = escapeString( string );
-    p->sqlQuickFilter = QString( " AND ( lower(artist.name) LIKE lower('%%1%') OR "
-                        "lower(album.name) LIKE lower('%%1%') OR "
-                        "lower(tags.title) LIKE lower('%%1%') OR "
-                        "lower(tags.url) LIKE lower('%%1%') )")
-                        .arg(string);
     p->filterString = string;
+    p->sqlQuickFilter = "";
+
+    foreach (QString token, string.split(" ")) {
+        p->sqlQuickFilter += QString( " AND ( lower(artist.name) LIKE lower('%%1%') OR "
+            "lower(album.name) LIKE lower('%%1%') OR "
+            "lower(tags.title) LIKE lower('%%1%') OR "
+            "lower(genre.name) LIKE lower('%%1%') OR "
+            "lower(tags.url) LIKE lower('%%1%') )")
+            .arg(token);
+    }
 }
 
 bool CollectionDB::isDbValid()
@@ -383,7 +388,7 @@ void CollectionDB::createTables( bool temporary )
         executeSql( "CREATE INDEX url_tag ON tags( url );" );
 
         // create directory statistics database
-        executeSql( QString( "CREATE TABLE directories ("
+        executeSql( QString( "CREATE TABLE IF NOT EXISTS directories ("
                             "dir VARCHAR(100) UNIQUE,"
                             "changedate INTEGER );" ) );
     }
@@ -399,11 +404,6 @@ void CollectionDB::dropTables( bool temporary )
     executeSql( QString( "DROP TABLE artist%1;" ).arg( temporary ? "_temp" : "" ) );
     executeSql( QString( "DROP TABLE genre%1;" ).arg( temporary ? "_temp" : "" ) );
     executeSql( QString( "DROP TABLE year%1;" ).arg( temporary ? "_temp" : "" ) );
-
-    if ( !temporary )
-    {
-        executeSql( QString( "DROP TABLE directories"));
-    }
 
     // force to re-read over all count for random entry
     p->resultCount=0;
