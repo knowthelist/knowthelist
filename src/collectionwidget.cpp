@@ -198,7 +198,7 @@ QString CollectionWidget::filterText()
 void CollectionWidget::resizeEvent(QResizeEvent *)
 {
     QRect rec = p->collectiontree->geometry();
-    p->progress->setGeometry(0,40,rec.width(),20);
+    p->progress->setGeometry(0,30,rec.width()-20,20);
 }
 
 

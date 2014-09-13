@@ -38,7 +38,7 @@ int main(int argc, char *argv[])
     QCoreApplication::setOrganizationName("knowthelist-org");
     QCoreApplication::setOrganizationDomain("");
     QCoreApplication::setApplicationName("knowthelist");
-    QCoreApplication::setApplicationVersion("2.2.3");
+    QCoreApplication::setApplicationVersion("2.2.4");
 
     QSettings settings;
     QStringList languages;

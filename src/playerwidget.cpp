@@ -89,7 +89,6 @@ PlayerWidget::PlayerWidget(QWidget *parent) :
    ui->lblTitle->setAlignment(Qt::AlignVCenter);
 #else
    int newSize = font.pointSize()-1;
-   ui->lblInfo->setAlignment(Qt::AlignBottom);
 #endif
    font.setPointSize(newSize);
    ui->lblInfo->setFont(font);
@@ -98,7 +97,6 @@ PlayerWidget::PlayerWidget(QWidget *parent) :
    m_isStarted = false;
    setAcceptDrops( true );
    this->stop();
-   //ui->txtCue->hide();
 
    trackanalyser = new TrackAnalyser(this);
    connect(trackanalyser, SIGNAL(finish()),this,SLOT(analyseFinished()));
@@ -128,7 +126,7 @@ void PlayerWidget::setGain(double gain)
 void PlayerWidget::setInfo(QPair<int,int> info)
 {
     QString strTrack = (info.first > 1) ? tr("Tracks") : tr("Track");
-    ui->lblInfo->setText(QString("   %1 %2       %3 %4")
+    ui->lblInfo->setText(QString("%1 %2       %3 %4")
                          .arg(info.first)
                          .arg(strTrack)
                          .arg(Track::prettyTime( info.second))
