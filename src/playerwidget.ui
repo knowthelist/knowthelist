@@ -155,7 +155,16 @@ QLabel{
 }</string>
   </property>
   <layout class="QGridLayout" name="gridLayout">
-   <property name="margin">
+   <property name="leftMargin">
+    <number>0</number>
+   </property>
+   <property name="topMargin">
+    <number>0</number>
+   </property>
+   <property name="rightMargin">
+    <number>0</number>
+   </property>
+   <property name="bottomMargin">
     <number>0</number>
    </property>
    <property name="spacing">
@@ -298,6 +307,9 @@ QLabel{
            <layout class="QVBoxLayout" name="verticalLayout">
             <property name="spacing">
              <number>4</number>
+            </property>
+            <property name="leftMargin">
+             <number>8</number>
             </property>
             <property name="topMargin">
              <number>6</number>
@@ -852,13 +864,13 @@ QLabel{
                <string>TextLabel</string>
               </property>
               <property name="alignment">
-               <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
+               <set>Qt::AlignCenter</set>
               </property>
               <property name="wordWrap">
                <bool>true</bool>
               </property>
               <property name="margin">
-               <number>0</number>
+               <number>-2</number>
               </property>
               <property name="indent">
                <number>0</number>
@@ -896,7 +908,7 @@ QLabel{
                 <number>1</number>
                </property>
                <property name="leftMargin">
-                <number>0</number>
+                <number>2</number>
                </property>
                <property name="topMargin">
                 <number>1</number>
@@ -918,7 +930,7 @@ QLabel{
                  <property name="maximumSize">
                   <size>
                    <width>57</width>
-                   <height>14</height>
+                   <height>16777215</height>
                   </size>
                  </property>
                  <property name="palette">
@@ -1351,7 +1363,7 @@ QLabel{
                   <bool>false</bool>
                  </property>
                  <property name="alignment">
-                  <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
+                  <set>Qt::AlignBottom|Qt::AlignRight|Qt::AlignTrailing</set>
                  </property>
                  <property name="wordWrap">
                   <bool>false</bool>
@@ -1360,7 +1372,7 @@ QLabel{
                   <number>0</number>
                  </property>
                  <property name="indent">
-                  <number>2</number>
+                  <number>0</number>
                  </property>
                 </widget>
                </item>
@@ -1372,7 +1384,7 @@ QLabel{
                  <property name="minimumSize">
                   <size>
                    <width>0</width>
-                   <height>20</height>
+                   <height>18</height>
                   </size>
                  </property>
                  <property name="maximumSize">
@@ -1809,7 +1821,7 @@ QLabel{
                   <bool>false</bool>
                  </property>
                  <property name="alignment">
-                  <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
+                  <set>Qt::AlignBottom|Qt::AlignLeading|Qt::AlignLeft</set>
                  </property>
                  <property name="wordWrap">
                   <bool>false</bool>
@@ -1860,7 +1872,7 @@ QLabel{
                  <property name="minimumSize">
                   <size>
                    <width>57</width>
-                   <height>15</height>
+                   <height>18</height>
                   </size>
                  </property>
                  <property name="palette">
@@ -2294,7 +2306,7 @@ QLabel{
                   <string>-00:00</string>
                  </property>
                  <property name="alignment">
-                  <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                  <set>Qt::AlignBottom|Qt::AlignRight|Qt::AlignTrailing</set>
                  </property>
                  <property name="wordWrap">
                   <bool>false</bool>
@@ -2303,7 +2315,7 @@ QLabel{
                   <number>0</number>
                  </property>
                  <property name="indent">
-                  <number>2</number>
+                  <number>0</number>
                  </property>
                 </widget>
                </item>
@@ -2315,12 +2327,12 @@ QLabel{
                  <property name="minimumSize">
                   <size>
                    <width>0</width>
-                   <height>16</height>
+                   <height>18</height>
                   </size>
                  </property>
                  <property name="maximumSize">
                   <size>
-                   <width>80</width>
+                   <width>16777215</width>
                    <height>16777215</height>
                   </size>
                  </property>
@@ -2752,10 +2764,10 @@ QLabel{
                   <string>.00</string>
                  </property>
                  <property name="alignment">
-                  <set>Qt::AlignBottom|Qt::AlignRight|Qt::AlignTrailing</set>
+                  <set>Qt::AlignBottom|Qt::AlignLeading|Qt::AlignLeft</set>
                  </property>
                  <property name="wordWrap">
-                  <bool>true</bool>
+                  <bool>false</bool>
                  </property>
                 </widget>
                </item>
@@ -2932,7 +2944,16 @@ QLabel{
             <number>0</number>
            </property>
            <layout class="QHBoxLayout" name="horizontalLayout_2">
-            <property name="margin">
+            <property name="leftMargin">
+             <number>0</number>
+            </property>
+            <property name="topMargin">
+             <number>0</number>
+            </property>
+            <property name="rightMargin">
+             <number>0</number>
+            </property>
+            <property name="bottomMargin">
              <number>0</number>
             </property>
             <item>

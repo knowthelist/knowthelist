@@ -120,7 +120,7 @@ CollectionWidget::CollectionWidget( QWidget* parent ):
     //Pogressbar for re-read collection
     p->progress = new ProgressBar(this);
     p->progress->setValue(0);
-
+    p->progress->setStyleSheet("* { margin-bottom: 3px; }");
 
     mainLayout->addWidget(p->collectiontree);
 
@@ -201,7 +201,7 @@ QString CollectionWidget::filterText()
 void CollectionWidget::resizeEvent(QResizeEvent *)
 {
     QRect rec = p->collectiontree->geometry();
-    p->progress->setGeometry(0,40,rec.width(),20);
+    p->progress->setGeometry(0,31,rec.width()-20,20);
 }
 
 
