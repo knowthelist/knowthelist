@@ -85,10 +85,6 @@ PlayerWidget::PlayerWidget(QWidget *parent) :
 #if defined(Q_OS_DARWIN)
    int newSize = font.pointSize()-4;
    fonttime.setPointSize(fonttime.pointSize()+2);
-   ui->lblInfo->setAlignment(Qt::AlignVCenter);
-   ui->lblTimeMs->setAlignment(Qt::AlignVCenter);
-   ui->lblTimeRemainMs->setAlignment(Qt::AlignVCenter);
-   ui->lblTitle->setAlignment(Qt::AlignVCenter);
 #else
    int newSize = font.pointSize()-1;
 #endif

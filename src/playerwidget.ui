@@ -155,16 +155,7 @@ QLabel{
 }</string>
   </property>
   <layout class="QGridLayout" name="gridLayout">
-   <property name="leftMargin">
-    <number>0</number>
-   </property>
-   <property name="topMargin">
-    <number>0</number>
-   </property>
-   <property name="rightMargin">
-    <number>0</number>
-   </property>
-   <property name="bottomMargin">
+   <property name="margin">
     <number>0</number>
    </property>
    <property name="spacing">
@@ -1826,6 +1817,9 @@ QLabel{
                  <property name="wordWrap">
                   <bool>false</bool>
                  </property>
+                 <property name="indent">
+                  <number>1</number>
+                 </property>
                 </widget>
                </item>
                <item>
@@ -2769,6 +2763,9 @@ QLabel{
                  <property name="wordWrap">
                   <bool>false</bool>
                  </property>
+                 <property name="indent">
+                  <number>1</number>
+                 </property>
                 </widget>
                </item>
                <item>
@@ -2944,16 +2941,7 @@ QLabel{
             <number>0</number>
            </property>
            <layout class="QHBoxLayout" name="horizontalLayout_2">
-            <property name="leftMargin">
-             <number>0</number>
-            </property>
-            <property name="topMargin">
-             <number>0</number>
-            </property>
-            <property name="rightMargin">
-             <number>0</number>
-            </property>
-            <property name="bottomMargin">
+            <property name="margin">
              <number>0</number>
             </property>
             <item>
