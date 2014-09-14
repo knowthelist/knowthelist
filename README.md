@@ -11,7 +11,7 @@ Knowthelist - the awesome party music player
 - Trackanalyser search for song start/end and gain setting
 - Auto DJ function with multiple filters  for random play 
 - Monitor player for pre listen tracks (via 2nd sound card e.g. USB)
-- ... more https://github.com/knowthelist/knowthelist/wiki
+- ... more details can be found on the [Wiki](https://github.com/knowthelist/knowthelist/wiki)
 
 Runs under Linux, MacOS and Windows
 
