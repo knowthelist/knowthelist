@@ -1826,6 +1826,9 @@ QLabel{
                  <property name="wordWrap">
                   <bool>false</bool>
                  </property>
+                 <property name="indent">
+                  <number>1</number>
+                 </property>
                 </widget>
                </item>
                <item>
@@ -2768,6 +2771,9 @@ QLabel{
                  </property>
                  <property name="wordWrap">
                   <bool>false</bool>
+                 </property>
+                 <property name="indent">
+                  <number>1</number>
                  </property>
                 </widget>
                </item>
