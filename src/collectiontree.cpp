@@ -61,7 +61,7 @@ CollectionTree::CollectionTree(QWidget *parent) :
     setHeaderItem(headeritem);
     setHeaderLabels(headers);
     header()->resizeSection(0,this->width()-50);
-
+    header()->setMinimumHeight(18);
 
     connect( this, SIGNAL(currentItemChanged(QTreeWidgetItem*,QTreeWidgetItem*)),
              this,   SLOT( on_currentItemChanged( QTreeWidgetItem* ) ) );
@@ -79,8 +79,16 @@ void
 CollectionTree::createTrunk()
 {
     //qDebug() << Q_FUNC_INFO;
+    CollectionTreeItem* item = 0;
 
     clear();
+
+    //add "ALL" node and select it
+    int countAll = p->database->getCount();
+    if (countAll < 1000 && countAll > 0){
+        item = new CollectionTreeItem(this );
+        setCurrentItem(item);
+    }
 
     QList<QStringList> tags;
 
@@ -89,29 +97,35 @@ CollectionTree::createTrunk()
     {
         case MODEGENRE:
             tags = p->database->selectGenres();
+            if (item)
+                item->setGenre(QString::null);
             foreach ( QStringList tag, tags) {
-                CollectionTreeItem* item = new CollectionTreeItem( this );
+                item = new CollectionTreeItem( this );
                 item->setGenre(tag[0]);
             }
-            headerItem()->setText(0, QString("%1  (%2)").arg(tr("Genre")).arg(tags.count()));
+            headerItem()->setText(0, QString("   %1  (%2)").arg(tr("Genre")).arg(tags.count()));
                     break;
             break;
         case MODEYEAR:
             tags = p->database->selectYears();
+            if (item)
+                item->setYear(QString::null);
             foreach ( QStringList tag, tags) {
-                CollectionTreeItem* item = new CollectionTreeItem( this );
+                item = new CollectionTreeItem( this );
                 item->setYear(tag[0]);
             }
-            headerItem()->setText(0, QString("%1  (%2)").arg(tr("Year")).arg(tags.count()));
+            headerItem()->setText(0, QString("   %1  (%2)").arg(tr("Year")).arg(tags.count()));
                     break;
             break;
         default:
             tags = p->database->selectArtists( );
+            if (item)
+                item->setArtist(QString::null);
             foreach ( QStringList tag, tags) {
-                CollectionTreeItem* item = new CollectionTreeItem( this );
+                item = new CollectionTreeItem( this );
                 item->setArtist(tag[0]);
             }
-            headerItem()->setText(0, QString("%1  (%2)").arg(tr("Artist")).arg(tags.count()));
+            headerItem()->setText(0, QString("   %1  (%2)").arg(tr("Artist")).arg(tags.count()));
             break;
     }
 }

@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>55</width>
+    <width>76</width>
     <height>30</height>
    </rect>
   </property>
@@ -33,6 +33,19 @@
   <property name="autoFillBackground">
    <bool>false</bool>
   </property>
+  <property name="styleSheet">
+   <string notr="true">QPushButton {
+ color: #ffffff; 
+border-style: inset;
+ border: 1px solid #777777;
+ border-radius: 4px;
+ background: #555555;
+max-height: 11px;
+min-height: 11px;
+min-width:13px;
+max-width:13px;
+}</string>
+  </property>
   <property name="frameShape">
    <enum>QFrame::NoFrame</enum>
   </property>
@@ -42,10 +55,10 @@
   <widget class="QPushButton" name="push1">
    <property name="geometry">
     <rect>
-     <x>7</x>
-     <y>9</y>
-     <width>16</width>
-     <height>15</height>
+     <x>2</x>
+     <y>3</y>
+     <width>15</width>
+     <height>13</height>
     </rect>
    </property>
    <property name="font">
@@ -63,20 +76,20 @@
   <widget class="QLed" name="led1" native="true">
    <property name="geometry">
     <rect>
-     <x>9</x>
-     <y>3</y>
-     <width>12</width>
-     <height>7</height>
+     <x>90</x>
+     <y>15</y>
+     <width>13</width>
+     <height>4</height>
     </rect>
    </property>
   </widget>
   <widget class="QPushButton" name="push2">
    <property name="geometry">
     <rect>
-     <x>21</x>
-     <y>9</y>
-     <width>16</width>
-     <height>15</height>
+     <x>20</x>
+     <y>3</y>
+     <width>15</width>
+     <height>13</height>
     </rect>
    </property>
    <property name="font">
@@ -94,20 +107,20 @@
   <widget class="QLed" name="led2" native="true">
    <property name="geometry">
     <rect>
-     <x>23</x>
-     <y>3</y>
-     <width>12</width>
-     <height>7</height>
+     <x>100</x>
+     <y>15</y>
+     <width>20</width>
+     <height>20</height>
     </rect>
    </property>
   </widget>
   <widget class="QPushButton" name="push3">
    <property name="geometry">
     <rect>
-     <x>35</x>
-     <y>9</y>
-     <width>16</width>
-     <height>15</height>
+     <x>38</x>
+     <y>3</y>
+     <width>15</width>
+     <height>13</height>
     </rect>
    </property>
    <property name="font">
@@ -125,13 +138,19 @@
   <widget class="QLed" name="led3" native="true">
    <property name="geometry">
     <rect>
-     <x>37</x>
-     <y>3</y>
-     <width>12</width>
-     <height>7</height>
+     <x>123</x>
+     <y>15</y>
+     <width>13</width>
+     <height>4</height>
     </rect>
    </property>
   </widget>
+  <zorder>push2</zorder>
+  <zorder>push3</zorder>
+  <zorder>push1</zorder>
+  <zorder>led2</zorder>
+  <zorder>led3</zorder>
+  <zorder>led1</zorder>
  </widget>
  <customwidgets>
   <customwidget>
