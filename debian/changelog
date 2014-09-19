@@ -1,3 +1,13 @@
+knowthelist (2.2.4-1) unstable; urgency=medium
+
+  * Fixed a bug which prevent correct monitoring of changes
+  * Improved quick search in collection: added search in genre, multiple strings
+  * Changed alignment of some display controls
+  * Allow more audio file formates
+  * Added a mutex to get more thread safety for database access
+
+ -- Mario Stephan <mstephan@shared-files.de>  Sun, 14 Sep 2014 01:18:00 +0200
+
 knowthelist (2.2.3-1) unstable; urgency=medium
 
   * Initial Release (Closes: #751350).

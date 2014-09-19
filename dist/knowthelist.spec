@@ -90,6 +90,14 @@ Auto DJ function with multiple filters for random play
 Monitor player for pre listen tracks (via 2nd sound card e.g. USB)
 
 %changelog
+* Sun Sep 14 2014 Mario Stephan <mstephan@shared-files.de>
+- 2.2.4
+- Fixed a bug which prevent correct monitoring of changes
+- Improved quick search in collection: added search in genre, multiple
+strings
+- Changed alignment of some display controls
+- Allow more audio file formates
+- Added a mutex to get more thread safety for database access
 * Thu Aug 26 2014 Mario Stephan <mstephan@shared-files.de>
 - 2.2.3
 - Get rid of dependency to Boost
