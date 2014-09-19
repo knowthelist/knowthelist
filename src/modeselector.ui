@@ -56,7 +56,7 @@ max-width:13px;
    <property name="geometry">
     <rect>
      <x>2</x>
-     <y>3</y>
+     <y>4</y>
      <width>15</width>
      <height>13</height>
     </rect>
@@ -87,7 +87,7 @@ max-width:13px;
    <property name="geometry">
     <rect>
      <x>20</x>
-     <y>3</y>
+     <y>4</y>
      <width>15</width>
      <height>13</height>
     </rect>
@@ -118,7 +118,7 @@ max-width:13px;
    <property name="geometry">
     <rect>
      <x>38</x>
-     <y>3</y>
+     <y>4</y>
      <width>15</width>
      <height>13</height>
     </rect>
