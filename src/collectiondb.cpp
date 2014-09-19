@@ -560,7 +560,7 @@ ulong CollectionDB::getCount()
     QString command = "SELECT count(distinct tags.url) "
             + p->sqlFromString
             + p->sqlQuickFilter;
-qDebug() << command;
+
     return selectSqlNumber( command );
 }
 
