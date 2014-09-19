@@ -150,6 +150,7 @@ void CollectionDB::setFilterString( QString string )
                         "lower(album.name) LIKE lower('%%1%') OR "
                         "lower(tags.title) LIKE lower('%%1%') OR "
                         "lower(genre.name) LIKE lower('%%1%') OR "
+                        "lower(year.name) LIKE lower('%%1%') OR "
                         "lower(tags.url) LIKE lower('%%1%') )")
                         .arg(token);
     }
@@ -559,7 +560,7 @@ ulong CollectionDB::getCount()
     QString command = "SELECT count(distinct tags.url) "
             + p->sqlFromString
             + p->sqlQuickFilter;
-
+qDebug() << command;
     return selectSqlNumber( command );
 }
 
