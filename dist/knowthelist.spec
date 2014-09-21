@@ -3,48 +3,62 @@
 #
 %define name    knowthelist
 
+%define qmake qmake-qt4
 
 %if 0%{?suse_version}
 %define qmake /usr/bin/qmake
-%else
-%define qmake qmake-qt4
-
+%endif
+%if 0%{?suse_version} >=1310
+%define qmake /usr/%_lib/qt5/bin/qmake
+%endif
+%if 0%{?fedora_version} >= 20 
+%define qmake /usr/bin/qmake-qt5
 %endif
 
-
-
-Summary: Knowthelist - the awesome party music player
+Summary: awesome party music player
 Name: %{name}
 License: LGPL-3.0+
 URL: https://github.com/knowthelist/knowthelist
-Version: 1
+Version: 2.3.0
 Release: 1
 Group: Multimedia
 Source: %{name}_%{version}.orig.tar.gz
 Packager: Mario Stephan <mstephan@shared-files.de>
 Distribution: %{distr}
 BuildRoot:      %{_tmppath}/%{name}-%{version}-build
-%if 0%{?suse_version}
-BuildRequires: update-desktop-files
-BuildRequires: libtag-devel
-BuildRequires: libqt5-devel
-Requires:       gstreamer-10-plugins-base
-Requires:       gstreamer-10-plugins-ugly
-Requires:       gstreamer-10-plugins-good
-Requires:       gstreamer-10-plugins-bad
-Requires:       libgstreamer-10-0
-Requires:       gstreamer-10
-%else
-BuildRequires: qt-devel >= 5.0
-BuildRequires: taglib-devel      
+
+%if 0%{?suse_version} >=1310 || 0%{?fedora_version} >= 20 
+
+BuildRequires: taglib-devel 
+BuildRequires: pkgconfig(gstreamer-1.0)
 Requires:       gstreamer-plugins-base
 Requires:       gstreamer-plugins-good
 Requires:       gstreamer-plugins-bad-free
 Requires:       gstreamer
 %endif
 
+%if 0%{?suse_version} && 0%{?suse_version} <1310
+BuildRequires: libqt4-devel >= 4.8 qwt6-devel
+BuildRequires: pkgconfig(gstreamer-0.10)
+BuildRequires: update-desktop-files
+BuildRequires: libtag-devel
+Requires:       gstreamer-10-plugins-base
+Requires:       gstreamer-10-plugins-ugly
+Requires:       gstreamer-10-plugins-good
+Requires:       gstreamer-10-plugins-bad
+Requires:       libgstreamer-10-0
+Requires:       gstreamer-10
+%endif
+%if 0%{?suse_version} >=1310
+BuildRequires: libqt5-qtbase-devel
+BuildRequires: update-desktop-files
+%endif
+%if 0%{?fedora_version} >= 20 
+BuildRequires: qt5-qtbase-devel	
+BuildRequires: qt-devel >= 5.0
+%endif
+     
 BuildRequires: glib2-devel
-BuildRequires: pkgconfig(gstreamer-1.0)
 BuildRequires: gcc-c++
 BuildRequires: alsa-devel
 
@@ -90,15 +104,20 @@ Auto DJ function with multiple filters for random play
 Monitor player for pre listen tracks (via 2nd sound card e.g. USB)
 
 %changelog
-* Thu Aug 26 2014 Mario Stephan <mstephan@shared-files.de>
+* Sun Sep 19 2014 Mario Stephan <mstephan@shared-files.de>
+- 2.3.0
+- Made all compatible with Qt5 and Gstreamer-1.0.
+- Add an ALL node to filter results in case of a manageable number of tracks are found
+- Changed ModeSelector style and moved to tree header
+- Included 'year' tag into quick search
+* Tue Aug 26 2014 Mario Stephan <mstephan@shared-files.de>
 - 2.2.3
 - Get rid of dependency to Boost
 - Bugfix where adding a song caused a segmentation fault
 - Switched to Homebrew package installer for MacOS
 - Set CUE button to untranslatable
 - Translation updates
-
-* Thu Aug 06 2014 Mario Stephan <mstephan@shared-files.de>
+* Wed Aug 06 2014 Mario Stephan <mstephan@shared-files.de>
 - 2.2.0
 - Added a new left side tab "Lists" to manage lists, dynamic and stored lists
 - Added a new feature to handle track ratings
@@ -113,7 +132,6 @@ Monitor player for pre listen tracks (via 2nd sound card e.g. USB)
 - Enhanced algorithm to fill playlist and simplified handling of current and next item
 - Fixed some size issues and cosmetical issues
 - Stabilized to avoid crashed in some cases 
-
 * Thu Jul 03 2014 Mario Stephan <mstephan@shared-files.de>
 - 2.1.3
 -  Added new widget ModeSelector to select collection tree mode
