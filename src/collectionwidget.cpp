@@ -204,7 +204,7 @@ void CollectionWidget::resizeEvent(QResizeEvent *)
 #if defined(Q_OS_DARWIN)
     int y = 39;
 #else
-    int y = 31;
+    int y = 41;
 #endif
     p->progress->setGeometry(0,y,rec.width()-20,20);
     p->modeSelect->setGeometry(rec.width()-p->modeSelect->width(),0,p->modeSelect->width(),20);

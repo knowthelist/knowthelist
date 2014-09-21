@@ -89,7 +89,11 @@ void TrackAnalyser::newpad (GstElement *decodebin,
         }
 
         /* check media type */
-        caps = gst_pad_query_caps (pad, NULL);
+#ifdef GST_API_VERSION_1
+        caps = gst_pad_query_caps (pad,NULL);
+#else
+        caps = gst_pad_get_caps (pad);
+#endif
         str = gst_caps_get_structure (caps, 0);
         if (!g_strrstr (gst_structure_get_name (str), "audio")) {
                 gst_caps_unref (caps);
@@ -122,14 +126,20 @@ bool TrackAnalyser::prepare()
         GstPad *audiopad;
         GstCaps *caps;
 
-        caps = gst_caps_new_simple ("audio/x-raw",
-                                    "channels", G_TYPE_INT, 2, NULL);
+
 
         pipeline = gst_pipeline_new ("pipeline");
         bus = gst_pipeline_get_bus (GST_PIPELINE (pipeline));
 
-
+#ifdef GST_API_VERSION_1
+        caps = gst_caps_new_simple ("audio/x-raw",
+                                    "channels", G_TYPE_INT, 2, NULL);
         dec = gst_element_factory_make ("decodebin", "decoder");
+#else
+        caps = gst_caps_new_simple ("audio/x-raw-int",
+                                    "channels", G_TYPE_INT, 2, NULL);
+        dec = gst_element_factory_make ("decodebin2", "decoder");
+#endif
         g_signal_connect (dec, "pad-added", G_CALLBACK (cb_newpad_ta), this);
         gst_bin_add (GST_BIN (pipeline), dec);
 
@@ -160,7 +170,11 @@ bool TrackAnalyser::prepare()
 
         gst_object_unref (audiopad);
 
+#ifdef GST_API_VERSION_1
         gst_bus_set_sync_handler (bus, bus_cb, this, NULL);
+#else
+        gst_bus_set_sync_handler (bus, bus_cb, this);
+#endif
 
         return pipeline;
 }
@@ -243,7 +257,12 @@ QTime TrackAnalyser::length()
 
         gint64 value=0;
 
+#ifdef GST_API_VERSION_1
         if(gst_element_query_duration(pipeline, GST_FORMAT_TIME, &value)) {
+#else
+        GstFormat fmt = GST_FORMAT_TIME;
+        if(gst_element_query_duration(pipeline, &fmt, &value)) {
+#endif
 
             return QTime(0,0).addMSecs( static_cast<uint>( ( value / GST_MSECOND ) )); // nanosec -> msec
         }

@@ -75,7 +75,11 @@ void Player::newpad (GstElement *decodebin,
         }
 
         /* check media type */
+#ifdef GST_API_VERSION_1
         caps = gst_pad_query_caps (pad,NULL);
+#else
+        caps = gst_pad_get_caps (pad);
+#endif
         str = gst_caps_get_structure (caps, 0);
         if (!g_strrstr (gst_structure_get_name (str), "audio")) {
                 gst_caps_unref (caps);
@@ -177,11 +181,16 @@ bool Player::prepare()
         GstCaps *caps;
         pipeline = gst_pipeline_new ("pipeline");
         bus = gst_pipeline_get_bus (GST_PIPELINE (pipeline));
+
+
+#ifdef GST_API_VERSION_1
+        dec = gst_element_factory_make ("decodebin", "decoder");
+#else
+        dec = gst_element_factory_make ("decodebin2", "decoder");
+        caps_value = "audio/x-raw-int";
+#endif
         caps = gst_caps_new_simple (caps_value.toLatin1().data(),
                                     "channels", G_TYPE_INT, 2, NULL);
-
-
-        dec = gst_element_factory_make ("decodebin", "decoder");
         g_signal_connect (dec, "pad-added", G_CALLBACK (cb_newpad), this);
         gst_bin_add (GST_BIN (pipeline), dec);
 
@@ -220,8 +229,11 @@ bool Player::prepare()
         gst_element_set_state (l_src, GST_STATE_NULL);
         gst_element_link ( l_src,dec);
 
+#ifdef GST_API_VERSION_1
         gst_bus_set_sync_handler (bus, bus_cb, this, NULL);
-
+#else
+        gst_bus_set_sync_handler (bus, bus_cb, this);
+#endif
         gst_object_unref (audiopad);
 
         return pipeline;
@@ -336,8 +348,12 @@ QTime Player::position()
 
         gint64 value=0;
 
+#ifdef GST_API_VERSION_1
         if(gst_element_query_position(pipeline, GST_FORMAT_TIME, &value)) {
-
+#else
+        GstFormat fmt = GST_FORMAT_TIME;
+        if(gst_element_query_position(pipeline, &fmt, &value)) {
+#endif
             m_position = static_cast<uint>( ( value / GST_MSECOND ) );
             return QTime(0,0).addMSecs( m_position ); // nanosec -> msec
         }
@@ -352,7 +368,12 @@ QTime Player::length()
 
     if ( m_length == 0 && pipeline){
 
+#ifdef GST_API_VERSION_1
         if(gst_element_query_duration(pipeline, GST_FORMAT_TIME, &value)) {
+#else
+        GstFormat fmt = GST_FORMAT_TIME;
+        if(gst_element_query_duration(pipeline, &fmt, &value)) {
+#endif
             m_length = static_cast<uint>( ( value / GST_MSECOND ));
         }
     }
@@ -447,9 +468,12 @@ void Player::messageReceived(GstMessage *message)
                             gint channels;
                             gdouble peak_dB;
                             gdouble rms;
+                            gint i;
+
+#ifdef GST_API_VERSION_1
                             const GValue *array_val;
                             GValueArray *peak_arr;
-                            gint i;
+
 
                             array_val = gst_structure_get_value (s, "peak");
                             peak_arr = (GValueArray *) g_value_get_boxed (array_val);
@@ -457,7 +481,18 @@ void Player::messageReceived(GstMessage *message)
 
                             for (i = 0; i < channels; ++i) {
                               peak_dB = g_value_get_double (peak_arr->values+i);
+#else
+                             const GValue *list;
+                             const GValue *value;
 
+                             list = gst_structure_get_value (s, "peak");
+                             channels = gst_value_list_get_size (list);
+
+                             for (i = 0; i < channels; ++i) {
+                                 list = gst_structure_get_value (s, "peak");
+                                 value = gst_value_list_get_value (list, i);
+                                 peak_dB = g_value_get_double (value);
+#endif
                               /* converting from dB to normal gives us a value between 0.0 and 1.0 */
                               rms = pow (10, peak_dB / 20);
                               if (i==0)
@@ -470,9 +505,12 @@ void Player::messageReceived(GstMessage *message)
                             gint channels;
                             gdouble peak_dB;
                             gdouble rms;
+                            gint i;
+
+#ifdef GST_API_VERSION_1
                             const GValue *array_val;
                             GValueArray *peak_arr;
-                            gint i;
+
 
                             array_val = gst_structure_get_value (s, "peak");
                             peak_arr = (GValueArray *) g_value_get_boxed (array_val);
@@ -480,6 +518,18 @@ void Player::messageReceived(GstMessage *message)
 
                             for (i = 0; i < channels; ++i) {
                               peak_dB = g_value_get_double (peak_arr->values+i);
+#else
+                             const GValue *list;
+                             const GValue *value;
+
+                             list = gst_structure_get_value (s, "peak");
+                             channels = gst_value_list_get_size (list);
+
+                             for (i = 0; i < channels; ++i) {
+                                 list = gst_structure_get_value (s, "peak");
+                                 value = gst_value_list_get_value (list, i);
+                                 peak_dB = g_value_get_double (value);
+#endif
 
                               /* converting from dB to normal gives us a value between 0.0 and 1.0 */
                               rms = pow (10, peak_dB / 20);

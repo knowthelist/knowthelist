@@ -7,7 +7,7 @@
 %if 0%{?suse_version}
 %define qmake /usr/bin/qmake
 %else
-%define qmake qmake-qt5
+%define qmake qmake-qt4
 
 %endif
 

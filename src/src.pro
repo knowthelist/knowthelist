@@ -5,12 +5,18 @@
 #
 
 DEFINES += APP_VERSION="\\\"2.3.0\\\""
+
 QT += core \
     gui \
     xml \
     sql
 
-greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
+greaterThan(QT_MAJOR_VERSION, 4){
+     #use qt5 and gstreamer 1.x
+     QT += widgets
+     DEFINES += GST_API_VERSION_1
+}
+#else use qt4 and gstreamer 0.10
 
 TARGET = knowthelist
 TEMPLATE = app
@@ -173,10 +179,20 @@ unix:!macx {
             desktop.path = $$DATADIR/applications
             desktop.files += ../dist/Knowthelist.desktop
             INSTALLS += target icon desktop
+
+contains(DEFINES, GST_API_VERSION_1) {
     CONFIG += link_pkgconfig \
         gstreamer-1.0
     PKGCONFIG += gstreamer-1.0 \
         taglib alsa
+}
+else {
+    CONFIG += link_pkgconfig \
+        gstreamer
+    PKGCONFIG += gstreamer-0.10 \
+        taglib alsa
+}
+
 }
 RESOURCES += ../images/icons.qrc \
     ../locale/locale.qrc

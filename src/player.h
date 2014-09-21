@@ -23,6 +23,7 @@
 #define GST_DISABLE_LOADSAVE 1
 #define GST_DISABLE_REGISTRY 1
 #define GST_DISABLE_DEPRECATED 1
+
 #include <gst/gst.h>
 
 class Player : public QWidget
