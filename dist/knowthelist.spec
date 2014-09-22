@@ -33,7 +33,6 @@ BuildRequires: taglib-devel
 BuildRequires: pkgconfig(gstreamer-1.0)
 Requires:       gstreamer-plugins-base
 Requires:       gstreamer-plugins-good
-Requires:       gstreamer-plugins-bad-free
 Requires:       gstreamer
 %endif
 
@@ -52,10 +51,12 @@ Requires:       gstreamer-10
 %if 0%{?suse_version} >=1310
 BuildRequires: libqt5-qtbase-devel
 BuildRequires: update-desktop-files
+Requires:       gstreamer-plugins-bad
 %endif
 %if 0%{?fedora_version} >= 20 
 BuildRequires: qt5-qtbase-devel	
 BuildRequires: qt-devel >= 5.0
+Requires:       gstreamer-plugins-bad-free
 %endif
      
 BuildRequires: glib2-devel
