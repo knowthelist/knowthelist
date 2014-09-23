@@ -156,6 +156,7 @@ win32 {
     QMAKE_POST_LINK = $$QMAKE_COPY \"$${DESTDIR}\libgstdirectsoundsink.dll\" \"$${GST_HOME}lib\gstreamer-1.0\" $$escape_expand(\\n\\t)
 }
 macx { 
+    DEFINES += GST_API_VERSION_1
     INCLUDEPATH += /usr/local/include/gstreamer-1.0 \
         /usr/local/include/glib-2.0 \
         /usr/local/lib/glib-2.0/include \
