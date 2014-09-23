@@ -34,6 +34,7 @@ struct CollectionTreePrivate
         CollectionDB* database;
         QList<Track*> tracks;
         QString filterString;
+        QMutex mutex;
 };
 
 CollectionTree::CollectionTree(QWidget *parent) :
@@ -72,6 +73,7 @@ CollectionTree::CollectionTree(QWidget *parent) :
 
 CollectionTree::~CollectionTree()
 {
+    p->mutex.tryLock(2000);
     delete p;
 }
 
@@ -173,6 +175,12 @@ CollectionTree::on_itemExpanded( QTreeWidgetItem* item )
 
 void CollectionTree::triggerRandomSelection()
 {
+    QFuture<void> future = QtConcurrent::run( this, &CollectionTree::asynchronTriggerRandomSelection);
+}
+
+void CollectionTree::asynchronTriggerRandomSelection()
+{
+    QMutexLocker locker(&p->mutex);
     p->tracks.clear();
 
     for ( int i = 0; i < 15; i++ ) {
@@ -201,6 +209,8 @@ void CollectionTree::on_currentItemChanged( QTreeWidgetItem* item )
 
 void CollectionTree::asynchronCurrentItemChanged( QTreeWidgetItem* item )
 {
+    QMutexLocker locker(&p->mutex);
+
     if (!item)
         return;
 

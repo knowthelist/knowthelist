@@ -46,6 +46,7 @@ public slots:
     void on_itemExpanded( QTreeWidgetItem* item );
     void showContextMenu(QTreeWidgetItem *, int );
     void triggerRandomSelection();
+    void asynchronTriggerRandomSelection();
     void setFilter( QString filter );
     void createTrunk();
     void onRescanTriggered();
