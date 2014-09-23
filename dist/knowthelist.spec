@@ -27,20 +27,12 @@ Packager: Mario Stephan <mstephan@shared-files.de>
 Distribution: %{distr}
 BuildRoot:      %{_tmppath}/%{name}-%{version}-build
 
-%if 0%{?suse_version} >=1310 || 0%{?fedora_version} >= 20 
-
-BuildRequires: taglib-devel 
-BuildRequires: pkgconfig(gstreamer-1.0)
-Requires:       gstreamer-plugins-base
-Requires:       gstreamer-plugins-good
-Requires:       gstreamer
-%endif
-
 %if 0%{?suse_version} && 0%{?suse_version} <1310
 BuildRequires: libqt4-devel >= 4.8 qwt6-devel
 BuildRequires: pkgconfig(gstreamer-0.10)
 BuildRequires: update-desktop-files
 BuildRequires: libtag-devel
+Requires:       libqt4-qtbase
 Requires:       gstreamer-10-plugins-base
 Requires:       gstreamer-10-plugins-ugly
 Requires:       gstreamer-10-plugins-good
@@ -48,15 +40,29 @@ Requires:       gstreamer-10-plugins-bad
 Requires:       libgstreamer-10-0
 Requires:       gstreamer-10
 %endif
-%if 0%{?suse_version} >=1310
+%if 0%{?suse_version} >=1310 
+BuildRequires: taglib-devel 
+BuildRequires: pkgconfig(gstreamer-1.0)
 BuildRequires: libqt5-qtbase-devel
 BuildRequires: update-desktop-files
 Requires:       gstreamer-plugins-bad
+Requires:       gstreamer-plugins-base
+Requires:       gstreamer-plugins-ugly
+Requires:       gstreamer-plugins-good
+Requires:       gstreamer
+Requires:       libqt5-qtbase
 %endif
 %if 0%{?fedora_version} >= 20 
+BuildRequires: taglib-devel 
+BuildRequires: pkgconfig(gstreamer-1.0)
 BuildRequires: qt5-qtbase-devel	
 BuildRequires: qt-devel >= 5.0
-Requires:       gstreamer-plugins-bad-free
+Requires:       qt5-qtbase
+Requires:       gstreamer1-plugins-base
+Requires:       gstreamer1-plugins-ugly
+Requires:       gstreamer1-plugins-good
+Requires:       gstreamer1-plugins-bad-free
+Requires:       gstreamer1
 %endif
      
 BuildRequires: glib2-devel
