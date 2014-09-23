@@ -48,9 +48,9 @@ void ModeSelector::on_push1_clicked()
     //ui->led2->off();
     //ui->led3->off();
     selMode = ModeSelector::MODENONE;
-    ui->push1->setStyleSheet("QPushButton { border: 1px solid #2377f6;}");
-    ui->push2->setStyleSheet("QPushButton { border: 1px solid #777777;}");
-    ui->push3->setStyleSheet("QPushButton { border: 1px solid #777777;}");
+    ui->push1->setStyleSheet("QPushButton { border: 1px solid #3399ff;}");
+    ui->push2->setStyleSheet("QPushButton { border: 1px solid #aaaaaa;}");
+    ui->push3->setStyleSheet("QPushButton { border: 1px solid #aaaaaa;}");
     Q_EMIT modeChanged(selMode);
 }
 void ModeSelector::on_push2_clicked()
@@ -59,9 +59,9 @@ void ModeSelector::on_push2_clicked()
     //ui->led2->on();
     //ui->led3->off();
     selMode = ModeSelector::MODEYEAR;
-    ui->push1->setStyleSheet("QPushButton { border: 1px solid #777777;}");
-    ui->push2->setStyleSheet("QPushButton { border: 1px solid #2377f6;}");
-    ui->push3->setStyleSheet("QPushButton { border: 1px solid #777777;}");
+    ui->push1->setStyleSheet("QPushButton { border: 1px solid #aaaaaa;}");
+    ui->push2->setStyleSheet("QPushButton { border: 1px solid #3399ff;}");
+    ui->push3->setStyleSheet("QPushButton { border: 1px solid #aaaaaa;}");
     Q_EMIT modeChanged(selMode);
 }
 void ModeSelector::on_push3_clicked()
@@ -70,9 +70,9 @@ void ModeSelector::on_push3_clicked()
     //ui->led2->off();
     //ui->led3->on();
     selMode = ModeSelector::MODEGENRE;
-    ui->push1->setStyleSheet("QPushButton { border: 1px solid #777777;}");
-    ui->push2->setStyleSheet("QPushButton { border: 1px solid #777777;}");
-    ui->push3->setStyleSheet("QPushButton { border: 1px solid #2377f6;}");
+    ui->push1->setStyleSheet("QPushButton { border: 1px solid #aaaaaa;}");
+    ui->push2->setStyleSheet("QPushButton { border: 1px solid #aaaaaa;}");
+    ui->push3->setStyleSheet("QPushButton { border: 1px solid #3399ff;}");
     Q_EMIT modeChanged(selMode);
 }
 void ModeSelector::setMode(ModeSelector::modeType value)
