@@ -39,6 +39,7 @@ class CollectionUpdaterPrivate
         QTimer *timer;
         bool incremental;
         CollectionDB *collectionDB;
+        QMutex mutex;
 };
 
 CollectionUpdater::CollectionUpdater()
@@ -70,8 +71,10 @@ CollectionUpdater::CollectionUpdater()
         p->timer = new QTimer( this );
         p->timer->setInterval(600000); //1000 * 60 * 10 = 10min
         connect(p->timer,SIGNAL(timeout()),this,SLOT(monitor()));
-        if ( p->doMonitor)
+        if ( p->doMonitor){
+           monitor();
            p->timer->start();
+        }
 }
 
 
@@ -151,7 +154,7 @@ void CollectionUpdater::asynchronScan(QStringList dirs)
     qDebug() << Q_FUNC_INFO << dirs.count() << "dirs" << endl;
 
     // avoid multiple runs
-    p->timer->stop();
+    QMutexLocker locker(&p->mutex);
 
     Q_EMIT progressChanged(1);
 
@@ -175,10 +178,6 @@ void CollectionUpdater::asynchronScan(QStringList dirs)
 
     if (!entries.empty())
         Q_EMIT changesDone();
-
-    // Re-start timer to monitor dirs
-    if ( p->doMonitor)
-       p->timer->start();
 }
 
 void CollectionUpdater::readDir( const QString& dir, QStringList& entries )
