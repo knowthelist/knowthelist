@@ -272,7 +272,7 @@ void SettingsDialog::on_pushAbout_clicked()
                       "<br />* Heiko Fischer   (for testing and new ideas)"
                       "<br />* David Geiger and Adrien Daugabel   (for French translation and issue reports)"
                       "<br />* Pavel Fric   (for Czech translation)"
-                      "<br />* Lszl Farkas   (for Hungarian translation)</div>"       ));
+                      "<br />* László Farkas   (for Hungarian translation)</div>"       ));
     msgBox.setWindowTitle(tr("About Knowthelist"));
     msgBox.exec();
 }
