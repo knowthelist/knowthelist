@@ -20,7 +20,6 @@
 
 #include <qobject.h>
 #include <qstringlist.h>
-#include <QCustomEvent>
 #include <qdir.h>
 #include <QtSql>
 #include "progressbar.h"

@@ -30,7 +30,9 @@
 
 #include <qfile.h>
 #include <QPainter>
-
+#include <QHeaderView>
+#include <QApplication>
+#include <QMessageBox>
 
 
 Playlist::Playlist(QWidget* parent)
@@ -74,7 +76,7 @@ Playlist::Playlist(QWidget* parent)
     setHeaderItem(headeritem);
     setHeaderLabels(headers);
 
-    header()->setResizeMode(QHeaderView::Interactive);
+    //header()->setResizeMode(QHeaderView::Interactive);
     header()->hideSection(PlaylistItem::Column_Url);
 
     // prevent click event if doubleclicked
@@ -115,11 +117,11 @@ void Playlist::addTrack( Track* track, PlaylistItem* after )
 {
     if (!track || !track->isValid())
         return;
-    //qDebug() << __PRETTY_FUNCTION__ <<":"<<objectName()<<" url="<<track->url();
+    //qDebug() << Q_FUNC_INFO <<":"<<objectName()<<" url="<<track->url();
     PlaylistItem* item =  new PlaylistItem( this, after );
     item->setTexts( track );
     newPlaylistItem  = item;
-    RatingWidget* rating= new RatingWidget();
+    RatingWidget* rating= new RatingWidget(this);
     rating->setRating( track->rate() * 0.1 );
     QObject::connect(rating,SIGNAL(RatingChanged(float)),SLOT(onRatingChanged(float)));
     setItemWidget(item, PlaylistItem::Column_Rate, rating);
@@ -178,7 +180,7 @@ void Playlist::appendList(QList<QUrl> list)
 
 void Playlist::appendList( const QList<QUrl> urls, PlaylistItem* after )
 {
-   qDebug() << __FUNCTION__;
+   qDebug() << Q_FUNC_INFO;
 
    int droppedUrlCnt = urls.size();
    for(int i = droppedUrlCnt-1; i > -1 ; i--) {
@@ -415,7 +417,7 @@ QList<Track*> Playlist::allTracks()
 void Playlist::removePlaylistItem( PlaylistItem *item )
 {
    if ( item )  {
-     qDebug() << __FUNCTION__ << ":"<<item->track()->url();
+     qDebug() << Q_FUNC_INFO << ":"<<item->track()->url();
 
      //unset if not available any more
      if ( item == currentPlaylistItem )
@@ -432,7 +434,7 @@ void Playlist::removePlaylistItem( PlaylistItem *item )
 
 void Playlist::skipForward()
 {
-    qDebug() << __PRETTY_FUNCTION__ <<":"<<objectName() ;
+    qDebug() << Q_FUNC_INFO <<":"<<objectName() ;
 
     //remove previous item at last due to keep playing
     if ( autoClearOn ){
@@ -456,7 +458,11 @@ void Playlist::skipRewind()
 
 QString Playlist::defaultPlaylistPath()
 {
+#if QT_VERSION >= 0x050000
+    QString pathName = QStandardPaths::standardLocations(QStandardPaths::DataLocation).at(0);
+#else
     QString pathName = QDesktopServices::storageLocation(QDesktopServices::DataLocation);
+#endif
     QDir path(pathName);
 
     if (!path.exists())
@@ -468,7 +474,7 @@ QString Playlist::defaultPlaylistPath()
 // Export content as a xspf playlist
 void Playlist::saveXML( const QString &path ) const
 {
-    qDebug() << __FUNCTION__ << "BEGIN " ;
+    qDebug() << Q_FUNC_INFO << "BEGIN " ;
     QFile file( path );
 
     if( !file.open(QFile::WriteOnly) ) return;
@@ -530,7 +536,7 @@ void Playlist::saveXML( const QString &path ) const
     stream << "<?xml version=\"1.0\" encoding=\"utf8\"?>\n";
     stream << newdoc.toString();
     file.close();
-    qDebug() << __FUNCTION__<< "END "  ;
+    qDebug() << Q_FUNC_INFO<< "END "  ;
 }
 
 void Playlist::loadXML( const QString &path )
@@ -587,7 +593,7 @@ void Playlist::loadXML( const QString &path )
     }
     file.close();
 
-    qDebug() << "End " << __FUNCTION__;
+    qDebug() << "End " << Q_FUNC_INFO;
 }
 
 void Playlist::removeSelectedItems()
@@ -645,13 +651,13 @@ void Playlist::onRatingChanged(float rate)
 {
     if(RatingWidget* rateWidget = dynamic_cast<RatingWidget*>(QObject::sender())){
 
-        QModelIndex modidx = indexAt( rateWidget->pos() );
+        QModelIndex modidx = indexAt( QPoint(0,rateWidget->pos().y()) );
         (PlaylistItem*)this->itemFromIndex(modidx);
         if(PlaylistItem* item = (PlaylistItem*)this->itemFromIndex(modidx)){
             Track* track = item->track();
             if (track){
                 track->setRate(rate * 10);
-                qDebug() << __FUNCTION__<<item->track()->url();
+                qDebug() << Q_FUNC_INFO<<item->track()->url();
                 emit trackPropertyChanged(track);
             }
         }
@@ -761,7 +767,7 @@ void Playlist::performDrag()
          PlaylistItem *item = dynamic_cast<PlaylistItem *>(it.next());
          if ( (item != currentPlaylistItem || (!m_isPlaying)) && item->track()->isValid()  )
          {
-             qDebug() << __PRETTY_FUNCTION__ <<": send Data:"<<item->track()->url();
+             qDebug() << Q_FUNC_INFO <<": send Data:"<<item->track()->url();
              QStringList tag = item->track()->tagList();
              tags << tag;
              if (i==0){
@@ -829,7 +835,7 @@ void Playlist::dropEvent(QDropEvent *event)
 
         //add Tracks to this playlist
         foreach ( QStringList tag, tags) {
-            qDebug() << __PRETTY_FUNCTION__ <<": is playlistitem; tags:"<<tags;
+            qDebug() << Q_FUNC_INFO <<": is playlistitem; tags:"<<tags;
             addTrack(new Track(tag),m_marker);
             m_marker = this->newTrack();
         }
@@ -899,7 +905,7 @@ void Playlist::paintEvent ( QPaintEvent* event )
           }
       }
 
-     // qDebug() << __PRETTY_FUNCTION__ <<": modidx:"<<modidx;
+     // qDebug() << Q_FUNC_INFO <<": modidx:"<<modidx;
 
       //draw the drop point hightlighter
       QRect arect = visualRect ( modidx );
@@ -919,7 +925,7 @@ void Playlist::paintEvent ( QPaintEvent* event )
 
 void Playlist::keyPressEvent   (   QKeyEvent* e    )
 {
-  qDebug() << __FUNCTION__ << "  " << e->key() << "del="<<Qt::Key_Delete;
+  qDebug() << Q_FUNC_INFO << "  " << e->key() << "del="<<Qt::Key_Delete;
 
   PlaylistItem* item = static_cast<PlaylistItem*>(currentItem());
 
@@ -993,50 +999,37 @@ void Playlist::showContextMenu( PlaylistItem *item, int col )
     QAction *a = popup.exec( QCursor::pos());
     if (!a)
         return;
-    switch( a->shortcut() )
-    {
-        case Qt::Key_L:
+    QKeySequence shortcut = a->shortcut();
+
+        if( shortcut == QKeySequence(Qt::Key_L) ){
             setCurrentPlaylistItem( item );
             handleChanges();
-            break;
-
-        case Qt::Key_N:
+        }
+        else if( shortcut == QKeySequence(Qt::Key_N) ){
             setNextPlaylistItem( item );
-            break;
-
-        case Qt::Key_1:
+        }
+        else if( shortcut == QKeySequence(Qt::Key_1) ){
             Q_EMIT wantLoad(item->track(),"Left" );
-            break;
-
-        case Qt::Key_2:
+        }
+        else if( shortcut == QKeySequence(Qt::Key_2) ){
             Q_EMIT wantLoad(item->track(),"Right" );
-            break;
-
-        case Qt::Key_P:
+        }
+        else if( shortcut == QKeySequence(Qt::Key_P) ){
             Q_EMIT itemDoubleClicked(item,col);
-            break;
-
-        case Qt::Key_S:
+        }
+        else if( shortcut == QKeySequence(Qt::Key_S) ){
             Q_EMIT wantSearch( item->text(col) );
-            break;
-
-        case Qt::Key_V:
+        }
+        else if( shortcut == QKeySequence(Qt::Key_V) ){
             showTrackInfo( item->track() );
-            break;
-
-        case Qt::Key_O:
+        }
+        else if( shortcut == QKeySequence(Qt::Key_O) ){
             if ( item->track())
                 QDesktopServices::openUrl( QUrl(QString("file://%1").arg(item->track()->dirPath())));
-            break;
-
-        case Qt::Key_F2:
-            //rename( item, col );
-            break;
-        case Qt::Key_Delete:
+        }
+        else if( shortcut == QKeySequence(Qt::Key_Delete) ){
             item=0;
-            break;
-
-    }
+        }
 
 }
 

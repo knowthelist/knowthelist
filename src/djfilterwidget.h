@@ -57,8 +57,8 @@ private:
 private slots:
     void on_pushActivate_clicked();
     void on_txtPath_textChanged(QString );
-    void on_cmbGenres_textChanged(QString );
-    void on_cmbArtists_textChanged(QString );
+    void on_cmbGenres_editTextChanged(QString );
+    void on_cmbArtists_editTextChanged(QString );
     void on_sliFilterValue_valueChanged(int value);
     void slotSetFilter();
     void onFilterStatusChanged(bool b);

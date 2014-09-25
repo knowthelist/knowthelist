@@ -17,3 +17,14 @@ dpkg-buildpackage -k${GPGKEY}
 # Suse / Fedora spec
 sed -i 's/Version: 1/Version: '${version}'/g' ${target}/dist/knowthelist.spec
 mv ${target}/dist/knowthelist.spec ${dist}/../../knowthelist_${version}.spec
+
+#process=$(objdump -p "$1" |grep NEEDED | cut -d ' ' -f 18)
+
+results(){
+for package in $process
+  do                                                                                                                       
+    dpkg -S $package |                                                                                                     
+      cut -d: -f1 |
+        sort -u
+  done
+}

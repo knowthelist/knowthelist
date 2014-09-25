@@ -18,11 +18,11 @@
 */
 
 #include "collectiondb.h"
+
 #include <QtSql>
 
 #include <QDesktopServices>
 #include <qimage.h>
-#include <QCustomEvent>
 #include <QMutex>
 
 class CollectionDbPrivate
@@ -43,7 +43,6 @@ class CollectionDbPrivate
         QSqlDatabase *db;
         QSqlQuery *query;
         QMutex mutex;
-
 
         QString selectionFilter(QString year="", QString genre="", QString artist="", QString album="")
         {
@@ -148,12 +147,13 @@ void CollectionDB::setFilterString( QString string )
     p->sqlQuickFilter = "";
 
     foreach (QString token, string.split(" ")) {
-        p->sqlQuickFilter += QString( " AND ( lower(artist.name) LIKE lower('%%1%') OR "
-            "lower(album.name) LIKE lower('%%1%') OR "
-            "lower(tags.title) LIKE lower('%%1%') OR "
-            "lower(genre.name) LIKE lower('%%1%') OR "
-            "lower(tags.url) LIKE lower('%%1%') )")
-            .arg(token);
+            p->sqlQuickFilter += QString( " AND ( lower(artist.name) LIKE lower('%%1%') OR "
+                        "lower(album.name) LIKE lower('%%1%') OR "
+                        "lower(tags.title) LIKE lower('%%1%') OR "
+                        "lower(genre.name) LIKE lower('%%1%') OR "
+                        "lower(year.name) LIKE lower('%%1%') OR "
+                        "lower(tags.url) LIKE lower('%%1%') )")
+                        .arg(token);
     }
 }
 
@@ -321,7 +321,7 @@ QList<QStringList> CollectionDB::selectSql( const QString& statement)
 
 void CollectionDB::createTables( bool temporary )
 {
-    qDebug() << __FUNCTION__;
+    qDebug() << Q_FUNC_INFO;
 
     //create tag table
     executeSql( QString( "CREATE %1 TABLE tags%2 ("
@@ -397,7 +397,7 @@ void CollectionDB::createTables( bool temporary )
 
 void CollectionDB::dropTables( bool temporary )
 {
-    qDebug() << __FUNCTION__;
+    qDebug() << Q_FUNC_INFO;
 
     executeSql( QString( "DROP TABLE tags%1;" ).arg( temporary ? "_temp" : "" ) );
     executeSql( QString( "DROP TABLE album%1;" ).arg( temporary ? "_temp" : "" ) );
@@ -434,7 +434,7 @@ void CollectionDB::moveTempTables()
 
 void CollectionDB::createStatsTable()
 {
-    qDebug() << __FUNCTION__;
+    qDebug() << Q_FUNC_INFO;
 
     // create music statistics database
     executeSql( QString( "CREATE TABLE statistics ("
@@ -462,7 +462,7 @@ void CollectionDB::createStatsTable()
 
 void CollectionDB::dropStatsTable()
 {
-    qDebug() << __FUNCTION__;
+    qDebug() << Q_FUNC_INFO;
 
     executeSql( "DROP TABLE statistics;" );
     executeSql( "DROP TABLE favorites;" );
@@ -528,7 +528,7 @@ QStringList CollectionDB::getRandomEntry(QString path, QString genre, QString ar
             return QStringList();
     }
     else {
-        qDebug() << __FUNCTION__ << " No Track found matching filter";
+        qDebug() << Q_FUNC_INFO << " No Track found matching filter";
         return QStringList();
     }
 }

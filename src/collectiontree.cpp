@@ -21,13 +21,20 @@
 #include <QApplication>
 #include <QMenu>
 #include <QtGui>
-#include <QtConcurrentRun>
+#include <QHeaderView>
+#include <QMessageBox>
+#if QT_VERSION >= 0x050000
+ #include <QtConcurrent/QtConcurrent>
+#else
+ #include <QtConcurrentRun>
+#endif
 
 struct CollectionTreePrivate
 {
         CollectionDB* database;
         QList<Track*> tracks;
         QString filterString;
+        QMutex mutex;
 };
 
 CollectionTree::CollectionTree(QWidget *parent) :
@@ -55,29 +62,35 @@ CollectionTree::CollectionTree(QWidget *parent) :
     setHeaderItem(headeritem);
     setHeaderLabels(headers);
     header()->resizeSection(0,this->width()-50);
-
+    header()->setMinimumHeight(18);
 
     connect( this, SIGNAL(currentItemChanged(QTreeWidgetItem*,QTreeWidgetItem*)),
              this,   SLOT( on_currentItemChanged( QTreeWidgetItem* ) ) );
 
     connect( this, SIGNAL(itemExpanded( QTreeWidgetItem*)),
              this,   SLOT( on_itemExpanded( QTreeWidgetItem* ) ) );
-
-    connect( this,     SIGNAL(itemClicked(QTreeWidgetItem*,int)) ,
-             this,       SLOT(on_itemClicked(QTreeWidgetItem*,int)));
 }
 
 CollectionTree::~CollectionTree()
 {
+    p->mutex.tryLock(2000);
     delete p;
 }
 
 void
 CollectionTree::createTrunk()
 {
-    //qDebug() << __FUNCTION__;
+    //qDebug() << Q_FUNC_INFO;
+    CollectionTreeItem* item = 0;
 
     clear();
+
+    //add "ALL" node and select it
+    int countAll = p->database->getCount();
+    if (countAll < 1000 && countAll > 0){
+        item = new CollectionTreeItem(this );
+        setCurrentItem(item);
+    }
 
     QList<QStringList> tags;
 
@@ -86,29 +99,35 @@ CollectionTree::createTrunk()
     {
         case MODEGENRE:
             tags = p->database->selectGenres();
+            if (item)
+                item->setGenre(QString::null);
             foreach ( QStringList tag, tags) {
-                CollectionTreeItem* item = new CollectionTreeItem( this );
+                item = new CollectionTreeItem( this );
                 item->setGenre(tag[0]);
             }
-            headerItem()->setText(0, QString("%1  (%2)").arg(tr("Genre")).arg(tags.count()));
+            headerItem()->setText(0, QString("   %1  (%2)").arg(tr("Genre")).arg(tags.count()));
                     break;
             break;
         case MODEYEAR:
             tags = p->database->selectYears();
+            if (item)
+                item->setYear(QString::null);
             foreach ( QStringList tag, tags) {
-                CollectionTreeItem* item = new CollectionTreeItem( this );
+                item = new CollectionTreeItem( this );
                 item->setYear(tag[0]);
             }
-            headerItem()->setText(0, QString("%1  (%2)").arg(tr("Year")).arg(tags.count()));
+            headerItem()->setText(0, QString("   %1  (%2)").arg(tr("Year")).arg(tags.count()));
                     break;
             break;
         default:
             tags = p->database->selectArtists( );
+            if (item)
+                item->setArtist(QString::null);
             foreach ( QStringList tag, tags) {
-                CollectionTreeItem* item = new CollectionTreeItem( this );
+                item = new CollectionTreeItem( this );
                 item->setArtist(tag[0]);
             }
-            headerItem()->setText(0, QString("%1  (%2)").arg(tr("Artist")).arg(tags.count()));
+            headerItem()->setText(0, QString("   %1  (%2)").arg(tr("Artist")).arg(tags.count()));
             break;
     }
 }
@@ -117,7 +136,7 @@ CollectionTree::createTrunk()
 void
 CollectionTree::on_itemExpanded( QTreeWidgetItem* item )
 {
-    qDebug() << __FUNCTION__ << endl;
+    qDebug() << Q_FUNC_INFO << endl;
     if ( !item ) return ;
 
     if  ( item->childCount() == 0 ) {
@@ -156,6 +175,12 @@ CollectionTree::on_itemExpanded( QTreeWidgetItem* item )
 
 void CollectionTree::triggerRandomSelection()
 {
+    QFuture<void> future = QtConcurrent::run( this, &CollectionTree::asynchronTriggerRandomSelection);
+}
+
+void CollectionTree::asynchronTriggerRandomSelection()
+{
+    QMutexLocker locker(&p->mutex);
     p->tracks.clear();
 
     for ( int i = 0; i < 15; i++ ) {
@@ -173,7 +198,7 @@ void CollectionTree::triggerRandomSelection()
         p->tracks.append(track);
     }
 
-    qDebug() << __FUNCTION__ << p->tracks.count();
+    qDebug() << Q_FUNC_INFO << p->tracks.count();
     emit selectionChanged(p->tracks);
 }
 
@@ -184,13 +209,15 @@ void CollectionTree::on_currentItemChanged( QTreeWidgetItem* item )
 
 void CollectionTree::asynchronCurrentItemChanged( QTreeWidgetItem* item )
 {
+    QMutexLocker locker(&p->mutex);
+
     if (!item)
         return;
 
     QList<QStringList> tags;
 
     CollectionTreeItem* collItem = static_cast<CollectionTreeItem*>(item);
-    qDebug() << __FUNCTION__ << "Artist: " << collItem->artist() << " Album: " << collItem->album() << endl;
+    qDebug() << Q_FUNC_INFO << "Artist: " << collItem->artist() << " Album: " << collItem->album() << endl;
 
     //Retrieve songs from database
     tags = p->database->selectTracks( collItem->year(), collItem->genre(), collItem->artist(), collItem->album() );
@@ -198,17 +225,17 @@ void CollectionTree::asynchronCurrentItemChanged( QTreeWidgetItem* item )
     //Show songs in parent's tracklist
     p->tracks.clear();
 
-    qDebug() << __FUNCTION__ << "Song count: " << tags.count();
+    qDebug() << Q_FUNC_INFO << "Song count: " << tags.count();
 
     //add tags to this track list
     foreach ( QStringList tag, tags) {
-        //qDebug() << __PRETTY_FUNCTION__ <<": is playlistitem; tags:"<<tags;
+        //qDebug() << Q_FUNC_INFO <<": is playlistitem; tags:"<<tags;
         p->tracks.append( new Track(tag));
     }
 
     emit selectionChanged(p->tracks);
 
-    //qDebug() << __FUNCTION__ << "[End]" << endl;
+    //qDebug() << Q_FUNC_INFO << "[End]" << endl;
 }
 
 QString CollectionTree::filter()
@@ -225,12 +252,13 @@ void CollectionTree::setFilter( QString filter )
 
 void CollectionTree::mousePressEvent( QMouseEvent *e )
 {
-    openContext = (e->button() == Qt::RightButton);
-
     if (e->button() == Qt::LeftButton)
         startPos = e->pos();
 
     QTreeWidget::mousePressEvent(e);
+
+    if (e->button() == Qt::RightButton)
+           showContextMenu( currentItem(), currentColumn() );
 
 }
 
@@ -261,7 +289,7 @@ void CollectionTree::performDrag() {
          Track *track = dynamic_cast<Track *>(it.next());
          if ( track->isValid()  )
          {
-             qDebug() << __PRETTY_FUNCTION__ <<": send Data:"<<track->url();
+             qDebug() << Q_FUNC_INFO <<": send Data:"<<track->url();
              QStringList tag = track->tagList();
              tags << tag;
              if (i==0)
@@ -287,17 +315,7 @@ void CollectionTree::performDrag() {
     }
 }
 
-void CollectionTree::on_itemClicked(QTreeWidgetItem *after,int col)
-{
-    QTreeWidgetItem* item = static_cast<QTreeWidgetItem*>(after);
-    if (item){
-        if (openContext)
-            showContextMenu( item, col );
-    }
-
-}
-
-void CollectionTree::showContextMenu( QTreeWidgetItem *&item, int col )
+void CollectionTree::showContextMenu(QTreeWidgetItem *item, int col )
 {
 
     Q_UNUSED(col);

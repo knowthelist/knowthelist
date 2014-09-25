@@ -37,6 +37,7 @@ public:
      void setAlbum(QString value);
      void setYear(QString value);
      void setGenre(QString value);
+     void setTextString(QString value);
 
 signals:
     

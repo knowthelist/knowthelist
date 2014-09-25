@@ -73,32 +73,41 @@ QDial {
 max-height: 32px;
 min-height: 32px;
 }
+
 QSlider::handle:horizontal {
           background: qlineargradient(
-   x1:0, y1:0, x2:0, y2:1,
-   stop: 0.1 #999999,
-	stop:0.5 #505050,
-   stop:1 black
+   x1:0, y1:0, x2:1, y2:0,
+	stop: 0 #000,
+	stop: 0.1 #222,
+   	stop: 0.38 #444,
+	stop:0.5 #ccc,
+   	stop:0.6 #444,
+	stop:0.9 #222,
+	stop:1 #000
  );
          border: 1px solid #5c5c5c;
          width: 18px;
          margin: 1px 0; /* handle is placed by default on the contents rect of the groove. Expand outside the groove */
          border-radius: 3px;
-     }
+}
 
 QSlider::handle:vertical {
           background: qlineargradient(
-   x1:0, y1:0, x2:0, y2:1,
-   stop: 0.1 #999999,
-	stop:0.5 #505050,
-   stop:1 black
+   x1:0, y1:0, x2:0, y2:1,	
+	stop: 0 #000,
+	stop: 0.1 #222,
+   	stop: 0.38 #444,
+	stop:0.5 #ccc,
+   	stop:0.6 #444,
+	stop:0.9 #222,
+	stop:1 #000
  );
          border: 1px solid #5c5c5c;
          width: 12px; height: 18px;
 max-height:15px;
          margin: 0 2px; /* handle is placed by default on the contents rect of the groove. Expand outside the groove */
          border-radius: 3px;
-     }
+}
 
 QFrame#frameMixer{
           background: qlineargradient(
@@ -357,7 +366,7 @@ background-color: #444444;
      <number>6</number>
     </property>
     <item row="0" column="0">
-     <layout class="QVBoxLayout" name="verticalLayout_2">
+     <layout class="QVBoxLayout" name="verticalLayoutMain">
       <property name="spacing">
        <number>0</number>
       </property>
@@ -3049,6 +3058,9 @@ background-color: #444444;
            <property name="maximum">
             <number>100</number>
            </property>
+           <property name="value">
+            <number>57</number>
+           </property>
            <property name="orientation">
             <enum>Qt::Vertical</enum>
            </property>
@@ -3610,7 +3622,7 @@ background-color: #444444;
             <number>200</number>
            </property>
            <property name="value">
-            <number>0</number>
+            <number>21</number>
            </property>
            <property name="orientation">
             <enum>Qt::Horizontal</enum>
@@ -4171,6 +4183,9 @@ background-color: #444444;
            </property>
            <property name="maximum">
             <number>100</number>
+           </property>
+           <property name="value">
+            <number>11</number>
            </property>
            <property name="orientation">
             <enum>Qt::Vertical</enum>
@@ -7619,16 +7634,6 @@ p, li { white-space: pre-wrap; }
      </layout>
     </item>
    </layout>
-  </widget>
-  <widget class="QMenuBar" name="menuBar">
-   <property name="geometry">
-    <rect>
-     <x>0</x>
-     <y>0</y>
-     <width>1280</width>
-     <height>23</height>
-    </rect>
-   </property>
   </widget>
   <action name="actionSettings">
    <property name="text">

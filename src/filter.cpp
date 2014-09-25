@@ -92,7 +92,7 @@ void Filter::setActive(bool b)
 
 void Filter::update()
 {
-    //qDebug() << __PRETTY_FUNCTION__ ;
+    //qDebug() << Q_FUNC_INFO ;
     Q_EMIT filterChanged();
 }
 

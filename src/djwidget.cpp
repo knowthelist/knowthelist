@@ -19,9 +19,9 @@
 #include "ui_djwidget.h"
 
 #include <qdebug.h>
-#include <QSettings>;
-#include <QTimer>;
-#include <QMouseEvent>;
+#include <QSettings>
+#include <QTimer>
+#include <QMouseEvent>
 
 struct DjWidgetPrivate
 {
@@ -90,7 +90,7 @@ void DjWidget::mousePressEvent(QMouseEvent *event)
 
 void DjWidget::setDj(Dj* dj)
 {
-    qDebug() << __PRETTY_FUNCTION__ ;
+    qDebug() << Q_FUNC_INFO ;
     p->dj = dj;
 
     connect(p->dj,SIGNAL(countChanged()),this,SLOT(updateView()));

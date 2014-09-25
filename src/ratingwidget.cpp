@@ -44,6 +44,8 @@ double RatingPainter::RatingForPos(const QPoint& pos, const QRect& rect) {
 
 void RatingPainter::Paint(QPainter* painter, const QRect& rect, float rating) const
 {
+    Q_UNUSED(rect);
+
     // save some time here
     if (rating==0)
         return;
@@ -97,7 +99,9 @@ void RatingWidget::setRating(float rating) {
 }
 
 void RatingWidget::paintEvent(QPaintEvent* e) {
+    Q_UNUSED(e);
   QStylePainter p(this);
+
 
   // Draw the stars
   painter_.Paint(&p, rect(), hover_rating_ == -1.0 ? rating_ : hover_rating_);

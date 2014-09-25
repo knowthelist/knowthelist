@@ -18,7 +18,11 @@
 #include "trackanalyser.h"
 
 #include <QtGui>
-#include <QtConcurrentRun>
+#if QT_VERSION >= 0x050000
+ #include <QtConcurrent/QtConcurrent>
+#else
+ #include <QtConcurrentRun>
+#endif
 
 struct TrackAnalyser::Private
 {
@@ -53,24 +57,21 @@ TrackAnalyser::~TrackAnalyser()
 {
     delete p;
     p=0;
-      cleanup();
-      gst_deinit();
+    cleanup();
 }
 
 
 void cb_newpad_ta (GstElement *decodebin,
                    GstPad     *pad,
-                   gboolean    last,
                    gpointer    data)
 {
     TrackAnalyser* instance = (TrackAnalyser*)data;
-            instance->newpad(decodebin, pad, last, data);
+            instance->newpad(decodebin, pad, data);
 }
 
 
 void TrackAnalyser::newpad (GstElement *decodebin,
                    GstPad     *pad,
-                   gboolean    last,
                    gpointer    data)
 {
         GstCaps *caps;
@@ -88,7 +89,11 @@ void TrackAnalyser::newpad (GstElement *decodebin,
         }
 
         /* check media type */
+#ifdef GST_API_VERSION_1
+        caps = gst_pad_query_caps (pad,NULL);
+#else
         caps = gst_pad_get_caps (pad);
+#endif
         str = gst_caps_get_structure (caps, 0);
         if (!g_strrstr (gst_structure_get_name (str), "audio")) {
                 gst_caps_unref (caps);
@@ -121,15 +126,21 @@ bool TrackAnalyser::prepare()
         GstPad *audiopad;
         GstCaps *caps;
 
-        caps = gst_caps_new_simple ("audio/x-raw-int",
-                                    "channels", G_TYPE_INT, 2, NULL);
+
 
         pipeline = gst_pipeline_new ("pipeline");
         bus = gst_pipeline_get_bus (GST_PIPELINE (pipeline));
 
-
+#ifdef GST_API_VERSION_1
+        caps = gst_caps_new_simple ("audio/x-raw",
+                                    "channels", G_TYPE_INT, 2, NULL);
+        dec = gst_element_factory_make ("decodebin", "decoder");
+#else
+        caps = gst_caps_new_simple ("audio/x-raw-int",
+                                    "channels", G_TYPE_INT, 2, NULL);
         dec = gst_element_factory_make ("decodebin2", "decoder");
-        g_signal_connect (dec, "new-decoded-pad", G_CALLBACK (cb_newpad_ta), this);
+#endif
+        g_signal_connect (dec, "pad-added", G_CALLBACK (cb_newpad_ta), this);
         gst_bin_add (GST_BIN (pipeline), dec);
 
         audio = gst_bin_new ("audiobin");
@@ -159,7 +170,11 @@ bool TrackAnalyser::prepare()
 
         gst_object_unref (audiopad);
 
+#ifdef GST_API_VERSION_1
+        gst_bus_set_sync_handler (bus, bus_cb, this, NULL);
+#else
         gst_bus_set_sync_handler (bus, bus_cb, this);
+#endif
 
         return pipeline;
 }
@@ -188,15 +203,14 @@ QTime TrackAnalyser::endPosition()
 void TrackAnalyser::open(QUrl url)
 {
     //To avoid delays load track in another thread
-    qDebug() << __PRETTY_FUNCTION__ <<":"<<parentWidget()->objectName()<<" url="<<url;
+    qDebug() << Q_FUNC_INFO <<":"<<parentWidget()->objectName()<<" url="<<url;
     QFuture<void> future = QtConcurrent::run( this, &TrackAnalyser::asyncOpen,url);
     p->watcher.setFuture(future);
 }
 
 void TrackAnalyser::asyncOpen(QUrl url)
 {
-     p->mutex.lock();
-    QString filename = url.toLocalFile().toUtf8();
+    p->mutex.lock();
     m_GainDB = GAIN_INVALID;
     m_StartPosition = QTime(0,0);
 
@@ -204,7 +218,7 @@ void TrackAnalyser::asyncOpen(QUrl url)
 
 
     GstElement *l_src = gst_bin_get_by_name(GST_BIN(pipeline), "localsrc");
-    g_object_set (G_OBJECT (l_src), "location", filename.toLatin1().data(), NULL);
+    g_object_set (G_OBJECT (l_src), "location", (const char*)url.toLocalFile().toUtf8(), NULL);
 
     sync_set_state (GST_ELEMENT (pipeline), GST_STATE_PAUSED);
 
@@ -219,13 +233,13 @@ void TrackAnalyser::asyncOpen(QUrl url)
 void TrackAnalyser::loadThreadFinished()
 {
     // async load in player done
-    qDebug() << __PRETTY_FUNCTION__ <<":"<<parentWidget()->objectName();
+    qDebug() << Q_FUNC_INFO <<":"<<parentWidget()->objectName();
     start();
 }
 
 void TrackAnalyser::start()
 {
-    qDebug() << __PRETTY_FUNCTION__ <<":"<<parentWidget()->objectName();
+    qDebug() << Q_FUNC_INFO <<":"<<parentWidget()->objectName();
     gst_element_set_state (GST_ELEMENT (pipeline), GST_STATE_PLAYING);
 }
 
@@ -242,9 +256,13 @@ QTime TrackAnalyser::length()
     if (pipeline) {
 
         gint64 value=0;
-        GstFormat fmt = GST_FORMAT_TIME;
 
+#ifdef GST_API_VERSION_1
+        if(gst_element_query_duration(pipeline, GST_FORMAT_TIME, &value)) {
+#else
+        GstFormat fmt = GST_FORMAT_TIME;
         if(gst_element_query_duration(pipeline, &fmt, &value)) {
+#endif
 
             return QTime(0,0).addMSecs( static_cast<uint>( ( value / GST_MSECOND ) )); // nanosec -> msec
         }
@@ -272,7 +290,7 @@ void TrackAnalyser::messageReceived(GstMessage *message)
                 break;
         }
         case GST_MESSAGE_EOS:{
-                qDebug() << __PRETTY_FUNCTION__ <<":"<<parentWidget()->objectName()<<" End of track reached";
+                qDebug() << Q_FUNC_INFO <<":"<<parentWidget()->objectName()<<" End of track reached";
                 need_finish();
                 break;
         }
@@ -300,20 +318,19 @@ void TrackAnalyser::messageReceived(GstMessage *message)
                         //if we detect a rising edge, set EndPostion to track end
                         m_EndPosition=m_MaxPosition;
                     }
-                    //qDebug() << __PRETTY_FUNCTION__ <<QTime(0,0).addMSecs( static_cast<uint>( ( timestamp / GST_MSECOND ) ))<< " silent:" << isSilent;
+                    //qDebug() << Q_FUNC_INFO <<QTime(0,0).addMSecs( static_cast<uint>( ( timestamp / GST_MSECOND ) ))<< " silent:" << isSilent;
                 }
             break;
           }
 
         case GST_MESSAGE_TAG:{
 
-                const GstStructure *s = gst_message_get_structure (message);
-                const GValue *value;
-                value=gst_structure_get_value (s, "replaygain-track-gain");
-                if (value){
-                    m_GainDB = g_value_get_double (value);
-                    //qDebug() << "Gain-db:" << gain_db;
-                    //qDebug() << "Gain-norm:" << pow (10, m_GainDB / 20);
+                GstTagList *tags = NULL;
+                gst_message_parse_tag (message, &tags);
+                if (gst_tag_list_get_double (tags, GST_TAG_TRACK_GAIN, &m_GainDB))
+                {
+                    qDebug() << "Gain-db:" << m_GainDB;
+                    qDebug() << "Gain-norm:" << pow (10, m_GainDB / 20);
                 }
             }
 

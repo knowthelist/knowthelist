@@ -21,6 +21,8 @@
 #include "trackanalyser.h"
 #include "vumeter.h"
 
+#include <QDragEnterEvent>
+
 struct PlayerWidgetPrivate
 {
     bool isEndAnnounced;
@@ -76,12 +78,13 @@ PlayerWidget::PlayerWidget(QWidget *parent) :
    connect(player, SIGNAL(loadFinished()), this, SLOT(playerLoaded()));
 
    ui->lblTitle->setText( "" );
+   ui->lblInfo->setText( "" );
+
    QFont font = ui->lblInfo->font();
    QFont fonttime = ui->lblTime->font();
 #if defined(Q_OS_DARWIN)
    int newSize = font.pointSize()-4;
    fonttime.setPointSize(fonttime.pointSize()+2);
-
 #else
    int newSize = font.pointSize()-1;
 #endif
@@ -139,8 +142,8 @@ void PlayerWidget::setPositionMarkers()
 {
     if ( trackanalyser->finished()) {
         if (m_skipSilentEnd){
-            qDebug() << __PRETTY_FUNCTION__ <<"endPosition:"<<trackanalyser->endPosition();
-            qDebug() << __PRETTY_FUNCTION__ <<"length:"<<trackanalyser->length();
+            qDebug() << Q_FUNC_INFO <<"endPosition:"<<trackanalyser->endPosition();
+            qDebug() << Q_FUNC_INFO <<"length:"<<trackanalyser->length();
             remainCueTime=trackanalyser->endPosition().msecsTo(trackanalyser->length());
         }
         else
@@ -210,7 +213,7 @@ void PlayerWidget::on_butPlay_clicked()
 
 void PlayerWidget::analyseFinished()
 {
-    qDebug() << __PRETTY_FUNCTION__ <<":"<<objectName();
+    qDebug() << Q_FUNC_INFO <<":"<<objectName();
     // got gain factor -> emit
     if (trackanalyser->gainDB()!=TrackAnalyser::GAIN_INVALID){
         Q_EMIT gainChanged(trackanalyser->gainFactor());
@@ -282,14 +285,14 @@ void PlayerWidget::dropEvent( QDropEvent *event )
 
 void PlayerWidget::loadFile( QUrl file)
 {
-    qDebug() << __FUNCTION__ << "url=" << file;
+    qDebug() << Q_FUNC_INFO << "url=" << file;
     loadTrack( new Track(file));
 }
 
 void PlayerWidget::loadTrack( Track *track)
 {
     if ( track )
-        qDebug() << __PRETTY_FUNCTION__ <<":"<<objectName()<< " track="<<track->url();
+        qDebug() << Q_FUNC_INFO <<":"<<objectName()<< " track="<<track->url();
 
     m_CurrentTrack = track;
 
@@ -313,7 +316,7 @@ void PlayerWidget::loadTrack( Track *track)
       if (player->lastError!="")
           ui->lblTitle->setText( player->lastError );
       else
-          ui->lblTitle->setText( tr("No track") );
+          ui->lblTitle->setText( "no track" );
 
       ui->lblTime->setText("-:-");
       ui->lblTimeMs->setText(".-");
@@ -370,11 +373,11 @@ void PlayerWidget::updateTimeAndPositionDisplay(bool isPassive)
 
     QTime length = player->length();
     QTime curpos = player->position();
-    QTime remain(0,0);
+    QTime remain(0,0,0);
     long remainMs;
 
     remainMs=curpos.msecsTo(length);
-    remain = QTime(0,0).addMSecs(remainMs);
+    remain = QTime(0,0,0).addMSecs(remainMs);
 
     //qDebug()<<remainMs << " :" <<remain;
 
@@ -390,12 +393,12 @@ void PlayerWidget::updateTimeAndPositionDisplay(bool isPassive)
                 && 0 < remainMs )
                 || m_isHanging )    {
         if (!p->isEndAnnounced ) {
-            qDebug() << __PRETTY_FUNCTION__ <<":"<<objectName()<<" EMIT aboutFinished";
-            qDebug() << __PRETTY_FUNCTION__ <<": curpos:"<< curpos;
-            qDebug() << __PRETTY_FUNCTION__ <<": remainMs:"<< remainMs;
-            qDebug() << __PRETTY_FUNCTION__ <<": remainCueTime:"<< remainCueTime;
-            qDebug() << __PRETTY_FUNCTION__ <<": mTrackFinishEmitTime:"<< mTrackFinishEmitTime;
-            qDebug() << __PRETTY_FUNCTION__ <<": m_isHanging:"<< m_isHanging;
+            qDebug() << Q_FUNC_INFO <<":"<<objectName()<<" EMIT aboutFinished";
+            qDebug() << Q_FUNC_INFO <<": curpos:"<< curpos;
+            qDebug() << Q_FUNC_INFO <<": remainMs:"<< remainMs;
+            qDebug() << Q_FUNC_INFO <<": remainCueTime:"<< remainCueTime;
+            qDebug() << Q_FUNC_INFO <<": mTrackFinishEmitTime:"<< mTrackFinishEmitTime;
+            qDebug() << Q_FUNC_INFO <<": m_isHanging:"<< m_isHanging;
 
             //send signals only once
             p->isEndAnnounced = true;
@@ -408,8 +411,8 @@ void PlayerWidget::updateTimeAndPositionDisplay(bool isPassive)
 
     //update position slider only if triggerd by timer
     if (isPassive) {
-        if (length != QTime(0,0))
-            ui->sliPosition->setValue(curpos.msecsTo(QTime()) * 1000 / length.msecsTo(QTime()));
+        if (length != QTime(0,0,0))
+            ui->sliPosition->setValue(curpos.msecsTo(QTime(0,0,0)) * 1000 / length.msecsTo(QTime(0,0,0)));
         else
             ui->sliPosition->setValue(0);
     }
@@ -453,9 +456,9 @@ void PlayerWidget::setTrackFinishEmitTime( const int sec )
 
 void PlayerWidget::on_sliPosition_sliderMoved(int value)
 {
-    uint length = -player->length().msecsTo(QTime());
+    uint length = -player->length().msecsTo(QTime(0,0,0));
     if (length != 0 && value > 0) {
-        QTime pos;
+        QTime pos = QTime(0, 0, 0);
         pos = pos.addMSecs(length * (value / 1000.0));
                 qDebug()<<"pos:"<<pos;
         player->setPosition(pos);

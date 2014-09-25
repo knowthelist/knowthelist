@@ -18,7 +18,7 @@
 #define TRACKANALYSER_H
 
 #include <QtCore>
-#include <QtGui/QWidget>
+#include <QWidget>
 
 #define GST_DISABLE_LOADSAVE 1
 #define GST_DISABLE_REGISTRY 1
@@ -46,10 +46,10 @@ public:
      bool finished() {return m_finished;}
 
      QTime length();
-     static const double GAIN_INVALID=-99.9;
+     static const int GAIN_INVALID=-99;
 
         void need_finish();
-        void newpad (GstElement *decodebin, GstPad *pad, gboolean last, gpointer data);
+        void newpad (GstElement *decodebin, GstPad *pad, gpointer data);
         static GstBusSyncReply  bus_cb (GstBus *bus, GstMessage *msg, gpointer data);
 
  Q_SIGNALS:

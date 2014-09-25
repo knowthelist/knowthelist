@@ -24,9 +24,13 @@
 #include "djwidget.h"
 #include "djfilterwidget.h"
 
-#include <QtGui/QBoxLayout>
+#include <QBoxLayout>
 #include <QSettings>
-#include <QtConcurrentRun>
+#if QT_VERSION >= 0x050000
+ #include <QtConcurrent/QtConcurrent>
+#else
+ #include <QtConcurrentRun>
+#endif
 #include <QMetaType>
 
 
@@ -72,7 +76,7 @@ Knowthelist::~Knowthelist()
         delete collectionBrowser;
 
         delete ui;
-        qDebug() << "The end" << __FUNCTION__ ;
+        qDebug() << "The end" << Q_FUNC_INFO ;
 }
 
 void Knowthelist::createUI()
@@ -227,6 +231,21 @@ void Knowthelist::createUI()
     //MonitorPlayer
     initMonitorPlayer();
 
+    //change slider style for linux
+#if defined(Q_OS_LINUX)
+    QString sliderStyle = QString(
+    "QSlider::sub-page:vertical { background: qlineargradient(x1: 0, y1: 0, x2:1, y2: 0,"
+    "   stop: 0.4 #666, stop: 0 #111111 ); border: 1px solid #444; border-radius: 2px;}"
+    "QSlider::add-page:vertical {background: qlineargradient(x1: 0, y1: 0, x2:1, y2: 0,"
+    "   stop: 0 #111,stop: 0.4 #666); border: 1px solid #333; border-radius: 2px;}"
+    "QSlider::sub-page:horizontal,QSlider::add-page:horizontal  {"
+    "   background: qlineargradient(x1: 0, y1: 0,    x2: 0, y2: 1,"
+    "   stop: 0 #111, stop: 0.6 #666 ); border: 1px solid #222; border-radius: 2px;}");
+
+    ui->frameMixer->setStyleSheet(sliderStyle);
+    ui->MonitorPlayer->setStyleSheet(sliderStyle);
+#endif
+
     //Add the AutoDJ Browser
     djBrowser = new DjBrowser();
     QPixmap pixmap2(":DJ.png");
@@ -281,6 +300,7 @@ void Knowthelist::createUI()
           this->show();
           showCollectionSetup();
     }
+
 }
 
 void Knowthelist::loadStartSettings()
@@ -377,7 +397,7 @@ void Knowthelist::loadCurrentSettings()
 
 void Knowthelist::closeEvent(QCloseEvent* event)
 {
-    qDebug() << __FUNCTION__ << "for Knowthelist" ;
+    qDebug() << Q_FUNC_INFO << "for Knowthelist" ;
 
     QSettings settings;
     settings.setValue("Volume1", QString("%1").arg( ui->slider1->value() ) );
@@ -670,7 +690,7 @@ void Knowthelist::Track_doubleClicked(Track* track)
 void Knowthelist::trackList_wantLoad(Track* track, QString target)
 {
     //ToDo: enable for multiple tracks like drag/drop
-    qDebug() << __FUNCTION__ << "target=" << target;
+    qDebug() << Q_FUNC_INFO << "target=" << target;
     if ( target == "Right" )
       playList2->appendSong( new Track(track->tagList()) );
     else if ( target ==  "Left" )
@@ -722,7 +742,7 @@ void Knowthelist::on_cmdFade_clicked()
 bool Knowthelist::initMonitorPlayer()
 {
     //ToDo: spend a separate widget for Monitor player
-    qDebug() << __FUNCTION__ << "BEGIN ";
+    qDebug() << Q_FUNC_INFO << "BEGIN ";
 
       monitorPlayer= new MonitorPlayer(this);
       monitorPlayer->prepare();
@@ -732,7 +752,7 @@ bool Knowthelist::initMonitorPlayer()
       ui->cmdMonitorPlay->setIcon(QIcon(":play.png"));
       connect(monitorPlayer,SIGNAL(loadFinished()),this,SLOT(timerMonitor_loadFinished()));
 
-    qDebug()  << __FUNCTION__ << "END " ;
+    qDebug()  << Q_FUNC_INFO << "END " ;
     return true;
 }
 
@@ -803,11 +823,11 @@ void Knowthelist::timerMonitor_timeOut()
     ui->lblMonitorLength->setText(length.toString("mm:ss"));
 
     //update position slider
-    if (length != QTime(0,0)) {
-        ui->sliMonitor->setValue(curpos.msecsTo(QTime()) * 1000 / length.msecsTo(QTime()));
-    } else {
+    if (length != QTime(0,0))
+        ui->sliMonitor->setValue(curpos.msecsTo(QTime(0,0,0)) * 1000 / length.msecsTo(QTime(0,0,0)));
+    else
         ui->sliMonitor->setValue(0);
-    }
+
 
     ui->monitorMeter->setLeftValue( monitorPlayer->levelLeft() * 100.0 );
     ui->monitorMeter->setRightValue( monitorPlayer->levelRight() * 100.0);
@@ -815,9 +835,9 @@ void Knowthelist::timerMonitor_timeOut()
 
 void Knowthelist::on_sliMonitor_sliderMoved(int value)
 {
-        uint length = -monitorPlayer->length().msecsTo(QTime());
+        uint length = -monitorPlayer->length().msecsTo(QTime(0,0,0));
         if (length != 0 && value > 0) {
-            QTime pos;
+            QTime pos = QTime(0,0,0);
             pos = pos.addMSecs(length * (value / 1000.0));
                     qDebug()<<"pos:"<<pos;
     monitorPlayer->setPosition(pos);

@@ -4,12 +4,20 @@
 # License: LGPL-3.0+
 #
 
-DEFINES += APP_VERSION="\\\"2.2.4\\\""
+DEFINES += APP_VERSION="\\\"2.3.0\\\""
+
 QT += core \
     gui \
     xml \
-    sql \
-    location
+    sql
+
+greaterThan(QT_MAJOR_VERSION, 4){
+     #use qt5 and gstreamer 1.x
+     QT += widgets
+     DEFINES += GST_API_VERSION_1
+}
+#else use qt4 and gstreamer 0.10
+
 TARGET = knowthelist
 TEMPLATE = app
 SOURCES += main.cpp \
@@ -101,29 +109,60 @@ TRANSLATIONS += \
     ../locale/knowthelist_tr.ts \
     ../locale/knowthelist_it.ts
 
+OTHER_FILES += \
+    knowthelist.rc
+
+DESTDIR = ../
+
 win32 { 
-    INCLUDEPATH += $$quote(C:\Program Files (x86)\gstreamer-sdk\0.10\x86\include\gstreamer-0.10) \
-        $$quote(C:\Program Files (x86)\gstreamer-sdk\0.10\x86\include\glib-2.0) \
-        $$quote(C:\Program Files (x86)\gstreamer-sdk\0.10\x86\lib\glib-2.0\include) \
-        $$quote(C:\Program Files (x86)\taglib-1.6.1\include) \
-        $$quote(C:\Program Files (x86)\gstreamer-sdk\0.10\x86\include\dsound) \
-        $$quote(C:\Program Files (x86)\boost_1_50_0)
-    LIBS += $$quote(C:\Program Files (x86)\gstreamer-sdk\0.10\x86\lib\gstreamer-0.10.lib) \
-        $$quote(C:\Program Files (x86)\gstreamer-sdk\0.10\x86\lib\gobject-2.0.lib) \
-        $$quote(C:\Program Files (x86)\gstreamer-sdk\0.10\x86\lib\glib-2.0.lib) \
-        $$quote(C:\Program Files (x86)\taglib-1.6.1\lib\libtaglib.a) \
+    GST_HOME = $$quote($$(GSTREAMER_1_0_ROOT_X86))
+    isEmpty(GST_HOME) {
+        message(\"GSTREAMER_1_0_ROOT_X86\" not detected ...)
+    }
+    else {
+        message(\"GSTREAMER_1_0_ROOT_X86\" detected in \"$${GST_HOME}\")
+    }
+
+    #TAGLIB_HOME = $$quote(C:\Program Files (x86)\taglib-1.9.1)
+
+    INCLUDEPATH += $${GST_HOME}\include\gstreamer-1.0 \
+        $${GST_HOME}\include\glib-2.0 \
+        $${GST_HOME}\lib\glib-2.0\include \
+        $${GST_HOME}\include \
+
+    LIBS += $${GST_HOME}\lib\gstreamer-1.0.lib \
+        $${GST_HOME}\lib\gobject-2.0.lib \
+        $${GST_HOME}\lib\glib-2.0.lib \
+        $${GST_HOME}\lib\libtag.dll.a \
         -ldsound \
         -lwinmm
 
     RC_FILE = knowthelist.rc
+
+    #DEPLOY_COMMAND = $$[QT_INSTALL_BINS]\windeployqt.exe
+    #DEPLOY_TARGET = $$DESTDIR$${TARGET}$${TARGET_EXT}.exe
+    #QMAKE_POST_LINK = $$DEPLOY_COMMAND $$DEPLOY_TARGET  $$escape_expand(\\n\\t)
+
+
+    #EXTRA_BINFILES += \
+        #$${GST_HOME}bin\*.dll \
+        #$${GST_HOME}\bin\*.dll
+    #for(FILE,EXTRA_BINFILES){
+    #            message($$QMAKE_COPY \"$$FILE\" \"$${DESTDIR}\" $$escape_expand(\\n\\t))
+    #            QMAKE_POST_LINK += $$QMAKE_COPY \"$$FILE\" \"$${DESTDIR}\" $$escape_expand(\\n\\t)
+    #}
+
+    # copy patched version of directsoundsink.dll direct to GStreamer plugin path
+    QMAKE_POST_LINK = $$QMAKE_COPY \"$${DESTDIR}\libgstdirectsoundsink.dll\" \"$${GST_HOME}lib\gstreamer-1.0\" $$escape_expand(\\n\\t)
 }
 macx { 
-    INCLUDEPATH += /usr/local/include/gstreamer-0.10 \
+    DEFINES += GST_API_VERSION_1
+    INCLUDEPATH += /usr/local/include/gstreamer-1.0 \
         /usr/local/include/glib-2.0 \
         /usr/local/lib/glib-2.0/include \
         /usr/local/include
     LIBS += -L/usr/local/lib \
-        -lgstreamer-0.10 \
+        -lgstreamer-1.0 \
         -lglib-2.0 \
         -lgobject-2.0 \
         -ltag \
@@ -141,10 +180,20 @@ unix:!macx {
             desktop.path = $$DATADIR/applications
             desktop.files += ../dist/Knowthelist.desktop
             INSTALLS += target icon desktop
+
+contains(DEFINES, GST_API_VERSION_1) {
+    CONFIG += link_pkgconfig \
+        gstreamer-1.0
+    PKGCONFIG += gstreamer-1.0 \
+        taglib alsa
+}
+else {
     CONFIG += link_pkgconfig \
         gstreamer
     PKGCONFIG += gstreamer-0.10 \
         taglib alsa
+}
+
 }
 RESOURCES += ../images/icons.qrc \
     ../locale/locale.qrc
@@ -161,6 +210,8 @@ lrelease.output = ../locale/${QMAKE_FILE_BASE}.qm
 lrelease.CONFIG = no_link target_predeps
 QMAKE_EXTRA_COMPILERS += lrelease
 
-DESTDIR = ../
 
-OTHER_FILES +=
+
+
+
+

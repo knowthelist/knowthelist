@@ -18,6 +18,8 @@
 #include "stackdisplay.h"
 
 #include <QColor>
+#include <QStyleOption>
+#include <QPainter>
 
 
 class StackDisplayPrivate

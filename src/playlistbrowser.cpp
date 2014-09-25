@@ -22,7 +22,10 @@
 #include "track.h"
 
 #include <QtXml>
-#include <Qt>
+#include <QListWidget>
+#include <QPushButton>
+#include <QVBoxLayout>
+#include <QInputDialog>
 
 class Track;
 
@@ -163,7 +166,7 @@ void PlaylistBrowser::updateLists()
         int sum = data[2].toInt();
         QDateTime date(QDateTime::fromTime_t( data[3].toInt() ));
 
-        qDebug() << __PRETTY_FUNCTION__ << "add playlist: " << name;
+        qDebug() << Q_FUNC_INFO << "add playlist: " << name;
         list = new PlaylistWidget(p->listPlaylists);
         list->setName( name );
         list->setObjectName( name );
@@ -191,7 +194,7 @@ void PlaylistBrowser::updateLists()
 
     //Q_FOREACH (const QFileInfo fi, filelist) {
     //        if ( fi.isFile() ) {
-    //            qDebug() << __PRETTY_FUNCTION__ << "add playlist: " << fi.fileName();
+    //            qDebug() << Q_FUNC_INFO << "add playlist: " << fi.fileName();
     //            list = new PlaylistWidget(p->listPlaylists);
     //            list->setName(fi.fileName().replace(".xspf",""));
     //            list->setObjectName(fi.fileName());
@@ -218,7 +221,7 @@ void PlaylistBrowser::updateLists()
 
 void PlaylistBrowser::playDatabaseList()
 {
-    qDebug() << __PRETTY_FUNCTION__ ;
+    qDebug() << Q_FUNC_INFO ;
 
     if(PlaylistWidget* item = qobject_cast<PlaylistWidget*>(QObject::sender())){
 
@@ -230,7 +233,7 @@ void PlaylistBrowser::playDatabaseList()
 
 void PlaylistBrowser::loadDatabaseList()
 {
-    qDebug() << __PRETTY_FUNCTION__ ;
+    qDebug() << Q_FUNC_INFO ;
 
     if(PlaylistWidget* item = qobject_cast<PlaylistWidget*>(QObject::sender())){
         onSelectionChanged(item);
@@ -242,7 +245,7 @@ void PlaylistBrowser::loadDatabaseList()
 
 void PlaylistBrowser::removeDatabaseList()
 {
-    qDebug() << __PRETTY_FUNCTION__ ;
+    qDebug() << Q_FUNC_INFO ;
 
     if(PlaylistWidget* item = qobject_cast<PlaylistWidget*>(QObject::sender())){
 
@@ -272,7 +275,7 @@ QList<Track*> PlaylistBrowser::selectedTracks()
 
     tracks.clear();
 
-    qDebug() << __FUNCTION__ << "Song count: " << selectedTags.count();
+    qDebug() << Q_FUNC_INFO << "Song count: " << selectedTags.count();
 
     //add tags to this track list
     foreach ( QStringList tag, selectedTags) {
@@ -377,7 +380,7 @@ QList<Track*> PlaylistBrowser::readFileList(QString filename)
     }
     file.close();
 
-    qDebug() << "End " << __FUNCTION__;
+    qDebug() << "End " << Q_FUNC_INFO;
 
     return tracks;
 }
@@ -424,7 +427,7 @@ QPair<int,int> PlaylistBrowser::readFileValues(QString filename)
     pair.first = count;
     pair.second = duration;
 
-    qDebug() << "End " << __FUNCTION__;
+    qDebug() << "End " << Q_FUNC_INFO;
 
     return pair;
 }
@@ -432,7 +435,7 @@ QPair<int,int> PlaylistBrowser::readFileValues(QString filename)
 
 void PlaylistBrowser::playFileList()
 {
-    qDebug() << __PRETTY_FUNCTION__ ;
+    qDebug() << Q_FUNC_INFO ;
 
     if(PlaylistWidget* item = qobject_cast<PlaylistWidget*>(QObject::sender())){
 
@@ -446,7 +449,7 @@ void PlaylistBrowser::playFileList()
 
 void PlaylistBrowser::loadFileList()
 {
-    qDebug() << __PRETTY_FUNCTION__ ;
+    qDebug() << Q_FUNC_INFO ;
 
     if(PlaylistWidget* item = qobject_cast<PlaylistWidget*>(QObject::sender())){
 
@@ -461,7 +464,7 @@ void PlaylistBrowser::loadFileList()
 
 void PlaylistBrowser::removeFileList()
 {
-    qDebug() << __PRETTY_FUNCTION__ ;
+    qDebug() << Q_FUNC_INFO ;
 
     if(PlaylistWidget* item = qobject_cast<PlaylistWidget*>(QObject::sender())){
 

@@ -26,8 +26,11 @@
 #include <QTimerEvent>
 #include <QPixmap>
 #include <QDropEvent>
-#include <Qt>
+#include <QPushButton>
 #include <QtGui>
+#include <QVBoxLayout>
+#include <QMenu>
+#include <QLabel>
 
 class CollectionWidgetPrivate
 {
@@ -40,6 +43,7 @@ class CollectionWidgetPrivate
         QTimer *timer;
         QToolButton *button;
         SearchEdit *searchEdit;
+        ModeSelector *modeSelect;
 };
 
 
@@ -52,8 +56,8 @@ CollectionWidget::CollectionWidget( QWidget* parent ):
     QPixmap pixmap2(":shuffle.png");
     pushRandom->setIcon(QIcon(pixmap2));
     pushRandom->setIconSize(QSize(27,27));
-    pushRandom->setMaximumWidth(36);
-    pushRandom->setStyleSheet("QPushButton { border: none; padding: 0px; margin-left: 8px;max-height: 20px; margin-right: 8px;}");
+    pushRandom->setMaximumWidth(40);
+    pushRandom->setStyleSheet("QPushButton { border: none; padding: 0px; margin-left: 10px;max-height: 20px; margin-right: 4px;}");
     pushRandom->setToolTip(tr( "Random Tracks" ));
 
     p->searchEdit = new SearchEdit();
@@ -67,9 +71,7 @@ CollectionWidget::CollectionWidget( QWidget* parent ):
     headWidgetLayout->setMargin(0);
     headWidgetLayout->setSpacing(1);
 
-    ModeSelector *modeSelect = new ModeSelector();
-
-    headWidgetLayout->addWidget(modeSelect);
+    headWidgetLayout->addSpacerItem(new QSpacerItem(10, 0, QSizePolicy::Fixed, QSizePolicy::Expanding));
     headWidgetLayout->addWidget(p->searchEdit);
     headWidgetLayout->addWidget(pushRandom);
     headWidget->setLayout(headWidgetLayout);
@@ -81,6 +83,7 @@ CollectionWidget::CollectionWidget( QWidget* parent ):
     p->timer->setSingleShot(true);
 
     p->collectiontree = new CollectionTree(this);
+    p->modeSelect = new ModeSelector(p->collectiontree);
 
     headWidget->raise();
     mainLayout->addWidget(headWidget);
@@ -91,7 +94,7 @@ CollectionWidget::CollectionWidget( QWidget* parent ):
     connect(pushRandom,SIGNAL(clicked()),
             p->collectiontree,SLOT(triggerRandomSelection()) );
 
-    connect ( modeSelect , SIGNAL(modeChanged(ModeSelector::modeType)),
+    connect ( p->modeSelect , SIGNAL(modeChanged(ModeSelector::modeType)),
             this, SLOT(onModeSelected(ModeSelector::modeType)));
 
     connect( p->searchEdit, SIGNAL( textChanged( const QString& ) ),
@@ -109,7 +112,7 @@ CollectionWidget::CollectionWidget( QWidget* parent ):
     connect( p->updater, SIGNAL(changesDone()), p->collectiontree, SLOT(createTrunk()));
     connect( p->collectiontree, SIGNAL(rescan()), p->updater, SLOT(scan()));
 
-    connect( p->timer, SIGNAL(timeout()), SLOT(onSetFilter()) );
+    connect( p->timer, SIGNAL(timeout()), SLOT(onSetFilter())  );
 
     setFocusProxy( p->collectiontree ); //default object to get focus
     setMaximumWidth(400);
@@ -117,14 +120,14 @@ CollectionWidget::CollectionWidget( QWidget* parent ):
     //Pogressbar for re-read collection
     p->progress = new ProgressBar(this);
     p->progress->setValue(0);
-
+    p->progress->setStyleSheet("* { margin-bottom: 3px; }");
 
     mainLayout->addWidget(p->collectiontree);
 
 
     // Read config values
     QSettings settings;
-    modeSelect->setMode( static_cast<ModeSelector::modeType>(settings.value("TreeMode",ModeSelector::MODENONE).toUInt()));
+    p->modeSelect->setMode( static_cast<ModeSelector::modeType>(settings.value("TreeMode",ModeSelector::MODENONE).toUInt()));
 
 
     p->collectiontree->createTrunk();
@@ -132,6 +135,7 @@ CollectionWidget::CollectionWidget( QWidget* parent ):
 
     connect(p->updater, SIGNAL(progressChanged(int)), p->progress,SLOT(setValue(int)));
     connect(p->progress, SIGNAL(stopped()), p->updater,SLOT(stop()));
+    p->modeSelect->show();
 }
 
 CollectionWidget::~CollectionWidget()
@@ -198,7 +202,13 @@ QString CollectionWidget::filterText()
 void CollectionWidget::resizeEvent(QResizeEvent *)
 {
     QRect rec = p->collectiontree->geometry();
-    p->progress->setGeometry(0,30,rec.width()-20,20);
+#if defined(Q_OS_DARWIN)
+    int y = 39;
+#else
+    int y = 41;
+#endif
+    p->progress->setGeometry(0,y,rec.width()-20,20);
+    p->modeSelect->setGeometry(rec.width()-p->modeSelect->width(),0,p->modeSelect->width(),20);
 }
 
 

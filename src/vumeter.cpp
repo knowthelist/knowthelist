@@ -16,6 +16,9 @@
 */
  
 #include "vumeter.h"
+#include <QWidget>
+#include <QStyleOption>
+#include <QPainter>
 
 VUMeter::VUMeter(QWidget *parent)
  : QWidget(parent)

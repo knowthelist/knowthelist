@@ -15,12 +15,16 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include <QtConcurrentRun>
-#include <QtXml>
-
 #include "djsession.h"
 #include "track.h"
 #include "dj.h"
+
+#if QT_VERSION >= 0x050000
+ #include <QtConcurrent/QtConcurrent>
+#else
+ #include <QtConcurrentRun>
+#endif
+#include <QtXml>
 
 struct DjSessionPrivate
 {
@@ -81,8 +85,8 @@ void DjSession::searchTracks()
     int needed = (diffCount1 > 0) ? diffCount1 : 0;
     needed = (diffCount2 > 0) ? needed + diffCount2 : needed;
 
-    qDebug() << __PRETTY_FUNCTION__ << " need "<<diffCount1<<" tracks left and "<<diffCount2<<" tracks right ";
-    qDebug() << __PRETTY_FUNCTION__ << " needed together: "<<needed;
+    qDebug() << Q_FUNC_INFO << " need "<<diffCount1<<" tracks left and "<<diffCount2<<" tracks right ";
+    qDebug() << Q_FUNC_INFO << " needed together: "<<needed;
 
     // retrieve new random tracks for both playlists
     QList<Track*> tracks1;
@@ -109,7 +113,7 @@ void DjSession::searchTracks()
     }
 
     // new tracks available, trigger fill up of playlists
-    qDebug() << __PRETTY_FUNCTION__ << " provide "<<tracks1.count()<<" tracks left and "<<tracks2.count()<<" tracks right ";
+    qDebug() << Q_FUNC_INFO << " provide "<<tracks1.count()<<" tracks left and "<<tracks2.count()<<" tracks right ";
 
     // emit if needed
     if ( tracks1.count() > 0 )
@@ -145,9 +149,9 @@ Track* DjSession::getRandomTrack()
            || p->seenUrls.contains(track->url().toString()) )
            && i<maxCount*3);
     if (i>=maxCount*3)
-        qDebug() << __PRETTY_FUNCTION__ << " no new track found.";
+        qDebug() << Q_FUNC_INFO << " no new track found.";
     else
-        qDebug() << __PRETTY_FUNCTION__ <<i<<" iterations to found a new track "<<i;
+        qDebug() << Q_FUNC_INFO <<i<<" iterations to found a new track "<<i;
 
     f->setCount(maxCount);
     f->setLength(p->database->lastLengthSum());
@@ -168,7 +172,7 @@ void DjSession::forceTracks(QList<Track*> tracks)
     int count1 = p->playList1_Tracks.count();
     int count2 = p->playList2_Tracks.count();
 
-    qDebug() << __PRETTY_FUNCTION__ <<count1<<" tracks left and "<<count2<<" tracks right ";
+    qDebug() << Q_FUNC_INFO <<count1<<" tracks left and "<<count2<<" tracks right ";
 
     // distribute tracks to both playlists
     QList<Track*> tracks1;
@@ -198,7 +202,7 @@ void DjSession::forceTracks(QList<Track*> tracks)
     }
 
     // new tracks available, trigger fill up of playlists
-    qDebug() << __PRETTY_FUNCTION__ << " provide "<<tracks1.count()<<" tracks left and "<<tracks2.count()<<" tracks right ";
+    qDebug() << Q_FUNC_INFO << " provide "<<tracks1.count()<<" tracks left and "<<tracks2.count()<<" tracks right ";
 
     // emit if needed
     if ( tracks1.count() > 0 )
@@ -210,7 +214,7 @@ void DjSession::forceTracks(QList<Track*> tracks)
 
 void DjSession::playDefaultList()
 {
-    qDebug() << __PRETTY_FUNCTION__ ;
+    qDebug() << Q_FUNC_INFO ;
 
     QList<QStringList> selectedTags;
 
@@ -221,7 +225,7 @@ void DjSession::playDefaultList()
 
     tracks.clear();
 
-    qDebug() << __FUNCTION__ << "Song count: " << selectedTags.count();
+    qDebug() << Q_FUNC_INFO << "Song count: " << selectedTags.count();
 
     //add tags to this track list
     foreach ( QStringList tag, selectedTags) {
@@ -233,7 +237,7 @@ void DjSession::playDefaultList()
 
 void DjSession::on_dj_filterChanged(Filter* f)
 {
-    //qDebug() << __PRETTY_FUNCTION__ ;
+    //qDebug() << Q_FUNC_INFO ;
     int cnt = p->database->getCount(f->path(),f->genre(),f->artist());
     f->setLength(p->database->lastLengthSum());
     f->setCount(cnt);
@@ -291,7 +295,7 @@ void DjSession::onTracksChanged_Playlist2(QList<Track*> tracks)
 
 void DjSession::storePlaylists( const QString &name, bool replace )
 {
-    qDebug() << __PRETTY_FUNCTION__ << " Start";
+    qDebug() << Q_FUNC_INFO << " Start";
 
     QList<Track*> listToStore;
     listToStore.append( p->playList1_Tracks );
@@ -321,7 +325,7 @@ void DjSession::storePlaylists( const QString &name, bool replace )
     }
 
     Q_EMIT savedPlaylists();
-    qDebug() << __PRETTY_FUNCTION__ << " Insert finish";
+    qDebug() << Q_FUNC_INFO << " Insert finish";
 }
 
 void DjSession::summariseCount()
@@ -334,7 +338,7 @@ void DjSession::summariseCount()
     for (int i=0;i<filterCount;i++)
     {
         Filter* f=p->currentDj->filters().at(i);
-            qDebug() << __PRETTY_FUNCTION__ << " countOfFilter= "<<f->count();
+            qDebug() << Q_FUNC_INFO << " countOfFilter= "<<f->count();
         res+=f->description();
         genres.append(f->genre());
         paths.append(f->path());
@@ -370,7 +374,7 @@ void DjSession::setMinCount(int value)
 // obsolate: keep this just in case we need an export function later
 void DjSession::savePlaylists( const QString &filename )
 {
-    qDebug() << __FUNCTION__ << "BEGIN " ;
+    qDebug() << Q_FUNC_INFO << "BEGIN " ;
     QFile file( filename );
 
     if( !file.open(QFile::WriteOnly) ) return;
@@ -437,7 +441,7 @@ void DjSession::savePlaylists( const QString &filename )
     file.close();
 
     Q_EMIT savedPlaylists();
-    qDebug() << __FUNCTION__<< "END "  ;
+    qDebug() << Q_FUNC_INFO<< "END "  ;
 
 }
 

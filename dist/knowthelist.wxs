@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi" xmlns:util="http://schemas.microsoft.com/wix/UtilExtension">
+    <!-- CHANGE THESE EVERY VERSION -->
+    <?define ProductVersion="2.2.3" ?>
+    <?define ProductCode="{6120DB53-572A-4D8A-9E13-B88345404A79}"?>
+    <!-- DO NOT CHANGE THESE AFTER FIRST RELEASE -->
+    <?define ProductName = "Knowthelist"?>
+    <?define Manufacturer="Knowthelist Org"?>
+    <?define UpgradeCode="{F894961B-6143-49D7-AA15-5B44124ADB52}"?>
+    <?define SourceDirectory="..\..\build-knowthelist-MinGW_Static_32bit-Release\"?>
+    <Product Id="$(var.ProductCode)" Name="$(var.ProductName)" Language="1033" Version="$(var.ProductVersion)" Manufacturer="$(var.Manufacturer)" UpgradeCode="$(var.UpgradeCode)">
+        <Package Description="The awesome party music player" Comments="Knowthelist" InstallerVersion="300" Languages="1033" Manufacturer="$(var.Manufacturer)" Platform="x86" Compressed="yes" />
+        <Media Id="1" Cabinet="setup.cab" CompressionLevel="high" EmbedCab="yes" />
+        <Condition Message="No GStreamer installation found. Please install GStreamer(x86) v1.4 or higher from http://gstreamer.freedesktop.org first and try it again."><![CDATA[%GSTREAMER_1_0_ROOT_X86 <> ""]]></Condition>
+        <WixVariable Id="WixUILicenseRtf" Value="License.rtf" />
+        <WixVariable Id="WixUIExclamationIco" Value="headset.ico" />
+        <WixVariable Id="WixUIBannerBmp" Value="banner.bmp" />
+        <WixVariable Id="WixUIDialogBmp" Value="dialog.bmp" />
+        <CustomAction Id="SetGstPath" Property="GST_BIN" Value="[%GSTREAMER_1_0_ROOT_X86]bin" />
+        <CustomAction Id="SetGstLibPath" Property="GST_LIBS" Value="[%GSTREAMER_1_0_ROOT_X86]lib\gstreamer-1.0" />
+        <InstallExecuteSequence>
+            <Custom Action="SetGstPath" Before="InstallInitialize" />
+            <Custom Action="SetGstLibPath" Before="InstallInitialize" />
+        </InstallExecuteSequence>
+        <Icon Id="ICON_ICO" SourceFile="headset.ico" />
+        <Icon Id="DesktopIcon.exe" SourceFile="$(var.SourceDirectory)knowthelist.exe" />
+        <Icon Id="StartMenuIcon.exe" SourceFile="$(var.SourceDirectory)knowthelist.exe" />
+        <Property Id="ARPPRODUCTICON" Value="ICON_ICO" />
+        <Property Id="ARPCONTACT" Value="$(var.Manufacturer)" />
+        <Property Id="ALLUSERS" Value="1" />
+        <Property Id="PREVIOUSVERSIONSINSTALLED" Secure="yes" />
+        <Property Id="NEWERPRODUCTFOUND" Secure="yes" />
+        <Property Id="WIXUI_INSTALLDIR" Value="INSTALLLOCATION" />
+        <Directory Id="TARGETDIR" Name="SourceDir">
+            <Directory Id="ProgramFilesFolder" Name="PFiles">
+                <Directory Id="KNOWTHELIST_ORG" Name="knowthelist-org">
+                    <Component Id="KNOWTHELIST.EXE" DiskId="1" Guid="0B3C8076-532A-4AD1-8F1E-FECF3549ECBD">
+                        <File Id="KNOWTHELIST.EXE" Name="knowthelist.exe" Source="$(var.SourceDirectory)knowthelist.exe">
+                            <Shortcut Id="desktopShortcut" Directory="DesktopFolder" Name="Knowthelist" WorkingDirectory="INSTALLDIR" Advertise="yes" Icon="DesktopIcon.exe" IconIndex="0" />
+                            <Shortcut Id="ExeShortcut" Directory="ProgramMenuDir" Name="Knowthelist" Advertise="yes" Icon="StartMenuIcon.exe" IconIndex="0" />
+                        </File>
+                        <RemoveFile Id="PurgeAppFolder" Name="*.*" On="uninstall" />
+                    </Component>
+                    <Directory Id="TARGET_PLUGINS" Name="plugins">
+                        <Component Id="SINK.DLL" DiskId="1" Guid="3948239B-48D0-421F-BEFD-2603516019ED">
+                            <File Id="SINK.DLL" Name="libgstdirectsoundsink.dll" Source="$(var.SourceDirectory)libgstdirectsoundsink.dll" />
+			    <RemoveFile Id="PurgeLibFolder" Name="*.*" On="uninstall" />
+                        </Component>
+                    </Directory>
+                </Directory>
+            </Directory>
+            <Directory Id="DesktopFolder" />
+            <Directory Id="ProgramMenuFolder">
+                <Directory Id="ProgramMenuDir" Name="Knowthelist">
+                    <Component Id="StartMenuShortcuts" Guid="A57B7DF4-B1A4-4871-820B-4847C0AB9E09">
+                        <RemoveFolder Id="ProgramMenuDir" On="uninstall" />
+                        <RegistryValue Root="HKCU" Key="Software\[Manufacturer]\[ProductName]" Type="string" Value="" />
+                        <Shortcut Id="UninstallProduct" Name="Uninstall" Description="Uninstalls the application" Target="[System64Folder]msiexec.exe" Arguments="/x [ProductCode]" />
+                        <util:InternetShortcut Id="WebsiteShortcut" Name="Knowthelist Homepage" Target="http://knowthelist.github.io/knowthelist" />
+                    </Component>
+                </Directory>
+            </Directory>
+        </Directory>
+        <DirectoryRef Id="KNOWTHELIST_ORG">
+            <Component Id="CopyGstLibs" Guid="81A3F0B8-68F2-471F-8DC6-14C3FB48FCCE">
+                <CopyFile Id="CopyGstLibs" SourceProperty="GST_BIN" SourceName="*.dll" DestinationProperty="KNOWTHELIST_ORG" />
+                <CopyFile Id="CopyGstPlugins" SourceProperty="GST_LIBS" SourceName="*.dll" DestinationProperty="TARGET_PLUGINS" />
+            </Component>
+        </DirectoryRef>
+        <Feature Id="DefaultFeature" Title="Party Music Player" Level="1" Description="Installs the Knowthelist Party Music Player">
+            <ComponentRef Id="CopyGstLibs" />
+            <ComponentRef Id="KNOWTHELIST.EXE" />
+            <ComponentRef Id="SINK.DLL" />
+            <ComponentRef Id="StartMenuShortcuts" />
+        </Feature>
+        <UI />
+        <UIRef Id="WixUI_Mondo" />
+    </Product>
+</Wix>

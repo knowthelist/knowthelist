@@ -18,8 +18,11 @@
 #ifndef PLAYERWIDGET_H
 #define PLAYERWIDGET_H
 
-#include <QtGui/QWidget>
-#include <QtGui/QStyle>
+#include <QWidget>
+#include <QStyle>
+#include <QToolButton>
+#include <QLabel>
+#include <QVBoxLayout>
 #include <QtCore/QTimer>
 
 

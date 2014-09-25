@@ -66,28 +66,37 @@ QString CollectionTreeItem::genre()
 void CollectionTreeItem::setArtist(QString value)
 {
     p->artist=value;
-    //if (p->album.isEmpty())
-        setText(0,value);
+    setTextString(value);
     QTreeWidgetItem::setIcon( 0, QIcon( style()->standardIcon(QStyle::SP_DirHomeIcon).pixmap(12)) );
 }
 
 void CollectionTreeItem::setAlbum(QString value)
 {
     p->album=value;
-    setText(0,value);
+    setTextString(value);
     QTreeWidgetItem::setIcon( 0, QIcon(style()->standardIcon(QStyle::SP_DriveCDIcon).pixmap(12)) );
 }
 
 void CollectionTreeItem::setYear(QString value)
 {
     p->year=value;
-    setText(0,value);
+    setTextString(value);
     QTreeWidgetItem::setIcon( 0, QIcon(style()->standardIcon(QStyle::SP_FileIcon).pixmap(12)) );
 }
 
 void CollectionTreeItem::setGenre(QString value)
 {
     p->genre=value;
-    setText(0,value);
+    setTextString(value);
     QTreeWidgetItem::setIcon( 0, QIcon(style()->standardIcon(QStyle::SP_DirIcon).pixmap(12)) );
+}
+
+void CollectionTreeItem::setTextString(QString value)
+{
+    if ( value == QString::null ){
+        setText(0,QString("( %1 )").arg(tr("All")));
+        setChildIndicatorPolicy(QTreeWidgetItem::DontShowIndicator);
+    }
+    else
+        setText(0,value);
 }

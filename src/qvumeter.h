@@ -21,8 +21,8 @@
 #ifndef QVUMETER_H
 #define QVUMETER_H
 
-#include <QtGui>
-#include <QtDesigner/QDesignerExportWidget>
+#include <QWidget>
+//#include <QtDesigner/QDesignerExportWidget>
 #include <math.h>
 
 

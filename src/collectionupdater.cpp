@@ -19,7 +19,12 @@
 #include "collectionupdater.h"
 
 #include "collectiondb.h"
-#include <QtConcurrentRun>
+
+#if QT_VERSION >= 0x050000
+ #include <QtConcurrent/QtConcurrent>
+#else
+ #include <QtConcurrentRun>
+#endif
 
 
 class CollectionUpdaterPrivate
@@ -47,7 +52,7 @@ CollectionUpdater::CollectionUpdater()
 
         p->collectionDB = new CollectionDB();
         if ( !p->collectionDB )
-            qWarning() << __FUNCTION__ << "Could not open SQLite database\n";
+            qWarning() << Q_FUNC_INFO << "Could not open SQLite database\n";
 
         //optimization for speeding up SQLite
         p->collectionDB->executeSql( "PRAGMA synchronous = OFF;" );
@@ -67,7 +72,6 @@ CollectionUpdater::CollectionUpdater()
         connect(p->timer,SIGNAL(timeout()),this,SLOT(monitor()));
         if ( p->doMonitor)
            p->timer->start();
-
 }
 
 
@@ -77,12 +81,12 @@ CollectionUpdater::~CollectionUpdater()
 }
 
 void CollectionUpdater::setDoMonitor(bool value)
-{  
+{
     p->doMonitor = value;
     if ( p->doMonitor)
-        p->timer->start();
+       p->timer->start();
     else
-        p->timer->stop();
+       p->timer->stop();
 }
 
 void CollectionUpdater::stop()
@@ -101,10 +105,12 @@ void CollectionUpdater::setDirectoryList(QStringList dirs, bool force)
 
 void CollectionUpdater::monitor()
 {
+    qDebug() << Q_FUNC_INFO;
+
     p->incremental = true;
     p->isStoped = false;
 
-        QStringList folders;
+    QStringList folders;
 
             QList<QStringList> entries = p->collectionDB->selectSql( "SELECT dir, changedate FROM directories;" );
 
@@ -142,7 +148,7 @@ void CollectionUpdater::scan()
 
 void CollectionUpdater::asynchronScan(QStringList dirs)
 {
-    qDebug() << __FUNCTION__ << dirs << endl;
+    qDebug() << Q_FUNC_INFO << dirs.count() << "dirs" << endl;
 
     // avoid multiple runs
     p->timer->stop();
@@ -209,7 +215,7 @@ void CollectionUpdater::readDir( const QString& dir, QStringList& entries )
 
 void CollectionUpdater::readTags( const QStringList& entries )
 {
-    qDebug() << __PRETTY_FUNCTION__ << " Start";
+    qDebug() << Q_FUNC_INFO << " Start";
 
     QUrl url;
     p->collectionDB->createTables( true );
@@ -247,7 +253,7 @@ void CollectionUpdater::readTags( const QStringList& entries )
           }
     }
 
-    qDebug() << __PRETTY_FUNCTION__ << " Insert finish";
+    qDebug() << Q_FUNC_INFO << " Insert finish";
 
     //update database only if not stoped
     if ( !p->isStoped )
@@ -275,10 +281,10 @@ void CollectionUpdater::readTags( const QStringList& entries )
     else
     {
 
-      qDebug() << __PRETTY_FUNCTION__ << " Stop";
+      qDebug() << Q_FUNC_INFO << " Stop";
     }
 
-    qDebug() << __PRETTY_FUNCTION__ << " End";
+    qDebug() << Q_FUNC_INFO << " End";
 }
 
 

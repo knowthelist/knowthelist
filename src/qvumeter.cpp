@@ -20,6 +20,7 @@
 
 
 #include "qvumeter.h"
+#include <QPainter>
 
 QVUMeter::QVUMeter(QWidget *parent) : QWidget(parent)
 {

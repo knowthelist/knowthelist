@@ -21,7 +21,10 @@
 #include "djfilterwidget.h"
 #include "collectiondb.h"
 
-#include <Qt>
+#include <QSplitter>
+#include <QListWidget>
+#include <QPushButton>
+#include <QVBoxLayout>
 
 class DjBrowserPrivate
 {
@@ -290,7 +293,7 @@ void DjBrowser::removeDj()
 
 void DjBrowser::startDj()
 {
-    qDebug() << __PRETTY_FUNCTION__ ;
+    qDebug() << Q_FUNC_INFO ;
     loadDj();
     Q_EMIT selectionStarted();
 
@@ -299,7 +302,7 @@ void DjBrowser::startDj()
 void DjBrowser::loadDj()
 {
     //Fill Filter Widget List
-    qDebug() << __PRETTY_FUNCTION__ ;
+    qDebug() << Q_FUNC_INFO ;
 
     p->listDjFilters->clear();
 
@@ -325,7 +328,7 @@ void DjBrowser::loadDj()
             f->setMaxUsage(4);
             dj->addFilter(f);
         }
-        qDebug() << __PRETTY_FUNCTION__<< "name="<<dj->name << "filters="<< dj->filters().count();
+        qDebug() << Q_FUNC_INFO<< "name="<<dj->name << "filters="<< dj->filters().count();
         for (int i=0;i<dj->filters().count();i++)
         {
 

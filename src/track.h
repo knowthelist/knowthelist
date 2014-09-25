@@ -23,6 +23,7 @@
 #include <QImage>
 #include <QStringList>
 
+#define TAGLIB_STATIC
 
 class PlaylistItem;
 
