@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Wix xmlns="http://schemas.microsoft.com/wix/2006/wi" xmlns:util="http://schemas.microsoft.com/wix/UtilExtension">
     <!-- CHANGE THESE EVERY VERSION -->
-    <?define ProductVersion="2.2.3" ?>
-    <?define ProductCode="{6120DB53-572A-4D8A-9E13-B88345404A79}"?>
+    <?define ProductVersion="2.3.0" ?>
+    <?define ProductCode="{6120DB53-572A-4D8A-9E13-B88345404A80}"?>
     <!-- DO NOT CHANGE THESE AFTER FIRST RELEASE -->
     <?define ProductName = "Knowthelist"?>
     <?define Manufacturer="Knowthelist Org"?>
