@@ -29,10 +29,6 @@ int main(int argc, char *argv[])
 
     // init rand
     srand(QDateTime::currentDateTime().toUTC().toTime_t());
-    // init qrand
-    QTime time = QTime::currentTime();
-    qsrand((uint)time.msec());
-
 
     QTextCodec::setCodecForLocale(QTextCodec::codecForName("UTF-8"));
     a.setQuitOnLastWindowClosed(true);

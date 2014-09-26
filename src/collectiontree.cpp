@@ -183,6 +183,10 @@ void CollectionTree::asynchronTriggerRandomSelection()
     QMutexLocker locker(&p->mutex);
     p->tracks.clear();
 
+    // init qrand
+    QTime time = QTime::currentTime();
+    qsrand((uint)time.msec());
+
     for ( int i = 0; i < 15; i++ ) {
 
         Track* track;

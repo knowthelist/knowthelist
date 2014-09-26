@@ -121,9 +121,15 @@ Track::Track( const PlaylistItem *item )
 
 void Track::readTags()
 {
-    QByteArray fileName = QFile::encodeName( p->url.toLocalFile() );
-    const char * encodedName = fileName.constData();
-    TagLib::FileRef fileref = TagLib::FileRef( encodedName, true, TagLib::AudioProperties::Fast);
+    QString fileName =  p->url.toLocalFile();
+
+#ifdef Q_OS_WIN32
+    TagLib::FileRef fileref = TagLib::FileRef( fileName.toStdWString().c_str(), true, TagLib::AudioProperties::Fast);
+#else
+    TagLib::FileRef fileref = TagLib::FileRef( QFile::encodeName(fileName).constData(), true, TagLib::AudioProperties::Fast);
+
+#endif
+
 
    if ( !fileref.isNull() )
    {

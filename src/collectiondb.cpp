@@ -546,7 +546,7 @@ QStringList CollectionDB::getRandomEntry()
           p->resultCount=getCount();
      }
 
-    long randomID = (rand() / randMax) * p->resultCount;
+    long randomID = (qrand() / randMax) * p->resultCount;
     //qDebug() << QString::number(randomID);
     QList<QStringList> entries = selectRandomEntry(QString::number(randomID) );
 
