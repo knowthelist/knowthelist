@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!DOCTYPE TS>
-<TS version="2.0" language="fr_FR">
+<TS version="2.1" language="fr_FR">
 <context>
     <name>CollectionSetupModel</name>
     <message>
@@ -71,7 +71,7 @@
     <message>
         <location filename="../src/collectiontreeitem.cpp" line="97"/>
         <source>All</source>
-        <translation type="unfinished">tous</translation>
+        <translation>Tous</translation>
     </message>
 </context>
 <context>
@@ -532,7 +532,7 @@ p, li { white-space: pre-wrap; }
     <message>
         <location filename="../src/playerwidget.ui" line="3048"/>
         <source>Jump to the point where the music starts mainly</source>
-        <translation type="unfinished"></translation>
+        <translation>Sauter le blanc du début de la musique</translation>
     </message>
     <message>
         <source>Jump to start position</source>
@@ -819,7 +819,7 @@ p, li { white-space: pre-wrap; }
     <message>
         <location filename="../src/main.cpp" line="66"/>
         <source>This application needs the QT5 SQLITE driver (libqt5-sql-sqlite)</source>
-        <translation type="unfinished">Cette application requiert le pilote QT5 SQLite (qt5-database-plugin-sqlite)</translation>
+        <translation>Cette application requiert le pilote QT5 SQLite (qt5-database-plugin-sqlite)</translation>
     </message>
     <message>
         <location filename="../src/main.cpp" line="69"/>
