@@ -647,6 +647,7 @@ void Knowthelist::Track_selectionChanged(  Track* track )
 {
     if ( track ){
 
+        m_MonitorTrack = track;
         ui->lblMonitorArtist->setText( track->prettyArtist(20) );
         ui->lblMonitorTrack->setText( track->prettyTitle(60) );
         wantSeek=false;
@@ -658,7 +659,7 @@ void Knowthelist::Track_selectionChanged(  Track* track )
                  if (!pix.isNull())
                  ui->pixMonitorCover->setPixmap(pix);
                  timerMonitor_timeOut();
-       }
+         }
 
     }
     else{
@@ -816,6 +817,10 @@ void Knowthelist::timerMonitor_timeOut()
     QTime remain(0,0);
     long remainMs;
 
+    //Some tracks deliver no length in state pause
+    if ( length == QTime(0,0) )
+       length = QTime(0,0,0).addSecs(m_MonitorTrack->length());
+
     remainMs=curpos.msecsTo(length);
     remain = QTime(0,0).addMSecs(remainMs);
 
@@ -836,11 +841,16 @@ void Knowthelist::timerMonitor_timeOut()
 void Knowthelist::on_sliMonitor_sliderMoved(int value)
 {
         uint length = -monitorPlayer->length().msecsTo(QTime(0,0,0));
+
+        //Some tracks deliver no length in state pause
+        if ( length == 0 )
+           length = m_MonitorTrack->length() * 1000;
+
         if (length != 0 && value > 0) {
             QTime pos = QTime(0,0,0);
             pos = pos.addMSecs(length * (value / 1000.0));
                     qDebug()<<"pos:"<<pos;
-    monitorPlayer->setPosition(pos);
+            monitorPlayer->setPosition(pos);
         }
 
 }

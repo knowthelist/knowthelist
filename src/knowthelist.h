@@ -144,6 +144,7 @@ private:
     int mAboutFinishTime;
     int mMinTracks;
     bool wantSeek;
+    Track* m_MonitorTrack;
 
 protected:
      virtual void closeEvent(QCloseEvent*);
