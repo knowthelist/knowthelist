@@ -31,7 +31,7 @@ void Player::sync_set_state(GstElement* element, GstState state)
         if(res == GST_STATE_CHANGE_FAILURE) return; \
         if(res == GST_STATE_CHANGE_ASYNC) { \
                 GstState state; \
-                        res = gst_element_get_state(GST_ELEMENT (element), &state, NULL, 1000000000/*GST_CLOCK_TIME_NONE*/); \
+                        res = gst_element_get_state(GST_ELEMENT (element), &state, NULL, GST_CLOCK_TIME_NONE); \
                         if(res == GST_STATE_CHANGE_FAILURE || res == GST_STATE_CHANGE_ASYNC) return; \
 } }
 
@@ -376,6 +376,7 @@ QTime Player::length()
 #endif
             m_length = static_cast<uint>( ( value / GST_MSECOND ));
         }
+        qDebug() << Q_FUNC_INFO <<": Can not get duration";
     }
     return QTime(0,0).addMSecs(  m_length ); // nanosec -> msec
 }
@@ -421,7 +422,7 @@ void Player::messageReceived(GstMessage *message)
 
                 switch (GST_MESSAGE_TYPE (message)) {
                 case GST_STATE_CHANGE_FAILURE: {
-                    qDebug()<< "Gstreamer error:"<< p->error;
+                    qDebug() << Q_FUNC_INFO <<": Gstreamer error:"<< p->error;
                 }
                 case GST_MESSAGE_ERROR: {
                         if ( p->error == "")
@@ -434,7 +435,7 @@ void Player::messageReceived(GstMessage *message)
                                     p->error += "\nMay be you should install more of gstreamer plugins";
                                     lastError = QString::fromUtf8(err->message);
                             }
-                            qDebug()<< "Gstreamer error:"<< p->error;
+                            qDebug() << Q_FUNC_INFO <<": Gstreamer error:"<< p->error;
                             g_error_free (err);
                             g_free (debug);
                             Q_EMIT error();

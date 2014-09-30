@@ -442,9 +442,11 @@ void Playlist::skipForward()
         setCurrentPlaylistItem((PlaylistItem*)itemBelow(currentPlaylistItem));
         removePlaylistItem( previousPlaylistItem );
     }
-    else
-        setCurrentPlaylistItem((PlaylistItem*)itemBelow(currentPlaylistItem));
-
+    else {
+        if ( itemBelow(currentPlaylistItem) ) {
+            setCurrentPlaylistItem((PlaylistItem*)itemBelow(currentPlaylistItem));
+        }
+    }
     handleChanges();
 }
 

@@ -376,6 +376,10 @@ void PlayerWidget::updateTimeAndPositionDisplay(bool isPassive)
     QTime remain(0,0,0);
     long remainMs;
 
+    //Some tracks deliver no length in state pause
+    if ( length == QTime(0,0) )
+       length = QTime(0,0,0).addSecs(m_CurrentTrack->length());
+
     remainMs=curpos.msecsTo(length);
     remain = QTime(0,0,0).addMSecs(remainMs);
 

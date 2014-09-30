@@ -329,8 +329,8 @@ void TrackAnalyser::messageReceived(GstMessage *message)
                 gst_message_parse_tag (message, &tags);
                 if (gst_tag_list_get_double (tags, GST_TAG_TRACK_GAIN, &m_GainDB))
                 {
-                    qDebug() << "Gain-db:" << m_GainDB;
-                    qDebug() << "Gain-norm:" << pow (10, m_GainDB / 20);
+                    qDebug() << Q_FUNC_INFO << ": Gain-db:" << m_GainDB;
+                    qDebug() << Q_FUNC_INFO << ": Gain-norm:" << pow (10, m_GainDB / 20);
                 }
             }
 
