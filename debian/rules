@@ -6,6 +6,12 @@
 include /usr/share/cdbs/1/rules/debhelper.mk
 include /usr/share/cdbs/1/class/qmake.mk
 
-QMAKE=qmake
+HASQT5=$(shell qmake -qt5 -v > /dev/null 2>&1 && echo yes)
+
+ifeq ($(HASQT5),yes)
+    QMAKE=qmake -qt5
+else
+    QMAKE=qmake-qt4
+endif
 CFLAGS=-O3
 CXXFLAGS=-O3
