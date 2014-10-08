@@ -77,13 +77,15 @@ Install packages:
 -----------------
 Prebuilt packages for Linux can be found here: http://opendesktop.org/content/show.php/Knowthelist?content=165335
 
-Debian:
+**Debian:**
+
 Knowthelist is available in Jessie and sid archive
 
-Ubuntu:
-sudo add-apt-repository "deb http://ppa.launchpad.net/mstephan-r/ppa/ubuntu trusty main "
-sudo apt update
-sudo apt install knowthelist
+**Ubuntu:**
+
+    $ sudo add-apt-repository "deb http://ppa.launchpad.net/mstephan-r/ppa/ubuntu trusty main "
+    $ sudo apt update
+    $ sudo apt install knowthelist
 
 Versions:
 ----------
