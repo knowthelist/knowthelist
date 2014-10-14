@@ -4,14 +4,14 @@ require "formula"
 
 class Knowthelist < Formula
   homepage "http://knowthelist.github.io/knowthelist"
-  url "https://github.com/knowthelist/knowthelist/archive/v2.2.4.tar.gz"
-  #sha1 "0019ddabe094b057b2c150bd50b7fd4b077ff897"
+  url "https://github.com/knowthelist/knowthelist/archive/v2.3.0.tar.gz"
+  sha1 "e97a68784b7056c8e7cfb11e926215116688380d"
   head "https://github.com/knowthelist/knowthelist.git"
 
-  depends_on "homebrew/versions/gstreamer010"
-  depends_on "gst-plugins-base010"
-  depends_on "gst-plugins-good010"
-  depends_on "gst-plugins-ugly010" => "with-mad"
+  depends_on "gstreamer"
+  depends_on "gst-plugins-base"
+  depends_on "gst-plugins-good"
+  depends_on "gst-plugins-ugly" => "with-mad"
   depends_on "taglib"
   depends_on 'qt'
 
