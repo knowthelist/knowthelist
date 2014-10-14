@@ -309,7 +309,7 @@ void Knowthelist::loadStartSettings()
 
     ui->slider1->setValue( settings.value("Volume1","80").toDouble());
     ui->slider2->setValue( settings.value("Volume2","80").toDouble());
-    ui->sliMonitorVolume->setValue( settings.value("VolumeMonitor").toDouble());
+
     ui->sliFader->setValue( 70 );
     changeVolumes();
 
@@ -344,6 +344,8 @@ void Knowthelist::loadStartSettings()
 
     loadCurrentSettings();
 
+    //now monitorplayer is initialized, restore monitor volume with effect
+    ui->sliMonitorVolume->setValue( settings.value("VolumeMonitor").toDouble());
 }
 
 void Knowthelist::loadCurrentSettings()
