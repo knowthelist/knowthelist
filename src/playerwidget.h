@@ -66,7 +66,8 @@ public:
 
  public Q_SLOTS:
     void loadTrack( Track* );
-    void analyseFinished();
+    void analyseGainFinished();
+    void analyseTempoFinished();
     void setEqualizer(EqBand, int);
     void setInfo(QPair<int,int> info);
 
@@ -94,9 +95,7 @@ private Q_SLOTS:
     void on_sliPosition_sliderMoved(int);
 
     void on_butPlay_clicked();
-
     void on_butRew_clicked();
-
     void on_butFwd_clicked();
 
 

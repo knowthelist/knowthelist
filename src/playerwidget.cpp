@@ -98,8 +98,8 @@ PlayerWidget::PlayerWidget(QWidget *parent) :
    this->stop();
 
    trackanalyser = new TrackAnalyser(this);
-   connect(trackanalyser, SIGNAL(finish()),this,SLOT(analyseFinished()));
-
+   connect(trackanalyser, SIGNAL(finishGain()),this,SLOT(analyseGainFinished()));
+   connect(trackanalyser, SIGNAL(finishTempo()),this,SLOT(analyseTempoFinished()));
 }
 
 PlayerWidget::~PlayerWidget()
@@ -211,16 +211,27 @@ void PlayerWidget::on_butPlay_clicked()
     }
 }
 
-void PlayerWidget::analyseFinished()
+void PlayerWidget::analyseGainFinished()
 {
     qDebug() << Q_FUNC_INFO <<":"<<objectName();
     // got gain factor -> emit
     if (trackanalyser->gainDB()!=TrackAnalyser::GAIN_INVALID){
         Q_EMIT gainChanged(trackanalyser->gainFactor());
+        trackanalyser->setMode(TrackAnalyser::TEMPO);
+        trackanalyser->open(m_CurrentTrack->url());
     }
     if ( m_CurrentTrack ){
         setPositionMarkers();
         updateTimeAndPositionDisplay();
+
+    }
+}
+
+void PlayerWidget::analyseTempoFinished()
+{
+    qDebug() << Q_FUNC_INFO <<":"<<objectName();
+    if ( m_CurrentTrack ){
+        ui->lblBpm->setText(QString::number(trackanalyser->bpm()));
     }
 }
 
@@ -306,6 +317,7 @@ void PlayerWidget::loadTrack( Track *track)
       QUrl url = track->url();
       player->open(url);
 
+      trackanalyser->setMode(TrackAnalyser::STANDARD);
       trackanalyser->open(url);
 
       if ( doPlay )
@@ -327,8 +339,9 @@ void PlayerWidget::loadTrack( Track *track)
 
     remainCueTime=0;
     ui->sliPosition->setValue( 0 );
-    ui->txtCue->setText("?");
+    ui->txtCue->setText("-");
     ui->butCue->setChecked(false);
+    ui->lblBpm->setText("-");
 
 }
 

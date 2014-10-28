@@ -24,17 +24,28 @@
  #include <QtConcurrentRun>
 #endif
 
-struct TrackAnalyser::Private
+static guint spect_bands = 9;
+
+struct TrackAnalyser_Private
 {
         QFutureWatcher<void> watcher;
         QMutex mutex;
+        guint64 fft_res;
+        float lastSpectrum[9];
+        QList<float> spectralFlux;
+        int bpm;
+        GstElement *conv, *sink, *cutter, *audio, *analysis, *spectrum;
+        TrackAnalyser::modeType analysisMode;
 };
 
 TrackAnalyser::TrackAnalyser(QWidget *parent) :
         QWidget(parent),
     pipeline(0), m_finished(false)
-    , p( new Private )
+    , p( new TrackAnalyser_Private )
 {
+    p->fft_res = 343; //sample rate for fft samples in Hz
+    for (int i=0;i<spect_bands;i++)
+        p->lastSpectrum[i]=0.0;
 
     gst_init (0, 0);
     prepare();
@@ -52,6 +63,7 @@ void TrackAnalyser::sync_set_state(GstElement* element, GstState state)
                         if(res == GST_STATE_CHANGE_FAILURE || res == GST_STATE_CHANGE_ASYNC) return; \
 } }
 
+#define AUDIOFREQ 32000
 
 TrackAnalyser::~TrackAnalyser()
 {
@@ -122,42 +134,40 @@ void TrackAnalyser::cleanup()
 
 bool TrackAnalyser::prepare()
 {
-        GstElement *dec, *conv, *sink, *cutter, *audio, *analysis;
+        GstElement *dec, *audio;
         GstPad *audiopad;
-        GstCaps *caps;
-
-
 
         pipeline = gst_pipeline_new ("pipeline");
         bus = gst_pipeline_get_bus (GST_PIPELINE (pipeline));
 
 #ifdef GST_API_VERSION_1
-        caps = gst_caps_new_simple ("audio/x-raw",
-                                    "channels", G_TYPE_INT, 2, NULL);
         dec = gst_element_factory_make ("decodebin", "decoder");
 #else
-        caps = gst_caps_new_simple ("audio/x-raw-int",
-                                    "channels", G_TYPE_INT, 2, NULL);
         dec = gst_element_factory_make ("decodebin2", "decoder");
 #endif
         g_signal_connect (dec, "pad-added", G_CALLBACK (cb_newpad_ta), this);
         gst_bin_add (GST_BIN (pipeline), dec);
 
         audio = gst_bin_new ("audiobin");
-        conv = gst_element_factory_make ("audioconvert", "conv");
-        audiopad = gst_element_get_static_pad (conv, "sink");
-        analysis = gst_element_factory_make ("rganalysis", "analysis");
-        cutter = gst_element_factory_make ("cutter", "cutter");
-        sink = gst_element_factory_make ("fakesink", "sink");
+        p->conv = gst_element_factory_make ("audioconvert", "conv");
+        p->spectrum = gst_element_factory_make ("spectrum", "spectrum");
+        p->analysis = gst_element_factory_make ("rganalysis", "analysis");
+        p->cutter = gst_element_factory_make ("cutter", "cutter");
+        p->sink = gst_element_factory_make ("fakesink", "sink");
+        audiopad = gst_element_get_static_pad (p->conv, "sink");
 
-        g_object_set (analysis, "message", TRUE, NULL);
-        g_object_set (analysis, "num-tracks", 1, NULL);
-        g_object_set (cutter, "threshold-dB", -25.0, NULL);
+        g_object_set (p->analysis, "message", TRUE, NULL);
+        g_object_set (p->analysis, "num-tracks", 1, NULL);
+        g_object_set (p->cutter, "threshold-dB", -25.0, NULL);
 
-        gst_bin_add_many (GST_BIN (audio), conv, analysis, cutter, sink, NULL);
-        gst_element_link (conv, analysis);
-        gst_element_link_filtered (analysis, cutter, caps);
-        gst_element_link (cutter, sink);
+        g_object_set (G_OBJECT (p->spectrum), "bands", spect_bands, "threshold", -25,
+              "post-messages", TRUE, "interval", GST_SECOND / p->fft_res, NULL);
+
+
+        gst_bin_add_many (GST_BIN (audio), p->conv, p->analysis, p->cutter, p->spectrum, p->sink, NULL);
+        gst_element_link (p->conv, p->analysis);
+        gst_element_link (p->analysis, p->cutter);
+        gst_element_link (p->cutter, p->sink);
         gst_element_add_pad (audio, gst_ghost_pad_new ("sink", audiopad));
 
         gst_bin_add (GST_BIN (pipeline), audio);
@@ -179,6 +189,10 @@ bool TrackAnalyser::prepare()
         return pipeline;
 }
 
+int TrackAnalyser::bpm()
+{
+    return  p->bpm;
+}
 
 double TrackAnalyser::gainDB()
 {
@@ -200,6 +214,36 @@ QTime TrackAnalyser::endPosition()
     return m_EndPosition;
 }
 
+void TrackAnalyser::setMode(modeType mode)
+{
+    p->analysisMode = mode;
+    sync_set_state (GST_ELEMENT (pipeline), GST_STATE_NULL);
+
+    //divide in multiple analyser due to different running times
+    switch (p->analysisMode)
+    {
+        case TEMPO:
+        gst_element_unlink (p->conv, p->analysis);
+        gst_element_unlink (p->analysis, p->cutter);
+        gst_element_unlink (p->cutter, p->sink);
+
+        gst_element_link (p->conv, p->analysis);
+        gst_element_link (p->analysis, p->cutter);
+        gst_element_link (p->cutter, p->spectrum); //spectrum take too much time
+        gst_element_link (p->spectrum, p->sink);
+        break;
+    default:
+        gst_element_unlink (p->conv, p->analysis);
+        gst_element_unlink (p->analysis, p->cutter);
+        gst_element_unlink (p->cutter, p->spectrum);
+        gst_element_unlink (p->spectrum, p->sink);
+
+        gst_element_link (p->conv, p->analysis);
+        gst_element_link (p->analysis, p->cutter);
+        gst_element_link (p->cutter, p->sink);
+    }
+}
+
 void TrackAnalyser::open(QUrl url)
 {
     //To avoid delays load track in another thread
@@ -213,6 +257,7 @@ void TrackAnalyser::asyncOpen(QUrl url)
     p->mutex.lock();
     m_GainDB = GAIN_INVALID;
     m_StartPosition = QTime(0,0);
+    p->spectralFlux.clear();
 
     sync_set_state (GST_ELEMENT (pipeline), GST_STATE_NULL);
 
@@ -295,13 +340,38 @@ void TrackAnalyser::messageReceived(GstMessage *message)
                 break;
         }
         case GST_MESSAGE_ELEMENT:{
-                GstClockTime timestamp;
 
                 const GstStructure *s = gst_message_get_structure (message);
                 const gchar *name = gst_structure_get_name (s);
+                GstClockTime timestamp;
+                gst_structure_get_clock_time (s, "timestamp", &timestamp);
 
+                // data for tempo detection
+                if (strcmp (name, "spectrum") == 0) {
+                  const GValue *magnitudes;
+                  const GValue *mag;
+                  float mag_value;
+                  guint i;
+
+                  magnitudes = gst_structure_get_value (s, "magnitude");
+
+                  float flux = 0;
+                  for (i = 0; i < spect_bands; ++i) {
+                    //freq = (gdouble) ((AUDIOFREQ / 2) * i + AUDIOFREQ / 4) / spect_bands;
+                    mag = gst_value_list_get_value (magnitudes, i);
+                    mag_value = pow (10.0, g_value_get_float (mag)/ 20.0);
+                    float value = (mag_value - p->lastSpectrum[i]);
+                    p->lastSpectrum[i] = mag_value;
+                    flux += value < 0? 0: value;
+                  }
+                  //Spectral flux (comparing the power spectrum for one frame against the previous frame)
+                  //for onset detection
+                  p->spectralFlux.append( flux );
+
+                }
+                // data for Start and End time detection
                 if (strcmp (name, "cutter") == 0) {
-                    gst_structure_get_clock_time (s, "timestamp", &timestamp);
+
                     const GValue *value;
                     value=gst_structure_get_value (s, "above");
                     bool isSilent=!g_value_get_boolean(value);
@@ -342,9 +412,106 @@ void TrackAnalyser::messageReceived(GstMessage *message)
 
 void TrackAnalyser::need_finish()
 {
-        m_finished=true;
-        Q_EMIT finish();
+    m_finished=true;
+    switch (p->analysisMode)
+    {
+        case TEMPO:
+            detectTempo();
+            Q_EMIT finishTempo();
+            break;
+        default:
+            Q_EMIT finishGain();
+    }
 }
 
+void TrackAnalyser::detectTempo()
+{
+    int THRESHOLD_WINDOW_SIZE = 10;
+    float MULTIPLIER = 1.5f;
+    QList<float> prunedSpectralFlux;
+    QList<float> threshold;
+    QList<float> peaks;
 
+    //calculate the running average for spectral flux.
+    for( int i = 0; i < p->spectralFlux.size(); i++ )
+    {
+       int start = qMax( 0, i - THRESHOLD_WINDOW_SIZE );
+       int end = qMin( p->spectralFlux.size() - 1, i + THRESHOLD_WINDOW_SIZE );
+       float mean = 0;
+       for( int j = start; j <= end; j++ )
+          mean += p->spectralFlux.at(j);
+       mean /= (end - start);
+       threshold.append( mean * MULTIPLIER );
+    }
 
+    //take only the signifikat onsets above threshold
+    for( int i = 0; i < threshold.size(); i++ )
+    {
+       if( threshold.at(i) <= p->spectralFlux.at(i) )
+          prunedSpectralFlux.append( p->spectralFlux.at(i) - threshold.at(i) );
+       else
+          prunedSpectralFlux.append( (float)0 );
+    }
+
+    //peak detection
+    for( int i = 0; i < prunedSpectralFlux.size() - 1; i++ )
+    {
+       if( prunedSpectralFlux.at(i) > prunedSpectralFlux.at(i+1) )
+          peaks.append( prunedSpectralFlux.at(i) );
+       else
+          peaks.append( (float)0 );
+    }
+
+    //time = index * p->fft_res
+    int duration = 90 * p->fft_res; //sec
+
+    //use autocorrelation to retrieve time periode of peaks
+    float bpm = AutoCorrelation(peaks, duration, 60, 240, p->fft_res);
+    qDebug() << Q_FUNC_INFO << "autocorrelation bpm:"<<bpm;
+
+    //tempo-harmonics issue
+    if ( bpm < 72.0 ) {
+        bpm *= 2;
+        qDebug() << Q_FUNC_INFO << "guess bpm:"<<bpm;
+    }
+    p->bpm = bpm;
+}
+
+float TrackAnalyser::AutoCorrelation( QList<float> buffer, int frames, int minBpm, int maxBpm, int sampleRate)
+{
+
+    float maxCorr = 0;
+    int maxLag = 0;
+    float std_bpm = 120.0f;
+    float std_dev = 0.8f;
+
+    int maxOffset = sampleRate / (minBpm / 60);
+    int minOffset = sampleRate / (maxBpm / 60);
+    if (frames > buffer.count()) frames=buffer.count();
+
+    for (int lag = minOffset; lag < maxOffset; lag++)
+    {
+        float corr = 0;
+        for (int i = 0; i < frames-lag; i++)
+        {
+            corr += (buffer.at(i+lag) * buffer.at(i));
+        }
+
+        float bpm = sampleRate * 60 / lag;
+
+        //calculate rating according then common bpm of 120 (log normal distribution)
+        float rate = (float) qExp( -0.5 * qPow(( log( bpm / std_bpm ) / log(2) / std_dev),2.0));
+        corr = corr * rate;
+
+        if (corr > maxCorr)
+        {
+            maxCorr = corr;
+            maxLag = lag;
+        }
+
+    }
+    if (maxLag>0)
+        return sampleRate * 60 / maxLag;
+    else
+        return 0.0;
+}
