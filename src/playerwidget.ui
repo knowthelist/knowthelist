@@ -155,7 +155,16 @@ QLabel{
 }</string>
   </property>
   <layout class="QGridLayout" name="gridLayout">
-   <property name="margin">
+   <property name="leftMargin">
+    <number>0</number>
+   </property>
+   <property name="topMargin">
+    <number>0</number>
+   </property>
+   <property name="rightMargin">
+    <number>0</number>
+   </property>
+   <property name="bottomMargin">
     <number>0</number>
    </property>
    <property name="spacing">
@@ -801,10 +810,10 @@ QLabel{
                 <number>5</number>
                </property>
                <property name="topMargin">
-                <number>0</number>
+                <number>2</number>
                </property>
                <property name="bottomMargin">
-                <number>4</number>
+                <number>2</number>
                </property>
                <item>
                 <widget class="VUMeter" name="vuMeter" native="true">
@@ -847,7 +856,7 @@ QLabel{
                 <number>0</number>
                </property>
                <property name="topMargin">
-                <number>3</number>
+                <number>2</number>
                </property>
                <property name="rightMargin">
                 <number>10</number>
@@ -971,7 +980,7 @@ QLabel{
                 <number>1</number>
                </property>
                <property name="bottomMargin">
-                <number>6</number>
+                <number>5</number>
                </property>
                <item>
                 <widget class="QLabel" name="lblTime">
@@ -3007,7 +3016,16 @@ QLabel{
             <number>0</number>
            </property>
            <layout class="QHBoxLayout" name="horizontalLayout_2">
-            <property name="margin">
+            <property name="leftMargin">
+             <number>0</number>
+            </property>
+            <property name="topMargin">
+             <number>0</number>
+            </property>
+            <property name="rightMargin">
+             <number>0</number>
+            </property>
+            <property name="bottomMargin">
              <number>0</number>
             </property>
             <item>
