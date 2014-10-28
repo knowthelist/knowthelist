@@ -44,6 +44,7 @@ Requires:       gstreamer-10
 BuildRequires: taglib-devel 
 BuildRequires: pkgconfig(gstreamer-1.0)
 BuildRequires: libqt5-qtbase-devel
+BuildRequires: libqt5-qttools-devel
 BuildRequires: update-desktop-files
 Requires:       gstreamer-plugins-bad
 Requires:       gstreamer-plugins-base
@@ -56,6 +57,7 @@ Requires:       libqt5-qtbase
 BuildRequires: taglib-devel 
 BuildRequires: pkgconfig(gstreamer-1.0)
 BuildRequires: qt5-qtbase-devel	
+BuildRequires: qt5-qttools-devel
 BuildRequires: qt-devel >= 5.0
 Requires:       qt5-qtbase
 Requires:       gstreamer1-plugins-base

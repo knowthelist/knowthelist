@@ -3,6 +3,7 @@ Section: sound
 Priority: optional
 Maintainer: Mario Stephan <mstephan@shared-files.de>
 Build-Depends: cdbs, qt5-qmake|qt4-qmake, qtbase5-dev|libqt4-dev, debhelper (>= 8),
+ qttools5-dev-tools|qt4-linguist-tools,
  libc6 (>= 2.2), libgcc1 (>= 1:4.1.1), libglib2.0-0 (>= 2.12.0),
  libgstreamer1.0-0 | libgstreamer0.10-0 (>= 0.10.0), libgstreamer1.0-dev | libgstreamer0.10-dev,
  libqt5sql5|libqt4-sql (>= 4:4.5.3), libqt5xml5|libqt4-xml (>= 4:4.5.3),
