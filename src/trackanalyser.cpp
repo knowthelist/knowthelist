@@ -24,14 +24,16 @@
  #include <QtConcurrentRun>
 #endif
 
-static guint spect_bands = 9;
+#define AUDIOFREQ 32000
+#define SCAN_DURATION 60
+static const guint spect_bands = 8;
 
 struct TrackAnalyser_Private
 {
         QFutureWatcher<void> watcher;
         QMutex mutex;
         guint64 fft_res;
-        float lastSpectrum[9];
+        float lastSpectrum[spect_bands];
         QList<float> spectralFlux;
         int bpm;
         GstElement *conv, *sink, *cutter, *audio, *analysis, *spectrum;
@@ -43,7 +45,7 @@ TrackAnalyser::TrackAnalyser(QWidget *parent) :
     pipeline(0), m_finished(false)
     , p( new TrackAnalyser_Private )
 {
-    p->fft_res = 343; //sample rate for fft samples in Hz
+    p->fft_res = 344; //sample rate for fft samples in Hz
     for (int i=0;i<spect_bands;i++)
         p->lastSpectrum[i]=0.0;
 
@@ -63,13 +65,11 @@ void TrackAnalyser::sync_set_state(GstElement* element, GstState state)
                         if(res == GST_STATE_CHANGE_FAILURE || res == GST_STATE_CHANGE_ASYNC) return; \
 } }
 
-#define AUDIOFREQ 32000
-
 TrackAnalyser::~TrackAnalyser()
 {
+    cleanup();
     delete p;
     p=0;
-    cleanup();
 }
 
 
@@ -214,6 +214,15 @@ QTime TrackAnalyser::endPosition()
     return m_EndPosition;
 }
 
+void TrackAnalyser::setPosition(QTime position)
+{
+        int time_milliseconds=QTime(0,0).msecsTo(position);
+        gint64 time_nanoseconds=( time_milliseconds * GST_MSECOND );
+        gst_element_seek (pipeline, 1.0, GST_FORMAT_TIME, GST_SEEK_FLAG_FLUSH,
+                                 GST_SEEK_TYPE_SET, time_nanoseconds,
+                                 GST_SEEK_TYPE_NONE, GST_CLOCK_TIME_NONE);
+}
+
 void TrackAnalyser::setMode(modeType mode)
 {
     p->analysisMode = mode;
@@ -241,6 +250,7 @@ void TrackAnalyser::setMode(modeType mode)
         gst_element_link (p->conv, p->analysis);
         gst_element_link (p->analysis, p->cutter);
         gst_element_link (p->cutter, p->sink);
+        m_StartPosition = QTime(0,0);
     }
 }
 
@@ -256,7 +266,7 @@ void TrackAnalyser::asyncOpen(QUrl url)
 {
     p->mutex.lock();
     m_GainDB = GAIN_INVALID;
-    m_StartPosition = QTime(0,0);
+    //m_StartPosition = QTime(0,0);
     p->spectralFlux.clear();
 
     sync_set_state (GST_ELEMENT (pipeline), GST_STATE_NULL);
@@ -279,6 +289,8 @@ void TrackAnalyser::loadThreadFinished()
 {
     // async load in player done
     qDebug() << Q_FUNC_INFO <<":"<<parentWidget()->objectName();
+    if ( p->analysisMode == TrackAnalyser::TEMPO )
+        setPosition( length().addSecs(-SCAN_DURATION) );
     start();
 }
 
@@ -308,7 +320,6 @@ QTime TrackAnalyser::length()
         GstFormat fmt = GST_FORMAT_TIME;
         if(gst_element_query_duration(pipeline, &fmt, &value)) {
 #endif
-
             return QTime(0,0).addMSecs( static_cast<uint>( ( value / GST_MSECOND ) )); // nanosec -> msec
         }
     }
@@ -462,18 +473,15 @@ void TrackAnalyser::detectTempo()
           peaks.append( (float)0 );
     }
 
-    //time = index * p->fft_res
-    int duration = 90 * p->fft_res; //sec
-
     //use autocorrelation to retrieve time periode of peaks
-    float bpm = AutoCorrelation(peaks, duration, 60, 240, p->fft_res);
+    float bpm = AutoCorrelation(peaks, peaks.count(), 60, 240, p->fft_res);
     qDebug() << Q_FUNC_INFO << "autocorrelation bpm:"<<bpm;
 
     //tempo-harmonics issue
-    if ( bpm < 72.0 ) {
-        bpm *= 2;
-        qDebug() << Q_FUNC_INFO << "guess bpm:"<<bpm;
-    }
+    //if ( bpm < 72.0 ) {
+    //    bpm *= 2;
+    //    qDebug() << Q_FUNC_INFO << "guess bpm:"<<bpm;
+    //} //We dont care about tempo-harmonics issue -> music fits anyway -> factor: 2x or 0.5x
     p->bpm = bpm;
 }
 
@@ -500,8 +508,9 @@ float TrackAnalyser::AutoCorrelation( QList<float> buffer, int frames, int minBp
         float bpm = sampleRate * 60 / lag;
 
         //calculate rating according then common bpm of 120 (log normal distribution)
-        float rate = (float) qExp( -0.5 * qPow(( log( bpm / std_bpm ) / log(2) / std_dev),2.0));
-        corr = corr * rate;
+        //float rate = (float) qExp( -0.5 * qPow(( log( bpm / std_bpm ) / log(2) / std_dev),2.0));
+        //corr = corr * rate;
+        //We dont care about tempo-harmonics issue -> music fits anyway -> factor: 2x or 0.5x
 
         if (corr > maxCorr)
         {

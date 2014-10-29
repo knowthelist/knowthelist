@@ -207,8 +207,8 @@ bool Player::prepare()
 
         g_object_set (level, "message", TRUE, NULL);
         g_object_set (levelout, "message", TRUE, NULL);
-        g_object_set (level, "interval", GST_MSECOND * 50, NULL);
-        g_object_set (levelout, "interval", GST_MSECOND * 50, NULL);
+        g_object_set (level, "peak-ttl", 300000000000, NULL);
+
 
         gst_bin_add_many (GST_BIN (audio), conv, resample, level, gain, equalizer, levelout, vol, sink, NULL);
         gst_element_link (conv,resample);

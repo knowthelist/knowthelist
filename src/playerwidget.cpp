@@ -108,6 +108,7 @@ PlayerWidget::~PlayerWidget()
     delete timerPosition;
     delete timerLevel;
     delete trackanalyser;
+    trackanalyser = 0;
     delete p;
 }
 
@@ -217,13 +218,13 @@ void PlayerWidget::analyseGainFinished()
     // got gain factor -> emit
     if (trackanalyser->gainDB()!=TrackAnalyser::GAIN_INVALID){
         Q_EMIT gainChanged(trackanalyser->gainFactor());
-        trackanalyser->setMode(TrackAnalyser::TEMPO);
-        trackanalyser->open(m_CurrentTrack->url());
+
     }
     if ( m_CurrentTrack ){
         setPositionMarkers();
         updateTimeAndPositionDisplay();
-
+        trackanalyser->setMode(TrackAnalyser::TEMPO);
+        trackanalyser->open(m_CurrentTrack->url());
     }
 }
 

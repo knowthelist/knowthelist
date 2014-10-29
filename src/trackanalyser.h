@@ -46,6 +46,7 @@ public:
     int bpm();
     bool finished() {return m_finished;}
     void setMode(modeType mode);
+    void setPosition(QTime position);
 
     QTime length();
     static const int GAIN_INVALID=-99;
