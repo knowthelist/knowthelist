@@ -221,6 +221,7 @@ void TrackAnalyser::setPosition(QTime position)
         gst_element_seek (pipeline, 1.0, GST_FORMAT_TIME, GST_SEEK_FLAG_FLUSH,
                                  GST_SEEK_TYPE_SET, time_nanoseconds,
                                  GST_SEEK_TYPE_NONE, GST_CLOCK_TIME_NONE);
+        qDebug() << Q_FUNC_INFO <<":"<<" position="<<position;
 }
 
 void TrackAnalyser::setMode(modeType mode)
@@ -236,21 +237,17 @@ void TrackAnalyser::setMode(modeType mode)
         gst_element_unlink (p->analysis, p->cutter);
         gst_element_unlink (p->cutter, p->sink);
 
-        gst_element_link (p->conv, p->analysis);
-        gst_element_link (p->analysis, p->cutter);
-        gst_element_link (p->cutter, p->spectrum); //spectrum take too much time
+        gst_element_link (p->conv, p->spectrum);//spectrum take too much time
         gst_element_link (p->spectrum, p->sink);
         break;
     default:
-        gst_element_unlink (p->conv, p->analysis);
-        gst_element_unlink (p->analysis, p->cutter);
-        gst_element_unlink (p->cutter, p->spectrum);
+        gst_element_unlink (p->conv, p->spectrum);
         gst_element_unlink (p->spectrum, p->sink);
 
         gst_element_link (p->conv, p->analysis);
         gst_element_link (p->analysis, p->cutter);
         gst_element_link (p->cutter, p->sink);
-        m_StartPosition = QTime(0,0);
+        m_StartPosition = m_MaxPosition = QTime(0,0);
     }
 }
 
@@ -277,8 +274,6 @@ void TrackAnalyser::asyncOpen(QUrl url)
 
     sync_set_state (GST_ELEMENT (pipeline), GST_STATE_PAUSED);
 
-    m_MaxPosition=length();
-    m_EndPosition=m_MaxPosition;
     m_finished=false;
 
     gst_object_unref(l_src);
@@ -288,9 +283,14 @@ void TrackAnalyser::asyncOpen(QUrl url)
 void TrackAnalyser::loadThreadFinished()
 {
     // async load in player done
-    qDebug() << Q_FUNC_INFO <<":"<<parentWidget()->objectName();
-    if ( p->analysisMode == TrackAnalyser::TEMPO )
-        setPosition( length().addSecs(-SCAN_DURATION) );
+    qDebug() << Q_FUNC_INFO <<":"<<parentWidget()->objectName()<<" analysisMode="<<p->analysisMode;
+
+    if ( p->analysisMode == TrackAnalyser::TEMPO ){
+        setPosition( m_EndPosition.addSecs(-SCAN_DURATION) );
+    }
+    else {
+        m_EndPosition=length();
+    }
     start();
 }
 
@@ -320,9 +320,11 @@ QTime TrackAnalyser::length()
         GstFormat fmt = GST_FORMAT_TIME;
         if(gst_element_query_duration(pipeline, &fmt, &value)) {
 #endif
-            return QTime(0,0).addMSecs( static_cast<uint>( ( value / GST_MSECOND ) )); // nanosec -> msec
+            //qDebug() << Q_FUNC_INFO <<  " new value:" <<value;
+            m_MaxPosition = QTime(0,0).addMSecs( static_cast<uint>( ( value / GST_MSECOND ) )); // nanosec -> msec
         }
     }
+    //qDebug() << Q_FUNC_INFO <<  " return:" <<m_MaxPosition;
     return m_MaxPosition;
 }
 
@@ -397,7 +399,7 @@ void TrackAnalyser::messageReceived(GstMessage *message)
                             m_StartPosition=QTime(0,0).addMSecs( static_cast<uint>( ( timestamp / GST_MSECOND ) )); // nanosec -> msec
 
                         //if we detect a rising edge, set EndPostion to track end
-                        m_EndPosition=m_MaxPosition;
+                        m_EndPosition=length();
                     }
                     //qDebug() << Q_FUNC_INFO <<QTime(0,0).addMSecs( static_cast<uint>( ( timestamp / GST_MSECOND ) ))<< " silent:" << isSilent;
                 }
