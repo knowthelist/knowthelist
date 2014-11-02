@@ -6,12 +6,16 @@
 include /usr/share/cdbs/1/rules/debhelper.mk
 include /usr/share/cdbs/1/class/qmake.mk
 
+DEB_BUILD_PARALLEL:=1
 HASQT5=$(shell qmake -qt5 -v > /dev/null 2>&1 && echo yes)
 
 ifeq ($(HASQT5),yes)
     QMAKE=qmake -qt5
+    QSQLITE_DEPEND=libqt5sql5-sqlite
 else
     QMAKE=qmake-qt4
+    QSQLITE_DEPEND=libqt4-sql-sqlite
 endif
 CFLAGS=-O3
 CXXFLAGS=-O3
+DEB_DH_GENCONTROL_ARGS_ALL = -- '-Vqtsqlite:Depends=$(QSQLITE_DEPEND)'
