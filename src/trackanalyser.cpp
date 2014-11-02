@@ -45,7 +45,7 @@ TrackAnalyser::TrackAnalyser(QWidget *parent) :
     pipeline(0), m_finished(false)
     , p( new TrackAnalyser_Private )
 {
-    p->fft_res = 344; //sample rate for fft samples in Hz
+    p->fft_res = 435; //sample rate for fft samples in Hz
     for (int i=0;i<spect_bands;i++)
         p->lastSpectrum[i]=0.0;
 
@@ -160,7 +160,7 @@ bool TrackAnalyser::prepare()
         g_object_set (p->analysis, "num-tracks", 1, NULL);
         g_object_set (p->cutter, "threshold-dB", -25.0, NULL);
 
-        g_object_set (G_OBJECT (p->spectrum), "bands", spect_bands, "threshold", -25,
+        g_object_set (G_OBJECT (p->spectrum), "bands", spect_bands, "threshold", -80,
               "post-messages", TRUE, "interval", GST_SECOND / p->fft_res, NULL);
 
 
@@ -286,7 +286,8 @@ void TrackAnalyser::loadThreadFinished()
     qDebug() << Q_FUNC_INFO <<":"<<parentWidget()->objectName()<<" analysisMode="<<p->analysisMode;
 
     if ( p->analysisMode == TrackAnalyser::TEMPO ){
-        setPosition( m_EndPosition.addSecs(-SCAN_DURATION) );
+        //setPosition( m_EndPosition.addSecs(-SCAN_DURATION) );
+        setPosition(m_StartPosition);
     }
     else {
         m_EndPosition=length();
@@ -370,12 +371,13 @@ void TrackAnalyser::messageReceived(GstMessage *message)
 
                   float flux = 0;
                   for (i = 0; i < spect_bands; ++i) {
-                    //freq = (gdouble) ((AUDIOFREQ / 2) * i + AUDIOFREQ / 4) / spect_bands;
+                    //gdouble freq = (gdouble) ((AUDIOFREQ / 2) * i + AUDIOFREQ / 4) / spect_bands;
                     mag = gst_value_list_get_value (magnitudes, i);
                     mag_value = pow (10.0, g_value_get_float (mag)/ 20.0);
                     float value = (mag_value - p->lastSpectrum[i]);
                     p->lastSpectrum[i] = mag_value;
                     flux += value < 0? 0: value;
+                    //qDebug() << Q_FUNC_INFO <<"freq:"<<freq<<" flux:"<<flux;
                   }
                   //Spectral flux (comparing the power spectrum for one frame against the previous frame)
                   //for onset detection
@@ -484,7 +486,7 @@ void TrackAnalyser::detectTempo()
     //    bpm *= 2;
     //    qDebug() << Q_FUNC_INFO << "guess bpm:"<<bpm;
     //} //We dont care about tempo-harmonics issue -> music fits anyway -> factor: 2x or 0.5x
-    p->bpm = bpm;
+    p->bpm = qRound(bpm);
 }
 
 float TrackAnalyser::AutoCorrelation( QList<float> buffer, int frames, int minBpm, int maxBpm, int sampleRate)
@@ -495,8 +497,8 @@ float TrackAnalyser::AutoCorrelation( QList<float> buffer, int frames, int minBp
     float std_bpm = 120.0f;
     float std_dev = 0.8f;
 
-    int maxOffset = sampleRate / (minBpm / 60);
-    int minOffset = sampleRate / (maxBpm / 60);
+    int maxOffset = sampleRate * 60 / minBpm;
+    int minOffset = sampleRate * 60 / maxBpm;
     if (frames > buffer.count()) frames=buffer.count();
 
     for (int lag = minOffset; lag < maxOffset; lag++)
@@ -507,7 +509,7 @@ float TrackAnalyser::AutoCorrelation( QList<float> buffer, int frames, int minBp
             corr += (buffer.at(i+lag) * buffer.at(i));
         }
 
-        float bpm = sampleRate * 60 / lag;
+        //float bpm = sampleRate * 60.0 / lag;
 
         //calculate rating according then common bpm of 120 (log normal distribution)
         //float rate = (float) qExp( -0.5 * qPow(( log( bpm / std_bpm ) / log(2) / std_dev),2.0));
@@ -516,13 +518,14 @@ float TrackAnalyser::AutoCorrelation( QList<float> buffer, int frames, int minBp
 
         if (corr > maxCorr)
         {
+            //qDebug() << Q_FUNC_INFO << "corr: "<<corr<<" bpm:"<<bpm;
             maxCorr = corr;
             maxLag = lag;
         }
 
     }
     if (maxLag>0)
-        return sampleRate * 60 / maxLag;
+        return sampleRate * 60.0 / maxLag;
     else
         return 0.0;
 }
