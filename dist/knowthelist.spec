@@ -5,7 +5,7 @@
 
 %define qmake qmake-qt4
 
-%if 0%{?suse_version}
+%if 0%{?suse_version} ||  0%{?rhel}
 %define qmake /usr/bin/qmake
 %endif
 %if 0%{?suse_version} >=1310
