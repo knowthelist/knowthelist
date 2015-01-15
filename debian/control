@@ -13,11 +13,7 @@ Vcs-Browser: https://github.com/knowthelist/knowthelist
 
 Package: knowthelist
 Architecture: any
-<<<<<<< HEAD
 Depends: ${shlibs:Depends}, ${misc:Depends}, ${runtime:Depends}
-=======
-Depends: ${shlibs:Depends}, ${misc:Depends}, ${qtsqlite:Depends}
->>>>>>> master
 Description: awesome party music player
  Easy to use for all party guests.
  .
