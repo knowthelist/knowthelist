@@ -930,7 +930,7 @@ QLabel{
                   </font>
                  </property>
                  <property name="toolTip">
-                  <string>Beats Pro Minute</string>
+                  <string>Beats Per Minute</string>
                  </property>
                  <property name="text">
                   <string>BPM</string>
