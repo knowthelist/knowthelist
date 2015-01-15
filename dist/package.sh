@@ -4,15 +4,21 @@ dist="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 version=$(grep "APP_VERSION.*$" ${dist}/../src/src.pro| sed 's/^.*APP_VERSION.*\([0-9]\.[0-9]\.[0-9]\).*$/\1/')
 target=${dist}"/../../knowthelist-"${version}
 
-rm -rf ${target} && mkdir ${target}
+if [ -d ${target} ]; then rm -rf ${target} ;fi 
+mkdir ${target}
 cp -R ${dist}/../../knowthelist/* ${target}
 rm ${target}/knowthelist.pro.user
 rm ${target}/src/Makefile
 rm ${target}/Makefile
+rm ${target}/locale/*.qm
 cd ${target}
 
-tar -czf ../knowthelist_${version}.orig.tar.gz ../knowthelist-${version}/
-dpkg-buildpackage -k${GPGKEY}
+if [ ! -f ../knowthelist_${version}.orig.tar.gz ]; then
+    tar -czf ../knowthelist_${version}.orig.tar.gz ../knowthelist-${version}/
+else
+    dpkg-source --commit
+fi
+dpkg-buildpackage -k${GPGKEY} -sa
 
 # Suse / Fedora spec
 sed -i 's/Version: 1/Version: '${version}'/g' ${target}/dist/knowthelist.spec
@@ -28,3 +34,4 @@ for package in $process
         sort -u
   done
 }
+
