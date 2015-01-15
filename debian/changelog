@@ -1,3 +1,11 @@
+knowthelist (2.3.0-2) unstable; urgency=medium
+
+  * Simplifed the build dependencies (Closes: #767141).
+  * Avoid mismatch of dependency (Closes: #767142).
+  * Enabled parallel building (Closes: #767143).
+
+ -- Mario Stephan <mstephan@shared-files.de>  Sun, 11 Jan 2015 20:01:11 +0100
+
 knowthelist (2.3.0-1) unstable; urgency=medium
  
   * Made all compatible with Qt5 and Gstreamer-1.0.

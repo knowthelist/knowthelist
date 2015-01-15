@@ -5,13 +5,13 @@
 
 %define qmake qmake-qt4
 
-%if 0%{?suse_version} ||  0%{?rhel}
+%if 0%{?suse_version}
 %define qmake /usr/bin/qmake
 %endif
 %if 0%{?suse_version} >=1310
 %define qmake /usr/%_lib/qt5/bin/qmake
 %endif
-%if 0%{?fedora_version} >= 20 
+%if 0%{?fedora_version} >= 20
 %define qmake /usr/bin/qmake-qt5
 %endif
 
@@ -44,6 +44,7 @@ Requires:       gstreamer-10
 BuildRequires: taglib-devel 
 BuildRequires: pkgconfig(gstreamer-1.0)
 BuildRequires: libqt5-qtbase-devel
+BuildRequires: libqt5-qttools
 BuildRequires: update-desktop-files
 Requires:       gstreamer-plugins-bad
 Requires:       gstreamer-plugins-base
@@ -52,10 +53,24 @@ Requires:       gstreamer-plugins-good
 Requires:       gstreamer
 Requires:       libqt5-qtbase
 %endif
-%if 0%{?fedora_version} >= 20 
+%if 0%{?suse_version} >=1320 
+BuildRequires: taglib-devel 
+BuildRequires: pkgconfig(gstreamer-1.0)
+BuildRequires: libqt5-qtbase-devel
+BuildRequires: libqt5-linguist
+BuildRequires: update-desktop-files
+Requires:       gstreamer-plugins-bad
+Requires:       gstreamer-plugins-base
+Requires:       gstreamer-plugins-ugly
+Requires:       gstreamer-plugins-good
+Requires:       gstreamer
+Requires:       libqt5-qtbase
+%endif
+%if 0%{?fedora_version} >= 20
 BuildRequires: taglib-devel 
 BuildRequires: pkgconfig(gstreamer-1.0)
 BuildRequires: qt5-qtbase-devel	
+BuildRequires: qt5-qttools-devel
 BuildRequires: qt-devel >= 5.0
 Requires:       qt5-qtbase
 Requires:       gstreamer1-plugins-base
@@ -166,3 +181,5 @@ strings
 * Thu May 29 2014 Mario Stephan <mstephan@shared-files.de>
 - 2.1.0
 - First Release
+
+
