@@ -32,36 +32,39 @@ public:
     TrackAnalyser(QWidget *parent = 0);
     ~TrackAnalyser();
 
+    enum modeType { STANDARD, TEMPO };
+
     bool prepare();
+    void open(QUrl url);
+    void start();
+    bool close();
 
-     void open(QUrl url);
-     void start();
+    double gainDB();
+    double gainFactor();
+    QTime startPosition();
+    QTime endPosition();
+    int bpm();
+    bool finished() {return m_finished;}
+    void setMode(modeType mode);
+    void setPosition(QTime position);
 
-     bool close();
+    QTime length();
+    static const int GAIN_INVALID=-99;
 
-     double gainDB();
-     double gainFactor();
-     QTime startPosition();
-     QTime endPosition();
-     bool finished() {return m_finished;}
-
-     QTime length();
-     static const int GAIN_INVALID=-99;
-
-        void need_finish();
-        void newpad (GstElement *decodebin, GstPad *pad, gpointer data);
-        static GstBusSyncReply  bus_cb (GstBus *bus, GstMessage *msg, gpointer data);
+    void need_finish();
+    void newpad (GstElement *decodebin, GstPad *pad, gpointer data);
+    static GstBusSyncReply  bus_cb (GstBus *bus, GstMessage *msg, gpointer data);
 
  Q_SIGNALS:
-        void finish();
+        void finishGain();
+        void finishTempo();
 
  private slots:
     void messageReceived(GstMessage* message);
-            void loadThreadFinished();
+    void loadThreadFinished();
 
  private:
-    struct Private;
-    Private * p;
+    struct TrackAnalyser_Private *p;
         GstElement *pipeline;
         GstBus *bus;
 
@@ -70,6 +73,9 @@ public:
         QTime m_EndPosition;
         QTime m_MaxPosition;
         bool m_finished;
+
+        void detectTempo();
+        float AutoCorrelation( QList<float> buffer, int frames, int minBpm, int maxBpm, int sampleRate);
 
         void cleanup();
         void asyncOpen(QUrl url);

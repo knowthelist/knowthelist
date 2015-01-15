@@ -85,10 +85,11 @@ void VUMeter::checkPeakTime() {
     }
 }
 
-void VUMeter::setValueLeft ( float f ) {
+void VUMeter::setValueLeft ( float f )
+{
+    float fl = f;
 
-    float fl = 1.0f + levelToDB( f )/120;
-    if (fl<0.f) fl= 0.f;   
+    if (fl<0.f) fl= 0.f;
         
     if ( fl > peakLeft ) {
         peakLeft = fl;
@@ -111,10 +112,11 @@ void VUMeter::setPercentage( float f )
     update();
 }
 
-void VUMeter::setValueRight ( float f ) {
+void VUMeter::setValueRight ( float f )
+{
+    float fr = f;
 
-    float fr = 1.0f + levelToDB( f )/120;
-    if (fr<0.f) fr= 0.f;    
+    if (fr<0.f) fr= 0.f;
     
     if ( fr > peakRight ) {
         peakRight = fr;
