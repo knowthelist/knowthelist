@@ -20,11 +20,11 @@ ifeq ($(HASQT5),yes)
 else
     QMAKE=qmake-qt4
     RUNTIME_DEPENDS=libqt4-sql-sqlite,\
-	gstreamer1.0-plugins-base,\
-	gstreamer1.0-plugins-good,\
-	gstreamer1.0-plugins-ugly,\
-	gstreamer1.0-plugins-bad,\
-	gstreamer1.0-pulseaudio
+	gstreamer0.10-plugins-base,\
+	gstreamer0.10-plugins-good,\
+	gstreamer0.10-plugins-ugly,\
+	gstreamer0.10-plugins-bad,\
+	gstreamer0.10-pulseaudio
 endif
 CFLAGS=-O3
 CXXFLAGS=-O3

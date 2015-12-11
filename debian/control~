@@ -4,7 +4,7 @@ Priority: optional
 Maintainer: Mario Stephan <mstephan@shared-files.de>
 Build-Depends: cdbs, qtbase5-dev|libqt4-dev, debhelper (>= 8),
  qttools5-dev-tools|qt4-linguist-tools,
- libgstreamer1.0-dev,
+ libgstreamer1.0-dev | libgstreamer0.10-dev,
  libtag1-dev, libasound2-dev
 Standards-Version: 3.9.6
 Homepage: http://knowthelist.github.io/knowthelist
