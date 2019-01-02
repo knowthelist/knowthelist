@@ -1,10 +1,10 @@
 #
 # Knowthelist
-# Copyright (C) 2011-2014 Mario Stephan <mstephan@shared-files.de>
+# Copyright (C) 2011-2019 Mario Stephan <mstephan@shared-files.de>
 # License: LGPL-3.0+
 #
 
-DEFINES += APP_VERSION="\\\"2.3.0\\\""
+DEFINES += APP_VERSION="\\\"2.3.1\\\""
 
 QT += core \
     gui \
@@ -24,7 +24,6 @@ SOURCES += main.cpp \
     knowthelist.cpp \
     player.cpp \
     vumeter.cpp \
-    qvumeter.cpp \
     playerwidget.cpp \
     qled.cpp \
     playlistitem.cpp \
@@ -54,10 +53,10 @@ SOURCES += main.cpp \
     playlistbrowser.cpp \
     playlistwidget.cpp \
     djbrowser.cpp \
-    ratingwidget.cpp
+    ratingwidget.cpp \
+    customdial.cpp
 HEADERS += knowthelist.h \
     vumeter.h \
-    qvumeter.h \
     playerwidget.h \
     qled.h \
     playlistitem.h \
@@ -88,7 +87,8 @@ HEADERS += knowthelist.h \
     playlistbrowser.h \
     playlistwidget.h \
     djbrowser.h \
-    ratingwidget.h
+    ratingwidget.h \
+    customdial.h
 FORMS += \
     settingsdialog.ui \
     djwidget.ui \
@@ -209,7 +209,8 @@ lrelease.input = TRANSLATIONS
 lrelease.output = ../locale/${QMAKE_FILE_BASE}.qm
 lrelease.CONFIG = no_link target_predeps
 QMAKE_EXTRA_COMPILERS += lrelease
-
+QMAKE_CXXFLAGS_WARN_ON += -Wno-unused-parameter
+QMAKE_CXXFLAGS_WARN_ON += -Wno-reorder
 
 
 

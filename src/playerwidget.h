@@ -67,7 +67,6 @@ public:
  public Q_SLOTS:
     void loadTrack( Track* );
     void analyseGainFinished();
-    void analyseTempoFinished();
     void setEqualizer(EqBand, int);
     void setInfo(QPair<int,int> info);
 

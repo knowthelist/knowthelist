@@ -62,18 +62,11 @@ QToolButton:pressed {
    stop:1 #999999
  );
 }
-QDial {
- color: white; 
- background: qlineargradient(
-   x1:0, y1:0, x2:0, y2:1,
-   stop: 0.1 #999999,
-	stop:0.5 #505050,
-   stop:1 white
- );
-max-height: 32px;
-min-height: 32px;
+CustomDial
+{
+ color: #fff; 
+ background-color: #555;
 }
-
 
 QSplitter {
 color: black;
@@ -125,13 +118,9 @@ max-height:15px;
          border-radius: 3px;
 }
 
-QFrame#frameMixer{
-          background: qlineargradient(
-   x1:0, y1:0, x2:0, y2:1,
-   stop: 0.1 #999999,
-	stop:0.5 #505050,
-   stop:1 black
- );
+QFrame#frameMixer,
+QFrame#phVUMeter {
+background-color: #444444;
 }
 QCheckBox {
 color: rgb(200, 200, 200);
@@ -153,7 +142,7 @@ QWidget#centralwidget{
  );
 }
 
- QLineEdit {
+QLineEdit {
 	 margin: 2 2 2 3;
      border: 2px solid gray;
      border-radius: 6px;
@@ -161,7 +150,7 @@ QWidget#centralwidget{
      background: #dddddd;
      selection-background-color: darkgray;
  }
- SearchEdit {
+SearchEdit {
      padding: 0px 18px;
 	font-size:14px;
  }
@@ -438,7 +427,6 @@ background-color: #444444;
               <height>0</height>
              </size>
             </property>
-            <zorder>frameMixer</zorder>
            </widget>
           </item>
          </layout>
@@ -478,7 +466,7 @@ background-color: #444444;
           <property name="frameShadow">
            <enum>QFrame::Raised</enum>
           </property>
-          <widget class="QVUMeter" name="phVU1" native="true">
+          <widget class="QFrame" name="phVU1">
            <property name="geometry">
             <rect>
              <x>71</x>
@@ -487,13 +475,19 @@ background-color: #444444;
              <height>109</height>
             </rect>
            </property>
+           <property name="frameShape">
+            <enum>QFrame::StyledPanel</enum>
+           </property>
+           <property name="frameShadow">
+            <enum>QFrame::Raised</enum>
+           </property>
           </widget>
           <widget class="QFrame" name="phVU2">
            <property name="geometry">
             <rect>
              <x>102</x>
              <y>134</y>
-             <width>23</width>
+             <width>24</width>
              <height>109</height>
             </rect>
            </property>
@@ -4868,235 +4862,11 @@ min-height: 16px;
             <bool>false</bool>
            </property>
           </widget>
-          <widget class="QDial" name="potHigh_1">
-           <property name="geometry">
-            <rect>
-             <x>43</x>
-             <y>1</y>
-             <width>33</width>
-             <height>32</height>
-            </rect>
-           </property>
-           <property name="minimum">
-            <number>-240</number>
-           </property>
-           <property name="maximum">
-            <number>120</number>
-           </property>
-           <property name="singleStep">
-            <number>4</number>
-           </property>
-           <property name="value">
-            <number>-60</number>
-           </property>
-           <property name="tracking">
-            <bool>true</bool>
-           </property>
-           <property name="invertedAppearance">
-            <bool>false</bool>
-           </property>
-           <property name="invertedControls">
-            <bool>false</bool>
-           </property>
-           <property name="wrapping">
-            <bool>false</bool>
-           </property>
-           <property name="notchesVisible">
-            <bool>true</bool>
-           </property>
-          </widget>
-          <widget class="QDial" name="potMid_1">
-           <property name="geometry">
-            <rect>
-             <x>43</x>
-             <y>33</y>
-             <width>33</width>
-             <height>32</height>
-            </rect>
-           </property>
-           <property name="minimum">
-            <number>-240</number>
-           </property>
-           <property name="maximum">
-            <number>120</number>
-           </property>
-           <property name="singleStep">
-            <number>4</number>
-           </property>
-           <property name="value">
-            <number>0</number>
-           </property>
-           <property name="tracking">
-            <bool>true</bool>
-           </property>
-           <property name="notchesVisible">
-            <bool>true</bool>
-           </property>
-          </widget>
-          <widget class="QDial" name="potLow_1">
-           <property name="geometry">
-            <rect>
-             <x>43</x>
-             <y>65</y>
-             <width>33</width>
-             <height>32</height>
-            </rect>
-           </property>
-           <property name="minimum">
-            <number>-240</number>
-           </property>
-           <property name="maximum">
-            <number>120</number>
-           </property>
-           <property name="singleStep">
-            <number>4</number>
-           </property>
-           <property name="tracking">
-            <bool>true</bool>
-           </property>
-           <property name="notchesVisible">
-            <bool>true</bool>
-           </property>
-          </widget>
-          <widget class="QDial" name="potHigh_2">
-           <property name="geometry">
-            <rect>
-             <x>119</x>
-             <y>1</y>
-             <width>33</width>
-             <height>32</height>
-            </rect>
-           </property>
-           <property name="minimum">
-            <number>-240</number>
-           </property>
-           <property name="maximum">
-            <number>120</number>
-           </property>
-           <property name="singleStep">
-            <number>4</number>
-           </property>
-           <property name="tracking">
-            <bool>true</bool>
-           </property>
-           <property name="notchesVisible">
-            <bool>true</bool>
-           </property>
-          </widget>
-          <widget class="QDial" name="potMid_2">
-           <property name="geometry">
-            <rect>
-             <x>119</x>
-             <y>33</y>
-             <width>33</width>
-             <height>32</height>
-            </rect>
-           </property>
-           <property name="minimum">
-            <number>-240</number>
-           </property>
-           <property name="maximum">
-            <number>120</number>
-           </property>
-           <property name="singleStep">
-            <number>4</number>
-           </property>
-           <property name="tracking">
-            <bool>true</bool>
-           </property>
-           <property name="notchesVisible">
-            <bool>true</bool>
-           </property>
-          </widget>
-          <widget class="QDial" name="potLow_2">
-           <property name="geometry">
-            <rect>
-             <x>119</x>
-             <y>65</y>
-             <width>33</width>
-             <height>32</height>
-            </rect>
-           </property>
-           <property name="minimum">
-            <number>-240</number>
-           </property>
-           <property name="maximum">
-            <number>120</number>
-           </property>
-           <property name="singleStep">
-            <number>4</number>
-           </property>
-           <property name="tracking">
-            <bool>true</bool>
-           </property>
-           <property name="notchesVisible">
-            <bool>true</bool>
-           </property>
-          </widget>
-          <widget class="QDial" name="potGain_1">
-           <property name="geometry">
-            <rect>
-             <x>43</x>
-             <y>99</y>
-             <width>33</width>
-             <height>32</height>
-            </rect>
-           </property>
-           <property name="styleSheet">
-            <string notr="true"/>
-           </property>
-           <property name="minimum">
-            <number>10</number>
-           </property>
-           <property name="maximum">
-            <number>180</number>
-           </property>
-           <property name="singleStep">
-            <number>4</number>
-           </property>
-           <property name="value">
-            <number>100</number>
-           </property>
-           <property name="tracking">
-            <bool>true</bool>
-           </property>
-           <property name="notchesVisible">
-            <bool>true</bool>
-           </property>
-          </widget>
-          <widget class="QDial" name="potGain_2">
-           <property name="geometry">
-            <rect>
-             <x>119</x>
-             <y>99</y>
-             <width>33</width>
-             <height>32</height>
-            </rect>
-           </property>
-           <property name="minimum">
-            <number>10</number>
-           </property>
-           <property name="maximum">
-            <number>180</number>
-           </property>
-           <property name="singleStep">
-            <number>4</number>
-           </property>
-           <property name="value">
-            <number>100</number>
-           </property>
-           <property name="tracking">
-            <bool>true</bool>
-           </property>
-           <property name="notchesVisible">
-            <bool>true</bool>
-           </property>
-          </widget>
           <widget class="QLabel" name="label">
            <property name="geometry">
             <rect>
              <x>9</x>
-             <y>101</y>
+             <y>109</y>
              <width>35</width>
              <height>16</height>
             </rect>
@@ -5120,7 +4890,7 @@ min-height: 16px;
            <property name="geometry">
             <rect>
              <x>82</x>
-             <y>98</y>
+             <y>113</y>
              <width>31</width>
              <height>16</height>
             </rect>
@@ -5751,7 +5521,7 @@ min-height: 16px;
            <property name="geometry">
             <rect>
              <x>91</x>
-             <y>90</y>
+             <y>105</y>
              <width>12</width>
              <height>7</height>
             </rect>
@@ -5777,7 +5547,7 @@ min-height: 16px;
            <property name="geometry">
             <rect>
              <x>153</x>
-             <y>101</y>
+             <y>109</y>
              <width>36</width>
              <height>16</height>
             </rect>
@@ -5798,7 +5568,7 @@ min-height: 16px;
            <property name="geometry">
             <rect>
              <x>9</x>
-             <y>67</y>
+             <y>75</y>
              <width>35</width>
              <height>16</height>
             </rect>
@@ -5822,7 +5592,7 @@ min-height: 16px;
            <property name="geometry">
             <rect>
              <x>153</x>
-             <y>67</y>
+             <y>75</y>
              <width>36</width>
              <height>16</height>
             </rect>
@@ -5843,7 +5613,7 @@ min-height: 16px;
            <property name="geometry">
             <rect>
              <x>1</x>
-             <y>37</y>
+             <y>43</y>
              <width>42</width>
              <height>16</height>
             </rect>
@@ -5867,7 +5637,7 @@ min-height: 16px;
            <property name="geometry">
             <rect>
              <x>153</x>
-             <y>37</y>
+             <y>44</y>
              <width>42</width>
              <height>16</height>
             </rect>
@@ -5888,7 +5658,7 @@ min-height: 16px;
            <property name="geometry">
             <rect>
              <x>9</x>
-             <y>3</y>
+             <y>10</y>
              <width>35</width>
              <height>16</height>
             </rect>
@@ -5915,7 +5685,7 @@ min-height: 16px;
            <property name="geometry">
             <rect>
              <x>153</x>
-             <y>3</y>
+             <y>9</y>
              <width>36</width>
              <height>16</height>
             </rect>
@@ -5932,6 +5702,189 @@ min-height: 16px;
             <string>High</string>
            </property>
           </widget>
+          <widget class="CustomDial" name="potHigh_1" native="true">
+           <property name="geometry">
+            <rect>
+             <x>46</x>
+             <y>4</y>
+             <width>32</width>
+             <height>32</height>
+            </rect>
+           </property>
+           <property name="maximumSize">
+            <size>
+             <width>60</width>
+             <height>60</height>
+            </size>
+           </property>
+           <property name="autoFillBackground">
+            <bool>true</bool>
+           </property>
+          </widget>
+          <widget class="CustomDial" name="potMid_1" native="true">
+           <property name="geometry">
+            <rect>
+             <x>46</x>
+             <y>37</y>
+             <width>32</width>
+             <height>32</height>
+            </rect>
+           </property>
+           <property name="maximumSize">
+            <size>
+             <width>60</width>
+             <height>60</height>
+            </size>
+           </property>
+           <property name="autoFillBackground">
+            <bool>true</bool>
+           </property>
+          </widget>
+          <widget class="CustomDial" name="potLow_1" native="true">
+           <property name="geometry">
+            <rect>
+             <x>46</x>
+             <y>70</y>
+             <width>32</width>
+             <height>32</height>
+            </rect>
+           </property>
+           <property name="maximumSize">
+            <size>
+             <width>60</width>
+             <height>60</height>
+            </size>
+           </property>
+           <property name="autoFillBackground">
+            <bool>true</bool>
+           </property>
+          </widget>
+          <widget class="CustomDial" name="potHigh_2" native="true">
+           <property name="geometry">
+            <rect>
+             <x>119</x>
+             <y>4</y>
+             <width>32</width>
+             <height>32</height>
+            </rect>
+           </property>
+           <property name="maximumSize">
+            <size>
+             <width>60</width>
+             <height>60</height>
+            </size>
+           </property>
+           <property name="autoFillBackground">
+            <bool>true</bool>
+           </property>
+          </widget>
+          <widget class="CustomDial" name="potMid_2" native="true">
+           <property name="geometry">
+            <rect>
+             <x>119</x>
+             <y>37</y>
+             <width>32</width>
+             <height>32</height>
+            </rect>
+           </property>
+           <property name="maximumSize">
+            <size>
+             <width>60</width>
+             <height>60</height>
+            </size>
+           </property>
+           <property name="autoFillBackground">
+            <bool>true</bool>
+           </property>
+          </widget>
+          <widget class="CustomDial" name="potLow_2" native="true">
+           <property name="geometry">
+            <rect>
+             <x>119</x>
+             <y>70</y>
+             <width>32</width>
+             <height>32</height>
+            </rect>
+           </property>
+           <property name="maximumSize">
+            <size>
+             <width>60</width>
+             <height>60</height>
+            </size>
+           </property>
+           <property name="autoFillBackground">
+            <bool>true</bool>
+           </property>
+          </widget>
+          <widget class="CustomDial" name="potGain_1" native="true">
+           <property name="geometry">
+            <rect>
+             <x>46</x>
+             <y>103</y>
+             <width>32</width>
+             <height>32</height>
+            </rect>
+           </property>
+           <property name="maximumSize">
+            <size>
+             <width>60</width>
+             <height>60</height>
+            </size>
+           </property>
+           <property name="autoFillBackground">
+            <bool>true</bool>
+           </property>
+          </widget>
+          <widget class="CustomDial" name="potGain_2" native="true">
+           <property name="geometry">
+            <rect>
+             <x>119</x>
+             <y>103</y>
+             <width>32</width>
+             <height>32</height>
+            </rect>
+           </property>
+           <property name="maximumSize">
+            <size>
+             <width>60</width>
+             <height>60</height>
+            </size>
+           </property>
+           <property name="autoFillBackground">
+            <bool>true</bool>
+           </property>
+          </widget>
+          <zorder>phVU2</zorder>
+          <zorder>ledFadeLeft</zorder>
+          <zorder>toggleAutoFade</zorder>
+          <zorder>ledDJ</zorder>
+          <zorder>ledFade</zorder>
+          <zorder>toggleAutoDJ</zorder>
+          <zorder>ledFadeRight</zorder>
+          <zorder>cmdOptions</zorder>
+          <zorder>slider1</zorder>
+          <zorder>sliFader</zorder>
+          <zorder>slider2</zorder>
+          <zorder>cmdFade</zorder>
+          <zorder>label</zorder>
+          <zorder>toggleAGC</zorder>
+          <zorder>ledAGC</zorder>
+          <zorder>label_5</zorder>
+          <zorder>label_2</zorder>
+          <zorder>label_3</zorder>
+          <zorder>label_4</zorder>
+          <zorder>label_6</zorder>
+          <zorder>label_7</zorder>
+          <zorder>label_8</zorder>
+          <zorder>potHigh_1</zorder>
+          <zorder>phVU1</zorder>
+          <zorder>potMid_1</zorder>
+          <zorder>potLow_1</zorder>
+          <zorder>potHigh_2</zorder>
+          <zorder>potMid_2</zorder>
+          <zorder>potLow_2</zorder>
+          <zorder>potGain_1</zorder>
+          <zorder>potGain_2</zorder>
          </widget>
         </item>
         <item>
@@ -6048,7 +6001,7 @@ min-height: 16px;
              <property name="frameShadow">
               <enum>QFrame::Raised</enum>
              </property>
-             <widget class="QVUMeter" name="monitorMeter" native="true">
+             <widget class="QFrame" name="phVUMeter">
               <property name="geometry">
                <rect>
                 <x>40</x>
@@ -6056,6 +6009,12 @@ min-height: 16px;
                 <width>27</width>
                 <height>75</height>
                </rect>
+              </property>
+              <property name="frameShape">
+               <enum>QFrame::StyledPanel</enum>
+              </property>
+              <property name="frameShadow">
+               <enum>QFrame::Raised</enum>
               </property>
              </widget>
              <widget class="QSlider" name="sliMonitorVolume">
@@ -7693,9 +7652,9 @@ p, li { white-space: pre-wrap; }
    <container>1</container>
   </customwidget>
   <customwidget>
-   <class>QVUMeter</class>
+   <class>CustomDial</class>
    <extends>QWidget</extends>
-   <header>qvumeter.h</header>
+   <header>customdial.h</header>
    <container>1</container>
   </customwidget>
  </customwidgets>
@@ -7707,12 +7666,6 @@ p, li { white-space: pre-wrap; }
   <tabstop>sliFader</tabstop>
   <tabstop>slider2</tabstop>
   <tabstop>cmdFade</tabstop>
-  <tabstop>potHigh_1</tabstop>
-  <tabstop>potMid_1</tabstop>
-  <tabstop>potLow_1</tabstop>
-  <tabstop>potHigh_2</tabstop>
-  <tabstop>potMid_2</tabstop>
-  <tabstop>potLow_2</tabstop>
  </tabstops>
  <resources/>
  <connections/>

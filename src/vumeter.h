@@ -71,7 +71,7 @@ private:
     void paintBorder();
     Qt::Orientation orient;
     QTime peakTime;
-    int sh, sw, secStep, ph, pw, pStep, m, h, w, step, space; 
+    int linesPerSegment, ledWidth, spacesInSegments, linesPerPeak, pw, spacesInPeak, margin, h, w, step, spacesBetweenSegments;
     QColor colBack;
     QColor colValue;
 

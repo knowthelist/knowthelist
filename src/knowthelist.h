@@ -1,5 +1,5 @@
 /*
-    Copyright (C) 2005-2014 Mario Stephan <mstephan@shared-files.de>
+    Copyright (C) 2005-2017 Mario Stephan <mstephan@shared-files.de>
 
     This library is free software; you can redistribute it and/or modify
     it under the terms of the GNU Lesser General Public License as published
@@ -20,7 +20,6 @@
 
 #include "playerwidget.h"
 #include "vumeter.h"
-#include "qvumeter.h"
 #include "playlist.h"
 #include "collectionwidget.h"
 #include "monitorplayer.h"
@@ -110,8 +109,9 @@ private:
     int gain1Target;
     int gain2Target;
     bool isFading;
-    QVUMeter* vuMeter1;
-    QVUMeter* vuMeter2;
+    VUMeter* vuMeter1;
+    VUMeter* vuMeter2;
+    VUMeter* monitorMeter;
     QTimer* timerMeter;
     QTimer* timerMonitor;
     QTimer* timerGain1;

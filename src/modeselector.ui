@@ -70,7 +70,7 @@ max-width:13px;
     <string>View: Artist &gt; Album</string>
    </property>
    <property name="text">
-    <string/>
+    <string>A</string>
    </property>
   </widget>
   <widget class="QLed" name="led1" native="true">

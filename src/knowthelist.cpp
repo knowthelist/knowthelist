@@ -63,6 +63,7 @@ Knowthelist::~Knowthelist()
 
         delete vuMeter1;
         delete vuMeter2;
+        delete monitorMeter;
 
         delete monitorPlayer;
 
@@ -101,11 +102,41 @@ void Knowthelist::createUI()
     timerAutoFader = new QTimer(this);
     connect( timerAutoFader, SIGNAL(timeout()), SLOT(timerAutoFader_timerOut()) );
 
-    vuMeter1 = new QVUMeter(ui->frameMixer);
-    vuMeter2 = new QVUMeter(ui->frameMixer);
+    vuMeter2 = new VUMeter(ui->frameMixer);
+    vuMeter2->setSpacesBetweenSegments( 1 );
+    vuMeter2->setLinesPerSegment( 2 );
+    vuMeter2->setLinesPerPeak( 2 );
+    vuMeter2->setSpacesInSegments( 1 );
+    vuMeter2->setSpacesInPeak( 1 );
+    vuMeter2->setMargin(3);
+    vuMeter2->LevelColorOff.setRgb( 20,20,20 );
+
+    vuMeter1 = new VUMeter(ui->frameMixer);
+    vuMeter1->setSpacesBetweenSegments( 1 );
+    vuMeter1->setLinesPerSegment( 2 );
+    vuMeter1->setLinesPerPeak( 2 );
+    vuMeter1->setSpacesInSegments( 1 );
+    vuMeter1->setSpacesInPeak( 1 );
+    vuMeter1->setMargin(3);
+    vuMeter1->LevelColorOff.setRgb( 20,20,20 );
+
+    monitorMeter = new VUMeter(ui->fraMonitorTop);
+    monitorMeter->setSpacesBetweenSegments( 1 );
+    monitorMeter->setLinesPerSegment( 2 );
+    monitorMeter->setLinesPerPeak( 2 );
+    monitorMeter->setSpacesInSegments( 1 );
+    monitorMeter->setSpacesInPeak( 1 );
+    monitorMeter->setMargin(3);
+    monitorMeter->LevelColorOff.setRgb( 20,20,20 );
 
     vuMeter1->setGeometry(ui->phVU1->geometry());
-    vuMeter2->setGeometry( ui->phVU2->geometry());
+    vuMeter2->setGeometry(ui->phVU2->geometry());
+    monitorMeter->setGeometry(ui->phVUMeter->geometry());
+
+    ui->potGain_1->setRange(10,180);
+    ui->potGain_1->setValue(100);
+    ui->potGain_2->setRange(10,180);
+    ui->potGain_2->setValue(100);
 
     timerMonitor = new QTimer(this);
     timerMonitor->setInterval(50);
@@ -326,8 +357,7 @@ void Knowthelist::loadStartSettings()
     if ( settings.value("loadPlaylists","true" )=="true")
     {
         djSession->playDefaultList();
-//       playList1->loadXML( playList1->defaultPlaylistPath() );
-//       playList2->loadXML( playList2->defaultPlaylistPath() );
+
     }
 
     //AutoFade, AGC ...
@@ -454,14 +484,14 @@ void Knowthelist::showCollectionSetup()
 
 void Knowthelist::player1_levelChanged(double left, double right)
 {
-    vuMeter1->setLeftValue( left * 300.0 );
-    vuMeter1->setRightValue( right * 300.0 );
+    vuMeter1->setValueLeft( left * 3.0 );
+    vuMeter1->setValueRight( right * 3.0 );
 }
 
 void Knowthelist::player2_levelChanged(double left, double right)
 {
-    vuMeter2->setLeftValue( left * 300.0 );
-    vuMeter2->setRightValue( right * 300.0 );
+    vuMeter2->setValueLeft(left * 3.0);
+    vuMeter2->setValueRight(right * 3.0);
 }
 
 
@@ -769,9 +799,8 @@ void Knowthelist::on_cmdMonitorStop_clicked()
     monitorPlayer->stop();
     timerMonitor->stop();
     ui->cmdMonitorPlay->setIcon(QIcon(":play.png"));
-    //ui->monitorMeter->reset();
-    ui->monitorMeter->setRightValue(0);
-    ui->monitorMeter->setLeftValue(0);
+    monitorMeter->setValueRight(0);
+    monitorMeter->setValueLeft(0);
 }
 
 void Knowthelist::on_cmdMonitorPlay_clicked()
@@ -780,9 +809,8 @@ void Knowthelist::on_cmdMonitorPlay_clicked()
         ui->cmdMonitorPlay->setIcon(QIcon(":play.png"));
         monitorPlayer->pause();
         timerMonitor->stop();
-        //ui->monitorMeter->reset();
-        ui->monitorMeter->setRightValue(0);
-        ui->monitorMeter->setLeftValue(0);
+        monitorMeter->setValueRight(0);
+        monitorMeter->setValueLeft(0);
     }
     else {
         ui->cmdMonitorPlay->setIcon(QIcon(":pause.png"));
@@ -836,8 +864,8 @@ void Knowthelist::timerMonitor_timeOut()
         ui->sliMonitor->setValue(0);
 
 
-    ui->monitorMeter->setLeftValue( monitorPlayer->levelLeft() * 100.0 );
-    ui->monitorMeter->setRightValue( monitorPlayer->levelRight() * 100.0);
+    monitorMeter->setValueLeft( monitorPlayer->levelLeft() * 1.0 );
+    monitorMeter->setValueRight( monitorPlayer->levelRight() * 1.0);
 }
 
 void Knowthelist::on_sliMonitor_sliderMoved(int value)

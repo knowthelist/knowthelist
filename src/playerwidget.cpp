@@ -99,7 +99,6 @@ PlayerWidget::PlayerWidget(QWidget *parent) :
 
    trackanalyser = new TrackAnalyser(this);
    connect(trackanalyser, SIGNAL(finishGain()),this,SLOT(analyseGainFinished()));
-   connect(trackanalyser, SIGNAL(finishTempo()),this,SLOT(analyseTempoFinished()));
 }
 
 PlayerWidget::~PlayerWidget()
@@ -136,7 +135,7 @@ void PlayerWidget::setInfo(QPair<int,int> info)
 void PlayerWidget::setEqualizer(EqBand band, int value)
 {
     //ranging from -24.0 to +12.0.
-    player->setEqualizer("band"+QString::number(band), value / 10.0);
+    player->setEqualizer("band"+QString::number(band), (value - 240) / 10.0);
 }
 
 void PlayerWidget::setPositionMarkers()
@@ -223,16 +222,6 @@ void PlayerWidget::analyseGainFinished()
     if ( m_CurrentTrack ){
         setPositionMarkers();
         updateTimeAndPositionDisplay();
-        trackanalyser->setMode(TrackAnalyser::TEMPO);
-        trackanalyser->open(m_CurrentTrack->url());
-    }
-}
-
-void PlayerWidget::analyseTempoFinished()
-{
-    qDebug() << Q_FUNC_INFO <<":"<<objectName();
-    if ( m_CurrentTrack ){
-        ui->lblBpm->setText(QString::number(trackanalyser->bpm()));
     }
 }
 
@@ -342,8 +331,6 @@ void PlayerWidget::loadTrack( Track *track)
     ui->sliPosition->setValue( 0 );
     ui->txtCue->setText("-");
     ui->butCue->setChecked(false);
-    ui->lblBpm->setText("-");
-
 }
 
 void PlayerWidget::resizeEvent( QResizeEvent* e )
@@ -391,7 +378,7 @@ void PlayerWidget::updateTimeAndPositionDisplay(bool isPassive)
     long remainMs;
 
     //Some tracks deliver no length in state pause
-    if ( length == QTime(0,0) )
+    if ( length == QTime(0,0) && m_CurrentTrack)
        length = QTime(0,0,0).addSecs(m_CurrentTrack->length());
 
     remainMs=curpos.msecsTo(length);

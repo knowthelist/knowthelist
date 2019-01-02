@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>699</width>
-    <height>124</height>
+    <height>130</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -898,45 +898,6 @@ QLabel{
                  </property>
                  <property name="indent">
                   <number>0</number>
-                 </property>
-                </widget>
-               </item>
-               <item>
-                <widget class="QLabel" name="lblBpm">
-                 <property name="font">
-                  <font>
-                   <pointsize>12</pointsize>
-                  </font>
-                 </property>
-                 <property name="toolTip">
-                  <string>Tempo of the song</string>
-                 </property>
-                 <property name="text">
-                  <string>0</string>
-                 </property>
-                 <property name="margin">
-                  <number>2</number>
-                 </property>
-                 <property name="indent">
-                  <number>-1</number>
-                 </property>
-                </widget>
-               </item>
-               <item>
-                <widget class="QLabel" name="label">
-                 <property name="font">
-                  <font>
-                   <pointsize>9</pointsize>
-                  </font>
-                 </property>
-                 <property name="toolTip">
-                  <string>Beats Per Minute</string>
-                 </property>
-                 <property name="text">
-                  <string>BPM</string>
-                 </property>
-                 <property name="margin">
-                  <number>2</number>
                  </property>
                 </widget>
                </item>

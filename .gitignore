@@ -1,4 +1,4 @@
-knowthelist.pro.user
+knowthelist.pro.user*
 *.o
 moc_*.h
 moc_*.cpp

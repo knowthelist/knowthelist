@@ -1,5 +1,5 @@
 /*
-    Copyright (C) 2005-2011 Mario Stephan <mstephan@shared-files.de>
+    Copyright (C) 2005-2019 Mario Stephan <mstephan@shared-files.de>
 
     This library is free software; you can redistribute it and/or modify
     it under the terms of the GNU Lesser General Public License as published
@@ -34,13 +34,13 @@ VUMeter::VUMeter(QWidget *parent)
     setPalette(pal);
     valueLeft= valueRight = 0;
     peakLeft = peakRight = 0;
-    m = 1;
-    sh = 1;
-    space = 1;
-    step = sh + space;
-    secStep = 2;
-    pStep = 2;
-    ph = 4;
+    margin = 1;
+    linesPerSegment = 1;
+    spacesBetweenSegments = 1;
+    step = linesPerSegment + spacesBetweenSegments;
+    spacesInSegments = 2;
+    spacesInPeak = 2;
+    linesPerPeak = 4;
     colBack = QColor(60, 60, 60);
     colValue = Qt::white;
 }
@@ -68,12 +68,9 @@ void VUMeter::resizeEvent( QResizeEvent* e )
     Q_UNUSED(e);
 
      w = (orientation() == Qt::Vertical) ? width() : height();
-    sw = ((w - 3*m)/2);
+    ledWidth = ((w - 3*margin)/2);
     
-    h = (((orientation() == Qt::Vertical) ? height() : width() ) / (sh + step)) * (sh + step) +m ;
-    
-    //QWidget::resizeEvent( e );
-    //repaint();
+    h = (((orientation() == Qt::Vertical) ? height() : width() ) / (linesPerSegment + step)) * (linesPerSegment + step) +margin ;
 }
 
 void VUMeter::checkPeakTime() {
@@ -133,32 +130,32 @@ void VUMeter::setValueRight ( float f )
 }
 
 void VUMeter::setLinesPerSegment( int i ){
-    sh = i;
-    step = sh + space;
+    linesPerSegment = i;
+    step = linesPerSegment + spacesBetweenSegments;
 }
 
 void VUMeter::setSpacesBetweenSegments( int i ) {
-    space = i;
-    step = sh + space;
+    spacesBetweenSegments = i;
+    step = linesPerSegment + spacesBetweenSegments;
 }
 
 void VUMeter::setSpacesInSegments( int i ) {
-    secStep = i-1;
-    if ( secStep<1 ) secStep=1;
+    spacesInSegments = i-1;
+    if ( spacesInSegments<1 ) spacesInSegments=1;
 }
 
 void VUMeter::setLinesPerPeak( int i ){
-    ph = i;
+    linesPerPeak = i;
 }
 
 
 void VUMeter::setSpacesInPeak( int i ) {
-    pStep = i-1;
-    if ( pStep<1 ) pStep=1;
+    spacesInPeak = i-1;
+    if ( spacesInPeak<1 ) spacesInPeak=1;
 }
 
 void VUMeter::setMargin( int i ){
-    m = i;
+    margin = i;
 }
 
 void VUMeter::paintEvent(QPaintEvent *)
@@ -170,43 +167,7 @@ void VUMeter::paintEvent(QPaintEvent *)
     style()->drawPrimitive(QStyle::PE_Widget, &opt, &p, this);
 }
 
-void VUMeter::paintBorder()
-{
-    QPainter painter(this);
-    painter.setWindow(0, 0, 100, 540);
-    painter.setRenderHint(QPainter::Antialiasing);
-    QColor light = Qt::white;
-    QColor dark = colBack.darker(140);
 
-    painter.setPen(QPen(colBack, 3, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
-    QLinearGradient linGrad(5, 250, 10, 250);
-    linGrad.setColorAt(0, light);
-    linGrad.setColorAt(1, colBack);
-    linGrad.setSpread(QGradient::PadSpread);
-    painter.setBrush(linGrad);
-    QRectF border(5, 5, 90, 530);
-    painter.drawRoundRect(border, 30, 5);
-    QLinearGradient linGrad1(85, 250, 95, 250);
-    linGrad1.setColorAt(0, colBack);
-    linGrad1.setColorAt(1, dark);
-    linGrad1.setSpread(QGradient::PadSpread);
-    painter.setBrush(linGrad1);
-    QRectF border1(20, 5, 75, 530);
-    painter.drawRoundRect(border1, 30, 5);
-
-    // paint label
-
-    painter.setPen(QPen(colValue, 2));
-    QRectF Left(20, 505, 25, 20);
-    QRectF Right(55, 505, 25, 20);
-    QFont valFont("Arial", 12, QFont::Bold);
-    painter.setFont(valFont);
-    painter.drawText(Left, Qt::AlignCenter, "L");
-    painter.drawText(Right, Qt::AlignCenter, "R");
-
-
-
-}
 void VUMeter::drawMeter() {
     
     QPainter painter(this);
@@ -222,18 +183,18 @@ void VUMeter::drawMeter() {
         if ( i==1 ) {
             value = (int)(h/step * valueLeft)*step;
             peak = (int)(h/step * peakLeft)*step;
-            x1 = m;
-            x2 = m + sw;
+            x1 = margin;
+            x2 = margin + ledWidth;
         }
         //Right value
         else {
             value = (int)(h/step * valueRight)*step;
             peak = (int)(h/step * peakRight)*step;
-            x1 = w - m - sw;
-            x2 = w - m;
+            x1 = w - margin - ledWidth;
+            x2 = w - margin;
         }
 
-        for( int sec=0; sec < h+m; sec+=step ){
+        for( int sec=0; sec < h+margin; sec+=step ){
             if ( sec < value && (sec <= .75*h) )
                 painter.setPen ( LevelColorNormal );
             else if ( sec < value && (sec > .75 * h)  )
@@ -244,11 +205,11 @@ void VUMeter::drawMeter() {
 
 
             if ( orientation() == Qt::Vertical )
-                for ( int led=0; led<sh; led+=secStep )
-                    painter.drawLine ( x1, h-(sec+led)+m, x2, h-(sec+led)+m );
+                for ( int led=0; led<linesPerSegment; led+=spacesInSegments )
+                    painter.drawLine ( x1, h-(sec+led)+margin, x2, h-(sec+led)+margin );
             else
-                for ( int led=0; led<sh; led+=secStep )
-                    painter.drawLine ( sec+led+m, x1, sec+led+m, x2 );
+                for ( int led=0; led<linesPerSegment; led+=spacesInSegments )
+                    painter.drawLine ( sec+led+margin, x1, sec+led+margin, x2 );
         }
 
         //peaks
@@ -259,11 +220,11 @@ void VUMeter::drawMeter() {
             else
             painter.setPen ( LevelColorNormal );
             if ( orientation() == Qt::Vertical ){
-                 for (int led=0; led<ph; led+=pStep)
-                     painter.drawLine ( x1, h-(peak+led)+m, x2, h-(peak+led)+m );}
+                 for (int led=0; led<linesPerPeak; led+=spacesInPeak)
+                     painter.drawLine ( x1, h-(peak+led)+margin, x2, h-(peak+led)+margin );}
             else
-                 for (int led=0; led<ph; led+=pStep)
-                    painter.drawLine ( peak+led+m, x1, peak+led+m, x2 );
+                 for (int led=0; led<linesPerPeak; led+=spacesInPeak)
+                    painter.drawLine ( peak+led+margin, x1, peak+led+margin, x2 );
        }
     }
 
