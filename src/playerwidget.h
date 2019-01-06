@@ -124,6 +124,7 @@ private:
     QTimer* timerPosition;
     void dropEvent( QDropEvent* );
     void dragEnterEvent(QDragEnterEvent*);
+    void dragMoveEvent(QDragMoveEvent *);
     void setPositionMarkers();
     int mTrackFinishEmitTime;
     Track* m_CurrentTrack;

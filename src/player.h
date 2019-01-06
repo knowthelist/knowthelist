@@ -1,5 +1,5 @@
 /*
-    Copyright (C) 2011 Mario Stephan <mstephan@shared-files.de>
+    Copyright (C) 2011-2019 Mario Stephan <mstephan@shared-files.de>
 
     This library is free software; you can redistribute it and/or modify
     it under the terms of the GNU Lesser General Public License as published
@@ -43,7 +43,7 @@ public:
      bool close();
      void setPosition(QTime);
      QTime position();
-     double  volume();
+     double volume();
      void setVolume(double);
      void setGain(double);
      void setEqualizer(QString, double);
@@ -53,10 +53,10 @@ public:
      bool mediaPlayable();
      QString lastError;
 
-     double levelLeft() {return rms_l;}
-     double levelRight() {return rms_r;}
-     double levelOutLeft() {return rmsout_l;}
-     double levelOutRight() {return rmsout_r;}
+     double levelLeft();
+     double levelRight();
+     double levelOutLeft();
+     double levelOutRight();
 
         void newpad (GstElement *decodebin, GstPad *pad, gpointer data);
         static GstBusSyncReply  bus_cb (GstBus *bus, GstMessage *msg, gpointer data);
@@ -73,18 +73,11 @@ public:
 
  private:
 
+        struct PlayerPrivate *p;
+
         GstElement *pipeline;
         GstBus *bus;
-        //QTimer *timer;
         gint64 Gstart, Glength;
-        int m_length;
-        int m_position;
-
-        struct Private;
-        Private * p;
-
-        double rms_l,rms_r,rmsout_l,rmsout_r;
-
         void setLink(int, QUrl&);
         void asyncOpen(QUrl url);
         void cleanup();

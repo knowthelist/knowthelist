@@ -1,5 +1,5 @@
 /*
-    Copyright (C) 2005-2014 Mario Stephan <mstephan@shared-files.de>
+    Copyright (C) 2005-2019 Mario Stephan <mstephan@shared-files.de>
 
     This library is free software; you can redistribute it and/or modify
     it under the terms of the GNU Lesser General Public License as published
@@ -37,8 +37,7 @@
 
 Knowthelist::Knowthelist(QWidget *parent) :
     QMainWindow(parent),
-    ui(new Ui::Knowthelist),
-    monitorPlayer(0)
+    ui(new Ui::Knowthelist)
 {
     ui->setupUi(this);
 
@@ -48,36 +47,32 @@ Knowthelist::Knowthelist(QWidget *parent) :
 
 Knowthelist::~Knowthelist()
 {
-
-        player1->stop();
-        delete player1;
-        player1 = 0;
-
-        delete playList1;
-
-        player2->stop();
-        delete player2;
-        player2 = 0;
-
-        delete playList2;
-
-        delete vuMeter1;
-        delete vuMeter2;
-        delete monitorMeter;
-
-        delete monitorPlayer;
-
-        delete djSession;
-        djSession=0;
-
-        monitorPlayer=0;
-
-        delete trackList;
-        trackList=0;
-        delete collectionBrowser;
-
-        delete ui;
-        qDebug() << "The end" << Q_FUNC_INFO ;
+    qDebug() << Q_FUNC_INFO << "START closing application";
+    player1->stop();
+    delete player1;
+    player1 = nullptr;
+    delete playList1;
+    player2->stop();
+    delete player2;
+    player2 = nullptr;
+    delete playList2;
+    delete vuMeter1;
+    delete vuMeter2;
+    delete monitorMeter;
+    delete monitorPlayer;
+    monitorPlayer = nullptr;
+    delete djSession;
+    djSession = nullptr;
+    delete trackList;
+    trackList = nullptr;
+    delete collectionBrowser;
+    delete djBrowser;
+    delete filetree;
+    delete playlistBrowser;
+    delete trackList2;
+    delete splitterPlaylist;
+    delete ui;
+    qDebug() << Q_FUNC_INFO << "END closing application";
 }
 
 void Knowthelist::createUI()
@@ -98,6 +93,7 @@ void Knowthelist::createUI()
     //Add player
     player1 = ui->player_L;
     player2 = ui->player_R;
+    monitorPlayer = new MonitorPlayer(this);
 
     timerAutoFader = new QTimer(this);
     connect( timerAutoFader, SIGNAL(timeout()), SLOT(timerAutoFader_timerOut()) );
@@ -151,11 +147,10 @@ void Knowthelist::createUI()
 
     qRegisterMetaType<QList<Track*> > ("QList<Track*>");
 
-
     //Add DJ
     djSession = new DjSession();
 
-    playList1=ui->playlist_L;
+    playList1 = ui->playlist_L;
     playList1->setIsCurrentList(true);
 
     playList2 = ui->playlist_R;
@@ -179,7 +174,6 @@ void Knowthelist::createUI()
     connect( player1, SIGNAL(levelChanged(double,double)),SLOT( player1_levelChanged(double,double)));
     connect( player2, SIGNAL(levelChanged(double,double)),SLOT( player2_levelChanged(double,double)));
 
-    //ToDo: try to avoid this
     connect( player1, SIGNAL(statusChanged( bool )),playList1,SLOT(setPlaying( bool )));
     connect( player2, SIGNAL(statusChanged( bool )),playList2,SLOT(setPlaying( bool )));
 
@@ -210,9 +204,9 @@ void Knowthelist::createUI()
     trackList->setAcceptDrops( false );
     trackList->setPlaylistMode(Playlist::Tracklist);
 
-    collectionBrowser=new CollectionWidget(this);
+    collectionBrowser = new CollectionWidget(this);
 
-    splitter= new QSplitter();
+    splitter = new QSplitter();
     splitter->addWidget(this->collectionBrowser);
     splitter->addWidget(trackList);
     QPixmap pixmap1(":database.png");
@@ -331,17 +325,16 @@ void Knowthelist::createUI()
           this->show();
           showCollectionSetup();
     }
-
 }
 
 void Knowthelist::loadStartSettings()
 {
     QSettings settings;
 
-    ui->slider1->setValue( settings.value("Volume1","80").toDouble());
-    ui->slider2->setValue( settings.value("Volume2","80").toDouble());
+    ui->slider1->setValue( settings.value("Volume1", 80).toInt());
+    ui->slider2->setValue( settings.value("Volume2", 80).toInt());
 
-    ui->sliFader->setValue( 70 );
+    ui->sliFader->setValue(70);
     changeVolumes();
 
     splitter->restoreState(settings.value("Splitter").toByteArray());
@@ -354,23 +347,21 @@ void Knowthelist::loadStartSettings()
     hide();
     show();
 
-    if ( settings.value("loadPlaylists","true" )=="true")
-    {
+    if ( settings.value("loadPlaylists","true" ) == "true") {
         djSession->playDefaultList();
-
     }
 
     //AutoFade, AGC ...
-    ui->toggleAutoFade->setChecked(settings.value("checkAutoFade",true).toBool());
-    ui->toggleAGC->setChecked(settings.value("checkAGC",true).toBool());
+    ui->toggleAutoFade->setChecked(settings.value("checkAutoFade", true).toBool());
+    ui->toggleAGC->setChecked(settings.value("checkAGC", true).toBool());
 
     //EQ values
-    ui->potHigh_1->setValue( settings.value("EQ_gains/High1").toInt() );
-    ui->potMid_1->setValue( settings.value("EQ_gains/Mid1").toInt() );
-    ui->potLow_1->setValue( settings.value("EQ_gains/Low1").toInt() );
-    ui->potHigh_2->setValue( settings.value("EQ_gains/High2").toInt() );
-    ui->potMid_2->setValue( settings.value("EQ_gains/Mid2").toInt() );
-    ui->potLow_2->setValue( settings.value("EQ_gains/Low2").toInt() );
+    ui->potHigh_1->setValue( settings.value("EQ_gains/High1", 180).toInt() );
+    ui->potMid_1->setValue( settings.value("EQ_gains/Mid1", 180).toInt() );
+    ui->potLow_1->setValue( settings.value("EQ_gains/Low1", 180).toInt() );
+    ui->potHigh_2->setValue( settings.value("EQ_gains/High2", 180).toInt() );
+    ui->potMid_2->setValue( settings.value("EQ_gains/Mid2", 180).toInt() );
+    ui->potLow_2->setValue( settings.value("EQ_gains/Low2", 180).toInt() );
 
     loadCurrentSettings();
 
@@ -384,17 +375,17 @@ void Knowthelist::loadCurrentSettings()
 
     if (monitorPlayer){
         on_cmdMonitorStop_clicked();
-//ToDo: get the ID or Name of the default device
+
         monitorPlayer->setOutputDevice(settings.value("MonitorOutputDevice").toString());
         QString outDev = monitorPlayer->outputDeviceName();
         if ( monitorPlayer->outputDeviceID() == monitorPlayer->defaultDeviceID()
              || outDev.isEmpty()){
             ui->lblSoundcard->show();
-            monitorPlayer->setVolume(0.0);
+            monitorPlayer->disable();
         }
         else {
             ui->lblSoundcard->hide();
-            monitorPlayer->setVolume(1.0);
+            monitorPlayer->enable();
         }
     }
 
@@ -471,6 +462,7 @@ void Knowthelist::closeEvent(QCloseEvent* event)
     settings.setValue("mainWindowGeometry", saveGeometry());
     settings.setValue("mainWindowState", saveState());
 
+    qDebug() << Q_FUNC_INFO << "settings saved";
     event->accept();
 }
 
@@ -675,7 +667,7 @@ void Knowthelist::savePlaylists()
 //    playList2->saveXML( playList2->defaultPlaylistPath() );
 }
 
-void Knowthelist::Track_selectionChanged(  Track* track )
+void Knowthelist::Track_selectionChanged( Track* track )
 {
     if ( track ){
 
@@ -692,13 +684,11 @@ void Knowthelist::Track_selectionChanged(  Track* track )
                  ui->pixMonitorCover->setPixmap(pix);
                  timerMonitor_timeOut();
          }
-
     }
     else{
         ui->lblMonitorTrack->setText("");
         ui->pixMonitorCover->setPixmap(QPixmap());
     }
-
 }
 
 void Knowthelist::timerMonitor_loadFinished()
@@ -777,7 +767,7 @@ bool Knowthelist::initMonitorPlayer()
     //ToDo: spend a separate widget for Monitor player
     qDebug() << Q_FUNC_INFO << "BEGIN ";
 
-      monitorPlayer= new MonitorPlayer(this);
+      monitorPlayer = new MonitorPlayer(this);
       monitorPlayer->prepare();
       monitorPlayer->setObjectName("monitorPlayer");
 
@@ -805,6 +795,10 @@ void Knowthelist::on_cmdMonitorStop_clicked()
 
 void Knowthelist::on_cmdMonitorPlay_clicked()
 {
+    if (monitorPlayer->isDisabled()) {
+        return;
+    }
+
     if (monitorPlayer->isPlaying()) {
         ui->cmdMonitorPlay->setIcon(QIcon(":play.png"));
         monitorPlayer->pause();

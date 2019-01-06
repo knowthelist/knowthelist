@@ -25,7 +25,7 @@
 CustomDial::CustomDial(QWidget* parent)
 : QDial(parent)
 {
-    // Default range
+    // Defaults
      QDial::setRange(0,360);
 }
 

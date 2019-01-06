@@ -37,15 +37,15 @@
 
 Playlist::Playlist(QWidget* parent)
     : QTreeWidget( parent )
-    , m_marker( 0 )
-    , m_CurrentTrackColor(QColor( 255,100,100 ))
-    , m_NextTrackColor(QColor( 200,200,255 ))
-    , m_PlaylistMode( Playlist::Playlist_Single )
-    , nextPlaylistItem (0)
-    , previousPlaylistItem(0)
-    , currentPlaylistItem(0)
-    , newPlaylistItem(0)
     , m_alternateMax(0)
+    , m_marker( nullptr )
+    , m_NextTrackColor(QColor( 200,200,255 ))
+    , m_CurrentTrackColor(QColor( 255,100,100 ))
+    , nextPlaylistItem (nullptr)
+    , previousPlaylistItem(nullptr)
+    , newPlaylistItem(nullptr)
+    , currentPlaylistItem(nullptr)
+    , m_PlaylistMode( Playlist::Playlist_Single )
     , showDropHighlighter(false)
     , autoClearOn(false)
     , m_isPlaying(false)
@@ -777,7 +777,6 @@ void Playlist::performDrag()
                  emit trackSelected(item->track());
              }
              i++;
-
          }
     }
 
@@ -844,7 +843,7 @@ void Playlist::dropEvent(QDropEvent *event)
         checkCurrentItem();
 
         event->setDropAction(Qt::MoveAction);
-        event->accept();
+        event->acceptProposedAction();
 
         if (event->source()->objectName()==this->objectName())
             m_isInternDrop=true;
@@ -859,7 +858,8 @@ void Playlist::dropEvent(QDropEvent *event)
 void Playlist::dragMoveEvent (QDragMoveEvent *event)
 {
   dropSite = event->answerRect();
-  showDropHighlighter=true;
+  showDropHighlighter = true;
+  event->acceptProposedAction();
   viewport()->repaint();
 }
 

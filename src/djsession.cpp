@@ -29,7 +29,6 @@
 struct DjSessionPrivate
 {
         QMutex mutex1;
-
         Dj* currentDj;
         int minCount;
         CollectionDB* database;
@@ -45,8 +44,8 @@ DjSession::DjSession()
     :p(new DjSessionPrivate)
 {
     p->database  = new CollectionDB();
-    p->minCount=10;
-    p->currentDj=0;
+    p->minCount = 10;
+    p->currentDj = nullptr;
     p->isEnabledAutoDJCount=false;
 }
 

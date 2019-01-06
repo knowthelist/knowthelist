@@ -1,16 +1,13 @@
 /*
-    Copyright (C) 2005-2014 Mario Stephan <mstephan@shared-files.de>
-
+    Copyright (C) 2005-2019 Mario Stephan <mstephan@shared-files.de>
     This library is free software; you can redistribute it and/or modify
     it under the terms of the GNU Lesser General Public License as published
     by the Free Software Foundation; either version 2.1 of the License, or
     (at your option) any later version.
-
     This program is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
     GNU General Public License for more details.
-
     You should have received a copy of the GNU Lesser General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
@@ -33,7 +30,6 @@
 
 #include "monitorplayer.h"
 
-
 void MonitorPlayer::sync_set_state(GstElement* element, GstState state)
 { GstStateChangeReturn res; \
         res = gst_element_set_state (GST_ELEMENT (element), state); \
@@ -44,67 +40,76 @@ void MonitorPlayer::sync_set_state(GstElement* element, GstState state)
                         if(res == GST_STATE_CHANGE_FAILURE || res == GST_STATE_CHANGE_ASYNC) return; \
 } }
 
-struct MonitorPlayer::Private
-{
-        QFutureWatcher<void> watcher;
-        QMutex mutex;
-        bool isStarted;
-        bool isLoaded;
-        QString error;
-        QString deviceName;
-        QString deviceID;
-        QMap<QString, QString> devices;
-};
 
-void cb_newpad_mp (GstElement *decodebin,
-                   GstPad     *pad,
+
+void cb_newpad_mp (GstElement *src,
+                   GstPad     *new_pad,
                    gpointer    data)
 {
     MonitorPlayer* instance = (MonitorPlayer*)data;
-            instance->newpad(decodebin, pad, data);
+            instance->newpad(src, new_pad, data);
 }
 
 
-void MonitorPlayer::newpad (GstElement *decodebin,
-                   GstPad     *pad,
+void MonitorPlayer::newpad (GstElement *src,
+                   GstPad     *new_pad,
                    gpointer    data)
 {
         GstCaps *caps;
         GstStructure *str;
-        GstPad *audiopad;
+        GstPad *sink_pad;
 
         /* only link once */
-        GstElement *audio = gst_bin_get_by_name(GST_BIN(pipeline), "audiobin");
-        audiopad = gst_element_get_static_pad (audio, "sink");
-        gst_object_unref(audio);
+        GstElement *bin = gst_bin_get_by_name(GST_BIN(pipeline), "convert");
+        sink_pad = gst_element_get_static_pad (bin, "sink");
 
-        if (GST_PAD_IS_LINKED (audiopad)) {
-                g_object_unref (audiopad);
+        gst_object_unref(bin);
+
+        if (GST_PAD_IS_LINKED (sink_pad)) {
+                g_object_unref (sink_pad);
                 return;
         }
 
         /* check media type */
 #ifdef GST_API_VERSION_1
-        caps = gst_pad_query_caps (pad,NULL);
+        caps = gst_pad_query_caps (new_pad, nullptr);
 #else
-        caps = gst_pad_get_caps (pad);
+        caps = gst_pad_get_caps (new_pad);
 #endif
         str = gst_caps_get_structure (caps, 0);
         if (!g_strrstr (gst_structure_get_name (str), "audio")) {
                 gst_caps_unref (caps);
-                gst_object_unref (audiopad);
+                gst_object_unref (sink_pad);
                 return;
         }
         gst_caps_unref (caps);
 
         /* link'n'play */
-        gst_pad_link (pad, audiopad);
+        gst_pad_link (new_pad, sink_pad);
 }
 
+struct MonitorPlayerPrivate
+{
+    QFutureWatcher<void> watcher;
+    QMutex mutex;
+    bool isStarted;
+    bool isLoaded;
+    bool isDisabled;
+    QString error;
+    QString deviceName;
+    QString deviceID;
+    QMap<QString, QString> devices;
+    uint length;
+    uint position;
+    dsDevice dev;
+    double rms_l;
+    double rms_r;
+};
+
 MonitorPlayer::MonitorPlayer(QWidget *parent):
-        QWidget(parent),
-    pipeline(0), bus(0), Gstart(0), Glength(0)
-    , p( new Private )
+        QWidget(parent)
+    , p( new MonitorPlayerPrivate )
+    , pipeline(nullptr), bus(nullptr), Gstart(0), Glength(0)
 {
     p->isStarted=false;
     p->isLoaded=false;
@@ -116,9 +121,9 @@ MonitorPlayer::MonitorPlayer(QWidget *parent):
 
 MonitorPlayer::~MonitorPlayer()
 {
-    delete p;
-    p=0;
     cleanup();
+    delete p;
+    p = nullptr;
 }
 
 GstBusSyncReply MonitorPlayer::bus_cb (GstBus *bus, GstMessage *msg, gpointer data)
@@ -139,34 +144,31 @@ void MonitorPlayer::cleanup()
 
 bool MonitorPlayer::prepare()
 {
-    //Init Gst
-    //
-    QString caps_value = "audio/x-raw";
+    // Init Gst
+    qDebug() << Q_FUNC_INFO << " " << "START";
+    QString caps_value;
 
-      gst_init (0, 0);
+    gst_init (nullptr, nullptr);
 
     //prepare
+    GstElement *src, *conv, *resample, *sink, *level, *vol;
+    GstCaps *caps;
+    pipeline = gst_pipeline_new ("pipeline");
+    bus = gst_pipeline_get_bus (GST_PIPELINE (pipeline));
+    src = gst_element_factory_make ("uridecodebin", "source");
 
-        GstElement *dec, *conv,*resample,*sink, *level, *vol, *audio;
-        GstPad *audiopad;
-        GstCaps *caps;
-        pipeline = gst_pipeline_new ("pipeline");
-        bus = gst_pipeline_get_bus (GST_PIPELINE (pipeline));
 
 #ifdef GST_API_VERSION_1
-        dec = gst_element_factory_make ("decodebin", "decoder");
+        caps_value = "audio/x-raw";
 #else
-        dec = gst_element_factory_make ("decodebin2", "decoder");
         caps_value = "audio/x-raw-int";
 #endif
         caps = gst_caps_new_simple (caps_value.toLatin1().data(),
                                     "channels", G_TYPE_INT, 2, NULL);
-        g_signal_connect (dec, "pad-added", G_CALLBACK (cb_newpad_mp), this);
-        gst_bin_add (GST_BIN (pipeline), dec);
+        g_signal_connect (src, "pad-added", G_CALLBACK (cb_newpad_mp), this);
 
-        audio = gst_bin_new ("audiobin");
-        conv = gst_element_factory_make ("audioconvert", "aconv");
-        audiopad = gst_element_get_static_pad (conv, "sink");
+
+        conv = gst_element_factory_make ("audioconvert", "convert");
         vol = gst_element_factory_make ("volume", "volume");
         resample = gst_element_factory_make ("audioresample", "resample");
         level = gst_element_factory_make ("level", "level");
@@ -188,29 +190,21 @@ bool MonitorPlayer::prepare()
             g_object_set (sink, "device", NULL, NULL);
         #endif
 
-
-        gst_bin_add_many (GST_BIN (audio), conv, resample, level, vol, sink, NULL);
-        gst_element_link (conv,resample);
+        gst_bin_add_many (GST_BIN (pipeline), src, conv, resample, level, vol, sink, NULL);
+        gst_element_link (conv, resample);
         gst_element_link_filtered (resample, level, caps);
         gst_element_link (level,vol);
         gst_element_link (vol, sink);
-        gst_element_add_pad (audio, gst_ghost_pad_new ("sink", audiopad));
-        gst_bin_add (GST_BIN (pipeline), audio);
 
-
-        GstElement *l_src;
-        l_src = gst_element_factory_make ("filesrc", "localsrc");
-        gst_bin_add_many (GST_BIN (pipeline), l_src, NULL);
-        gst_element_set_state (l_src, GST_STATE_NULL);
-        gst_element_link ( l_src,dec);
+        gst_element_set_state (src, GST_STATE_NULL);
 
 #ifdef GST_API_VERSION_1
-        gst_bus_set_sync_handler (bus, bus_cb, this, NULL);
+        gst_bus_set_sync_handler (bus, bus_cb, this, nullptr);
 #else
         gst_bus_set_sync_handler (bus, bus_cb, this);
 #endif
 
-        gst_object_unref (audiopad);
+        qDebug() << Q_FUNC_INFO << " " << "END";
 
         return pipeline;
 }
@@ -222,8 +216,11 @@ bool MonitorPlayer::ready()
 
 void MonitorPlayer::open(QUrl url)
 {
-    //To avoid delays load track in another thread
-    qDebug() << Q_FUNC_INFO <<":"<<parentWidget()->objectName()<<" url="<<url;
+    if (p->isDisabled) {
+        return;
+    }
+    // To avoid delays, load track in another thread
+    qDebug() << Q_FUNC_INFO << ":" << parentWidget()->objectName() << " url=" << url;
     QFuture<void> future = QtConcurrent::run( this, &MonitorPlayer::asyncOpen,url);
     p->watcher.setFuture(future);
 }
@@ -231,25 +228,26 @@ void MonitorPlayer::open(QUrl url)
 void MonitorPlayer::asyncOpen(QUrl url)
 {
     p->mutex.lock();
-    m_length = 0;
-    p->isLoaded=false;
-    p->error="";
+    p->length = 0;
+    p->isLoaded = false;
+    p->error = "";
 
     sync_set_state (GST_ELEMENT (pipeline), GST_STATE_NULL);
 
-    GstElement *l_src = gst_bin_get_by_name(GST_BIN(pipeline), "localsrc");
-    g_object_set (G_OBJECT (l_src), "location", (const char*)url.toLocalFile().toUtf8(), NULL);
+    GstElement *src = gst_bin_get_by_name(GST_BIN(pipeline), "source");
+    g_object_set (G_OBJECT (src), "uri", (const char*)url.toString().toUtf8(), NULL);
+
     sync_set_state (GST_ELEMENT (pipeline), GST_STATE_PAUSED);
     setPosition(QTime(0,0));
 
-    gst_object_unref(l_src);
+    gst_object_unref(src);
     p->mutex.unlock();
 }
 
 void MonitorPlayer::loadThreadFinished()
 {
     // async load in MonitorPlayerGst done
-    qDebug() << Q_FUNC_INFO <<":"<<parentWidget()->objectName();
+    qDebug() << Q_FUNC_INFO << ":" << parentWidget()->objectName();
     p->isLoaded=true;
     if (p->isStarted) {
         play();
@@ -259,12 +257,14 @@ void MonitorPlayer::loadThreadFinished()
 
 void MonitorPlayer::play()
 {
-    p->isStarted=true;
-    qDebug() << Q_FUNC_INFO <<":"<<parentWidget()->objectName();
+
+    p->isStarted = true;
+    qDebug() << Q_FUNC_INFO << ":" << parentWidget()->objectName();
     if (p->isLoaded) {
           gst_element_set_state (GST_ELEMENT (pipeline), GST_STATE_PLAYING);
     }
 }
+
 void MonitorPlayer::stop()
 {
     p->isStarted=false;
@@ -287,12 +287,12 @@ bool MonitorPlayer::close()
 
 void MonitorPlayer::setPosition(QTime position)
 {
-        int time_milliseconds=QTime(0,0).msecsTo(position);
-        gint64 time_nanoseconds=( time_milliseconds * GST_MSECOND );
+        int time_milliseconds = QTime(0,0).msecsTo(position);
+        gint64 time_nanoseconds = ( time_milliseconds * GST_MSECOND );
         gst_element_seek (pipeline, 1.0, GST_FORMAT_TIME, GST_SEEK_FLAG_FLUSH,
                                  GST_SEEK_TYPE_SET, time_nanoseconds,
                                  GST_SEEK_TYPE_NONE, GST_CLOCK_TIME_NONE);
-        m_position=time_milliseconds;
+        p->position = time_milliseconds;
         emit positionChanged();
 }
 
@@ -308,10 +308,10 @@ QTime MonitorPlayer::position()
         GstFormat fmt = GST_FORMAT_TIME;
         if(gst_element_query_position(pipeline, &fmt, &value)) {
 #endif
-            m_position = static_cast<uint>( ( value / GST_MSECOND ) );
-            return QTime(0,0).addMSecs( m_position ); // nanosec -> msec
+            p->position = static_cast<uint>( ( value / GST_MSECOND ) );
+            return QTime(0,0).addMSecs( p->position ); // nanosec -> msec
         }
-        return  QTime(0,0).addMSecs(  m_position ); // nanosec -> msec
+        return  QTime(0,0).addMSecs(  p->position ); // nanosec -> msec
     }
     return QTime(0,0);
 }
@@ -320,7 +320,7 @@ QTime MonitorPlayer::length()
 {
     gint64 value=0;
 
-    if ( m_length == 0 && pipeline){
+    if ( p->length == 0 && pipeline){
 
 #ifdef GST_API_VERSION_1
         if(gst_element_query_duration(pipeline, GST_FORMAT_TIME, &value)) {
@@ -328,10 +328,10 @@ QTime MonitorPlayer::length()
         GstFormat fmt = GST_FORMAT_TIME;
         if(gst_element_query_duration(pipeline, &fmt, &value)) {
 #endif
-            m_length = static_cast<uint>( ( value / GST_MSECOND ));
+            p->length = static_cast<uint>( ( value / GST_MSECOND ));
         }
     }
-    return QTime(0,0).addMSecs(  m_length ); // nanosec -> msec
+    return QTime(0,0).addMSecs(  p->length ); // nanosec -> msec
 }
 
 double  MonitorPlayer::volume()
@@ -351,6 +351,31 @@ void MonitorPlayer::setVolume(double v)
         GstElement *volume = gst_bin_get_by_name(GST_BIN(pipeline), "volume");
         g_object_set (G_OBJECT(volume), "volume", vol, NULL);
         gst_object_unref(volume);
+}
+
+void MonitorPlayer::disable()
+{
+    p->isDisabled = true;
+}
+
+void MonitorPlayer::enable()
+{
+    p->isDisabled = false;
+}
+
+bool MonitorPlayer::isDisabled()
+{
+    return p->isDisabled;
+}
+
+double MonitorPlayer::levelLeft()
+{
+    return p->rms_l;
+}
+
+double MonitorPlayer::levelRight()
+{
+    return p->rms_r;
 }
 
 bool MonitorPlayer::mediaPlayable()
@@ -404,7 +429,7 @@ void MonitorPlayer::setOutputDevice(QString deviceName)
          }
     }
 
-    qDebug()<<"Monitor setDevice to DeviceID:"<<p->deviceID<<" DevicenName:"<<p->deviceName;
+    qDebug()<<"Monitor setDevice to DeviceID:" << p->deviceID << " DevicenName:" << p->deviceName;
 
     GstElement *sink = gst_bin_get_by_name(GST_BIN(pipeline), "sink");
 #if defined(Q_OS_WIN32)
@@ -450,7 +475,6 @@ QString MonitorPlayer::defaultDeviceID()
 #endif
 
 }
-
 
 void MonitorPlayer::readDevices()
 {
@@ -532,7 +556,7 @@ void MonitorPlayer::messageReceived(GstMessage *message)
                             gst_message_parse_error (message, &err, &debug);
                             p->error = "Error #"+QString::number(err->code)+" in module "+QString::number(err->domain)+"\n"+QString::fromUtf8(err->message);
                             if(err->code == 6 && err->domain == 851) {
-                                    p->error += "\nMay be you should to install gstreamer0.10-plugins-ugly or gstreamer0.10-plugins-bad";
+                                    p->error += "\nMay be you should to install gstreamerX.XX-plugins-ugly or gstreamerX.XX-plugins-bad";
                             }
                             qDebug()<< "Gstreamer error:"<< p->error;
                             g_error_free (err);
@@ -552,7 +576,7 @@ void MonitorPlayer::messageReceived(GstMessage *message)
                     switch(new_state){
                     case GST_STATE_PAUSED:
                     case GST_STATE_NULL:
-                        rms_l=rms_r=0;
+                        p->rms_l = p->rms_r = 0;
                     default:
                             break;
                     }
@@ -595,9 +619,9 @@ void MonitorPlayer::messageReceived(GstMessage *message)
                               /* converting from dB to normal gives us a value between 0.0 and 1.0 */
                               rms = pow (10, peak_dB / 20);
                               if (i==0)
-                                  rms_l=rms;
+                                  p->rms_l = rms;
                               else
-                                  rms_r=rms;
+                                  p->rms_r = rms;
                             }
 
                         }
@@ -609,5 +633,3 @@ void MonitorPlayer::messageReceived(GstMessage *message)
                 }
 
 }
-
-

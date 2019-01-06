@@ -202,17 +202,17 @@ QScrollBar:horizontal {
          height: 15px;
          margin: 0px 20px 0 20px;
      }
-     QScrollBar::handle:horizontal {
-                   background: qlineargradient(
+QScrollBar::handle:horizontal {
+  background: qlineargradient(
    x1:0, y1:0, x2:0, y2:1,
    stop:0.1 white,
    stop:1 gray
  );
          min-width: 20px;
      }
-     QScrollBar::add-line:horizontal {
-         border: 2px solid grey;
-                   background: qlineargradient(
+QScrollBar::add-line:horizontal {
+   border: 2px solid grey;
+   background: qlineargradient(
    x1:0, y1:0, x2:0, y2:1,
    stop:0.1 #505050,
    stop:1 black
@@ -260,7 +260,7 @@ QScrollBar:vertical {
          width: 15px;
      }
 QScrollBar::handle:vertical {
-                   background: qlineargradient(
+background: qlineargradient(
    x1:0, y1:0, x2:1, y2:0,
    stop:0.1 white,
    stop:1 gray
@@ -330,9 +330,11 @@ QPushButton#butPlayWidget:pressed {
    stop:1 #82df52
  );
 }
+
 RatingWidget {
 background-color: #333333;
 }
+
 QMessageBox,QInputDialog{
   background-color: #bbbbbb;
   color: #1c1c1c;
@@ -740,6 +742,15 @@ background-color: #444444;
                 </color>
                </brush>
               </colorrole>
+              <colorrole role="PlaceholderText">
+               <brush brushstyle="NoBrush">
+                <color alpha="128">
+                 <red>255</red>
+                 <green>255</green>
+                 <blue>255</blue>
+                </color>
+               </brush>
+              </colorrole>
              </active>
              <inactive>
               <colorrole role="WindowText">
@@ -940,6 +951,15 @@ background-color: #444444;
                 </color>
                </brush>
               </colorrole>
+              <colorrole role="PlaceholderText">
+               <brush brushstyle="NoBrush">
+                <color alpha="128">
+                 <red>255</red>
+                 <green>255</green>
+                 <blue>255</blue>
+                </color>
+               </brush>
+              </colorrole>
              </inactive>
              <disabled>
               <colorrole role="WindowText">
@@ -1137,6 +1157,15 @@ background-color: #444444;
                  <red>0</red>
                  <green>0</green>
                  <blue>0</blue>
+                </color>
+               </brush>
+              </colorrole>
+              <colorrole role="PlaceholderText">
+               <brush brushstyle="NoBrush">
+                <color alpha="128">
+                 <red>255</red>
+                 <green>255</green>
+                 <blue>255</blue>
                 </color>
                </brush>
               </colorrole>
@@ -1435,6 +1464,15 @@ background-color: #444444;
                 </color>
                </brush>
               </colorrole>
+              <colorrole role="PlaceholderText">
+               <brush brushstyle="NoBrush">
+                <color alpha="128">
+                 <red>255</red>
+                 <green>255</green>
+                 <blue>255</blue>
+                </color>
+               </brush>
+              </colorrole>
              </active>
              <inactive>
               <colorrole role="WindowText">
@@ -1635,6 +1673,15 @@ background-color: #444444;
                 </color>
                </brush>
               </colorrole>
+              <colorrole role="PlaceholderText">
+               <brush brushstyle="NoBrush">
+                <color alpha="128">
+                 <red>255</red>
+                 <green>255</green>
+                 <blue>255</blue>
+                </color>
+               </brush>
+              </colorrole>
              </inactive>
              <disabled>
               <colorrole role="WindowText">
@@ -1832,6 +1879,15 @@ background-color: #444444;
                  <red>0</red>
                  <green>0</green>
                  <blue>0</blue>
+                </color>
+               </brush>
+              </colorrole>
+              <colorrole role="PlaceholderText">
+               <brush brushstyle="NoBrush">
+                <color alpha="128">
+                 <red>255</red>
+                 <green>255</green>
+                 <blue>255</blue>
                 </color>
                </brush>
               </colorrole>
@@ -2098,6 +2154,15 @@ background-color: #444444;
                 </color>
                </brush>
               </colorrole>
+              <colorrole role="PlaceholderText">
+               <brush brushstyle="NoBrush">
+                <color alpha="128">
+                 <red>255</red>
+                 <green>255</green>
+                 <blue>255</blue>
+                </color>
+               </brush>
+              </colorrole>
              </active>
              <inactive>
               <colorrole role="WindowText">
@@ -2298,6 +2363,15 @@ background-color: #444444;
                 </color>
                </brush>
               </colorrole>
+              <colorrole role="PlaceholderText">
+               <brush brushstyle="NoBrush">
+                <color alpha="128">
+                 <red>255</red>
+                 <green>255</green>
+                 <blue>255</blue>
+                </color>
+               </brush>
+              </colorrole>
              </inactive>
              <disabled>
               <colorrole role="WindowText">
@@ -2495,6 +2569,15 @@ background-color: #444444;
                  <red>0</red>
                  <green>0</green>
                  <blue>0</blue>
+                </color>
+               </brush>
+              </colorrole>
+              <colorrole role="PlaceholderText">
+               <brush brushstyle="NoBrush">
+                <color alpha="128">
+                 <red>255</red>
+                 <green>255</green>
+                 <blue>255</blue>
                 </color>
                </brush>
               </colorrole>
@@ -2702,6 +2785,15 @@ background-color: #444444;
                 </color>
                </brush>
               </colorrole>
+              <colorrole role="PlaceholderText">
+               <brush brushstyle="NoBrush">
+                <color alpha="128">
+                 <red>255</red>
+                 <green>255</green>
+                 <blue>255</blue>
+                </color>
+               </brush>
+              </colorrole>
              </active>
              <inactive>
               <colorrole role="WindowText">
@@ -2881,6 +2973,15 @@ background-color: #444444;
                 </color>
                </brush>
               </colorrole>
+              <colorrole role="PlaceholderText">
+               <brush brushstyle="NoBrush">
+                <color alpha="128">
+                 <red>255</red>
+                 <green>255</green>
+                 <blue>255</blue>
+                </color>
+               </brush>
+              </colorrole>
              </inactive>
              <disabled>
               <colorrole role="WindowText">
@@ -3057,6 +3158,15 @@ background-color: #444444;
                  <red>0</red>
                  <green>64</green>
                  <blue>0</blue>
+                </color>
+               </brush>
+              </colorrole>
+              <colorrole role="PlaceholderText">
+               <brush brushstyle="NoBrush">
+                <color alpha="128">
+                 <red>255</red>
+                 <green>255</green>
+                 <blue>255</blue>
                 </color>
                </brush>
               </colorrole>
@@ -3268,6 +3378,15 @@ background-color: #444444;
                 </color>
                </brush>
               </colorrole>
+              <colorrole role="PlaceholderText">
+               <brush brushstyle="NoBrush">
+                <color alpha="128">
+                 <red>0</red>
+                 <green>0</green>
+                 <blue>0</blue>
+                </color>
+               </brush>
+              </colorrole>
              </active>
              <inactive>
               <colorrole role="WindowText">
@@ -3447,6 +3566,15 @@ background-color: #444444;
                 </color>
                </brush>
               </colorrole>
+              <colorrole role="PlaceholderText">
+               <brush brushstyle="NoBrush">
+                <color alpha="128">
+                 <red>0</red>
+                 <green>0</green>
+                 <blue>0</blue>
+                </color>
+               </brush>
+              </colorrole>
              </inactive>
              <disabled>
               <colorrole role="WindowText">
@@ -3622,6 +3750,15 @@ background-color: #444444;
                 <color alpha="255">
                  <red>0</red>
                  <green>64</green>
+                 <blue>0</blue>
+                </color>
+               </brush>
+              </colorrole>
+              <colorrole role="PlaceholderText">
+               <brush brushstyle="NoBrush">
+                <color alpha="128">
+                 <red>0</red>
+                 <green>0</green>
                  <blue>0</blue>
                 </color>
                </brush>
@@ -3831,6 +3968,15 @@ background-color: #444444;
                 </color>
                </brush>
               </colorrole>
+              <colorrole role="PlaceholderText">
+               <brush brushstyle="NoBrush">
+                <color alpha="128">
+                 <red>0</red>
+                 <green>0</green>
+                 <blue>0</blue>
+                </color>
+               </brush>
+              </colorrole>
              </active>
              <inactive>
               <colorrole role="WindowText">
@@ -4010,6 +4156,15 @@ background-color: #444444;
                 </color>
                </brush>
               </colorrole>
+              <colorrole role="PlaceholderText">
+               <brush brushstyle="NoBrush">
+                <color alpha="128">
+                 <red>0</red>
+                 <green>0</green>
+                 <blue>0</blue>
+                </color>
+               </brush>
+              </colorrole>
              </inactive>
              <disabled>
               <colorrole role="WindowText">
@@ -4185,6 +4340,15 @@ background-color: #444444;
                 <color alpha="255">
                  <red>0</red>
                  <green>64</green>
+                 <blue>0</blue>
+                </color>
+               </brush>
+              </colorrole>
+              <colorrole role="PlaceholderText">
+               <brush brushstyle="NoBrush">
+                <color alpha="128">
+                 <red>0</red>
+                 <green>0</green>
                  <blue>0</blue>
                 </color>
                </brush>
@@ -4427,6 +4591,15 @@ background-color: #444444;
                 </color>
                </brush>
               </colorrole>
+              <colorrole role="PlaceholderText">
+               <brush brushstyle="NoBrush">
+                <color alpha="128">
+                 <red>255</red>
+                 <green>255</green>
+                 <blue>255</blue>
+                </color>
+               </brush>
+              </colorrole>
              </active>
              <inactive>
               <colorrole role="WindowText">
@@ -4627,6 +4800,15 @@ background-color: #444444;
                 </color>
                </brush>
               </colorrole>
+              <colorrole role="PlaceholderText">
+               <brush brushstyle="NoBrush">
+                <color alpha="128">
+                 <red>255</red>
+                 <green>255</green>
+                 <blue>255</blue>
+                </color>
+               </brush>
+              </colorrole>
              </inactive>
              <disabled>
               <colorrole role="WindowText">
@@ -4824,6 +5006,15 @@ background-color: #444444;
                  <red>0</red>
                  <green>0</green>
                  <blue>0</blue>
+                </color>
+               </brush>
+              </colorrole>
+              <colorrole role="PlaceholderText">
+               <brush brushstyle="NoBrush">
+                <color alpha="128">
+                 <red>255</red>
+                 <green>255</green>
+                 <blue>255</blue>
                 </color>
                </brush>
               </colorrole>
@@ -5096,6 +5287,15 @@ min-height: 16px;
                 </color>
                </brush>
               </colorrole>
+              <colorrole role="PlaceholderText">
+               <brush brushstyle="NoBrush">
+                <color alpha="128">
+                 <red>255</red>
+                 <green>255</green>
+                 <blue>255</blue>
+                </color>
+               </brush>
+              </colorrole>
              </active>
              <inactive>
               <colorrole role="WindowText">
@@ -5296,6 +5496,15 @@ min-height: 16px;
                 </color>
                </brush>
               </colorrole>
+              <colorrole role="PlaceholderText">
+               <brush brushstyle="NoBrush">
+                <color alpha="128">
+                 <red>255</red>
+                 <green>255</green>
+                 <blue>255</blue>
+                </color>
+               </brush>
+              </colorrole>
              </inactive>
              <disabled>
               <colorrole role="WindowText">
@@ -5493,6 +5702,15 @@ min-height: 16px;
                  <red>0</red>
                  <green>0</green>
                  <blue>0</blue>
+                </color>
+               </brush>
+              </colorrole>
+              <colorrole role="PlaceholderText">
+               <brush brushstyle="NoBrush">
+                <color alpha="128">
+                 <red>255</red>
+                 <green>255</green>
+                 <blue>255</blue>
                 </color>
                </brush>
               </colorrole>
@@ -6206,6 +6424,15 @@ min-height: 16px;
                    </color>
                   </brush>
                  </colorrole>
+                 <colorrole role="PlaceholderText">
+                  <brush brushstyle="NoBrush">
+                   <color alpha="128">
+                    <red>0</red>
+                    <green>0</green>
+                    <blue>0</blue>
+                   </color>
+                  </brush>
+                 </colorrole>
                 </active>
                 <inactive>
                  <colorrole role="WindowText">
@@ -6385,6 +6612,15 @@ min-height: 16px;
                    </color>
                   </brush>
                  </colorrole>
+                 <colorrole role="PlaceholderText">
+                  <brush brushstyle="NoBrush">
+                   <color alpha="128">
+                    <red>0</red>
+                    <green>0</green>
+                    <blue>0</blue>
+                   </color>
+                  </brush>
+                 </colorrole>
                 </inactive>
                 <disabled>
                  <colorrole role="WindowText">
@@ -6560,6 +6796,15 @@ min-height: 16px;
                    <color alpha="255">
                     <red>0</red>
                     <green>64</green>
+                    <blue>0</blue>
+                   </color>
+                  </brush>
+                 </colorrole>
+                 <colorrole role="PlaceholderText">
+                  <brush brushstyle="NoBrush">
+                   <color alpha="128">
+                    <red>0</red>
+                    <green>0</green>
                     <blue>0</blue>
                    </color>
                   </brush>
@@ -6676,6 +6921,15 @@ min-height: 16px;
                    </gradient>
                   </brush>
                  </colorrole>
+                 <colorrole role="PlaceholderText">
+                  <brush brushstyle="NoBrush">
+                   <color alpha="128">
+                    <red>225</red>
+                    <green>225</green>
+                    <blue>225</blue>
+                   </color>
+                  </brush>
+                 </colorrole>
                 </active>
                 <inactive>
                  <colorrole role="WindowText">
@@ -6765,6 +7019,15 @@ min-height: 16px;
                    </gradient>
                   </brush>
                  </colorrole>
+                 <colorrole role="PlaceholderText">
+                  <brush brushstyle="NoBrush">
+                   <color alpha="128">
+                    <red>225</red>
+                    <green>225</green>
+                    <blue>225</blue>
+                   </color>
+                  </brush>
+                 </colorrole>
                 </inactive>
                 <disabled>
                  <colorrole role="WindowText">
@@ -6852,6 +7115,15 @@ min-height: 16px;
                      </color>
                     </gradientstop>
                    </gradient>
+                  </brush>
+                 </colorrole>
+                 <colorrole role="PlaceholderText">
+                  <brush brushstyle="NoBrush">
+                   <color alpha="128">
+                    <red>225</red>
+                    <green>225</green>
+                    <blue>225</blue>
+                   </color>
                   </brush>
                  </colorrole>
                 </disabled>
@@ -6978,6 +7250,15 @@ min-height: 16px;
                    </gradient>
                   </brush>
                  </colorrole>
+                 <colorrole role="PlaceholderText">
+                  <brush brushstyle="NoBrush">
+                   <color alpha="128">
+                    <red>225</red>
+                    <green>225</green>
+                    <blue>225</blue>
+                   </color>
+                  </brush>
+                 </colorrole>
                 </active>
                 <inactive>
                  <colorrole role="WindowText">
@@ -7067,6 +7348,15 @@ min-height: 16px;
                    </gradient>
                   </brush>
                  </colorrole>
+                 <colorrole role="PlaceholderText">
+                  <brush brushstyle="NoBrush">
+                   <color alpha="128">
+                    <red>225</red>
+                    <green>225</green>
+                    <blue>225</blue>
+                   </color>
+                  </brush>
+                 </colorrole>
                 </inactive>
                 <disabled>
                  <colorrole role="WindowText">
@@ -7154,6 +7444,15 @@ min-height: 16px;
                      </color>
                     </gradientstop>
                    </gradient>
+                  </brush>
+                 </colorrole>
+                 <colorrole role="PlaceholderText">
+                  <brush brushstyle="NoBrush">
+                   <color alpha="128">
+                    <red>225</red>
+                    <green>225</green>
+                    <blue>225</blue>
+                   </color>
                   </brush>
                  </colorrole>
                 </disabled>
@@ -7351,6 +7650,15 @@ min-height: 16px;
                      </gradient>
                     </brush>
                    </colorrole>
+                   <colorrole role="PlaceholderText">
+                    <brush brushstyle="NoBrush">
+                     <color alpha="128">
+                      <red>225</red>
+                      <green>225</green>
+                      <blue>225</blue>
+                     </color>
+                    </brush>
+                   </colorrole>
                   </active>
                   <inactive>
                    <colorrole role="WindowText">
@@ -7438,6 +7746,15 @@ min-height: 16px;
                        </color>
                       </gradientstop>
                      </gradient>
+                    </brush>
+                   </colorrole>
+                   <colorrole role="PlaceholderText">
+                    <brush brushstyle="NoBrush">
+                     <color alpha="128">
+                      <red>225</red>
+                      <green>225</green>
+                      <blue>225</blue>
+                     </color>
                     </brush>
                    </colorrole>
                   </inactive>
@@ -7529,6 +7846,15 @@ min-height: 16px;
                      </gradient>
                     </brush>
                    </colorrole>
+                   <colorrole role="PlaceholderText">
+                    <brush brushstyle="NoBrush">
+                     <color alpha="128">
+                      <red>225</red>
+                      <green>225</green>
+                      <blue>225</blue>
+                     </color>
+                    </brush>
+                   </colorrole>
                   </disabled>
                  </palette>
                 </property>
@@ -7593,15 +7919,12 @@ min-height: 16px;
                   <height>35</height>
                  </size>
                 </property>
-                <property name="styleSheet">
-                 <string notr="true">color: rgb(255, 0, 0);</string>
-                </property>
                 <property name="text">
                  <string>&lt;!DOCTYPE HTML PUBLIC &quot;-//W3C//DTD HTML 4.0//EN&quot; &quot;http://www.w3.org/TR/REC-html40/strict.dtd&quot;&gt;
 &lt;html&gt;&lt;head&gt;&lt;meta name=&quot;qrichtext&quot; content=&quot;1&quot; /&gt;&lt;style type=&quot;text/css&quot;&gt;
 p, li { white-space: pre-wrap; }
 &lt;/style&gt;&lt;/head&gt;&lt;body style=&quot; font-size:8.25pt; font-weight:400; font-style:normal;&quot;&gt;
-&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;a href=&quot;settings&quot;&gt;&lt;span style=&quot; font-size:8pt; color:#df0000;&quot;&gt;No 2nd soundcard selected!&lt;/span&gt;&lt;/a&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;a href=&quot;settings&quot;&gt;&lt;span style=&quot; font-size:8pt; color:#df9090;&quot;&gt;No 2nd soundcard selected!&lt;/span&gt;&lt;/a&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                 </property>
                 <property name="wordWrap">
                  <bool>true</bool>

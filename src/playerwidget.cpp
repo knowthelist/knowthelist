@@ -240,18 +240,25 @@ void PlayerWidget::timerPosition_timeOut()
 void PlayerWidget::dragEnterEvent(QDragEnterEvent* event)
 {
     //ToDo: remove forein classname tracklist"
-    //qDebug() << "PlayerWidget: dragEnterEvent: "<<event->source()->objectName()  ;
     if ( !event->source() ) return;
     event->setDropAction(Qt::CopyAction);
      QString sourceSite = event->source()->objectName();
      QString dropSite = this->objectName();
-     if ( sourceSite.left(4) == dropSite.left(4) || sourceSite.left(9) == "tracklist" )
-        event->accept();
+     qDebug() << "PlayerWidget: dragEnterEvent: sourceSite=" << sourceSite << " dropSite=" << dropSite;
+     if ( sourceSite.left(4) == dropSite.left(4) || sourceSite.left(9) == "tracklist" ) {
+         qDebug() << "PlayerWidget: dragEnterEvent: acceptProposedAction";
+        event->acceptProposedAction();
+     }
 }
 
+void PlayerWidget::dragMoveEvent(QDragMoveEvent *event)
+{
+    event->acceptProposedAction();
+}
 
 void PlayerWidget::dropEvent( QDropEvent *event )
 {
+    qDebug() << "PlayerWidget: dragEnterEvent: " << event->mimeData();
     if (event->mimeData()->hasUrls()) {
             QList<QUrl> urlList = event->mimeData()->urls(); // returns list of QUrls
             event->ignore();
@@ -297,7 +304,7 @@ void PlayerWidget::loadTrack( Track *track)
 
     m_CurrentTrack = track;
 
-    if ( track != NULL ) {
+    if ( track != nullptr ) {
 
       drawTitle();
 

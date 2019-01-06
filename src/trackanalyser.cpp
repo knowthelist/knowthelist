@@ -36,20 +36,20 @@ struct TrackAnalyser_Private
         float lastSpectrum[spect_bands];
         QList<float> spectralFlux;
         int bpm;
-        GstElement *conv, *sink, *cutter, *audio, *analysis, *spectrum;
+        GstElement *src, *conv, *sink, *cutter, *audio, *analysis, *spectrum;
         TrackAnalyser::modeType analysisMode;
 };
 
 TrackAnalyser::TrackAnalyser(QWidget *parent) :
         QWidget(parent),
-    pipeline(0), m_finished(false)
+    pipeline(nullptr), m_finished(false)
     , p( new TrackAnalyser_Private )
 {
     p->fft_res = 435; //sample rate for fft samples in Hz
     for (int i=0;i<spect_bands;i++)
         p->lastSpectrum[i]=0.0;
 
-    gst_init (0, 0);
+    gst_init (nullptr, nullptr);
     prepare();
     connect(&p->watcher, SIGNAL(finished()), this, SLOT(loadThreadFinished()));
 
@@ -69,53 +69,52 @@ TrackAnalyser::~TrackAnalyser()
 {
     cleanup();
     delete p;
-    p=0;
+    p = nullptr;
 }
 
 
-void cb_newpad_ta (GstElement *decodebin,
-                   GstPad     *pad,
+void cb_newpad_ta (GstElement *src,
+                   GstPad     *new_pad,
                    gpointer    data)
 {
     TrackAnalyser* instance = (TrackAnalyser*)data;
-            instance->newpad(decodebin, pad, data);
+            instance->newpad(src, new_pad, data);
 }
 
 
-void TrackAnalyser::newpad (GstElement *decodebin,
-                   GstPad     *pad,
+void TrackAnalyser::newpad (GstElement *src,
+                   GstPad     *new_pad,
                    gpointer    data)
 {
         GstCaps *caps;
         GstStructure *str;
-        GstPad *audiopad;
+        GstPad *sink_pad;
 
         /* only link once */
-        GstElement *audio = gst_bin_get_by_name(GST_BIN(pipeline), "audiobin");
-        audiopad = gst_element_get_static_pad (audio, "sink");
-        gst_object_unref(audio);
+        GstElement *bin = gst_bin_get_by_name(GST_BIN(pipeline), "convert");
+        sink_pad = gst_element_get_static_pad (bin, "sink");
 
-        if (GST_PAD_IS_LINKED (audiopad)) {
-                g_object_unref (audiopad);
+        if (GST_PAD_IS_LINKED (sink_pad)) {
+                g_object_unref (sink_pad);
                 return;
         }
 
         /* check media type */
 #ifdef GST_API_VERSION_1
-        caps = gst_pad_query_caps (pad,NULL);
+        caps = gst_pad_query_caps (new_pad, nullptr);
 #else
-        caps = gst_pad_get_caps (pad);
+        caps = gst_pad_get_caps (new_pad);
 #endif
         str = gst_caps_get_structure (caps, 0);
         if (!g_strrstr (gst_structure_get_name (str), "audio")) {
                 gst_caps_unref (caps);
-                gst_object_unref (audiopad);
+                gst_object_unref (sink_pad);
                 return;
         }
         gst_caps_unref (caps);
 
         /* link'n'play */
-        gst_pad_link (pad, audiopad);
+        gst_pad_link (new_pad, sink_pad);
 }
 
 GstBusSyncReply TrackAnalyser::bus_cb (GstBus *bus, GstMessage *msg, gpointer data)
@@ -134,27 +133,17 @@ void TrackAnalyser::cleanup()
 
 bool TrackAnalyser::prepare()
 {
-        GstElement *dec, *audio;
-        GstPad *audiopad;
-
         pipeline = gst_pipeline_new ("pipeline");
         bus = gst_pipeline_get_bus (GST_PIPELINE (pipeline));
+        p->src = gst_element_factory_make ("uridecodebin", "source");
 
-#ifdef GST_API_VERSION_1
-        dec = gst_element_factory_make ("decodebin", "decoder");
-#else
-        dec = gst_element_factory_make ("decodebin2", "decoder");
-#endif
-        g_signal_connect (dec, "pad-added", G_CALLBACK (cb_newpad_ta), this);
-        gst_bin_add (GST_BIN (pipeline), dec);
+        g_signal_connect (p->src, "pad-added", G_CALLBACK (cb_newpad_ta), this);
 
-        audio = gst_bin_new ("audiobin");
-        p->conv = gst_element_factory_make ("audioconvert", "conv");
+        p->conv = gst_element_factory_make ("audioconvert", "convert");
         p->spectrum = gst_element_factory_make ("spectrum", "spectrum");
         p->analysis = gst_element_factory_make ("rganalysis", "analysis");
         p->cutter = gst_element_factory_make ("cutter", "cutter");
         p->sink = gst_element_factory_make ("fakesink", "sink");
-        audiopad = gst_element_get_static_pad (p->conv, "sink");
 
         g_object_set (p->analysis, "message", TRUE, NULL);
         g_object_set (p->analysis, "num-tracks", 1, NULL);
@@ -164,24 +153,13 @@ bool TrackAnalyser::prepare()
               "post-messages", TRUE, "interval", GST_SECOND / p->fft_res, NULL);
 
 
-        gst_bin_add_many (GST_BIN (audio), p->conv, p->analysis, p->cutter, p->spectrum, p->sink, NULL);
+        gst_bin_add_many (GST_BIN (pipeline), p->src, p->conv, p->analysis, p->cutter, p->spectrum, p->sink, NULL);
         gst_element_link (p->conv, p->analysis);
         gst_element_link (p->analysis, p->cutter);
         gst_element_link (p->cutter, p->sink);
-        gst_element_add_pad (audio, gst_ghost_pad_new ("sink", audiopad));
-
-        gst_bin_add (GST_BIN (pipeline), audio);
-
-        GstElement *l_src;
-        l_src = gst_element_factory_make ("filesrc", "localsrc");
-        gst_bin_add_many (GST_BIN (pipeline), l_src, NULL);
-        gst_element_set_state (l_src, GST_STATE_NULL);
-        gst_element_link ( l_src,dec);
-
-        gst_object_unref (audiopad);
 
 #ifdef GST_API_VERSION_1
-        gst_bus_set_sync_handler (bus, bus_cb, this, NULL);
+        gst_bus_set_sync_handler (bus, bus_cb, this, nullptr);
 #else
         gst_bus_set_sync_handler (bus, bus_cb, this);
 #endif
@@ -269,14 +247,14 @@ void TrackAnalyser::asyncOpen(QUrl url)
     sync_set_state (GST_ELEMENT (pipeline), GST_STATE_NULL);
 
 
-    GstElement *l_src = gst_bin_get_by_name(GST_BIN(pipeline), "localsrc");
-    g_object_set (G_OBJECT (l_src), "location", (const char*)url.toLocalFile().toUtf8(), NULL);
+    GstElement *src = gst_bin_get_by_name(GST_BIN(pipeline), "source");
+    g_object_set (G_OBJECT (src), "uri", (const char*)url.toString().toUtf8(), nullptr);
 
     sync_set_state (GST_ELEMENT (pipeline), GST_STATE_PAUSED);
 
     m_finished=false;
 
-    gst_object_unref(l_src);
+    gst_object_unref(src);
     p->mutex.unlock();
 }
 

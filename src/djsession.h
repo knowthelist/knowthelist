@@ -63,7 +63,7 @@ public slots:
     void setCurrentDj(Dj*);
 
 private:
-    class DjSessionPrivate *p;
+    struct DjSessionPrivate *p;
     void searchTracks();
     void summariseCount();
 

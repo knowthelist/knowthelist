@@ -1,5 +1,5 @@
 /*
-    Copyright (C) 2005-2014 Mario Stephan <mstephan@shared-files.de>
+    Copyright (C) 2005-2019 Mario Stephan <mstephan@shared-files.de>
 
     This library is free software; you can redistribute it and/or modify
     it under the terms of the GNU Lesser General Public License as published
@@ -38,7 +38,7 @@ class MonitorPlayer: public QWidget
 {
    Q_OBJECT
 public:
-    MonitorPlayer(QWidget *parent = 0);
+    MonitorPlayer(QWidget *parent = nullptr);
     ~MonitorPlayer();
 
 
@@ -54,6 +54,9 @@ public:
      QTime position();
      double  volume();
      void setVolume(double);
+     void disable();
+     void enable();
+     bool isDisabled();
 
      QTime length();
      bool isPlaying();
@@ -65,8 +68,8 @@ public:
      void readDevices();
      QString defaultDeviceID();
 
-     double levelLeft() {return rms_l;}
-     double levelRight() {return rms_r;}
+     double levelLeft();
+     double levelRight();
 
         void newpad (GstElement *decodebin, GstPad *pad, gpointer data);
         static GstBusSyncReply  bus_cb (GstBus *bus, GstMessage *msg, gpointer data);
@@ -81,17 +84,12 @@ public:
         void messageReceived(GstMessage* message);
 
  private:
-    struct Private;
-    Private * p;
+    struct MonitorPlayerPrivate *p;
+
         GstElement *pipeline;
         GstBus *bus;
-        //QTimer *timer;
-        gint64 Gstart, Glength;
-        int m_length;
-        int m_position;
-        dsDevice dev;
-        double rms_l,rms_r;
-
+        gint64 Gstart;
+        gint64 Glength;
         void setLink(int, QUrl&);
         void asyncOpen(QUrl url);
         void cleanup();

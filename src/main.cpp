@@ -36,7 +36,7 @@ int main(int argc, char *argv[])
     QCoreApplication::setOrganizationName("knowthelist-org");
     QCoreApplication::setOrganizationDomain("");
     QCoreApplication::setApplicationName("knowthelist");
-    QCoreApplication::setApplicationVersion("2.3.0");
+    QCoreApplication::setApplicationVersion("2.3.1");
 
     QSettings settings;
     QStringList languages;
@@ -52,13 +52,13 @@ int main(int argc, char *argv[])
 
     QTranslator localization;
     bool result = localization.load(":knowthelist_" + lang +".qm");
-    qDebug() << "localization load " << ":knowthelist_" + lang +".qm result:" << result;
+    qDebug() << "localization load " << ":knowthelist_" + lang + ".qm result:" << result;
     a.installTranslator(&localization);
 
 
 if (!QSqlDatabase::drivers().contains("QSQLITE")) {
 #if QT_VERSION >= 0x050000
-    QMessageBox::critical(0, QObject::tr("Unable to load database"),
+    QMessageBox::critical(nullptr, QObject::tr("Unable to load database"),
                           QObject::tr("This application needs the QT5 SQLITE driver (libqt5-sql-sqlite)"));
 #else
     QMessageBox::critical(0, QObject::tr("Unable to load database"),
@@ -82,13 +82,12 @@ QSqlDatabase db  = QSqlDatabase::addDatabase("QSQLITE");
 db.setDatabaseName( path.absolutePath() + "/collection.db");
 
 if ( !db.open() ) {
-    QMessageBox::critical(0, "fatal database error", db.lastError().text());
+    QMessageBox::critical(nullptr, "fatal database error", db.lastError().text());
     return 1;
 }
     qDebug() << "load database: " << db.databaseName();
     Knowthelist w;
     w.show();
-
 
     return a.exec();
 }
