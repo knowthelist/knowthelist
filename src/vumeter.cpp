@@ -202,7 +202,7 @@ void VUMeter::drawMeter() {
     peakRight = static_cast<int>((p->maxLevel / p->step * p->peakRight) * p->step);
 
     // segments
-    for( int segment = 0; segment < p->maxLevel + p->step; segment += p->step ){
+    for( int segment = 0; segment < p->maxLevel; segment += p->step ){
 
         // left value & peak colors
         if ( ( segment < valueLeft && segment <= p->highLevel ) ||
@@ -229,7 +229,7 @@ void VUMeter::drawMeter() {
         // LEDs
         for ( int led = 0; led < p->linesPerSegment; led++ ) {
 
-            int level = segment + led - 1;
+            int level = segment + led;
 
             if ( orientation() == Qt::Vertical ) {
                 // draw left
