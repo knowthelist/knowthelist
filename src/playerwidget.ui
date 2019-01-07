@@ -331,7 +331,7 @@ QLabel{
               <property name="minimumSize">
                <size>
                 <width>0</width>
-                <height>26</height>
+                <height>25</height>
                </size>
               </property>
               <property name="palette">
@@ -472,15 +472,6 @@ QLabel{
                    </color>
                   </brush>
                  </colorrole>
-                 <colorrole role="PlaceholderText">
-                  <brush brushstyle="NoBrush">
-                   <color alpha="128">
-                    <red>221</red>
-                    <green>221</green>
-                    <blue>221</blue>
-                   </color>
-                  </brush>
-                 </colorrole>
                 </active>
                 <inactive>
                  <colorrole role="WindowText">
@@ -615,15 +606,6 @@ QLabel{
                     <red>0</red>
                     <green>0</green>
                     <blue>0</blue>
-                   </color>
-                  </brush>
-                 </colorrole>
-                 <colorrole role="PlaceholderText">
-                  <brush brushstyle="NoBrush">
-                   <color alpha="128">
-                    <red>221</red>
-                    <green>221</green>
-                    <blue>221</blue>
                    </color>
                   </brush>
                  </colorrole>
@@ -764,15 +746,6 @@ QLabel{
                    </color>
                   </brush>
                  </colorrole>
-                 <colorrole role="PlaceholderText">
-                  <brush brushstyle="NoBrush">
-                   <color alpha="128">
-                    <red>221</red>
-                    <green>221</green>
-                    <blue>221</blue>
-                   </color>
-                  </brush>
-                 </colorrole>
                 </disabled>
                </palette>
               </property>
@@ -853,7 +826,7 @@ QLabel{
                  <property name="minimumSize">
                   <size>
                    <width>17</width>
-                   <height>19</height>
+                   <height>17</height>
                   </size>
                  </property>
                  <property name="maximumSize">
@@ -902,7 +875,7 @@ QLabel{
                  <property name="minimumSize">
                   <size>
                    <width>0</width>
-                   <height>14</height>
+                   <height>15</height>
                   </size>
                  </property>
                  <property name="maximumSize">
@@ -1125,15 +1098,6 @@ QLabel{
                       </color>
                      </brush>
                     </colorrole>
-                    <colorrole role="PlaceholderText">
-                     <brush brushstyle="NoBrush">
-                      <color alpha="128">
-                       <red>221</red>
-                       <green>221</green>
-                       <blue>221</blue>
-                      </color>
-                     </brush>
-                    </colorrole>
                    </active>
                    <inactive>
                     <colorrole role="WindowText">
@@ -1271,15 +1235,6 @@ QLabel{
                       </color>
                      </brush>
                     </colorrole>
-                    <colorrole role="PlaceholderText">
-                     <brush brushstyle="NoBrush">
-                      <color alpha="128">
-                       <red>221</red>
-                       <green>221</green>
-                       <blue>221</blue>
-                      </color>
-                     </brush>
-                    </colorrole>
                    </inactive>
                    <disabled>
                     <colorrole role="WindowText">
@@ -1414,15 +1369,6 @@ QLabel{
                        <red>0</red>
                        <green>0</green>
                        <blue>0</blue>
-                      </color>
-                     </brush>
-                    </colorrole>
-                    <colorrole role="PlaceholderText">
-                     <brush brushstyle="NoBrush">
-                      <color alpha="128">
-                       <red>221</red>
-                       <green>221</green>
-                       <blue>221</blue>
                       </color>
                      </brush>
                     </colorrole>
@@ -1612,15 +1558,6 @@ QLabel{
                       </color>
                      </brush>
                     </colorrole>
-                    <colorrole role="PlaceholderText">
-                     <brush brushstyle="NoBrush">
-                      <color alpha="128">
-                       <red>221</red>
-                       <green>221</green>
-                       <blue>221</blue>
-                      </color>
-                     </brush>
-                    </colorrole>
                    </active>
                    <inactive>
                     <colorrole role="WindowText">
@@ -1758,15 +1695,6 @@ QLabel{
                       </color>
                      </brush>
                     </colorrole>
-                    <colorrole role="PlaceholderText">
-                     <brush brushstyle="NoBrush">
-                      <color alpha="128">
-                       <red>221</red>
-                       <green>221</green>
-                       <blue>221</blue>
-                      </color>
-                     </brush>
-                    </colorrole>
                    </inactive>
                    <disabled>
                     <colorrole role="WindowText">
@@ -1901,15 +1829,6 @@ QLabel{
                        <red>0</red>
                        <green>0</green>
                        <blue>0</blue>
-                      </color>
-                     </brush>
-                    </colorrole>
-                    <colorrole role="PlaceholderText">
-                     <brush brushstyle="NoBrush">
-                      <color alpha="128">
-                       <red>221</red>
-                       <green>221</green>
-                       <blue>221</blue>
                       </color>
                      </brush>
                     </colorrole>
@@ -2124,15 +2043,6 @@ QLabel{
                       </color>
                      </brush>
                     </colorrole>
-                    <colorrole role="PlaceholderText">
-                     <brush brushstyle="NoBrush">
-                      <color alpha="128">
-                       <red>255</red>
-                       <green>61</green>
-                       <blue>42</blue>
-                      </color>
-                     </brush>
-                    </colorrole>
                    </active>
                    <inactive>
                     <colorrole role="WindowText">
@@ -2270,15 +2180,6 @@ QLabel{
                       </color>
                      </brush>
                     </colorrole>
-                    <colorrole role="PlaceholderText">
-                     <brush brushstyle="NoBrush">
-                      <color alpha="128">
-                       <red>255</red>
-                       <green>61</green>
-                       <blue>42</blue>
-                      </color>
-                     </brush>
-                    </colorrole>
                    </inactive>
                    <disabled>
                     <colorrole role="WindowText">
@@ -2413,15 +2314,6 @@ QLabel{
                        <red>0</red>
                        <green>0</green>
                        <blue>0</blue>
-                      </color>
-                     </brush>
-                    </colorrole>
-                    <colorrole role="PlaceholderText">
-                     <brush brushstyle="NoBrush">
-                      <color alpha="128">
-                       <red>255</red>
-                       <green>61</green>
-                       <blue>42</blue>
                       </color>
                      </brush>
                     </colorrole>
@@ -2612,15 +2504,6 @@ QLabel{
                       </color>
                      </brush>
                     </colorrole>
-                    <colorrole role="PlaceholderText">
-                     <brush brushstyle="NoBrush">
-                      <color alpha="128">
-                       <red>255</red>
-                       <green>61</green>
-                       <blue>42</blue>
-                      </color>
-                     </brush>
-                    </colorrole>
                    </active>
                    <inactive>
                     <colorrole role="WindowText">
@@ -2758,15 +2641,6 @@ QLabel{
                       </color>
                      </brush>
                     </colorrole>
-                    <colorrole role="PlaceholderText">
-                     <brush brushstyle="NoBrush">
-                      <color alpha="128">
-                       <red>255</red>
-                       <green>61</green>
-                       <blue>42</blue>
-                      </color>
-                     </brush>
-                    </colorrole>
                    </inactive>
                    <disabled>
                     <colorrole role="WindowText">
@@ -2901,15 +2775,6 @@ QLabel{
                        <red>0</red>
                        <green>0</green>
                        <blue>0</blue>
-                      </color>
-                     </brush>
-                    </colorrole>
-                    <colorrole role="PlaceholderText">
-                     <brush brushstyle="NoBrush">
-                      <color alpha="128">
-                       <red>255</red>
-                       <green>61</green>
-                       <blue>42</blue>
                       </color>
                      </brush>
                     </colorrole>

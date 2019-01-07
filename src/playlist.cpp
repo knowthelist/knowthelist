@@ -502,14 +502,15 @@ void Playlist::saveXML( const QString &path ) const
 
             QDomElement extElem = newdoc.createElement( "extension" );
 
-//            i.setAttribute("url", item->track()->url().toLocalFile());
-            if ( currentPlaylistItem )
-              if ( item == currentPlaylistItem )
-                extElem.setAttribute("current", "1");
-              if ( item == nextTrack() )
-                extElem.setAttribute("next", "1");
-              if ( item->track()->flags().testFlag(Track::isAutoDjSelection ))
-                extElem.setAttribute("isAutoDjSelection", "1");
+          if ( currentPlaylistItem && item == currentPlaylistItem ) {
+            extElem.setAttribute("current", "1");
+          }
+          if ( item == nextTrack() ) {
+            extElem.setAttribute("next", "1");
+          }
+          if ( item->track()->flags().testFlag(Track::isAutoDjSelection )){
+            extElem.setAttribute("isAutoDjSelection", "1");
+          }
 
             QStringList tag = item->track()->tagList();
 
