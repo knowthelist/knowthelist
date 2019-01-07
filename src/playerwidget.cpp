@@ -61,11 +61,9 @@ PlayerWidget::PlayerWidget(QWidget *parent) :
    vuMeter->LevelColorNormal.setRgb( 112,146,190 );
    vuMeter->LevelColorHigh.setRgb( 218,59,9 );
    vuMeter->LevelColorOff.setRgb( 31,45,65 );
-   vuMeter->setSpacesBetweenSegments( 1 );
    vuMeter->setLinesPerSegment( 2 );
-   vuMeter->setLinesPerPeak( 2 );
-   vuMeter->setSpacesInSegments( 1 );
-   vuMeter->setSpacesInPeak( 1 );
+   vuMeter->setSpacesBetweenSegments( 1 );
+   vuMeter->setSegmentsPerPeak( 2 );
 
    timerLevel = new QTimer(this);
    connect( timerLevel, SIGNAL(timeout()), SLOT(timerLevel_timeOut()) );
@@ -107,7 +105,7 @@ PlayerWidget::~PlayerWidget()
     delete timerPosition;
     delete timerLevel;
     delete trackanalyser;
-    trackanalyser = 0;
+    trackanalyser = nullptr;
     delete p;
 }
 

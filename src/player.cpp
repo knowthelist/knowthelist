@@ -103,8 +103,8 @@ struct PlayerPrivate
 
 Player::Player(QWidget *parent) :
         QWidget(parent)
-    , p( new PlayerPrivate )
-    , pipeline(nullptr), bus(nullptr), Gstart(0), Glength(0)
+        ,p( new PlayerPrivate )
+        ,pipeline(nullptr), bus(nullptr), Gstart(0), Glength(0)
 {
     p->isStarted=false;
     p->isLoaded=false;

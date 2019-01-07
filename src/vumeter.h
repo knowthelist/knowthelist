@@ -1,5 +1,5 @@
 /*
-    Copyright (C) 2005-2014 Mario Stephan <mstephan@shared-files.de>
+    Copyright (C) 2005-2019 Mario Stephan <mstephan@shared-files.de>
 
     This library is free software; you can redistribute it and/or modify
     it under the terms of the GNU Lesser General Public License as published
@@ -18,6 +18,7 @@
 #ifndef VUMETER_H
 #define VUMETER_H
 
+#include <QtCore>
 #include <QWidget>
 #include <QTime>
 #include <math.h>
@@ -40,22 +41,23 @@ class VUMeter : public QWidget
 Q_OBJECT
     Q_PROPERTY( Qt::Orientation orientation READ orientation WRITE setOrientation )
 public:
-    VUMeter(QWidget *parent = 0);
+    VUMeter(QWidget *parent = nullptr);
     ~VUMeter();
  
-    void setValueLeft( float );
-    void setValueRight( float );
-    void setPercentage( float );
+    void setValueLeft( double );
+    void setValueRight( double );
+    void setPercentage( double );
     void checkPeakTime();
     void setOrientation( Qt::Orientation );
     Qt::Orientation orientation() const;
     void setLinesPerSegment( int );
     void setSpacesBetweenSegments( int );
-    void setSpacesInSegments( int );
-    void setLinesPerPeak( int );
-    void setSpacesInPeak( int );
+    void setSegmentsPerPeak( int );
     void setMargin( int );
-    QColor LevelColorNormal, LevelColorHigh, LevelColorOff, BackgroundColor;
+    QColor LevelColorNormal;
+    QColor LevelColorHigh;
+    QColor LevelColorOff;
+    QColor BackgroundColor;
     void reset();
     
 
@@ -65,21 +67,10 @@ protected:
     void resizeEvent(QResizeEvent *);
 
 private:
-    float valueLeft, valueRight;
-    float peakLeft, peakRight;
-    void  drawMeter();
-    void paintBorder();
-    Qt::Orientation orient;
-    QTime peakTime;
-    int linesPerSegment, ledWidth, spacesInSegments, linesPerPeak, pw, spacesInPeak, margin, h, w, step, spacesBetweenSegments;
-    QColor colBack;
-    QColor colValue;
 
+    struct VUMeterPrivate *p;
+    void  drawMeter();
 };
 
-inline Qt::Orientation VUMeter::orientation() const
-{
-    return orient;
-}
 
 #endif

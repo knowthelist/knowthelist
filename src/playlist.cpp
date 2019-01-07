@@ -320,7 +320,7 @@ void Playlist::handleChanges()
       if ( itemBelow(currentPlaylistItem) ) {
             nextPlaylistItem = (PlaylistItem*)itemBelow(currentPlaylistItem);
        } else {
-           nextPlaylistItem = NULL;
+           nextPlaylistItem = nullptr;
        }
 
 
@@ -351,7 +351,7 @@ void Playlist::setCurrentPlaylistItem( PlaylistItem* item )
     if (currentPlaylistItem)
         Q_EMIT currentTrackChanged(currentPlaylistItem->track());
     else
-        Q_EMIT currentTrackChanged(NULL);
+        Q_EMIT currentTrackChanged(nullptr);
 }
 
 void Playlist::setNextPlaylistItem( PlaylistItem* item )

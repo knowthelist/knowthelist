@@ -99,30 +99,24 @@ void Knowthelist::createUI()
     connect( timerAutoFader, SIGNAL(timeout()), SLOT(timerAutoFader_timerOut()) );
 
     vuMeter2 = new VUMeter(ui->frameMixer);
-    vuMeter2->setSpacesBetweenSegments( 1 );
     vuMeter2->setLinesPerSegment( 2 );
-    vuMeter2->setLinesPerPeak( 2 );
-    vuMeter2->setSpacesInSegments( 1 );
-    vuMeter2->setSpacesInPeak( 1 );
-    vuMeter2->setMargin(3);
+    vuMeter2->setSpacesBetweenSegments( 1 );
+    vuMeter2->setSegmentsPerPeak( 1 );
+    vuMeter2->setMargin(2);
     vuMeter2->LevelColorOff.setRgb( 20,20,20 );
 
     vuMeter1 = new VUMeter(ui->frameMixer);
-    vuMeter1->setSpacesBetweenSegments( 1 );
     vuMeter1->setLinesPerSegment( 2 );
-    vuMeter1->setLinesPerPeak( 2 );
-    vuMeter1->setSpacesInSegments( 1 );
-    vuMeter1->setSpacesInPeak( 1 );
-    vuMeter1->setMargin(3);
+    vuMeter1->setSpacesBetweenSegments( 1 );
+    vuMeter1->setSegmentsPerPeak( 1 );
+    vuMeter1->setMargin(2);
     vuMeter1->LevelColorOff.setRgb( 20,20,20 );
 
     monitorMeter = new VUMeter(ui->fraMonitorTop);
     monitorMeter->setSpacesBetweenSegments( 1 );
     monitorMeter->setLinesPerSegment( 2 );
-    monitorMeter->setLinesPerPeak( 2 );
-    monitorMeter->setSpacesInSegments( 1 );
-    monitorMeter->setSpacesInPeak( 1 );
-    monitorMeter->setMargin(3);
+    monitorMeter->setSegmentsPerPeak( 2 );
+    monitorMeter->setMargin(2);
     monitorMeter->LevelColorOff.setRgb( 20,20,20 );
 
     vuMeter1->setGeometry(ui->phVU1->geometry());
