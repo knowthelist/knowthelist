@@ -18,87 +18,84 @@
 #ifndef COLLECTIONDB_H
 #define COLLECTIONDB_H
 
+#include "progressbar.h"
+#include <QtSql>
+#include <qdir.h>
 #include <qobject.h>
 #include <qstringlist.h>
-#include <qdir.h>
-#include <QtSql>
-#include "progressbar.h"
 
 //class sqlite;
 
-class CollectionDB : public QObject
-{
+class CollectionDB : public QObject {
     Q_OBJECT
-    
-    public:
-      CollectionDB();
-        ~CollectionDB();
 
-        bool isDbValid();
-        bool isEmpty();
-        
-        void incSongCounter( const QString url );
-        void setSongRate( const QString url, int rate );
-        void updateDirStats( QString path, const long datetime );
-        void removeSongsInDir( QString path );
-        bool isDirInCollection( QString path );
-        void removeDirFromCollection( QString path );
-        void removePlaylist( QString name );
-        void setFilterString( QString string );
+public:
+    CollectionDB();
+    ~CollectionDB();
 
-        bool executeSql(const QString& statement);
-        QList<QStringList> selectSql( const QString& statement);
-        long selectSqlNumber( const QString& statement );
+    bool isDbValid();
+    bool isEmpty();
 
-        int sqlInsertID();
-        QString escapeString( QString string );
+    void incSongCounter(const QString url);
+    void setSongRate(const QString url, int rate);
+    void updateDirStats(QString path, const long datetime);
+    void removeSongsInDir(QString path);
+    bool isDirInCollection(QString path);
+    void removeDirFromCollection(QString path);
+    void removePlaylist(QString name);
+    void setFilterString(QString string);
 
-        ulong getValueID( QString name, QString value, bool autocreate = true, bool useTempTables = false );
-        ulong getCount();
-        uint getCount(QString path, QString genre, QString artist);
-        QPair<int,int> getCount(QStringList paths, QStringList genres, QStringList artists);
-        long lastLengthSum();
-        uint lastMaxCount();
+    bool executeSql(const QString& statement);
+    QList<QStringList> selectSql(const QString& statement);
+    long selectSqlNumber(const QString& statement);
 
-        QList<QStringList> selectRandomEntry( QString rownum, QString path="", QString genre="", QString artist="");
-        QStringList getRandomEntry();
-        QStringList getRandomEntry(QString path, QString genre,QString artist);
+    int sqlInsertID();
+    QString escapeString(QString string);
 
+    ulong getValueID(QString name, QString value, bool autocreate = true, bool useTempTables = false);
+    ulong getCount();
+    uint getCount(QString path, QString genre, QString artist);
+    QPair<int, int> getCount(QStringList paths, QStringList genres, QStringList artists);
+    long lastLengthSum();
+    uint lastMaxCount();
 
-        void createTables( const bool temporary = false );
-        void dropTables( const bool temporary = false );
-        void moveTempTables();
-        void createStatsTable();
-        void dropStatsTable();
-        void resetSongCounter();
+    QList<QStringList> selectRandomEntry(QString rownum, QString path = "", QString genre = "", QString artist = "");
+    QStringList getRandomEntry();
+    QStringList getRandomEntry(QString path, QString genre, QString artist);
 
-        void purgeDirCache();
-        void scanModifiedDirs( bool recursively );
-        void scan( const QStringList& folders, bool recursively );
+    void createTables(const bool temporary = false);
+    void dropTables(const bool temporary = false);
+    void moveTempTables();
+    void createStatsTable();
+    void dropStatsTable();
+    void resetSongCounter();
 
-        QList<QStringList> selectTracks(QString year, QString genre, QString artist, QString album );
-        QList<QStringList> selectAlbums(QString year, QString genre, QString artist);
-        QList<QStringList> selectArtists(QString year="", QString genre="");
-        QList<QStringList> selectYears();
-        QList<QStringList> selectGenres();
-        QList<QStringList> selectHotTracks();
-        QList<QStringList> selectLastTracks();
-        QList<QStringList> selectFavoritesTracks();
-        QList<QStringList> selectPlaylistData();
-        QList<QStringList> selectPlaylistTracks(QString name);
+    void purgeDirCache();
+    void scanModifiedDirs(bool recursively);
+    void scan(const QStringList& folders, bool recursively);
 
-    signals:
-        void scanDone( bool changed );
+    QList<QStringList> selectTracks(QString year, QString genre, QString artist, QString album);
+    QList<QStringList> selectAlbums(QString year, QString genre, QString artist);
+    QList<QStringList> selectArtists(QString year = "", QString genre = "");
+    QList<QStringList> selectYears();
+    QList<QStringList> selectGenres();
+    QList<QStringList> selectHotTracks();
+    QList<QStringList> selectLastTracks();
+    QList<QStringList> selectFavoritesTracks();
+    QList<QStringList> selectPlaylistData();
+    QList<QStringList> selectPlaylistTracks(QString name);
 
-    private slots:
+signals:
+    void scanDone(bool changed);
 
-    private:
-        struct CollectionDbPrivate * p;
-        QSqlDatabase db;
-        ProgressBar* m_progress;
-        bool m_monitor;
-        int m_lastInsertId;
+private slots:
+
+private:
+    struct CollectionDbPrivate* p;
+    QSqlDatabase db;
+    ProgressBar* m_progress;
+    bool m_monitor;
+    int m_lastInsertId;
 };
-
 
 #endif /* COLLECTIONDB_H */

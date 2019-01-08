@@ -22,17 +22,18 @@
 
 #include "qled.h"
 
-#include <QtGui/QPainter>
-#include <QtGui/QImage>
 #include <QStyle>
 #include <QStyleOption>
+#include <QtGui/QImage>
+#include <QtGui/QPainter>
 
-class QLed::Private
-{
-  public:
+class QLed::Private {
+public:
     Private()
-      : darkFactor( 300 ),
-        state( On ), look( Raised ), shape( Circular )
+        : darkFactor(300)
+        , state(On)
+        , look(Raised)
+        , shape(Circular)
     {
     }
 
@@ -46,63 +47,61 @@ class QLed::Private
     QStyle::ControlElement ce_indicatorLedRectangular;
 };
 
-
-QLed::QLed( QWidget *parent )
-  : QWidget( parent ),
-    d( new Private )
+QLed::QLed(QWidget* parent)
+    : QWidget(parent)
+    , d(new Private)
 {
-  setColor( Qt::green );
+    setColor(Qt::green);
 }
 
-
-QLed::QLed( const QColor& color, QWidget *parent )
-  : QWidget( parent ),
-    d( new Private )
+QLed::QLed(const QColor& color, QWidget* parent)
+    : QWidget(parent)
+    , d(new Private)
 {
-  setColor( color );
+    setColor(color);
 }
 
-QLed::QLed( const QColor& color, State state, Look look, Shape shape,
-            QWidget *parent )
-  : QWidget( parent ),
-    d( new Private )
+QLed::QLed(const QColor& color, State state, Look look, Shape shape,
+    QWidget* parent)
+    : QWidget(parent)
+    , d(new Private)
 {
-  d->state = (state == Off ? Off : On);
-  d->look = look;
-  d->shape = shape;
-  setColor( color );
+    d->state = (state == Off ? Off : On);
+    d->look = look;
+    d->shape = shape;
+    setColor(color);
 }
 
 QLed::~QLed()
 {
-  delete d;
+    delete d;
 }
 
-void QLed::paintEvent( QPaintEvent* )
+void QLed::paintEvent(QPaintEvent*)
 {
-    switch( d->shape ) {
-      case Rectangular:
-        switch ( d->look ) {
-          case Sunken:
-            paintRectFrame( false );
+    switch (d->shape) {
+    case Rectangular:
+        switch (d->look) {
+        case Sunken:
+            paintRectFrame(false);
             break;
-          case Raised:
-            paintRectFrame( true );
+        case Raised:
+            paintRectFrame(true);
             break;
-          case Flat:
+        case Flat:
             paintRect();
             break;
         }
         break;
-      case Circular:
-        switch ( d->look ) {
-          case Flat:
+    case Circular:
+        switch (d->look) {
+        case Flat:
             paintFlat();
             break;
-          case Raised:
+        case Raised:
             paintRaised();
             break;
-          case Sunken:
+        case Sunken:
             paintSunken();
             break;
         }
@@ -112,13 +111,13 @@ void QLed::paintEvent( QPaintEvent* )
 
 int QLed::ledWidth() const
 {
-  // Make sure the LED is round!
-  int size = qMin(width(), height());
+    // Make sure the LED is round!
+    int size = qMin(width(), height());
 
-  // leave one pixel border
-  size -= 2;
+    // leave one pixel border
+    size -= 2;
 
-  return qMax(0, size);
+    return qMax(0, size);
 }
 
 bool QLed::paintCachedPixmap()
@@ -151,98 +150,98 @@ void QLed::paintRect()
     paintLed(Rectangular, Flat);
 }
 
-void QLed::paintRectFrame( bool raised )
+void QLed::paintRectFrame(bool raised)
 {
     paintLed(Rectangular, raised ? Raised : Sunken);
 }
 
 QLed::State QLed::state() const
 {
-  return d->state;
+    return d->state;
 }
 
 QLed::Shape QLed::shape() const
 {
-  return d->shape;
+    return d->shape;
 }
 
-  QColor QLed::color() const
+QColor QLed::color() const
 {
-  return d->color;
+    return d->color;
 }
 
 QLed::Look QLed::look() const
 {
-  return d->look;
+    return d->look;
 }
 
-void QLed::setState( State state )
+void QLed::setState(State state)
 {
-  if ( d->state == state)
-    return;
+    if (d->state == state)
+        return;
 
-  d->state = (state == Off ? Off : On);
-  updateCachedPixmap();
+    d->state = (state == Off ? Off : On);
+    updateCachedPixmap();
 }
 
-void QLed::setShape( Shape shape )
+void QLed::setShape(Shape shape)
 {
-  if ( d->shape == shape )
-    return;
+    if (d->shape == shape)
+        return;
 
-  d->shape = shape;
-  updateCachedPixmap();
+    d->shape = shape;
+    updateCachedPixmap();
 }
 
-void QLed::setColor( const QColor &color )
+void QLed::setColor(const QColor& color)
 {
-  if ( d->color == color )
-    return;
+    if (d->color == color)
+        return;
 
-  d->color = color;
-  updateCachedPixmap();
+    d->color = color;
+    updateCachedPixmap();
 }
 
-void QLed::setDarkFactor( int darkFactor )
+void QLed::setDarkFactor(int darkFactor)
 {
-  if ( d->darkFactor == darkFactor )
-    return;
+    if (d->darkFactor == darkFactor)
+        return;
 
-  d->darkFactor = darkFactor;
-  updateCachedPixmap();
+    d->darkFactor = darkFactor;
+    updateCachedPixmap();
 }
 
 int QLed::darkFactor() const
 {
-  return d->darkFactor;
+    return d->darkFactor;
 }
 
-void QLed::setLook( Look look )
+void QLed::setLook(Look look)
 {
-  if ( d->look == look)
-    return;
+    if (d->look == look)
+        return;
 
-  d->look = look;
-  updateCachedPixmap();
+    d->look = look;
+    updateCachedPixmap();
 }
 
 void QLed::toggle()
 {
-  d->state = (d->state == On ? Off : On);
-  updateCachedPixmap();
+    d->state = (d->state == On ? Off : On);
+    updateCachedPixmap();
 }
 
 void QLed::on()
 {
-  setState( On );
+    setState(On);
 }
 
 void QLed::off()
 {
-  setState( Off );
+    setState(Off);
 }
 
-void QLed::resizeEvent( QResizeEvent * )
+void QLed::resizeEvent(QResizeEvent*)
 {
     updateCachedPixmap();
 }
@@ -252,12 +251,12 @@ QSize QLed::sizeHint() const
     QStyleOption option;
     option.initFrom(this);
     int iconSize = style()->pixelMetric(QStyle::PM_SmallIconSize, &option, this);
-    return QSize( iconSize,  iconSize );
+    return QSize(iconSize, iconSize);
 }
 
 QSize QLed::minimumSizeHint() const
 {
-  return QSize( 16, 16 );
+    return QSize(16, 16);
 }
 
 void QLed::updateCachedPixmap()
@@ -319,16 +318,16 @@ void QLed::paintLed(Shape shape, Look look)
     painter.end();
 }
 
- QColor QLed::overlayColors(const QColor &base, const QColor &paint,
-                                   QPainter::CompositionMode comp)
- {
+QColor QLed::overlayColors(const QColor& base, const QColor& paint,
+    QPainter::CompositionMode comp)
+{
     QImage img(1, 1, QImage::Format_ARGB32_Premultiplied);
-     QPainter p(&img);
-     QColor start = base;
-     start.setAlpha(255); // opaque
-     p.fillRect(0, 0, 1, 1, start);
-     p.setCompositionMode(comp);
-     p.fillRect(0, 0, 1, 1, paint);
-     p.end();
-     return img.pixel(0, 0);
+    QPainter p(&img);
+    QColor start = base;
+    start.setAlpha(255); // opaque
+    p.fillRect(0, 0, 1, 1, start);
+    p.setCompositionMode(comp);
+    p.fillRect(0, 0, 1, 1, paint);
+    p.end();
+    return img.pixel(0, 0);
 }

@@ -20,46 +20,40 @@
 
 #include <QDialog>
 
-
-class SettingsDialog : public QDialog
-{
-	Q_OBJECT
+class SettingsDialog : public QDialog {
+    Q_OBJECT
 public:
-	SettingsDialog(QWidget * parent = 0);
-	~SettingsDialog();
-	int exec();
-    enum Tab  { TabFader = 0,
-                 TabCollection = 1,
-                 TabMonitor = 2
-               };
+    SettingsDialog(QWidget* parent = 0);
+    ~SettingsDialog();
+    int exec();
+    enum Tab { TabFader = 0,
+        TabCollection = 1,
+        TabMonitor = 2
+    };
     void setCurrentTab(Tab tab);
 public slots:
-	void accept();
+    void accept();
     void tableSelectionChanged();
 
 signals:
-      void  scanNowPressed();
-      void  resetStatsPressed();
-
-
+    void scanNowPressed();
+    void resetStatsPressed();
 
 protected:
     bool loadSettings();
 
 private slots:
-        void on_faderEndSlider_sliderMoved(int position);
-        void on_faderTimeSlider_sliderMoved(int position);
-        void on_pushButton_clicked();
-        void onScanNow();
-        void loadDjList(int count);
-        void on_pushAbout_clicked();
-
+    void on_faderEndSlider_sliderMoved(int position);
+    void on_faderTimeSlider_sliderMoved(int position);
+    void on_pushButton_clicked();
+    void onScanNow();
+    void loadDjList(int count);
+    void on_pushAbout_clicked();
 
 protected:
-
 private:
-	enum ItemRole { ItemRoleId = Qt::UserRole+1 };
-    class SettingsDialogPrivate *p;
+    enum ItemRole { ItemRoleId = Qt::UserRole + 1 };
+    class SettingsDialogPrivate* p;
 };
 
 #endif /* SETTINGSDIALOG_H_ */

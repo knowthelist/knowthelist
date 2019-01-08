@@ -14,14 +14,13 @@
     You should have received a copy of the GNU Lesser General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
- 
-#include "vumeter.h"
-#include <QWidget>
-#include <QStyleOption>
-#include <QPainter>
 
-struct VUMeterPrivate
-{
+#include "vumeter.h"
+#include <QPainter>
+#include <QStyleOption>
+#include <QWidget>
+
+struct VUMeterPrivate {
     double valueLeft;
     double valueRight;
     double peakLeft;
@@ -41,16 +40,16 @@ struct VUMeterPrivate
     QColor colValue;
 };
 
-VUMeter::VUMeter(QWidget *parent)
- : QWidget(parent)
- , p( new VUMeterPrivate )
+VUMeter::VUMeter(QWidget* parent)
+    : QWidget(parent)
+    , p(new VUMeterPrivate)
 {
-    setOrientation( Qt::Vertical );
+    setOrientation(Qt::Vertical);
 
-    BackgroundColor.setRgb ( 40,40,40 );
-    LevelColorNormal.setRgb ( 0,200,0 );
-    LevelColorHigh.setRgb ( 200,0,0 );
-    LevelColorOff.setRgb(80,120,120);
+    BackgroundColor.setRgb(40, 40, 40);
+    LevelColorNormal.setRgb(0, 200, 0);
+    LevelColorHigh.setRgb(200, 0, 0);
+    LevelColorOff.setRgb(80, 120, 120);
     QPalette pal = palette();
     pal.setColor(QPalette::Window, BackgroundColor);
     setPalette(pal);
@@ -65,18 +64,16 @@ VUMeter::VUMeter(QWidget *parent)
     p->colValue = Qt::white;
 }
 
-
 VUMeter::~VUMeter()
 {
 }
 
-void VUMeter:: setOrientation( Qt::Orientation o)
+void VUMeter::setOrientation(Qt::Orientation o)
 {
     p->orientation = o;
 }
 
-
-inline Qt::Orientation VUMeter::orientation() const
+Qt::Orientation VUMeter::orientation() const
 {
     return p->orientation;
 }
@@ -88,20 +85,23 @@ void VUMeter::reset()
     update();
 }
 
-void VUMeter::resizeEvent( QResizeEvent* e )
-{   
+void VUMeter::resizeEvent(QResizeEvent* e)
+{
     Q_UNUSED(e);
 
     int size = (orientation() == Qt::Vertical) ? width() : height();
     p->ledSize = ((size - p->margin) / 2);
-    
-    p->maxLevel = ( ((orientation() == Qt::Vertical) ? height() : width() )
-                / (p->linesPerSegment + p->step)) * (p->linesPerSegment + p->step) + p->margin;
+
+    p->maxLevel = (((orientation() == Qt::Vertical) ? height() : width())
+                      / (p->linesPerSegment + p->step))
+            * (p->linesPerSegment + p->step)
+        + p->margin;
     p->highLevel = static_cast<int>(0.75 * p->maxLevel);
 }
 
-void VUMeter::checkPeakTime() {
-    if ( p->peakTime.elapsed() >= 1000 ) {
+void VUMeter::checkPeakTime()
+{
+    if (p->peakTime.elapsed() >= 1000) {
         p->peakLeft = 0;
         p->peakRight = 0;
         p->peakTime.restart();
@@ -109,18 +109,19 @@ void VUMeter::checkPeakTime() {
     }
 }
 
-void VUMeter::setValueLeft ( double f )
+void VUMeter::setValueLeft(double f)
 {
     double fl = f;
 
-    if (fl < 0.0) fl = 0.0;
-        
-    if ( fl > p->peakLeft ) {
+    if (fl < 0.0)
+        fl = 0.0;
+
+    if (fl > p->peakLeft) {
         p->peakLeft = fl;
         p->peakTime.start();
     }
 
-    if (p->valueLeft != fl){
+    if (p->valueLeft != fl) {
         p->valueLeft = fl;
         if (p->valueLeft == 0.0)
             p->peakLeft = 0.0;
@@ -129,26 +130,26 @@ void VUMeter::setValueLeft ( double f )
     }
 }
 
-void VUMeter::setPercentage( double f )
+void VUMeter::setPercentage(double f)
 {
     //qDebug() << "Level: "<< f;
-    p->valueRight = p->valueLeft = f ;
+    p->valueRight = p->valueLeft = f;
     update();
 }
 
-void VUMeter::setValueRight ( double f )
+void VUMeter::setValueRight(double f)
 {
     double fr = f;
 
-    if (fr < 0.0) fr = 0.0;
-    
-    if ( fr > p->peakRight ) {
+    if (fr < 0.0)
+        fr = 0.0;
+    if (fr > p->peakRight) {
         p->peakRight = fr;
         p->peakTime.start();
     }
 
-    if (p->valueRight != fr ){
-        p->valueRight = fr ;
+    if (p->valueRight != fr) {
+        p->valueRight = fr;
         if (p->valueRight == 0.0)
             p->peakRight = 0.0;
         update();
@@ -156,25 +157,29 @@ void VUMeter::setValueRight ( double f )
     }
 }
 
-void VUMeter::setLinesPerSegment( int i ) {
+void VUMeter::setLinesPerSegment(int i)
+{
     p->linesPerSegment = i;
     p->step = p->linesPerSegment + p->spacesBetweenSegments;
 }
 
-void VUMeter::setSpacesBetweenSegments( int i ) {
+void VUMeter::setSpacesBetweenSegments(int i)
+{
     p->spacesBetweenSegments = i;
     p->step = p->linesPerSegment + p->spacesBetweenSegments;
 }
 
-void VUMeter::setSegmentsPerPeak( int i ){
+void VUMeter::setSegmentsPerPeak(int i)
+{
     p->segmentsPerPeak = i;
 }
 
-void VUMeter::setMargin( int i ){
+void VUMeter::setMargin(int i)
+{
     p->margin = i;
 }
 
-void VUMeter::paintEvent(QPaintEvent *)
+void VUMeter::paintEvent(QPaintEvent*)
 {
     drawMeter();
     QStyleOption opt;
@@ -183,9 +188,9 @@ void VUMeter::paintEvent(QPaintEvent *)
     style()->drawPrimitive(QStyle::PE_Widget, &opt, &p, this);
 }
 
+void VUMeter::drawMeter()
+{
 
-void VUMeter::drawMeter() {
-    
     QPainter painter(this);
 
     int valueLeft = 0;
@@ -202,56 +207,50 @@ void VUMeter::drawMeter() {
     peakRight = static_cast<int>((p->maxLevel / p->step * p->peakRight) * p->step);
 
     // segments
-    for( int segment = 0; segment < p->maxLevel; segment += p->step ){
+    for (int segment = 0; segment < p->maxLevel; segment += p->step) {
 
         // left value & peak colors
-        if ( ( segment < valueLeft && segment <= p->highLevel ) ||
-             ( peakLeft > 0 && peakLeft >= segment && peakLeft < segment + p->step * p->segmentsPerPeak && segment <= p->highLevel) ) {
+        if ((segment < valueLeft && segment <= p->highLevel) || (peakLeft > 0 && peakLeft >= segment && peakLeft < segment + p->step * p->segmentsPerPeak && segment <= p->highLevel)) {
             colorLeft = LevelColorNormal;
-        } else if ( (segment < valueLeft && segment > p->highLevel) ||
-                    ( peakLeft > 0 && peakLeft >= segment && peakLeft < segment + p->step * p->segmentsPerPeak && segment > p->highLevel) ) {
+        } else if ((segment < valueLeft && segment > p->highLevel) || (peakLeft > 0 && peakLeft >= segment && peakLeft < segment + p->step * p->segmentsPerPeak && segment > p->highLevel)) {
             colorLeft = LevelColorHigh;
         } else {
             colorLeft = LevelColorOff;
         }
 
         // right value & peak colors
-        if ( ( segment < valueRight && segment <= p->highLevel ) ||
-             ( peakRight > 0 && peakRight >= segment && peakRight < segment + p->step * p->segmentsPerPeak && segment <= p->highLevel) ) {
+        if ((segment < valueRight && segment <= p->highLevel) || (peakRight > 0 && peakRight >= segment && peakRight < segment + p->step * p->segmentsPerPeak && segment <= p->highLevel)) {
             colorRight = LevelColorNormal;
-        } else if ( (segment < valueRight && segment > p->highLevel) ||
-                    ( peakRight > 0 && peakRight >= segment && peakRight < segment + p->step * p->segmentsPerPeak && segment > p->highLevel) ) {
+        } else if ((segment < valueRight && segment > p->highLevel) || (peakRight > 0 && peakRight >= segment && peakRight < segment + p->step * p->segmentsPerPeak && segment > p->highLevel)) {
             colorRight = LevelColorHigh;
         } else {
             colorRight = LevelColorOff;
         }
 
         // LEDs
-        for ( int led = 0; led < p->linesPerSegment; led++ ) {
+        for (int led = 0; led < p->linesPerSegment; led++) {
 
             int level = segment + led;
 
-            if ( orientation() == Qt::Vertical ) {
+            if (orientation() == Qt::Vertical) {
                 // draw left
                 painter.setPen(colorLeft);
-                painter.drawLine ( 0, p->maxLevel - level,
-                                   p->ledSize - 1, p->maxLevel - level);
+                painter.drawLine(0, p->maxLevel - level,
+                    p->ledSize - 1, p->maxLevel - level);
                 // draw right
                 painter.setPen(colorRight);
-                painter.drawLine ( p->margin + p->ledSize, p->maxLevel - level,
-                                   p->margin + p->ledSize *2 - 1, p->maxLevel - level);
+                painter.drawLine(p->margin + p->ledSize, p->maxLevel - level,
+                    p->margin + p->ledSize * 2 - 1, p->maxLevel - level);
             } else {
                 // draw left
                 painter.setPen(colorLeft);
-                painter.drawLine ( level, 0,
-                                   level, p->ledSize - 1);
+                painter.drawLine(level, 0,
+                    level, p->ledSize - 1);
                 // draw right
                 painter.setPen(colorRight);
-                painter.drawLine ( level, p->margin + p->ledSize,
-                                   level, p->margin + p->ledSize *2 - 1);
+                painter.drawLine(level, p->margin + p->ledSize,
+                    level, p->margin + p->ledSize * 2 - 1);
             }
-
-         }
-      }
+        }
+    }
 }
-

@@ -16,75 +16,65 @@
 */
 
 #include "collectionsetupmodel.h"
-#include <QTreeView>
 #include <QDirModel>
+#include <QTreeView>
 
 CollectionSetupModel::CollectionSetupModel()
 {
-
 }
 
 Qt::ItemFlags CollectionSetupModel::flags(const QModelIndex& index) const
 {
-        Qt::ItemFlags f = QDirModel::flags(index);
-        if (index.column() == 0) // make the first column checkable
-                f |= Qt::ItemIsUserCheckable;
-        return f;
+    Qt::ItemFlags f = QDirModel::flags(index);
+    if (index.column() == 0) // make the first column checkable
+        f |= Qt::ItemIsUserCheckable;
+    return f;
 }
 
 QVariant CollectionSetupModel::data(const QModelIndex& index, int role) const
 {
-        if (index.isValid() && index.column() == 0 && role == Qt::CheckStateRole)
-        {
-            // the item is checked only if we have stored its path
-            if (checkedPartially.contains(filePath(index)) )
-            {
-                return Qt::PartiallyChecked;
-            }
-            else
-                return (checked.contains(filePath(index)) ? Qt::Checked : Qt::Unchecked);
-        }
-        return QDirModel::data(index, role);
+    if (index.isValid() && index.column() == 0 && role == Qt::CheckStateRole) {
+        // the item is checked only if we have stored its path
+        if (checkedPartially.contains(filePath(index))) {
+            return Qt::PartiallyChecked;
+        } else
+            return (checked.contains(filePath(index)) ? Qt::Checked : Qt::Unchecked);
+    }
+    return QDirModel::data(index, role);
 }
 
 bool CollectionSetupModel::setData(const QModelIndex& index, const QVariant& value, int role)
 {
-        if (index.isValid() && index.column() == 0 && role == Qt::CheckStateRole)
-        {
-                // store checked paths, remove unchecked paths
-                QModelIndex idx=parent(index);
-                if (value.toInt() == Qt::Checked)
-                {
-                        checked.insert(filePath(index));
-                        // make parents always partially checked
-                        while( idx.isValid() )
-                        {
-                            checkedPartially.insert(filePath(idx));
-                            checked.remove(filePath(idx));
-                            idx =idx.parent();
-                        }
+    if (index.isValid() && index.column() == 0 && role == Qt::CheckStateRole) {
+        // store checked paths, remove unchecked paths
+        QModelIndex idx = parent(index);
+        if (value.toInt() == Qt::Checked) {
+            checked.insert(filePath(index));
+            // make parents always partially checked
+            while (idx.isValid()) {
+                checkedPartially.insert(filePath(idx));
+                checked.remove(filePath(idx));
+                idx = idx.parent();
+            }
+        } else {
+            checked.remove(filePath(index));
+            // make parent unchecked if index was his only child
+            while (idx.isValid()) {
+                bool hasChildren = false;
+                foreach (const QString& value, checked)
+                    if (value.contains(filePath(idx)))
+                        hasChildren = true;
+                if (!hasChildren) {
+                    checkedPartially.remove(filePath(idx));
+                    checked.insert(filePath(idx));
                 }
-                else
-                {
-                        checked.remove(filePath(index));
-                        // make parent unchecked if index was his only child
-                        while( idx.isValid() )
-                        {
-                            bool hasChildren=false;
-                            foreach (const QString &value, checked)
-                                    if ( value.contains(filePath(idx)) )
-                                        hasChildren = true;
-                            if ( !hasChildren ){
-                                checkedPartially.remove(filePath(idx));
-                                checked.insert(filePath(idx));
-                            }
-                            idx =idx.parent();
-                        }
-                }
-                emit dataChanged(parent(index),index);
-                return true;
+                idx = idx.parent();
+            }
         }
-        return QDirModel::setData(index, value, role);
+        emit dataChanged(parent(index), index);
+        return true;
+    }
+    return QDirModel::setData(index, value, role);
 }
 
 QVariant CollectionSetupModel::headerData(int section, Qt::Orientation orientation, int role) const
@@ -95,35 +85,32 @@ QVariant CollectionSetupModel::headerData(int section, Qt::Orientation orientati
         switch (section) {
         case 0:
             return QString(tr("Select folders for music collection"));
-        default: return QVariant();
+        default:
+            return QVariant();
         }
     }
     return QAbstractItemModel::headerData(section, orientation, role);
-
 }
 
 QStringList CollectionSetupModel::dirsChecked()
 {
-     QStringList list;
-     foreach (const QString &value, checked)
-         list << value;
-     return list;
+    QStringList list;
+    foreach (const QString& value, checked)
+        list << value;
+    return list;
 }
 
-void
-CollectionSetupModel::setDirsChecked(QStringList list)
+void CollectionSetupModel::setDirsChecked(QStringList list)
 {
     checked.clear();
     checkedPartially.clear();
-    foreach (const QString &value, list)
-    {
+    foreach (const QString& value, list) {
         /* index parents Qt::PartiallyChecked */
-        QModelIndex idx=parent(index(value));
-        while( idx.isValid() )
-        {
-           checkedPartially.insert(filePath(idx));
-           idx =idx.parent();
+        QModelIndex idx = parent(index(value));
+        while (idx.isValid()) {
+            checkedPartially.insert(filePath(idx));
+            idx = idx.parent();
         }
         checked.insert(value);
-     }
+    }
 }

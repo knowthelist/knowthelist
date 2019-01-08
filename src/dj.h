@@ -20,9 +20,8 @@
 
 #include "filter.h"
 
-class Dj: public QObject
-{
-      Q_OBJECT
+class Dj : public QObject {
+    Q_OBJECT
 public:
     Dj();
     ~Dj();
@@ -31,9 +30,9 @@ public:
     QString name;
     QString description();
     void setDescription(QString);
-    int countTracks();
+    long countTracks();
     void setCountTracks(int);
-    int lengthTracks();
+    long lengthTracks();
     void setLengthTracks(int);
     void addFilter(Filter* filter);
     void removeFilter(Filter* filter);
@@ -41,10 +40,10 @@ public:
     int activeFilterIdx();
 
 Q_SIGNALS:
-   void filterChanged(Filter*);
-   void countChanged();
+    void filterChanged(Filter*);
+    void countChanged();
 
-  private  Q_SLOTS:
+private Q_SLOTS:
     void on_filter_activated();
     void on_filter_filterChanged();
     void on_filter_countChanged();
@@ -52,11 +51,8 @@ Q_SIGNALS:
     void checkSequence();
 
 protected:
-
-
 private:
     struct DjPrivate* p;
-
 };
 
 #endif // DJ_H

@@ -17,24 +17,23 @@
 
 #include "collectiontreeitem.h"
 
-struct CollectionTreeItemPrivate
-{
+struct CollectionTreeItemPrivate {
     QString artist;
     QString album;
     QString year;
     QString genre;
 };
 
-CollectionTreeItem::CollectionTreeItem(QTreeWidget* parent, int type) :
-    QTreeWidgetItem(parent,type)
-    ,p(new CollectionTreeItemPrivate)
+CollectionTreeItem::CollectionTreeItem(QTreeWidget* parent, int type)
+    : QTreeWidgetItem(parent, type)
+    , p(new CollectionTreeItemPrivate)
 {
     setChildIndicatorPolicy(QTreeWidgetItem::ShowIndicator);
 }
 
-CollectionTreeItem::CollectionTreeItem(QTreeWidgetItem* parent, int type) :
-    QTreeWidgetItem(parent,type)
-      ,p(new CollectionTreeItemPrivate)
+CollectionTreeItem::CollectionTreeItem(QTreeWidgetItem* parent, int type)
+    : QTreeWidgetItem(parent, type)
+    , p(new CollectionTreeItemPrivate)
 {
 }
 
@@ -65,38 +64,37 @@ QString CollectionTreeItem::genre()
 
 void CollectionTreeItem::setArtist(QString value)
 {
-    p->artist=value;
+    p->artist = value;
     setTextString(value);
-    QTreeWidgetItem::setIcon( 0, QIcon( style()->standardIcon(QStyle::SP_DirHomeIcon).pixmap(12)) );
+    QTreeWidgetItem::setIcon(0, QIcon(style()->standardIcon(QStyle::SP_DirHomeIcon).pixmap(12)));
 }
 
 void CollectionTreeItem::setAlbum(QString value)
 {
-    p->album=value;
+    p->album = value;
     setTextString(value);
-    QTreeWidgetItem::setIcon( 0, QIcon(style()->standardIcon(QStyle::SP_DriveCDIcon).pixmap(12)) );
+    QTreeWidgetItem::setIcon(0, QIcon(style()->standardIcon(QStyle::SP_DriveCDIcon).pixmap(12)));
 }
 
 void CollectionTreeItem::setYear(QString value)
 {
-    p->year=value;
+    p->year = value;
     setTextString(value);
-    QTreeWidgetItem::setIcon( 0, QIcon(style()->standardIcon(QStyle::SP_FileIcon).pixmap(12)) );
+    QTreeWidgetItem::setIcon(0, QIcon(style()->standardIcon(QStyle::SP_FileIcon).pixmap(12)));
 }
 
 void CollectionTreeItem::setGenre(QString value)
 {
-    p->genre=value;
+    p->genre = value;
     setTextString(value);
-    QTreeWidgetItem::setIcon( 0, QIcon(style()->standardIcon(QStyle::SP_DirIcon).pixmap(12)) );
+    QTreeWidgetItem::setIcon(0, QIcon(style()->standardIcon(QStyle::SP_DirIcon).pixmap(12)));
 }
 
 void CollectionTreeItem::setTextString(QString value)
 {
-    if ( value == QString::null ){
-        setText(0,QString("( %1 )").arg(tr("All")));
+    if (value == QString::null) {
+        setText(0, QString("( %1 )").arg(tr("All")));
         setChildIndicatorPolicy(QTreeWidgetItem::DontShowIndicator);
-    }
-    else
-        setText(0,value);
+    } else
+        setText(0, value);
 }

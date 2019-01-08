@@ -1,13 +1,12 @@
 #include "playlistwidget.h"
 #include "ui_playlistwidget.h"
 
-#include <qdebug.h>
-#include <QTimer>
 #include <QMouseEvent>
+#include <QTimer>
+#include <qdebug.h>
 
-class PlaylistWidgetPrivate
-{
-    public:
+class PlaylistWidgetPrivate {
+public:
     QString name;
     QString description;
     bool isActive;
@@ -16,33 +15,33 @@ class PlaylistWidgetPrivate
     bool isRemovable;
 };
 
-PlaylistWidget::PlaylistWidget(QWidget *parent) :
-    QWidget(parent),
-    ui(new Ui::PlaylistWidget)
+PlaylistWidget::PlaylistWidget(QWidget* parent)
+    : QWidget(parent)
+    , ui(new Ui::PlaylistWidget)
 {
     ui->setupUi(this);
-    ui->lblDesciption->setText( QString::null );
+    ui->lblDesciption->setText(QString::null);
     ui->widgetClose->setMinimumWidth(0);
     ui->widgetClose->setMaximumWidth(0);
 
     setFocusPolicy(Qt::ClickFocus);
 
     p = new PlaylistWidgetPrivate;
-    p->isActive=false;
-    p->isRemovable=true;
+    p->isActive = false;
+    p->isRemovable = true;
 
     QFont font = ui->lblDesciption->font();
 #if defined(Q_OS_DARWIN)
-    int newSize = font.pointSize()-4;
+    int newSize = font.pointSize() - 4;
 #else
-    int newSize = font.pointSize()-1;
+    int newSize = font.pointSize() - 1;
 #endif
     font.setPointSize(newSize);
     ui->lblDesciption->setFont(font);
 
     p->timerSlide = new QTimer(this);
     p->timerSlide->setInterval(10);
-    connect( p->timerSlide, SIGNAL(timeout()), SLOT(timerSlide_timeOut()) );
+    connect(p->timerSlide, SIGNAL(timeout()), SLOT(timerSlide_timeOut()));
 }
 
 PlaylistWidget::~PlaylistWidget()
@@ -52,7 +51,7 @@ PlaylistWidget::~PlaylistWidget()
 }
 
 // auto connect slot
-void PlaylistWidget::on_lblName_linkActivated(const QString &link)
+void PlaylistWidget::on_lblName_linkActivated(const QString& link)
 {
     Q_UNUSED(link);
     Q_EMIT activated();
@@ -65,31 +64,33 @@ bool PlaylistWidget::isRemovable()
 
 void PlaylistWidget::setRemovable(bool value)
 {
-    p->isRemovable=value;
+    p->isRemovable = value;
     ui->pushClose->setVisible(value);
-   // if (!value)
-     //r   ui->horizontalSpacer->changeSize(42,0);
- }
+    // if (!value)
+    // r   ui->horizontalSpacer->changeSize(42,0);
+}
 
-QString PlaylistWidget::name()
+QString
+PlaylistWidget::name()
 {
     return p->name;
 }
 
 void PlaylistWidget::setName(QString value)
 {
-    p->name=value;
+    p->name = value;
     updateView();
 }
 
-QString PlaylistWidget::description()
+QString
+PlaylistWidget::description()
 {
     return p->description;
 }
 
 void PlaylistWidget::setDescription(QString value)
 {
-    p->description=value;
+    p->description = value;
     updateView();
 }
 
@@ -107,13 +108,11 @@ void PlaylistWidget::deactivate()
 
 void PlaylistWidget::mousePressEvent(QMouseEvent* event)
 {
-    if(ui->widgetClose->geometry().contains(event->pos()))
-    {
+    if (ui->widgetClose->geometry().contains(event->pos())) {
         Q_EMIT deleted();
-    }
-   else{
-       slideCloseWidget(false);
-       Q_EMIT activated();
+    } else {
+        slideCloseWidget(false);
+        Q_EMIT activated();
     }
 }
 
@@ -124,34 +123,39 @@ void PlaylistWidget::updateView()
 
     // active/passive look differentiation
     QString activeStyle;
-    if (p->isActive){
-       activeStyle = "color:#ff6464;'>";
-       ui->framePlaylistWidget->setStyleSheet("#framePlaylistWidget {	background: qlineargradient("
-                           "x1:0, y1:0, x2:0, y2:1,"
-                           "stop: 0.01 #202020,"
-                            "stop:0.11 #505050,"
-                           "stop:1 #505050"
-                           ");}");
+    if (p->isActive) {
+        activeStyle = "color:#ff6464;'>";
+        ui->framePlaylistWidget->setStyleSheet(
+            "#framePlaylistWidget {	background: qlineargradient("
+            "x1:0, y1:0, x2:0, y2:1,"
+            "stop: 0.01 #202020,"
+            "stop:0.11 #505050,"
+            "stop:1 #505050"
+            ");}");
+    } else {
+        activeStyle = "color:#eeeeee;'>";
+        ui->framePlaylistWidget->setStyleSheet(
+            "#framePlaylistWidget {		background: qlineargradient("
+            "x1:0, y1:0, x2:0, y2:1,"
+            "stop: 0.01 #202020,"
+            "stop:0.11 #404040,"
+            "stop:1 #404040"
+            ");}");
     }
-    else
-    {
-       activeStyle = "color:#eeeeee;'>";
-       ui->framePlaylistWidget->setStyleSheet("#framePlaylistWidget {		background: qlineargradient("
-                           "x1:0, y1:0, x2:0, y2:1,"
-                           "stop: 0.01 #202020,"
-                            "stop:0.11 #404040,"
-                           "stop:1 #404040"
-                           ");}");
-        }
 
-    ui->lblName->setText("<!DOCTYPE HTML PUBLIC '-//W3C//DTD HTML 4.0//EN' 'http://www.w3.org/TR/REC-html40/strict.dtd'>"
-                         "<html><head><meta name='qrichtext' content='1' /><style type='text/css'>p, li { white-space: pre-wrap; }"
-                         "</style></head><body style='font-size:8.25pt; font-weight:400; font-style:normal;'><p style=' margin-top:0px; "
-                         "margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;'>"
-                         "<a href='fdadfaf'><span style=' font-size:12pt;font-style:normal;font-weight:bold; text-decoration: underline; "
-                         + activeStyle
-                         + p->name +
-                         "</span></a></p></body></html>");
+    ui->lblName->setText(
+        "<!DOCTYPE HTML PUBLIC '-//W3C//DTD HTML 4.0//EN' "
+        "'http://www.w3.org/TR/REC-html40/strict.dtd'>"
+        "<html><head><meta name='qrichtext' content='1' /><style "
+        "type='text/css'>p, li { white-space: pre-wrap; }"
+        "</style></head><body style='font-size:8.25pt; font-weight:400; "
+        "font-style:normal;'><p style=' margin-top:0px; "
+        "margin-bottom:0px; margin-left:0px; margin-right:0px; "
+        "-qt-block-indent:0; text-indent:0px;'>"
+        "<a href='fdadfaf'><span style=' "
+        "font-size:12pt;font-style:normal;font-weight:bold; text-decoration: "
+        "underline; "
+        + activeStyle + p->name + "</span></a></p></body></html>");
 }
 
 void PlaylistWidget::on_butPlayWidget_pressed()
@@ -160,17 +164,17 @@ void PlaylistWidget::on_butPlayWidget_pressed()
 }
 
 // esc key for exit close
-void PlaylistWidget::keyPressEvent(QKeyEvent *e)
+void PlaylistWidget::keyPressEvent(QKeyEvent* e)
 {
-  if( e->key() == Qt::Key_Escape )
-      slideCloseWidget(false);
-   else
-      QWidget::keyPressEvent( e );
+    if (e->key() == Qt::Key_Escape)
+        slideCloseWidget(false);
+    else
+        QWidget::keyPressEvent(e);
 }
 
 void PlaylistWidget::on_pushClose_clicked()
 {
-    slideCloseWidget( (ui->widgetClose->minimumWidth()<50) );
+    slideCloseWidget((ui->widgetClose->minimumWidth() < 50));
 }
 
 void PlaylistWidget::slideCloseWidget(bool open)
@@ -182,15 +186,13 @@ void PlaylistWidget::slideCloseWidget(bool open)
 void PlaylistWidget::timerSlide_timeOut()
 {
     int mWidth = ui->widgetClose->minimumWidth();
-    if ( p->targetWidth > mWidth ){
-        ui->widgetClose->setMinimumWidth(mWidth+5);
-        ui->widgetClose->setMaximumWidth(mWidth+5);
-    }
-    else if ( p->targetWidth < mWidth ){
-        ui->widgetClose->setMinimumWidth(mWidth-5);
-        ui->widgetClose->setMaximumWidth(mWidth-5);
-    }
-    else{
+    if (p->targetWidth > mWidth) {
+        ui->widgetClose->setMinimumWidth(mWidth + 5);
+        ui->widgetClose->setMaximumWidth(mWidth + 5);
+    } else if (p->targetWidth < mWidth) {
+        ui->widgetClose->setMinimumWidth(mWidth - 5);
+        ui->widgetClose->setMaximumWidth(mWidth - 5);
+    } else {
         p->timerSlide->stop();
     }
 }

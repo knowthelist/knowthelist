@@ -113,7 +113,16 @@ QComboBox::drop-down {
    <property name="spacing">
     <number>0</number>
    </property>
-   <property name="margin">
+   <property name="leftMargin">
+    <number>0</number>
+   </property>
+   <property name="topMargin">
+    <number>0</number>
+   </property>
+   <property name="rightMargin">
+    <number>0</number>
+   </property>
+   <property name="bottomMargin">
     <number>0</number>
    </property>
    <item>
@@ -422,60 +431,6 @@ p, li { white-space: pre-wrap; }
          <property name="frameShadow">
           <enum>QFrame::Raised</enum>
          </property>
-         <widget class="QDial" name="sliFilterValue">
-          <property name="geometry">
-           <rect>
-            <x>-4</x>
-            <y>23</y>
-            <width>51</width>
-            <height>31</height>
-           </rect>
-          </property>
-          <property name="sizePolicy">
-           <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-            <horstretch>0</horstretch>
-            <verstretch>0</verstretch>
-           </sizepolicy>
-          </property>
-          <property name="maximumSize">
-           <size>
-            <width>56</width>
-            <height>56</height>
-           </size>
-          </property>
-          <property name="font">
-           <font>
-            <pointsize>8</pointsize>
-           </font>
-          </property>
-          <property name="toolTip">
-           <string>how many records per turn</string>
-          </property>
-          <property name="minimum">
-           <number>0</number>
-          </property>
-          <property name="maximum">
-           <number>10</number>
-          </property>
-          <property name="singleStep">
-           <number>1</number>
-          </property>
-          <property name="pageStep">
-           <number>2</number>
-          </property>
-          <property name="value">
-           <number>0</number>
-          </property>
-          <property name="tracking">
-           <bool>true</bool>
-          </property>
-          <property name="wrapping">
-           <bool>false</bool>
-          </property>
-          <property name="notchesVisible">
-           <bool>true</bool>
-          </property>
-         </widget>
          <widget class="QLed" name="ledActive" native="true">
           <property name="geometry">
            <rect>
@@ -506,7 +461,7 @@ p, li { white-space: pre-wrap; }
           <property name="geometry">
            <rect>
             <x>52</x>
-            <y>33</y>
+            <y>34</y>
             <width>33</width>
             <height>19</height>
            </rect>
@@ -1170,6 +1125,28 @@ p, li { white-space: pre-wrap; }
           </property>
           <property name="text">
            <string>Count</string>
+          </property>
+         </widget>
+         <widget class="CustomDial" name="sliFilterValue" native="true">
+          <property name="geometry">
+           <rect>
+            <x>9</x>
+            <y>23</y>
+            <width>32</width>
+            <height>32</height>
+           </rect>
+          </property>
+          <property name="maximumSize">
+           <size>
+            <width>60</width>
+            <height>60</height>
+           </size>
+          </property>
+          <property name="toolTip">
+           <string>how many records per turn</string>
+          </property>
+          <property name="autoFillBackground">
+           <bool>true</bool>
           </property>
          </widget>
         </widget>
@@ -2687,6 +2664,12 @@ p, li { white-space: pre-wrap; }
    <class>QLed</class>
    <extends>QWidget</extends>
    <header>qled.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>CustomDial</class>
+   <extends>QWidget</extends>
+   <header>customdial.h</header>
    <container>1</container>
   </customwidget>
   <customwidget>

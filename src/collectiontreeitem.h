@@ -20,32 +20,30 @@
 
 #include <QTreeWidgetItem>
 
-class CollectionTreeItem : public QWidget, public QTreeWidgetItem
-{
+class CollectionTreeItem : public QWidget, public QTreeWidgetItem {
     Q_OBJECT
 public:
-    explicit CollectionTreeItem(QObject *parent = 0, int type=Type);
-     CollectionTreeItem(QTreeWidget *parent = 0, int type=Type);
-     CollectionTreeItem(QTreeWidgetItem *parent = 0, int type=Type);
-     ~CollectionTreeItem();
+    explicit CollectionTreeItem(QObject* parent = 0, int type = Type);
+    CollectionTreeItem(QTreeWidget* parent = 0, int type = Type);
+    CollectionTreeItem(QTreeWidgetItem* parent = 0, int type = Type);
+    ~CollectionTreeItem();
 
-     QString artist();
-     QString album();
-     QString year();
-     QString genre();
-     void setArtist(QString value);
-     void setAlbum(QString value);
-     void setYear(QString value);
-     void setGenre(QString value);
-     void setTextString(QString value);
+    QString artist();
+    QString album();
+    QString year();
+    QString genre();
+    void setArtist(QString value);
+    void setAlbum(QString value);
+    void setYear(QString value);
+    void setGenre(QString value);
+    void setTextString(QString value);
 
 signals:
-    
-public slots:
-    
-private:
 
-    class CollectionTreeItemPrivate* p;
+public slots:
+
+private:
+    struct CollectionTreeItemPrivate* p;
 };
 
 #endif // COLLECTIONTREEITEM_H

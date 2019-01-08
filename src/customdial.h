@@ -1,6 +1,7 @@
 #ifndef CUSTOMDIAL_H
 #define CUSTOMDIAL_H
 
+#include <QtCore>
 #include <QDial>
 
 class CustomDial : public QDial

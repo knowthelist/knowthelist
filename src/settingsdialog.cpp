@@ -15,81 +15,79 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "collectionsetupmodel.h"
 #include "settingsdialog.h"
+#include "collectionsetupmodel.h"
 #include "djsettings.h"
 #include "ui_settingsdialog.h"
 
+#include <QFileDialog>
+#include <QMessageBox>
 #include <QtDebug>
 #include <QtGui>
 #include <QtSql>
-#include <QFileDialog>
-#include <QMessageBox>
 
-
-class SettingsDialogPrivate
-{
-   public:
-        Ui::SettingsDialog ui;
-        QWidget *parent;
-        CollectionSetupModel *model;
+class SettingsDialogPrivate {
+public:
+    Ui::SettingsDialog ui;
+    QWidget* parent;
+    CollectionSetupModel* model;
 };
 
-SettingsDialog::SettingsDialog(QWidget * parent)
-	: QDialog(parent)
+SettingsDialog::SettingsDialog(QWidget* parent)
+    : QDialog(parent)
 {
     p = new SettingsDialogPrivate;
-	p->ui.setupUi(this);
-        p->parent=parent;
+    p->ui.setupUi(this);
+    p->parent = parent;
 
-	// set icons in the settings list
+    // set icons in the settings list
 
-	QTableWidgetItem * item;
-	p->ui.settingsGroupsTable->setIconSize(QSize(32,32));
+    QTableWidgetItem* item;
+    p->ui.settingsGroupsTable->setIconSize(QSize(32, 32));
 
-	item = p->ui.settingsGroupsTable->item(0, 0);
+    item = p->ui.settingsGroupsTable->item(0, 0);
     item->setIcon(QIcon(":slider.png"));
-	item->setTextAlignment(Qt::AlignCenter);
-        item->setFlags(Qt::ItemIsSelectable|Qt::ItemIsEnabled);
+    item->setTextAlignment(Qt::AlignCenter);
+    item->setFlags(Qt::ItemIsSelectable | Qt::ItemIsEnabled);
 
-	item = p->ui.settingsGroupsTable->item(1, 0);
+    item = p->ui.settingsGroupsTable->item(1, 0);
     item->setIcon(QIcon(":database.png"));
-	item->setTextAlignment(Qt::AlignCenter);
-        item->setFlags(Qt::ItemIsSelectable|Qt::ItemIsEnabled);
+    item->setTextAlignment(Qt::AlignCenter);
+    item->setFlags(Qt::ItemIsSelectable | Qt::ItemIsEnabled);
 
-	item = p->ui.settingsGroupsTable->item(2, 0);
+    item = p->ui.settingsGroupsTable->item(2, 0);
     item->setIcon(QIcon(":volume.png"));
-	item->setTextAlignment(Qt::AlignCenter);
-        item->setFlags(Qt::ItemIsSelectable|Qt::ItemIsEnabled);
+    item->setTextAlignment(Qt::AlignCenter);
+    item->setFlags(Qt::ItemIsSelectable | Qt::ItemIsEnabled);
 
-	item = p->ui.settingsGroupsTable->item(3, 0);
+    item = p->ui.settingsGroupsTable->item(3, 0);
     item->setIcon(QIcon(":DJ.png"));
-	item->setTextAlignment(Qt::AlignCenter);
-        item->setFlags(Qt::ItemIsSelectable|Qt::ItemIsEnabled);
+    item->setTextAlignment(Qt::AlignCenter);
+    item->setFlags(Qt::ItemIsSelectable | Qt::ItemIsEnabled);
 
-	item = p->ui.settingsGroupsTable->item(4, 0);
+    item = p->ui.settingsGroupsTable->item(4, 0);
     item->setIcon(QIcon(":list.png"));
-	item->setTextAlignment(Qt::AlignCenter);
-        item->setFlags(Qt::ItemIsSelectable|Qt::ItemIsEnabled);
+    item->setTextAlignment(Qt::AlignCenter);
+    item->setFlags(Qt::ItemIsSelectable | Qt::ItemIsEnabled);
 
     item = p->ui.settingsGroupsTable->item(5, 0);
     item->setIcon(QIcon(":folder.png"));
     item->setTextAlignment(Qt::AlignCenter);
-        item->setFlags(Qt::ItemIsSelectable|Qt::ItemIsEnabled);
+    item->setFlags(Qt::ItemIsSelectable | Qt::ItemIsEnabled);
 
     item = p->ui.settingsGroupsTable->item(6, 0);
     item->setIcon(QIcon(":settings.png"));
     item->setTextAlignment(Qt::AlignCenter);
-        item->setFlags(Qt::ItemIsSelectable|Qt::ItemIsEnabled);
+    item->setFlags(Qt::ItemIsSelectable | Qt::ItemIsEnabled);
 
-	int w = p->ui.settingsGroupsTable->width();
-	p->ui.settingsGroupsTable->setColumnWidth(0, w);
+    int w = p->ui.settingsGroupsTable->width();
+    p->ui.settingsGroupsTable->setColumnWidth(0, w);
 
-	// select first item
-	p->ui.settingsGroupsTable->setCurrentCell(0, 0);
+    // select first item
+    p->ui.settingsGroupsTable->setCurrentCell(0, 0);
 
-	// select first page
-	p->ui.pages->setCurrentIndex(0);
+    // select first page
+    p->ui.pages->setCurrentIndex(0);
 
     //Collection folder setup
     p->model = new CollectionSetupModel();
@@ -101,22 +99,22 @@ SettingsDialog::SettingsDialog(QWidget * parent)
     p->ui.collectionsTreeView->expandToDepth(0);
 
     connect(p->ui.settingsGroupsTable, SIGNAL(itemSelectionChanged()),
-            this, SLOT(tableSelectionChanged()));
+        this, SLOT(tableSelectionChanged()));
 
     connect(p->ui.faderEndSlider, SIGNAL(sliderMoved(int)),
-                    this, SLOT(on_faderEndSlider_sliderMoved(int)));
+        this, SLOT(on_faderEndSlider_sliderMoved(int)));
     connect(p->ui.faderTimeSlider, SIGNAL(sliderMoved(int)),
-                    this, SLOT(on_faderTimeSlider_sliderMoved(int)));
+        this, SLOT(on_faderTimeSlider_sliderMoved(int)));
 
-    connect(p->ui.pushScanNow,SIGNAL(clicked()),this, SLOT(onScanNow()));
-    connect(p->ui.pushResetStats,SIGNAL(clicked()),this, SIGNAL(resetStatsPressed()) );
+    connect(p->ui.pushScanNow, SIGNAL(clicked()), this, SLOT(onScanNow()));
+    connect(p->ui.pushResetStats, SIGNAL(clicked()), this, SIGNAL(resetStatsPressed()));
 
-    connect(p->ui.countDJ,SIGNAL(valueChanged(int)),this,SLOT(loadDjList(int)));
+    connect(p->ui.countDJ, SIGNAL(valueChanged(int)), this, SLOT(loadDjList(int)));
 }
 
 SettingsDialog::~SettingsDialog()
 {
-	delete p;
+    delete p;
 }
 
 void SettingsDialog::setCurrentTab(SettingsDialog::Tab tab)
@@ -127,58 +125,57 @@ void SettingsDialog::setCurrentTab(SettingsDialog::Tab tab)
 
 int SettingsDialog::exec()
 {
-	// load settings
-	if (!loadSettings()) {
-		return QDialog::Rejected;
-	}
+    // load settings
+    if (!loadSettings()) {
+        return QDialog::Rejected;
+    }
 
-	return QDialog::exec();
+    return QDialog::exec();
 }
 
 void SettingsDialog::accept()
 {
     QSettings settings;
-    settings.setValue("MonitorOutputDevice",p->ui.monitorOutputDevice->currentText());
+    settings.setValue("MonitorOutputDevice", p->ui.monitorOutputDevice->currentText());
 
     //Common
-    settings.setValue("language",p->ui.comboLanguage->currentIndex());
+    settings.setValue("language", p->ui.comboLanguage->currentIndex());
 
     //save fade slider
-    settings.setValue("faderTimeSlider",p->ui.faderTimeSlider->value());
-    settings.setValue("faderEndSlider",p->ui.faderEndSlider->value());
+    settings.setValue("faderTimeSlider", p->ui.faderTimeSlider->value());
+    settings.setValue("faderEndSlider", p->ui.faderEndSlider->value());
 
     //Playlist settings
-    settings.setValue("checkAutoRemove",p->ui.checkAutoRemove->isChecked());
+    settings.setValue("checkAutoRemove", p->ui.checkAutoRemove->isChecked());
 
     //Silent settings
-    settings.setValue("checkAutoCue",p->ui.checkAutoCue->isChecked());
-    settings.setValue("checkSkipSilentEnd",p->ui.checkSkipSilentEnd->isChecked());
+    settings.setValue("checkAutoCue", p->ui.checkAutoCue->isChecked());
+    settings.setValue("checkSkipSilentEnd", p->ui.checkSkipSilentEnd->isChecked());
 
     //AutoDJ
-    settings.setValue("minTracks",p->ui.minTracks->value());
-    settings.setValue("countDJ",p->ui.countDJ->value());
-    settings.setValue("isEnabledAutoDJCount",p->ui.checkAutoDjCountPlayed->isChecked());
+    settings.setValue("minTracks", p->ui.minTracks->value());
+    settings.setValue("countDJ", p->ui.countDJ->value());
+    settings.setValue("isEnabledAutoDJCount", p->ui.checkAutoDjCountPlayed->isChecked());
     settings.beginGroup("AutoDJ");
-    int maxDj=p->ui.countDJ->value();
+    int maxDj = p->ui.countDJ->value();
 
-        for (int d=0;d<maxDj;d++)
-        {
-            settings.beginGroup(QString::number(d));
-            QListWidgetItem *item = p->ui.listDjNames->item(d);
-            if (DjSettings *djs = dynamic_cast<DjSettings*>(p->ui.listDjNames->itemWidget(item))) {
-                settings.setValue("Name", djs->name() );
-                settings.setValue("FilterCount", djs->filterCount() );
-            }
-            settings.endGroup();
+    for (int d = 0; d < maxDj; d++) {
+        settings.beginGroup(QString::number(d));
+        QListWidgetItem* item = p->ui.listDjNames->item(d);
+        if (DjSettings* djs = dynamic_cast<DjSettings*>(p->ui.listDjNames->itemWidget(item))) {
+            settings.setValue("Name", djs->name());
+            settings.setValue("FilterCount", djs->filterCount());
         }
         settings.endGroup();
+    }
+    settings.endGroup();
 
     //CollectionFolders
-    settings.setValue("Dirs",p->model->dirsChecked());
-    settings.setValue("Monitor", p->ui.chkMonitor->isChecked() );
+    settings.setValue("Dirs", p->model->dirsChecked());
+    settings.setValue("Monitor", p->ui.chkMonitor->isChecked());
 
     //File Browser
-    settings.setValue("editBrowerRoot",p->ui.txtBrowserRoot->text());
+    settings.setValue("editBrowerRoot", p->ui.txtBrowserRoot->text());
 
     QDialog::accept();
 }
@@ -193,32 +190,32 @@ bool SettingsDialog::loadSettings()
     p->ui.monitorOutputDevice->setCurrentIndex(index);
 
     //Common
-    p->ui.comboLanguage->setCurrentIndex( settings.value("language",0 ).toInt());
+    p->ui.comboLanguage->setCurrentIndex(settings.value("language", 0).toInt());
 
     //fade slider
-    p->ui.faderTimeSlider->setValue(settings.value("faderTimeSlider","12").toInt());
-    p->ui.faderTimeLabel->setText(settings.value("faderTimeSlider","12").toString() + "s");
-    p->ui.faderEndSlider->setValue(settings.value("faderEndSlider","12").toInt());
-    p->ui.faderEndLabel->setText(settings.value("faderEndSlider","12").toString() + "s");
+    p->ui.faderTimeSlider->setValue(settings.value("faderTimeSlider", "12").toInt());
+    p->ui.faderTimeLabel->setText(settings.value("faderTimeSlider", "12").toString() + "s");
+    p->ui.faderEndSlider->setValue(settings.value("faderEndSlider", "12").toInt());
+    p->ui.faderEndLabel->setText(settings.value("faderEndSlider", "12").toString() + "s");
 
     //Playlist setting
-    p->ui.checkAutoRemove->setChecked(settings.value("checkAutoRemove",true).toBool());
+    p->ui.checkAutoRemove->setChecked(settings.value("checkAutoRemove", true).toBool());
 
     //Silent setting
-    p->ui.checkSkipSilentEnd->setChecked(settings.value("checkSkipSilentEnd",true).toBool());
-    p->ui.checkAutoCue->setChecked(settings.value("checkAutoCue",true).toBool());
+    p->ui.checkSkipSilentEnd->setChecked(settings.value("checkSkipSilentEnd", true).toBool());
+    p->ui.checkAutoCue->setChecked(settings.value("checkAutoCue", true).toBool());
 
     //AutoDJ
-    p->ui.minTracks->setValue(settings.value("minTracks","6").toInt());
-    p->ui.countDJ->setValue(settings.value("countDJ","3").toInt());
-    p->ui.checkAutoDjCountPlayed->setChecked(settings.value("isEnabledAutoDJCount",false).toBool());
+    p->ui.minTracks->setValue(settings.value("minTracks", "6").toInt());
+    p->ui.countDJ->setValue(settings.value("countDJ", "3").toInt());
+    p->ui.checkAutoDjCountPlayed->setChecked(settings.value("isEnabledAutoDJCount", false).toBool());
 
     //CollectionFolders
     p->model->setDirsChecked(settings.value("Dirs").toStringList());
     p->ui.chkMonitor->setChecked(settings.value("Monitor").toBool());
 
     //File Browser
-    p->ui.txtBrowserRoot->setText(settings.value("editBrowerRoot","").toString());
+    p->ui.txtBrowserRoot->setText(settings.value("editBrowerRoot", "").toString());
 
     //Load Dj list
     loadDjList(p->ui.countDJ->value());
@@ -229,22 +226,21 @@ bool SettingsDialog::loadSettings()
 void SettingsDialog::loadDjList(int count)
 {
     QSettings settings;
-    QListWidgetItem *itm;
-    DjSettings *djs;
+    QListWidgetItem* itm;
+    DjSettings* djs;
 
     p->ui.listDjNames->clear();
 
     settings.beginGroup("AutoDJ");
-    for (int d=0;d<count;d++)
-    {
+    for (int d = 0; d < count; d++) {
         settings.beginGroup(QString::number(d));
         itm = new QListWidgetItem(p->ui.listDjNames);
         p->ui.listDjNames->addItem(itm);
         djs = new DjSettings(p->ui.listDjNames);
-        djs->setID(d+1);
-        djs->setName(settings.value("Name","Dj%1").toString().arg(d+1));
-        djs->setFilterCount(settings.value("FilterCount","2").toInt());
-        p->ui.listDjNames->setItemWidget(itm,djs);
+        djs->setID(d + 1);
+        djs->setName(settings.value("Name", "Dj%1").toString().arg(d + 1));
+        djs->setFilterCount(settings.value("FilterCount", "2").toInt());
+        p->ui.listDjNames->setItemWidget(itm, djs);
         settings.endGroup();
     }
     settings.endGroup();
@@ -255,24 +251,24 @@ void SettingsDialog::on_pushButton_clicked()
     QFileDialog dialog(this);
     dialog.setFileMode(QFileDialog::DirectoryOnly);
     if (dialog.exec())
-         p->ui.txtBrowserRoot->setText(dialog.selectedFiles().first());
+        p->ui.txtBrowserRoot->setText(dialog.selectedFiles().first());
 }
 
 void SettingsDialog::on_pushAbout_clicked()
 {
     QMessageBox msgBox;
-    msgBox.setIconPixmap(QIcon(":knowthelist.png").pixmap(65,65));
+    msgBox.setIconPixmap(QIcon(":knowthelist.png").pixmap(65, 65));
     msgBox.setText(QString("%1").arg("<h3>Knowthelist</h3>"
-                      "         Version " + QApplication::applicationVersion() +
-                      "<br />Copyright (C) 2005-2014 Mario Stephan "
-                      "<br /><a href='mailto:mstephan@shared-files.de'>mstephan@shared-files.de</a>"
-                      "<br /><br /><a href='http://knowthelist.github.io/knowthelist'>"
-                      "http://knowthelist.github.io/knowthelist</a>"
-                      "<br /><br /><div style='font-size:9px;'>Thanks to :"
-                      "<br />* Heiko Fischer   (for testing and new ideas)"
-                      "<br />* David Geiger and Adrien Daugabel   (for French translation and issue reports)"
-                      "<br />* Pavel Fric   (for Czech translation)"
-                      "<br />* László Farkas   (for Hungarian translation)</div>"       ));
+                                     "         Version "
+        + QApplication::applicationVersion() + "<br />Copyright (C) 2005-2014 Mario Stephan "
+                                               "<br /><a href='mailto:mstephan@shared-files.de'>mstephan@shared-files.de</a>"
+                                               "<br /><br /><a href='http://knowthelist.github.io/knowthelist'>"
+                                               "http://knowthelist.github.io/knowthelist</a>"
+                                               "<br /><br /><div style='font-size:9px;'>Thanks to :"
+                                               "<br />* Heiko Fischer   (for testing and new ideas)"
+                                               "<br />* David Geiger and Adrien Daugabel   (for French translation and issue reports)"
+                                               "<br />* Pavel Fric   (for Czech translation)"
+                                               "<br />* László Farkas   (for Hungarian translation)</div>"));
     msgBox.setWindowTitle(tr("About Knowthelist"));
     msgBox.exec();
 }
@@ -280,23 +276,22 @@ void SettingsDialog::on_pushAbout_clicked()
 void SettingsDialog::onScanNow()
 {
     QSettings settings;
-    settings.setValue("Dirs",p->model->dirsChecked());
+    settings.setValue("Dirs", p->model->dirsChecked());
     Q_EMIT scanNowPressed();
 }
 
 void SettingsDialog::on_faderEndSlider_sliderMoved(int position)
 {
-    p->ui.faderEndLabel->setText(QString::number(position)+"s");
+    p->ui.faderEndLabel->setText(QString::number(position) + "s");
 }
 
 void SettingsDialog::on_faderTimeSlider_sliderMoved(int position)
 {
-    p->ui.faderTimeLabel->setText(QString::number(position)+"s");
+    p->ui.faderTimeLabel->setText(QString::number(position) + "s");
 }
 
 void SettingsDialog::tableSelectionChanged()
 {
-        QTableWidgetItem * item = p->ui.settingsGroupsTable->selectedItems().first();
-        p->ui.pages->setCurrentIndex(item->row());
+    QTableWidgetItem* item = p->ui.settingsGroupsTable->selectedItems().first();
+    p->ui.pages->setCurrentIndex(item->row());
 }
-

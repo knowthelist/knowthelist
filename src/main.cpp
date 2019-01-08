@@ -18,76 +18,90 @@
 #include "knowthelist.h"
 
 #include <QApplication>
-#include <QtSql>
-#include <QTranslator>
 #include <QMessageBox>
 #include <QTextCodec>
+#include <QTranslator>
+#include <QtSql>
 
-int main(int argc, char *argv[])
-{
-    QApplication a(argc, argv);
+int main(int argc, char *argv[]) {
+  QApplication a(argc, argv);
 
-    // init rand
-    srand(QDateTime::currentDateTime().toUTC().toTime_t());
+  // init rand
+  srand(QDateTime::currentDateTime().toUTC().toTime_t());
 
-    QTextCodec::setCodecForLocale(QTextCodec::codecForName("UTF-8"));
-    a.setQuitOnLastWindowClosed(true);
+  QTextCodec::setCodecForLocale(QTextCodec::codecForName("UTF-8"));
+  a.setQuitOnLastWindowClosed(true);
 
-    QCoreApplication::setOrganizationName("knowthelist-org");
-    QCoreApplication::setOrganizationDomain("");
-    QCoreApplication::setApplicationName("knowthelist");
-    QCoreApplication::setApplicationVersion("2.3.1");
+  QFont f = a.font();
+  f.setStyleStrategy(QFont::PreferQuality);
+  f.setStyleHint(QFont::SansSerif);
+  a.setFont(f);
 
-    QSettings settings;
-    QStringList languages;
-    languages << "" << "en" << "de" << "cs" << "hu" << "fr";
-    QString lang = languages[ settings.value("language",0 ).toInt() ];
-    if (lang.isEmpty())
-        lang = QLocale::system().name();
+  QCoreApplication::setOrganizationName("knowthelist-org");
+  QCoreApplication::setOrganizationDomain("");
+  QCoreApplication::setApplicationName("knowthelist");
+  QCoreApplication::setApplicationVersion("2.3.1");
 
-    QTranslator qtTranslator;
-    qtTranslator.load("qt_" + lang,
-            QLibraryInfo::location(QLibraryInfo::TranslationsPath));
-    a.installTranslator(&qtTranslator);
+  QSettings settings;
+  QStringList languages;
+  languages << ""
+            << "en"
+            << "de"
+            << "cs"
+            << "hu"
+            << "fr";
+  QString lang = languages[settings.value("language", 0).toInt()];
+  if (lang.isEmpty())
+    lang = QLocale::system().name();
 
-    QTranslator localization;
-    bool result = localization.load(":knowthelist_" + lang +".qm");
-    qDebug() << "localization load " << ":knowthelist_" + lang + ".qm result:" << result;
-    a.installTranslator(&localization);
+  QTranslator qtTranslator;
+  qtTranslator.load("qt_" + lang,
+                    QLibraryInfo::location(QLibraryInfo::TranslationsPath));
+  a.installTranslator(&qtTranslator);
 
+  QTranslator localization;
+  bool result = localization.load(":knowthelist_" + lang + ".qm");
+  qDebug() << "localization load "
+           << ":knowthelist_" + lang + ".qm result:" << result;
+  a.installTranslator(&localization);
 
-if (!QSqlDatabase::drivers().contains("QSQLITE")) {
+  if (!QSqlDatabase::drivers().contains("QSQLITE")) {
 #if QT_VERSION >= 0x050000
     QMessageBox::critical(nullptr, QObject::tr("Unable to load database"),
-                          QObject::tr("This application needs the QT5 SQLITE driver (libqt5-sql-sqlite)"));
+                          QObject::tr("This application needs the QT5 SQLITE "
+                                      "driver (libqt5-sql-sqlite)"));
 #else
     QMessageBox::critical(0, QObject::tr("Unable to load database"),
-                          QObject::tr("This application needs the QT4 SQLITE driver (libqt4-sql-sqlite)"));
+                          QObject::tr("This application needs the QT4 SQLITE "
+                                      "driver (libqt4-sql-sqlite)"));
 #endif
 
     return 1;
-}
+  }
 
 #if QT_VERSION >= 0x050000
-    QString pathName = QStandardPaths::standardLocations(QStandardPaths::DataLocation).at(0);
+  QString pathName =
+      QStandardPaths::standardLocations(QStandardPaths::DataLocation).at(0);
 #else
-    QString pathName = QDesktopServices::storageLocation(QDesktopServices::DataLocation);
+  QString pathName =
+      QDesktopServices::storageLocation(QDesktopServices::DataLocation);
 #endif
-QDir path(pathName);
+  QDir path(pathName);
 
-if (!path.exists())
+  if (!path.exists())
     path.mkpath(pathName);
 
-QSqlDatabase db  = QSqlDatabase::addDatabase("QSQLITE");
-db.setDatabaseName( path.absolutePath() + "/collection.db");
+  QSqlDatabase db = QSqlDatabase::addDatabase("QSQLITE");
+  db.setDatabaseName(path.absolutePath() + "/collection.db");
 
-if ( !db.open() ) {
-    QMessageBox::critical(nullptr, "fatal database error", db.lastError().text());
+  if (!db.open()) {
+    QMessageBox::critical(nullptr, "fatal database error",
+                          db.lastError().text());
     return 1;
-}
-    qDebug() << "load database: " << db.databaseName();
-    Knowthelist w;
-    w.show();
+  }
+  qDebug() << "load database: " << db.databaseName();
+  Knowthelist w;
+  w.show();
 
-    return a.exec();
+  return a.exec();
 }

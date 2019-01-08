@@ -17,26 +17,27 @@
 
 #include "customdial.h"
 
-#include <QPainter>
 #include <QColor>
+#include <QPainter>
 
 #include <cmath>
 
 CustomDial::CustomDial(QWidget* parent)
-: QDial(parent)
+    : QDial(parent)
 {
+    qDebug() << Q_FUNC_INFO << "START";
     // Defaults
-     QDial::setRange(0,360);
+    QDial::setRange(0, 360);
 }
 
 void CustomDial::paintEvent(QPaintEvent*)
 {
     static const double degree270 = 1.5 * M_PI;
     static const double degree225 = 1.25 * M_PI;
-    static const int scaleDiameter = static_cast<int>(round((this->height() * 0.8)/2)*2);
-    static const int scaleOffset = static_cast<int>((this->height()-scaleDiameter)/2);
-    static const int dialDiameter = static_cast<int>(round((this->height() * 0.65)/2)*2);
-    static const int dialOffset = static_cast<int>((this->height()-dialDiameter)/2);
+    static const int scaleDiameter = static_cast<int>(round((this->height() * 0.8) / 2) * 2);
+    static const int scaleOffset = static_cast<int>((this->height() - scaleDiameter) / 2);
+    static const int dialDiameter = static_cast<int>(round((this->height() * 0.65) / 2) * 2);
+    static const int dialOffset = static_cast<int>((this->height() - dialDiameter) / 2);
 
     QPainter painter(this);
 
@@ -47,7 +48,7 @@ void CustomDial::paintEvent(QPaintEvent*)
     QRadialGradient radialGrad(QPointF(dialOffset, dialOffset), dialDiameter);
     radialGrad.setColorAt(0.1, "#999");
     radialGrad.setColorAt(0.5, "#777");
-    radialGrad.setColorAt(1,   "#222");
+    radialGrad.setColorAt(1, "#222");
 
     QBrush brush(radialGrad);
     painter.setBrush(brush);
@@ -65,7 +66,7 @@ void CustomDial::paintEvent(QPaintEvent*)
 
     // Draw scale arc
     int startAngle = 225 * 16;
-    int spanAngle = - 270 * 16;
+    int spanAngle = -270 * 16;
     QRectF rectScale(scaleOffset, scaleOffset, scaleDiameter, scaleDiameter);
     painter.setPen(QPen(QColor("#444"), 6));
     painter.drawArc(rectScale, startAngle, spanAngle);
@@ -76,11 +77,11 @@ void CustomDial::paintEvent(QPaintEvent*)
     double ratio = static_cast<double>(QDial::value()) / QDial::maximum();
     double angle = ratio * degree270 - degree225;
     double r = dialDiameter / 2.0;
-    double y = sin(angle) * (r - dialOffset/2) + r + dialOffset;
-    double x = cos(angle) * (r - dialOffset/2) + r + dialOffset;
+    double y = sin(angle) * (r - dialOffset / 2) + r + dialOffset;
+    double x = cos(angle) * (r - dialOffset / 2) + r + dialOffset;
     double c = r + dialOffset;
 
     // Draw the notch
     painter.setPen(QPen(QColor("#ccc"), 2));
-    painter.drawLine(QPointF(x,y),QPointF(c,c));
+    painter.drawLine(QPointF(x, y), QPointF(c, c));
 }

@@ -18,27 +18,26 @@
 #include "dj.h"
 #include "filter.h"
 #include <qdebug.h>
-#include <qwaitcondition.h>
 #include <qmutex.h>
+#include <qwaitcondition.h>
 
-struct DjPrivate
-{
-        int rotation;
-        QList<Filter*> filters;
-        Filter* filter;
-        long countTracks;
-        long lengthTracks;
-        QString description;
+struct DjPrivate {
+    int rotation;
+    QList<Filter*> filters;
+    Filter* filter;
+    long countTracks;
+    long lengthTracks;
+    QString description;
 };
 
 Dj::Dj()
-    :p(new DjPrivate)
+    : p(new DjPrivate)
 {
-    p->rotation=0;
-    p->filter=0;
-    p->description=QString::null;
-    p->countTracks=0;
-    p->lengthTracks=0;
+    p->rotation = 0;
+    p->filter = nullptr;
+    p->description = QString::null;
+    p->countTracks = 0;
+    p->lengthTracks = 0;
 }
 
 Dj::~Dj()
@@ -49,12 +48,12 @@ Dj::~Dj()
 void Dj::addFilter(Filter* filter)
 {
     p->filters.append(filter);
-    connect(filter,SIGNAL(activated()),
-            this,SLOT(on_filter_activated()));
-    connect(filter,SIGNAL(filterChanged()),
-            this,SLOT(on_filter_filterChanged()));
-    connect(filter,SIGNAL(maxUsageChanged()),
-            this,SLOT(on_filter_maxUsageChanged()));
+    connect(filter, SIGNAL(activated()),
+        this, SLOT(on_filter_activated()));
+    connect(filter, SIGNAL(filterChanged()),
+        this, SLOT(on_filter_filterChanged()));
+    connect(filter, SIGNAL(maxUsageChanged()),
+        this, SLOT(on_filter_maxUsageChanged()));
 }
 
 void Dj::removeFilter(Filter* filter)
@@ -70,7 +69,7 @@ QList<Filter*> Dj::filters()
 void Dj::setActiveFilterIdx(int idx)
 {
     p->rotation = idx;
-    if ( p->rotation >= p->filters.count() )
+    if (p->rotation >= p->filters.count())
         p->rotation = 0;
     p->filters[p->rotation]->setActive(true);
 }
@@ -98,45 +97,38 @@ void Dj::on_filter_activated()
 {
     Filter* f = qobject_cast<Filter*>(QObject::sender());
     QList<Filter*>::iterator i;
-     for (i = p->filters.begin(); i != p->filters.end(); ++i)
-    {
-         if ( (*i) != f )
+    for (i = p->filters.begin(); i != p->filters.end(); ++i) {
+        if ((*i) != f)
             (*i)->setActive(false);
-         else
-         {
-             p->rotation = p->filters.indexOf((*i));
-         }
-
-     }
-     //p->wc.wakeAll();
+        else {
+            p->rotation = p->filters.indexOf((*i));
+        }
+    }
+    //p->wc.wakeAll();
 }
 
 void Dj::on_filter_maxUsageChanged()
 {
     Filter* f = qobject_cast<Filter*>(QObject::sender());
-    if ( p->filter == f )
+    if (p->filter == f)
         checkSequence();
-
 }
 
 void Dj::checkSequence()
 {
 
     qDebug() << Q_FUNC_INFO << "rotation=" << p->rotation << "/" << p->filters.count()
-             << " repeat=" << p->filter->usage() << "/" <<  p->filter->maxUsage() ;
+             << " repeat=" << p->filter->usage() << "/" << p->filter->maxUsage();
 
-    if ( p->filter->usage() >= p->filter->maxUsage() )
-    {
+    if (p->filter->usage() >= p->filter->maxUsage()) {
         int i = p->filters.count();
-        do
-        {
+        do {
             p->rotation++;
             i--;
-            if ( p->rotation >= p->filters.count() )
+            if (p->rotation >= p->filters.count())
                 p->rotation = 0;
-        }
-        while (p->filters.at(p->rotation)->maxUsage() == 0
-               && i>0);
+        } while (p->filters.at(p->rotation)->maxUsage() == 0
+            && i > 0);
 
         p->filters.at(p->rotation)->setActive(true);
 
@@ -146,7 +138,6 @@ void Dj::checkSequence()
         p->wc.wait(&p->mutex);
         p->mutex.unlock();*/
     }
-
 }
 
 //ToDo: - Switch LED before add the Track
@@ -156,16 +147,16 @@ Filter* Dj::requestFilter()
 {
     p->filter = p->filters.at(p->rotation);
 
-    p->filter->setUsage(p->filter->usage() +1);
+    p->filter->setUsage(p->filter->usage() + 1);
 
     checkSequence();
 
     qDebug() << Q_FUNC_INFO << "rotation=" << p->rotation << "/" << p->filters.count()
-             << " repeat=" << p->filter->usage() << "/" <<  p->filter->maxUsage() ;
+             << " repeat=" << p->filter->usage() << "/" << p->filter->maxUsage();
 
     qDebug() << Q_FUNC_INFO << "return filter=" << p->filters.at(p->rotation)->path()
-            << "/" << p->filters.at(p->rotation)->genre()
-            << "/" << p->filters.at(p->rotation)->artist();
+             << "/" << p->filters.at(p->rotation)->genre()
+             << "/" << p->filters.at(p->rotation)->artist();
 
     return p->filter;
 }
@@ -180,7 +171,7 @@ void Dj::setDescription(QString value)
     p->description = value;
 }
 
-int Dj::countTracks()
+long Dj::countTracks()
 {
     return p->countTracks;
 }
@@ -191,7 +182,7 @@ void Dj::setCountTracks(int value)
     Q_EMIT countChanged();
 }
 
-int Dj::lengthTracks()
+long Dj::lengthTracks()
 {
     return p->lengthTracks;
 }

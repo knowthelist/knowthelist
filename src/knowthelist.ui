@@ -473,7 +473,7 @@ background-color: #444444;
             <rect>
              <x>71</x>
              <y>135</y>
-             <width>23</width>
+             <width>21</width>
              <height>108</height>
             </rect>
            </property>
@@ -487,9 +487,9 @@ background-color: #444444;
           <widget class="QFrame" name="phVU2">
            <property name="geometry">
             <rect>
-             <x>102</x>
+             <x>105</x>
              <y>135</y>
-             <width>24</width>
+             <width>21</width>
              <height>108</height>
             </rect>
            </property>

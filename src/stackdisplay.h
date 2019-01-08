@@ -20,27 +20,26 @@
 
 #include <QWidget>
 
-class StackDisplay : public QWidget
-{
+class StackDisplay : public QWidget {
     Q_OBJECT
 public:
-    explicit StackDisplay(QWidget *parent = 0);
+    explicit StackDisplay(QWidget* parent = 0);
     ~StackDisplay();
 
-    void setCount ( int value );
-    void setSelected( int value );
-    void setMargin( int value);
-    void setBarColor ( QColor color );
-    
+    void setCount(int value);
+    void setSelected(int value);
+    void setMargin(int value);
+    void setBarColor(QColor color);
+
 signals:
-    
+
 public slots:
-    
+
 private:
-    void resizeEvent( QResizeEvent* e );
-    void paintEvent(QPaintEvent *);
+    void resizeEvent(QResizeEvent* e);
+    void paintEvent(QPaintEvent*);
     void drawBars();
-    class StackDisplayPrivate *p;
+    class StackDisplayPrivate* p;
 };
 
 #endif // STACKDISPLAY_H

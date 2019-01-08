@@ -18,28 +18,26 @@
 #include "stackdisplay.h"
 
 #include <QColor>
-#include <QStyleOption>
 #include <QPainter>
+#include <QStyleOption>
 
-
-class StackDisplayPrivate
-{
-    public:
-        int height;
-        int width;
-        int margin;
-        int count;
-        int indexSelected;
-        int barHeight;
-        QColor colorBars;
+class StackDisplayPrivate {
+public:
+    int height;
+    int width;
+    int margin;
+    int count;
+    int indexSelected;
+    int barHeight;
+    QColor colorBars;
 };
 
-StackDisplay::StackDisplay(QWidget *parent) :
-    QWidget(parent)
+StackDisplay::StackDisplay(QWidget* parent)
+    : QWidget(parent)
 {
     p = new StackDisplayPrivate;
 
-    p->colorBars.setRgb ( 200,200,200 );
+    p->colorBars.setRgb(200, 200, 200);
 
     p->count = 6;
     p->indexSelected = 1;
@@ -47,46 +45,43 @@ StackDisplay::StackDisplay(QWidget *parent) :
     p->margin = 8;
 }
 
-
-
 StackDisplay::~StackDisplay()
 {
     delete p;
 }
 
-void StackDisplay::resizeEvent( QResizeEvent* e )
+void StackDisplay::resizeEvent(QResizeEvent* e)
 {
     Q_UNUSED(e);
 
-     p->width = width();
-     p->height = height();
+    p->width = width();
+    p->height = height();
 }
 
-void StackDisplay::setBarColor ( QColor color )
+void StackDisplay::setBarColor(QColor color)
 {
     p->colorBars = color;
     update();
 }
 
-
-void StackDisplay::setCount ( int value )
+void StackDisplay::setCount(int value)
 {
     p->count = value;
     update();
 }
 
-void StackDisplay::setSelected( int value )
+void StackDisplay::setSelected(int value)
 {
     p->indexSelected = value;
     update();
 }
 
-void StackDisplay::setMargin( int value)
+void StackDisplay::setMargin(int value)
 {
     p->margin = value;
 }
 
-void StackDisplay::paintEvent(QPaintEvent *)
+void StackDisplay::paintEvent(QPaintEvent*)
 {
     drawBars();
     QStyleOption opt;
@@ -95,39 +90,35 @@ void StackDisplay::paintEvent(QPaintEvent *)
     style()->drawPrimitive(QStyle::PE_Widget, &opt, &p, this);
 }
 
-void StackDisplay::drawBars() {
+void StackDisplay::drawBars()
+{
 
     QPainter painter(this);
-    painter.setPen ( p->colorBars );
+    painter.setPen(p->colorBars);
 
-    if (p->count==0)
+    if (p->count == 0)
         return;
 
-    int space = (int)(p->height/p->count);
+    int space = (int)(p->height / p->count);
     int posY = 0;
 
-    for ( int i=0;i<p->count;i++ ) {
+    for (int i = 0; i < p->count; i++) {
         posY = posY + space;
-        for ( int j=0;j<p->barHeight;j++ ) {
+        for (int j = 0; j < p->barHeight; j++) {
             //draw bars
-            painter.drawLine (p->margin*2,
-                              posY+j-p->barHeight,
-                              p->width-p->margin,
-                              posY+j-p->barHeight);
+            painter.drawLine(p->margin * 2,
+                posY + j - p->barHeight,
+                p->width - p->margin,
+                posY + j - p->barHeight);
         }
-        if (i==p->indexSelected){
+        if (i == p->indexSelected) {
             //draw triancle
-            for ( int j=p->margin;j<p->margin+5;j++ ) {
-                painter.drawLine (j,
-                                  posY-(p->margin+5-j)+1-p->barHeight,
-                                  j,
-                                  posY+(p->margin+5-j)-1-p->barHeight);
+            for (int j = p->margin; j < p->margin + 5; j++) {
+                painter.drawLine(j,
+                    posY - (p->margin + 5 - j) + 1 - p->barHeight,
+                    j,
+                    posY + (p->margin + 5 - j) - 1 - p->barHeight);
             }
         }
-
-
+    }
 }
-
-}
-
-

@@ -21,25 +21,23 @@
 #include "collectiondb.h"
 
 #if QT_VERSION >= 0x050000
- #include <QtConcurrent/QtConcurrent>
+#include <QtConcurrent/QtConcurrent>
 #else
- #include <QtConcurrentRun>
+#include <QtConcurrentRun>
 #endif
 
-
-class CollectionUpdaterPrivate
-{
-    public:
-        bool doMonitor;
-        QStringList dirs;
-        bool isStoped;
-        QPoint startPos;
-        bool openContext;
-        bool dragLocked;
-        QTimer *timer;
-        bool incremental;
-        CollectionDB *collectionDB;
-        QMutex mutex;
+class CollectionUpdaterPrivate {
+public:
+    bool doMonitor;
+    QStringList dirs;
+    bool isStoped;
+    QPoint startPos;
+    bool openContext;
+    bool dragLocked;
+    QTimer* timer;
+    bool incremental;
+    CollectionDB* collectionDB;
+    QMutex mutex;
 };
 
 CollectionUpdater::CollectionUpdater()
@@ -48,48 +46,46 @@ CollectionUpdater::CollectionUpdater()
 
     QSettings settings;
 
-        p->doMonitor = settings.value("Monitor").toBool();
-        p->dirs=settings.value("Dirs").toStringList();
+    p->doMonitor = settings.value("Monitor").toBool();
+    p->dirs = settings.value("Dirs").toStringList();
 
-        p->collectionDB = new CollectionDB();
-        if ( !p->collectionDB )
-            qWarning() << Q_FUNC_INFO << "Could not open SQLite database\n";
+    p->collectionDB = new CollectionDB();
+    if (!p->collectionDB)
+        qWarning() << Q_FUNC_INFO << "Could not open SQLite database\n";
 
-        //optimization for speeding up SQLite
-        p->collectionDB->executeSql( "PRAGMA synchronous = OFF;" );
+    //optimization for speeding up SQLite
+    p->collectionDB->executeSql("PRAGMA synchronous = OFF;");
 
-        if ( !p->collectionDB->isDbValid() )
-        {
-            qDebug() << "Rebuilding database!" << endl;
-            p->collectionDB->dropTables();
-            p->collectionDB->createTables();
-            p->collectionDB->dropStatsTable();
-            p->collectionDB->createStatsTable();
-            scan();
-        }
+    if (!p->collectionDB->isDbValid()) {
+        qDebug() << "Rebuilding database!" << endl;
+        p->collectionDB->dropTables();
+        p->collectionDB->createTables();
+        p->collectionDB->dropStatsTable();
+        p->collectionDB->createStatsTable();
+        scan();
+    }
 
-        p->timer = new QTimer( this );
-        p->timer->setInterval(600000); //1000 * 60 * 10 = 10min
-        connect(p->timer,SIGNAL(timeout()),this,SLOT(monitor()));
-        if ( p->doMonitor){
-           monitor();
-           p->timer->start();
-        }
+    p->timer = new QTimer(this);
+    p->timer->setInterval(600000); //1000 * 60 * 10 = 10min
+    connect(p->timer, SIGNAL(timeout()), this, SLOT(monitor()));
+    if (p->doMonitor) {
+        monitor();
+        p->timer->start();
+    }
 }
-
 
 CollectionUpdater::~CollectionUpdater()
 {
-   delete p;
+    delete p;
 }
 
 void CollectionUpdater::setDoMonitor(bool value)
 {
     p->doMonitor = value;
-    if ( p->doMonitor)
-       p->timer->start();
+    if (p->doMonitor)
+        p->timer->start();
     else
-       p->timer->stop();
+        p->timer->stop();
 }
 
 void CollectionUpdater::stop()
@@ -99,12 +95,11 @@ void CollectionUpdater::stop()
 
 void CollectionUpdater::setDirectoryList(QStringList dirs, bool force)
 {
-    if ( p->dirs != dirs || force ){
-         p->dirs = dirs;
-         scan();
+    if (p->dirs != dirs || force) {
+        p->dirs = dirs;
+        scan();
     }
 }
-
 
 void CollectionUpdater::monitor()
 {
@@ -115,38 +110,34 @@ void CollectionUpdater::monitor()
 
     QStringList folders;
 
-            QList<QStringList> entries = p->collectionDB->selectSql( "SELECT dir, changedate FROM directories;" );
+    QList<QStringList> entries = p->collectionDB->selectSql("SELECT dir, changedate FROM directories;");
 
-            foreach ( QStringList entry, entries) {
-                QString dir(entry[0]);
-                QString changedate(entry[1]);
-                QFileInfo fi(dir);
+    foreach (QStringList entry, entries) {
+        QString dir(entry[0]);
+        QString changedate(entry[1]);
+        QFileInfo fi(dir);
 
-                if ( fi.exists() )
-                {
-                    if ( QString::number(fi.lastModified().toTime_t()) != changedate )
-                    {
-                        folders << dir;
-                        qDebug() << "Collection dir changed: " << dir;
-                    }
-                }
-                else
-                {
-                    // this folder has been removed
-                    folders << dir;
-                    qDebug() << "Collection dir removed: " << dir;
-                }
+        if (fi.exists()) {
+            if (QString::number(fi.lastModified().toTime_t()) != changedate) {
+                folders << dir;
+                qDebug() << "Collection dir changed: " << dir;
             }
+        } else {
+            // this folder has been removed
+            folders << dir;
+            qDebug() << "Collection dir removed: " << dir;
+        }
+    }
 
-            if ( !folders.isEmpty() )
-                QFuture<void> future = QtConcurrent::run( this, &CollectionUpdater::asynchronScan, folders);
+    if (!folders.isEmpty())
+        QFuture<void> future = QtConcurrent::run(this, &CollectionUpdater::asynchronScan, folders);
 }
 
 void CollectionUpdater::scan()
 {
     p->incremental = false;
     p->isStoped = false;
-    QFuture<void> future = QtConcurrent::run( this, &CollectionUpdater::asynchronScan, p->dirs);
+    QFuture<void> future = QtConcurrent::run(this, &CollectionUpdater::asynchronScan, p->dirs);
 }
 
 void CollectionUpdater::asynchronScan(QStringList dirs)
@@ -158,21 +149,21 @@ void CollectionUpdater::asynchronScan(QStringList dirs)
 
     Q_EMIT progressChanged(1);
 
-    if ( !p->incremental )
+    if (!p->incremental)
         p->collectionDB->purgeDirCache();
 
     QStringList entries;
     int dirCount = dirs.count();
 
     //iterate over all folders
-    for ( int i = 0; i < dirCount; i++ ) {
-        Q_EMIT progressChanged(((i+1)*10)/dirCount);
-        readDir( dirs[ i ], entries );
+    for (int i = 0; i < dirCount; i++) {
+        Q_EMIT progressChanged(((i + 1) * 10) / dirCount);
+        readDir(dirs[i], entries);
     }
 
-    if ( !entries.empty() ) {
+    if (!entries.empty()) {
         Q_EMIT progressChanged(10);
-        readTags( entries );
+        readTags(entries);
     }
     Q_EMIT progressChanged(100);
 
@@ -180,115 +171,100 @@ void CollectionUpdater::asynchronScan(QStringList dirs)
         Q_EMIT changesDone();
 }
 
-void CollectionUpdater::readDir( const QString& dir, QStringList& entries )
+void CollectionUpdater::readDir(const QString& dir, QStringList& entries)
 {
     //update dir statistics for rescanning purposes
-    QFileInfo fi( dir );
+    QFileInfo fi(dir);
 
-    if ( fi.exists() )
-        p->collectionDB->updateDirStats( dir, ( long ) fi.lastModified().toTime_t() );
-    else
-    {
-        if ( p->incremental )
-        {
-            p->collectionDB->removeSongsInDir( dir );
-            p->collectionDB->removeDirFromCollection( dir );
+    if (fi.exists())
+        p->collectionDB->updateDirStats(dir, (long)fi.lastModified().toTime_t());
+    else {
+        if (p->incremental) {
+            p->collectionDB->removeSongsInDir(dir);
+            p->collectionDB->removeDirFromCollection(dir);
         }
         return;
     }
 
-
-    QDir rDir( dir );
+    QDir rDir(dir);
     rDir.setFilter(QDir::Dirs | QDir::Files | QDir::NoDotDot | QDir::NoDot | QDir::NoSymLinks | QDir::Readable);
     QFileInfoList list = rDir.entryInfoList();
 
     Q_FOREACH (const QFileInfo fi, list) {
-            if ( fi.isDir() ) {
-                if ( !p->incremental || !p->collectionDB->isDirInCollection( fi.absoluteFilePath() ) )
-                    readDir( fi.absoluteFilePath(), entries );
-            } else if ( fi.isFile() )
-                entries << fi.absoluteFilePath();
-
+        if (fi.isDir()) {
+            if (!p->incremental || !p->collectionDB->isDirInCollection(fi.absoluteFilePath()))
+                readDir(fi.absoluteFilePath(), entries);
+        } else if (fi.isFile())
+            entries << fi.absoluteFilePath();
     }
 }
 
-void CollectionUpdater::readTags( const QStringList& entries )
+void CollectionUpdater::readTags(const QStringList& entries)
 {
     qDebug() << Q_FUNC_INFO << " Start";
 
     QUrl url;
-    p->collectionDB->createTables( true );
+    p->collectionDB->createTables(true);
 
     int entriesCount = entries.count();
-    for ( int i = 0; i < entriesCount; i++ ) {
-        if ( !( i % 20 ) )
-            Q_EMIT progressChanged(((i*90)/entriesCount)+10);
+    for (int i = 0; i < entriesCount; i++) {
+        if (!(i % 20))
+            Q_EMIT progressChanged(((i * 90) / entriesCount) + 10);
 
-        url = QUrl::fromLocalFile( entries[ i ] );
+        url = QUrl::fromLocalFile(entries[i]);
 
-        Track track( url );
+        Track track(url);
 
-
-         if ( track.isValid() ) {
+        if (track.isValid()) {
 
             QString command = QString("INSERT INTO tags_temp "
-                              "( url, dir, artist, title, album, genre, year, length, track ) "
-                              "VALUES('%1','%2',%3,'%4',%5,%6,%7,%8,%9);")
-                    .arg(p->collectionDB->escapeString( track.url().toLocalFile() ))
-                    .arg(p->collectionDB->escapeString( track.dirPath() ))
-                    .arg(p->collectionDB->escapeString( QString::number( p->collectionDB->getValueID( "artist", track.artist(), true, !p->incremental ) ) ))
-                    .arg(p->collectionDB->escapeString( track.title() ))
-                    .arg(p->collectionDB->escapeString( QString::number( p->collectionDB->getValueID( "album", track.album(), true, !p->incremental ) )) )
-                    .arg(p->collectionDB->escapeString( QString::number( p->collectionDB->getValueID( "genre", track.genre(), true, !p->incremental ) ) ))
-                    .arg(p->collectionDB->escapeString( QString::number( p->collectionDB->getValueID( "year", track.year(), true, !p->incremental ) ) ))
-                    .arg(p->collectionDB->escapeString( QString::number( track.length() )))
-                    .arg(p->collectionDB->escapeString( track.tracknumber() ));
+                                      "( url, dir, artist, title, album, genre, year, length, track ) "
+                                      "VALUES('%1','%2',%3,'%4',%5,%6,%7,%8,%9);")
+                                  .arg(p->collectionDB->escapeString(track.url().toLocalFile()))
+                                  .arg(p->collectionDB->escapeString(track.dirPath()))
+                                  .arg(p->collectionDB->escapeString(QString::number(p->collectionDB->getValueID("artist", track.artist(), true, !p->incremental))))
+                                  .arg(p->collectionDB->escapeString(track.title()))
+                                  .arg(p->collectionDB->escapeString(QString::number(p->collectionDB->getValueID("album", track.album(), true, !p->incremental))))
+                                  .arg(p->collectionDB->escapeString(QString::number(p->collectionDB->getValueID("genre", track.genre(), true, !p->incremental))))
+                                  .arg(p->collectionDB->escapeString(QString::number(p->collectionDB->getValueID("year", track.year(), true, !p->incremental))))
+                                  .arg(p->collectionDB->escapeString(QString::number(track.length())))
+                                  .arg(p->collectionDB->escapeString(track.tracknumber()));
 
-
-            p->collectionDB->executeSql( command );
+            p->collectionDB->executeSql(command);
 
             //stop the process?
-            if ( p->isStoped ) i = entries.count();
-          }
+            if (p->isStoped)
+                i = entries.count();
+        }
     }
 
     qDebug() << Q_FUNC_INFO << " Insert finish";
 
     //update database only if not stoped
-    if ( !p->isStoped )
-    {
-      // let's lock the database (will block other threads)
-      p->collectionDB->executeSql( "BEGIN TRANSACTION;" );
+    if (!p->isStoped) {
+        // let's lock the database (will block other threads)
+        p->collectionDB->executeSql("BEGIN TRANSACTION;");
 
-      // remove tables and recreate them (quicker than DELETE FROM)
-      if ( !p->incremental ) {
-          p->collectionDB->dropTables();
-          p->collectionDB->createTables();
-      } else {
-          // remove old entries from database, only
-          for ( int i = 0; i < p->dirs.count(); i++ )
-              p->collectionDB->removeSongsInDir( p->dirs[ i ] );
-      }
+        // remove tables and recreate them (quicker than DELETE FROM)
+        if (!p->incremental) {
+            p->collectionDB->dropTables();
+            p->collectionDB->createTables();
+        } else {
+            // remove old entries from database, only
+            for (int i = 0; i < p->dirs.count(); i++)
+                p->collectionDB->removeSongsInDir(p->dirs[i]);
+        }
 
-      // rename tables
-      p->collectionDB->moveTempTables();
+        // rename tables
+        p->collectionDB->moveTempTables();
 
-      // remove temp tables and unlock database
-      p->collectionDB->dropTables( true );
-      p->collectionDB->executeSql( "END TRANSACTION;" );
-    }
-    else
-    {
+        // remove temp tables and unlock database
+        p->collectionDB->dropTables(true);
+        p->collectionDB->executeSql("END TRANSACTION;");
+    } else {
 
-      qDebug() << Q_FUNC_INFO << " Stop";
+        qDebug() << Q_FUNC_INFO << " Stop";
     }
 
     qDebug() << Q_FUNC_INFO << " End";
 }
-
-
-
-
-
-
-

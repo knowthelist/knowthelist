@@ -18,59 +18,55 @@
 #ifndef VUMETER_H
 #define VUMETER_H
 
-#include <QtCore>
-#include <QWidget>
 #include <QTime>
+#include <QWidget>
+#include <QtCore>
 #include <math.h>
 
 // helper functions
-const float LEVEL_MIN= 1.f/(1<<20); // minimal positive sample for 20 bit resolution
-inline float levelToDB(float level) {
-        if (level<LEVEL_MIN) level=LEVEL_MIN; // prevent from div by 0
-        return (25.0f)*log(level);
-
-}
-
-inline float DBToLevel(float db) {
-	return exp(db/(log(2.f)/6.f));
-}
-
-
-class VUMeter : public QWidget
+const float LEVEL_MIN = 1.f / (1 << 20); // minimal positive sample for 20 bit resolution
+inline float levelToDB(float level)
 {
-Q_OBJECT
-    Q_PROPERTY( Qt::Orientation orientation READ orientation WRITE setOrientation )
+    if (level < LEVEL_MIN)
+        level = LEVEL_MIN; // prevent from div by 0
+    return (25.0f) * log(level);
+}
+
+inline float DBToLevel(float db)
+{
+    return exp(db / (log(2.f) / 6.f));
+}
+
+class VUMeter : public QWidget {
+    Q_OBJECT
+    Q_PROPERTY(Qt::Orientation orientation READ orientation WRITE setOrientation)
 public:
-    VUMeter(QWidget *parent = nullptr);
+    VUMeter(QWidget* parent = nullptr);
     ~VUMeter();
- 
-    void setValueLeft( double );
-    void setValueRight( double );
-    void setPercentage( double );
+
+    void setValueLeft(double);
+    void setValueRight(double);
+    void setPercentage(double);
     void checkPeakTime();
-    void setOrientation( Qt::Orientation );
+    void setOrientation(Qt::Orientation);
     Qt::Orientation orientation() const;
-    void setLinesPerSegment( int );
-    void setSpacesBetweenSegments( int );
-    void setSegmentsPerPeak( int );
-    void setMargin( int );
+    void setLinesPerSegment(int);
+    void setSpacesBetweenSegments(int);
+    void setSegmentsPerPeak(int);
+    void setMargin(int);
     QColor LevelColorNormal;
     QColor LevelColorHigh;
     QColor LevelColorOff;
     QColor BackgroundColor;
     void reset();
-    
 
 protected:
-
-    void paintEvent(QPaintEvent *);
-    void resizeEvent(QResizeEvent *);
+    void paintEvent(QPaintEvent*);
+    void resizeEvent(QResizeEvent*);
 
 private:
-
-    struct VUMeterPrivate *p;
-    void  drawMeter();
+    struct VUMeterPrivate* p;
+    void drawMeter();
 };
-
 
 #endif

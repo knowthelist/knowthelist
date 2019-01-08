@@ -29,14 +29,14 @@
 
 #include "stylehelper.h"
 
-#include <QtGui/QPixmapCache>
+#include <QApplication>
+#include <QStyleOption>
 #include <QWidget>
+#include <QtCore/QObject>
 #include <QtCore/QRect>
 #include <QtGui/QPainter>
-#include <QApplication>
 #include <QtGui/QPalette>
-#include <QStyleOption>
-#include <QtCore/QObject>
+#include <QtGui/QPixmapCache>
 
 // Clamps float color values within (0, 255)
 static int clamp(float x)
@@ -81,12 +81,12 @@ QColor StyleHelper::highlightColor(bool lightColored)
     QColor result = baseColor(lightColored);
     if (!lightColored)
         result.setHsv(result.hue(),
-                  clamp(result.saturation()),
-                  clamp(result.value() * 1.16));
+            clamp(result.saturation()),
+            clamp(result.value() * 1.16));
     else
         result.setHsv(result.hue(),
-                  clamp(result.saturation()),
-                  clamp(result.value() * 1.06));
+            clamp(result.saturation()),
+            clamp(result.value() * 1.06));
     return result;
 }
 
@@ -94,8 +94,8 @@ QColor StyleHelper::shadowColor(bool lightColored)
 {
     QColor result = baseColor(lightColored);
     result.setHsv(result.hue(),
-                  clamp(result.saturation() * 1.1),
-                  clamp(result.value() * 0.70));
+        clamp(result.saturation() * 1.1),
+        clamp(result.value() * 0.70));
     return result;
 }
 
@@ -103,31 +103,31 @@ QColor StyleHelper::borderColor(bool lightColored)
 {
     QColor result = baseColor(lightColored);
     result.setHsv(result.hue(),
-                  result.saturation(),
-                  result.value() / 2);
+        result.saturation(),
+        result.value() / 2);
     return result;
 }
 
 // We try to ensure that the actual color used are within
 // reasonalbe bounds while generating the actual baseColor
 // from the users request.
-void StyleHelper::setBaseColor(const QColor &newcolor)
+void StyleHelper::setBaseColor(const QColor& newcolor)
 {
     m_requestedBaseColor = newcolor;
 
     QColor color;
     color.setHsv(newcolor.hue(),
-                 newcolor.saturation() * 0.7,
-                 64 + newcolor.value() / 3);
+        newcolor.saturation() * 0.7,
+        64 + newcolor.value() / 3);
 
     if (color.isValid() && color != m_baseColor) {
         m_baseColor = color;
-        foreach (QWidget *w, QApplication::topLevelWidgets())
+        foreach (QWidget* w, QApplication::topLevelWidgets())
             w->update();
     }
 }
 
-static void verticalGradientHelper(QPainter *p, const QRect &spanRect, const QRect &rect, bool lightColored)
+static void verticalGradientHelper(QPainter* p, const QRect& spanRect, const QRect& rect, bool lightColored)
 {
     QColor highlight = StyleHelper::highlightColor(lightColored);
     QColor shadow = StyleHelper::shadowColor(lightColored);
@@ -144,14 +144,15 @@ static void verticalGradientHelper(QPainter *p, const QRect &spanRect, const QRe
     p->drawLine(rect.topLeft(), rect.bottomLeft());
 }
 
-void StyleHelper::verticalGradient(QPainter *painter, const QRect &spanRect, const QRect &clipRect, bool lightColored)
+void StyleHelper::verticalGradient(QPainter* painter, const QRect& spanRect, const QRect& clipRect, bool lightColored)
 {
     if (StyleHelper::usePixmapCache()) {
         QString key;
         QColor keyColor = baseColor(lightColored);
         key.sprintf("mh_vertical %d %d %d %d %d",
             spanRect.width(), spanRect.height(), clipRect.width(),
-            clipRect.height(), keyColor.rgb());;
+            clipRect.height(), keyColor.rgb());
+        ;
 
         QPixmap pixmap;
         if (!QPixmapCache::find(key, pixmap)) {
@@ -170,8 +171,8 @@ void StyleHelper::verticalGradient(QPainter *painter, const QRect &spanRect, con
 }
 
 // Draws a cached pixmap with shadow
-void StyleHelper::drawIconWithShadow(const QIcon &icon, const QRect &rect,
-                                     QPainter *p, QIcon::Mode iconMode, int radius, const QColor &color, const QPoint &offset)
+void StyleHelper::drawIconWithShadow(const QIcon& icon, const QRect& rect,
+    QPainter* p, QIcon::Mode iconMode, int radius, const QColor& color, const QPoint& offset)
 {
     QPixmap cache;
     QString pixmapName = QString("icon %0 %1 %2").arg(icon.cacheKey()).arg(iconMode).arg(rect.height());
@@ -184,9 +185,9 @@ void StyleHelper::drawIconWithShadow(const QIcon &icon, const QRect &rect,
         QPainter cachePainter(&cache);
         if (iconMode == QIcon::Disabled) {
             QImage im = px.toImage().convertToFormat(QImage::Format_ARGB32);
-            for (int y=0; y<im.height(); ++y) {
-                QRgb *scanLine = (QRgb*)im.scanLine(y);
-                for (int x=0; x<im.width(); ++x) {
+            for (int y = 0; y < im.height(); ++y) {
+                QRgb* scanLine = (QRgb*)im.scanLine(y);
+                for (int x = 0; x < im.width(); ++x) {
                     QRgb pixel = *scanLine;
                     char intensity = qGray(pixel);
                     *scanLine = qRgba(intensity, intensity, intensity, qAlpha(pixel));

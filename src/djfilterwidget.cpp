@@ -19,59 +19,67 @@
 #include "ui_djfilterwidget.h"
 #include <qfiledialog.h>
 
-#include <qdebug.h>
-#include <QTimer>
 #include <QMouseEvent>
+#include <QTimer>
+#include <qdebug.h>
 
-struct DjFilterWidgetPrivate
-{
-        Filter* filter;
-        QTimer* timerSlide;
-        int targetWidth;
+struct DjFilterWidgetPrivate {
+    Filter* filter;
+    QTimer* timerSlide;
+    int targetWidth;
 };
 
-DjFilterWidget::DjFilterWidget(QWidget *parent) :
-    QWidget(parent),
-    ui(new Ui::DjFilterWidget)
-    ,p(new DjFilterWidgetPrivate)
+DjFilterWidget::DjFilterWidget(QWidget* parent)
+    : QWidget(parent)
+    , ui(new Ui::DjFilterWidget)
+    , p(new DjFilterWidgetPrivate)
 
 {
     setFocusPolicy(Qt::ClickFocus);
     ui->setupUi(this);
     ui->ledActive->setLook(QLed::Flat);
     ui->ledActive->setShape(QLed::Rectangular);
-    ui->ledActive->setColor(QColor(35,119,246));
+    ui->ledActive->setColor(QColor(35, 119, 246));
     ui->ledActive->off();
     ui->txtPath->setAttribute(Qt::WA_MacShowFocusRect, false);
     ui->cmbGenres->setAttribute(Qt::WA_MacShowFocusRect, false);
     ui->cmbArtists->setAttribute(Qt::WA_MacShowFocusRect, false);
 #if defined(Q_OS_DARWIN)
+    djfw = new DjFilterWidget(p->listDjFilters);
+    djfw->setID(QString::number(i + 1));
+    djfw->setAllGenres(p->allGenres);
+    djfw->setAllArtists(p->allArtists);
+    djfw->setFilter(dj->filters().at(i));
+    itm = new QListWidgetItem(p->listDjFilters);
+    itm->setSizeHint(QSize(0, 75));
+    p->listDjFilters->addItem(itm);
+    p->listDjFilters->setItemWidget(itm, djfw);
+    dj->filters().at(i)->update();
+    connect(djfw, SIGNAL(deleted()), this, SLOT(removeFilter()));
     ui->cmbArtists->setStyleSheet("QComboBox { margin: 0 3 0 3;}");
     ui->cmbGenres->setStyleSheet("QComboBox { margin: 0 3 0 3;}");
-    ui->fraFilterTextBoxes->layout()->setContentsMargins(0,13,13,14);
+    ui->fraFilterTextBoxes->layout()->setContentsMargins(0, 13, 13, 14);
     ui->fraFilterTextBoxes->layout()->setSpacing(-1);
 #endif
 
+    ui->lblFilterValue->setText(QString::null);
+    ui->stackDisplay->setCount(0);
 
-    ui->lblFilterValue->setText( QString::null );
-    ui->sliFilterValue->setValue( 0 );
-    ui->stackDisplay->setCount( 0 );
-
-    ui->stackDisplay->setBarColor(QColor( 196,196,210));
+    ui->stackDisplay->setBarColor(QColor(196, 196, 210));
     ui->widgetClose->setMinimumWidth(0);
     ui->widgetClose->setMaximumWidth(0);
 
-    timer = new QTimer( this );
+    timer = new QTimer(this);
     timer->stop();
     timer->setInterval(300);
     timer->setSingleShot(true);
-    connect( timer,SIGNAL(timeout()),this,SLOT( slotSetFilter() ));
+    connect(timer, SIGNAL(timeout()), this, SLOT(slotSetFilter()));
 
     p->timerSlide = new QTimer(this);
     p->timerSlide->setInterval(10);
-    connect( p->timerSlide, SIGNAL(timeout()), SLOT(timerSlide_timeOut()) );
+    connect(p->timerSlide, SIGNAL(timeout()), SLOT(timerSlide_timeOut()));
+    ui->sliFilterValue->setRange(0, 10);
 }
-
 
 DjFilterWidget::~DjFilterWidget()
 {
@@ -79,7 +87,7 @@ DjFilterWidget::~DjFilterWidget()
     delete p;
 }
 
-void DjFilterWidget::changeEvent(QEvent *e)
+void DjFilterWidget::changeEvent(QEvent* e)
 {
     QWidget::changeEvent(e);
     switch (e->type()) {
@@ -91,20 +99,18 @@ void DjFilterWidget::changeEvent(QEvent *e)
     }
 }
 
-void DjFilterWidget::mousePressEvent(QMouseEvent *event)
+void DjFilterWidget::mousePressEvent(QMouseEvent* event)
 {
 
-     if(ui->widgetClose->geometry().contains(event->pos()))
-     {
-         Q_EMIT deleted();
-     }
-    else{
+    if (ui->widgetClose->geometry().contains(event->pos())) {
+        Q_EMIT deleted();
+    } else {
         slideCloseWidget(false);
-     }
+    }
 }
 void DjFilterWidget::slotSetFilter()
 {
-    qDebug() << Q_FUNC_INFO ;
+    qDebug() << Q_FUNC_INFO;
     timer->stop();
     p->filter->setPath(ui->txtPath->text());
     p->filter->setGenre(ui->cmbGenres->currentText());
@@ -114,12 +120,12 @@ void DjFilterWidget::slotSetFilter()
 
 void DjFilterWidget::setAllArtists(QStringList values)
 {
-    ui->cmbArtists->addItems(values );
+    ui->cmbArtists->addItems(values);
 }
 
 void DjFilterWidget::setAllGenres(QStringList& values)
 {
-    ui->cmbGenres->addItems(values );
+    ui->cmbGenres->addItems(values);
 }
 
 void DjFilterWidget::setID(QString value)
@@ -130,21 +136,22 @@ void DjFilterWidget::setID(QString value)
 void DjFilterWidget::setFilter(Filter* filter)
 {
     timer->stop();
-
+    qDebug() << Q_FUNC_INFO << "START";
     p->filter = filter;
     onFilterCountChanged();
     onFilterMaxUsageChanged();
     ui->txtPath->setText(p->filter->path());
     ui->cmbGenres->setEditText(p->filter->genre());
     ui->cmbArtists->setEditText(p->filter->artist());
-    connect(p->filter,SIGNAL(statusChanged(bool)),
-            this,SLOT(onFilterStatusChanged(bool)));
-    connect(p->filter,SIGNAL(countChanged()),
-            this,SLOT(onFilterCountChanged()));
-    connect(p->filter,SIGNAL(usageChanged()),
-            this,SLOT(onFilterUsageChanged()));
-    connect(p->filter,SIGNAL(maxUsageChanged()),
-            this,SLOT(onFilterMaxUsageChanged()));
+    connect(p->filter, SIGNAL(statusChanged(bool)),
+        this, SLOT(onFilterStatusChanged(bool)));
+    connect(p->filter, SIGNAL(countChanged()),
+        this, SLOT(onFilterCountChanged()));
+    connect(p->filter, SIGNAL(usageChanged()),
+        this, SLOT(onFilterUsageChanged()));
+    connect(p->filter, SIGNAL(maxUsageChanged()),
+        this, SLOT(onFilterMaxUsageChanged()));
+    qDebug() << Q_FUNC_INFO << "END";
 }
 
 Filter* DjFilterWidget::filter()
@@ -154,27 +161,27 @@ Filter* DjFilterWidget::filter()
 
 void DjFilterWidget::on_sliFilterValue_valueChanged(int value)
 {
-    ui->lblFilterValue->setText(QString("%1 %2").arg( value).arg(QString(tr("of"))));
+    ui->lblFilterValue->setText(QString("%1 %2").arg(value).arg(QString(tr("of"))));
     p->filter->setMaxUsage(ui->sliFilterValue->value());
 }
 
-void DjFilterWidget::on_txtPath_textChanged(QString )
+void DjFilterWidget::on_txtPath_textChanged(QString)
 {
-    if ( timer->isActive() )
+    if (timer->isActive())
         timer->stop();
     timer->start();
 }
 
-void DjFilterWidget::on_cmbGenres_editTextChanged(QString )
+void DjFilterWidget::on_cmbGenres_editTextChanged(QString)
 {
-    if ( timer->isActive() )
+    if (timer->isActive())
         timer->stop();
     timer->start();
 }
 
-void DjFilterWidget::on_cmbArtists_editTextChanged(QString )
+void DjFilterWidget::on_cmbArtists_editTextChanged(QString)
 {
-    if ( timer->isActive() )
+    if (timer->isActive())
         timer->stop();
     timer->start();
 }
@@ -196,43 +203,42 @@ void DjFilterWidget::onFilterStatusChanged(bool b)
 
 void DjFilterWidget::onFilterCountChanged()
 {
-    ui->lblCount->setText( QString("%1").arg( p->filter->count()));
+    ui->lblCount->setText(QString("%1").arg(p->filter->count()));
 }
 
 void DjFilterWidget::onFilterMaxUsageChanged()
 {
-    ui->lblFilterValue->setText(QString("%1 %2").arg( p->filter->maxUsage()).arg(tr("of")));
+    ui->lblFilterValue->setText(QString("%1 %2").arg(p->filter->maxUsage()).arg(tr("of")));
     ui->sliFilterValue->setValue(p->filter->maxUsage());
     ui->stackDisplay->setCount(p->filter->maxUsage());
 }
 
 void DjFilterWidget::onFilterUsageChanged()
 {
-    ui->stackDisplay->setCount( p->filter->maxUsage());
+    ui->stackDisplay->setCount(p->filter->maxUsage());
     ui->stackDisplay->setSelected(p->filter->usage());
 }
 
-
-void DjFilterWidget::on_lbl1_linkActivated(const QString &link)
+void DjFilterWidget::on_lbl1_linkActivated(const QString& link)
 {
     QFileDialog dialog(this);
     dialog.setFileMode(QFileDialog::DirectoryOnly);
     if (dialog.exec())
-         ui->txtPath->setText(dialog.selectedFiles().first());
+        ui->txtPath->setText(dialog.selectedFiles().first());
 }
 
 // esc key for exit close
-void DjFilterWidget::keyPressEvent(QKeyEvent *e)
+void DjFilterWidget::keyPressEvent(QKeyEvent* e)
 {
-  if( e->key() == Qt::Key_Escape )
-      slideCloseWidget(false);
-   else
-      QWidget::keyPressEvent( e );
+    if (e->key() == Qt::Key_Escape)
+        slideCloseWidget(false);
+    else
+        QWidget::keyPressEvent(e);
 }
 
 void DjFilterWidget::on_pushClose_clicked()
 {
-    slideCloseWidget( (ui->widgetClose->minimumWidth()<50) );
+    slideCloseWidget((ui->widgetClose->minimumWidth() < 50));
 }
 
 void DjFilterWidget::slideCloseWidget(bool open)
@@ -244,15 +250,13 @@ void DjFilterWidget::slideCloseWidget(bool open)
 void DjFilterWidget::timerSlide_timeOut()
 {
     int mWidth = ui->widgetClose->minimumWidth();
-    if ( p->targetWidth > mWidth ){
-        ui->widgetClose->setMinimumWidth(mWidth+5);
-        ui->widgetClose->setMaximumWidth(mWidth+5);
-    }
-    else if ( p->targetWidth < mWidth ){
-        ui->widgetClose->setMinimumWidth(mWidth-5);
-        ui->widgetClose->setMaximumWidth(mWidth-5);
-    }
-    else{
+    if (p->targetWidth > mWidth) {
+        ui->widgetClose->setMinimumWidth(mWidth + 5);
+        ui->widgetClose->setMaximumWidth(mWidth + 5);
+    } else if (p->targetWidth < mWidth) {
+        ui->widgetClose->setMinimumWidth(mWidth - 5);
+        ui->widgetClose->setMaximumWidth(mWidth - 5);
+    } else {
         p->timerSlide->stop();
     }
 }
