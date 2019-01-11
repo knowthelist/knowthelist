@@ -18,13 +18,12 @@
 #ifndef PLAYERWIDGET_H
 #define PLAYERWIDGET_H
 
-#include <QWidget>
+#include <QLabel>
 #include <QStyle>
 #include <QToolButton>
-#include <QLabel>
 #include <QVBoxLayout>
+#include <QWidget>
 #include <QtCore/QTimer>
-
 
 #include "player.h"
 #include "vumeter.h"
@@ -33,20 +32,19 @@
 #include "trackanalyser.h"
 
 namespace Ui {
-    class PlayerWidget;
+class PlayerWidget;
 }
 
-class PlayerWidget : public QWidget
-{
+class PlayerWidget : public QWidget {
     Q_OBJECT
 public:
-    explicit PlayerWidget(QWidget *parent = 0);
+    explicit PlayerWidget(QWidget* parent = 0);
     ~PlayerWidget();
 
-    enum EqBand  { EQ_Low = 0,
-                   EQ_Mid = 1,
-                   EQ_High = 2
-                   };
+    enum EqBand { EQ_Low = 0,
+        EQ_Mid = 1,
+        EQ_High = 2
+    };
 
     float currentLevelLeft();
     float currentLevelRight();
@@ -55,26 +53,34 @@ public:
     void play();
     void stop();
     void pause();
-    bool isStarted(){ return m_isStarted;}
+    bool isStarted() { return m_isStarted; }
 
-    void setTrackFinishEmitTime( const int sec );
-    int TrackFinishEmitTime() { return mTrackFinishEmitTime;}
+    void setTrackFinishEmitTime(const int sec);
+    int TrackFinishEmitTime() { return mTrackFinishEmitTime; }
     void setVolume(double volume);
     void setGain(double gain);
-    void setSkipSilentEnd(bool checked) {m_skipSilentEnd=checked; setPositionMarkers();}
-    void setSkipSilentBegin(bool checked) {m_skipSilentBegin=checked; setPositionMarkers();}
+    void setSkipSilentEnd(bool checked)
+    {
+        m_skipSilentEnd = checked;
+        setPositionMarkers();
+    }
+    void setSkipSilentBegin(bool checked)
+    {
+        m_skipSilentBegin = checked;
+        setPositionMarkers();
+    }
 
- public Q_SLOTS:
-    void loadTrack( Track* );
+public Q_SLOTS:
+    void loadTrack(Track*);
     void analyseGainFinished();
     void setEqualizer(EqBand, int);
-    void setInfo(QPair<int,int> info);
+    void setInfo(QPair<int, int> info);
 
- Q_SIGNALS:
+Q_SIGNALS:
     void trackFinished();
     void aboutFinished();
-    void trackDropped( Track* );
-    void trackPlayed( Track* );
+    void trackDropped(Track*);
+    void trackPlayed(Track*);
     void forwardPressed();
     void rewindPressed();
     void statusChanged(bool);
@@ -85,7 +91,7 @@ private Q_SLOTS:
 
     void on_butCue_clicked();
     void on_sliPosition_actionTriggered(int action);
-    void updateTimeAndPositionDisplay(bool isPassive=true);
+    void updateTimeAndPositionDisplay(bool isPassive = true);
     void playerFinished();
     void playerError();
     void playerLoaded();
@@ -97,34 +103,32 @@ private Q_SLOTS:
     void on_butRew_clicked();
     void on_butFwd_clicked();
 
-
 protected:
-    //void mouseMoveEvent(QMouseEvent *event);
     VUMeter* vuMeter;
 
     long songTime;
 
 private:
     //ToDo: move privates to struct Private
-    Ui::PlayerWidget *ui;
-    QToolButton *initButton(QStyle::StandardPixmap icon, const QString & tip,
-                            QObject *dstobj, const char *slot_method, QLayout *layout);
+    Ui::PlayerWidget* ui;
+    QToolButton* initButton(QStyle::StandardPixmap icon, const QString& tip,
+        QObject* dstobj, const char* slot_method, QLayout* layout);
 
-   void createUI(QBoxLayout *appLayout);
-   void resizeEvent( QResizeEvent* e );
-   void drawTitle();
+    void createUI(QBoxLayout* appLayout);
+    void resizeEvent(QResizeEvent* e);
+    void drawTitle();
 
-    Player *player;
-    TrackAnalyser *trackanalyser;
+    Player* player;
+    TrackAnalyser* trackanalyser;
     float m_level;
-    QLabel *m_positionLabel;
-    QLabel *m_volumeLabel;
+    QLabel* m_positionLabel;
+    QLabel* m_volumeLabel;
 
     QTimer* timerLevel;
     QTimer* timerPosition;
-    void dropEvent( QDropEvent* );
+    void dropEvent(QDropEvent*);
     void dragEnterEvent(QDragEnterEvent*);
-    void dragMoveEvent(QDragMoveEvent *);
+    void dragMoveEvent(QDragMoveEvent*);
     void setPositionMarkers();
     int mTrackFinishEmitTime;
     Track* m_CurrentTrack;
@@ -134,12 +138,7 @@ private:
     bool m_skipSilentEnd;
     bool m_skipSilentBegin;
 
-    struct PlayerWidgetPrivate *p;
-
+    struct PlayerWidgetPrivate* p;
 };
 
 #endif // PLAYERWIDGET_H
-
-
-
-

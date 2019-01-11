@@ -30,7 +30,7 @@
 }
 QLineEdit {
     background:#606060;
-    color: #a4a4a4;
+    color: #c4c4c4;
     selection-color: white;   
     border: 1px groove gray;
     border-radius: 0px;

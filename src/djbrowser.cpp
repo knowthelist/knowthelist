@@ -79,6 +79,17 @@ DjBrowser::DjBrowser(QWidget* parent)
     pushAddFilter->setToolTip(tr("Add a new record case for current AutoDj"));
     connect(pushAddFilter, SIGNAL(clicked()), this, SLOT(addFilter()));
 
+    QPushButton* pushSave = new QPushButton();
+    pushSave->setGeometry(QRect(1, 1, 60, 25));
+    pushSave->setMaximumWidth(60);
+    pushSave->setMinimumWidth(60);
+    pushSave->setText(QString::fromUtf8("\U0001f4be"));
+    pushSave->setFont(pushFont);
+
+    pushSave->setStyleSheet("QPushButton { border: none; padding-top: -3px; margin-left: 8px;max-height: 20px; margin-right: 28px;}");
+    pushSave->setToolTip(tr("Save all settings"));
+    connect(pushSave, SIGNAL(clicked()), this, SLOT(saveSettings()));
+
     p->listDjFilters = new QListWidget();
     p->listDjs = new QListWidget();
     p->listDjFilters->setAttribute(Qt::WA_MacShowFocusRect, false);
@@ -98,11 +109,12 @@ DjBrowser::DjBrowser(QWidget* parent)
     headWidgetLeft->setMinimumHeight(20);
     headWidgetLeft->setLayout(headWidgetLeftLayout);
 
-    QVBoxLayout* headWidgetRightLayout = new QVBoxLayout;
+    QHBoxLayout* headWidgetRightLayout = new QHBoxLayout;
     headWidgetRightLayout->setMargin(0);
     headWidgetRightLayout->setSpacing(1);
     headWidgetRightLayout->setAlignment(Qt::AlignRight);
     headWidgetRightLayout->addWidget(pushAddFilter);
+    headWidgetRightLayout->addWidget(pushSave);
 
     QWidget* headWidgetRight = new QWidget(this);
     headWidgetRight->setMaximumHeight(20);
@@ -144,8 +156,6 @@ DjBrowser::DjBrowser(QWidget* parent)
     p->splitter->setStretchFactor(0, 5);
     p->splitter->setStretchFactor(1, 9);
     p->splitter->restoreState(settings.value("SplitterDjBrowser").toByteArray());
-
-    //ToDo: restore last DJ from settings
 }
 
 DjBrowser::~DjBrowser()
@@ -166,22 +176,24 @@ void DjBrowser::saveSettings()
     for (int d = 0; d < p->listDjs->count(); d++) {
         settings.beginGroup(QString::number(d));
         Dj* dj = ((DjWidget*)p->listDjs->itemWidget(p->listDjs->item(d)))->dj();
-        settings.setValue("Name", dj->name);
-        settings.setValue("FilterCount", dj->filters().count());
+        if (dj != nullptr) {
+            settings.setValue("Name", dj->name);
+            settings.setValue("FilterCount", dj->filters().count());
 
-        QList<Filter*> f = dj->filters();
+            QList<Filter*> f = dj->filters();
 
-        settings.beginGroup("Filter");
-        for (int i = 0; i < f.count(); i++) {
-            settings.beginGroup(QString::number(i));
-            settings.setValue("Path", f.at(i)->path());
-            settings.setValue("Genre", f.at(i)->genre());
-            settings.setValue("Artist", f.at(i)->artist());
-            settings.setValue("Value", QString::number(f.at(i)->maxUsage()));
+            settings.beginGroup("Filter");
+            for (int i = 0; i < f.count(); i++) {
+                settings.beginGroup(QString::number(i));
+                settings.setValue("Path", f.at(i)->path());
+                settings.setValue("Genre", f.at(i)->genre());
+                settings.setValue("Artist", f.at(i)->artist());
+                settings.setValue("Value", QString::number(f.at(i)->maxUsage()));
+                settings.endGroup();
+            }
+            settings.endGroup();
             settings.endGroup();
         }
-        settings.endGroup();
-        settings.endGroup();
     }
     settings.endGroup();
 }
@@ -207,7 +219,8 @@ void DjBrowser::updateList()
     for (int d = 0; d < maxDj; d++) {
         settings.beginGroup(QString::number(d));
         dj = new Dj();
-        dj->name = settings.value("Name", "Dj%1").toString().arg(d + 1);
+        QString djID = QString("Dj%1").arg(d + 1);
+        dj->name = settings.value("Name", djID).toString();
 
         djw = new DjWidget(p->listDjs);
 
@@ -250,7 +263,7 @@ void DjBrowser::updateList()
     settings.endGroup();
     p->listDjs->setCurrentRow(0);
 
-    DjWidget* djWidget = (DjWidget*)p->listDjs->itemWidget(p->listDjs->currentItem());
+    DjWidget* djWidget = static_cast<DjWidget*>(p->listDjs->itemWidget(p->listDjs->currentItem()));
     djWidget->activateDJ();
     djWidget->clicked();
     p->listDjs->setItemSelected(p->listDjs->currentItem(), false);
@@ -259,6 +272,7 @@ void DjBrowser::updateList()
 
 void DjBrowser::addDj()
 {
+    saveSettings();
     QSettings settings;
     settings.setValue("countDJ", p->listDjs->count() + 1);
     updateList();
@@ -299,17 +313,17 @@ void DjBrowser::loadDj()
 
     DjFilterWidget* djfw;
     QListWidgetItem* itm;
+    int maxFilters = 0;
 
     // deactivate all Djs
     for (int d = 0; d < p->listDjs->count(); d++)
-        ((DjWidget*)p->listDjs->itemWidget(p->listDjs->item(d)))->deactivateDJ();
+        static_cast<DjWidget*>(p->listDjs->itemWidget(p->listDjs->item(d)))->deactivateDJ();
 
     // Activate current selected DJ
     if (DjWidget* djWidget = qobject_cast<DjWidget*>(QObject::sender())) {
 
         djWidget->activateDJ();
         Dj* dj = djWidget->dj();
-        Q_EMIT selectionChanged(dj);
 
         // Filters
         if (dj->filters().count() == 0) {
@@ -318,8 +332,14 @@ void DjBrowser::loadDj()
             f->setMaxUsage(4);
             dj->addFilter(f);
         }
+
+        Q_EMIT selectionChanged(dj);
         qDebug() << Q_FUNC_INFO << "name=" << dj->name << "filters=" << dj->filters().count();
-        for (int i = 0; i < dj->filters().count(); i++) {
+
+        maxFilters = dj->filters().count();
+        for (int i = 0; i < maxFilters; i++) {
+            //
+
             djfw = new DjFilterWidget(p->listDjFilters);
             djfw->setID(QString::number(i + 1));
             djfw->setAllGenres(p->allGenres);
@@ -329,13 +349,16 @@ void DjBrowser::loadDj()
             itm->setSizeHint(QSize(0, 75));
             p->listDjFilters->addItem(itm);
             p->listDjFilters->setItemWidget(itm, djfw);
-            dj->filters().at(i)->update();
             connect(djfw, SIGNAL(deleted()), this, SLOT(removeFilter()));
         }
 
         dj->setActiveFilterIdx(0);
         p->currentDj = dj;
         p->currentDjw = djWidget;
+    }
+
+    for (int i = 0; i < maxFilters; i++) {
+        p->currentDj->filters().at(i)->update();
     }
     // give a chance to update the labels
     qApp->processEvents();
@@ -346,6 +369,7 @@ void DjBrowser::addFilter()
     Filter* f = new Filter();
     f->setMaxUsage(4);
     p->currentDj->addFilter(f);
+    saveSettings();
     p->currentDjw->clicked();
 }
 

@@ -17,8 +17,8 @@
 #ifndef PLAYER_H
 #define PLAYER_H
 
-#include <QtCore>
 #include <QWidget>
+#include <QtCore>
 
 #define GST_DISABLE_LOADSAVE 1
 #define GST_DISABLE_REGISTRY 1
@@ -26,62 +26,60 @@
 
 #include <gst/gst.h>
 
-class Player : public QWidget
-{
+class Player : public QWidget {
     Q_OBJECT
 public:
-    Player(QWidget *parent = nullptr);
+    Player(QWidget* parent = nullptr);
     ~Player();
 
-     bool prepare();
-     bool ready();
-     bool canOpen(QString mime);
-     void open(QUrl url);
-     void play();
-     void stop();
-     void pause();
-     bool close();
-     void setPosition(QTime);
-     QTime position();
-     double volume();
-     void setVolume(double);
-     void setGain(double);
-     void setEqualizer(QString, double);
+    bool prepare();
+    bool ready();
+    bool canOpen(QString mime);
+    void open(QUrl url);
+    void play();
+    void stop();
+    void pause();
+    bool close();
+    void setPosition(QTime);
+    QTime position();
+    double volume();
+    void setVolume(double);
+    void setGain(double);
+    void setEqualizer(QString, double);
 
-     QTime length();
-     bool isPlaying();
-     bool mediaPlayable();
-     QString lastError;
+    QTime length();
+    bool isPlaying();
+    bool mediaPlayable();
+    QString lastError;
 
-     double levelLeft();
-     double levelRight();
-     double levelOutLeft();
-     double levelOutRight();
+    double levelLeft();
+    double levelRight();
+    double levelOutLeft();
+    double levelOutRight();
 
-        void newpad (GstElement *decodebin, GstPad *pad, gpointer data);
-        static GstBusSyncReply  bus_cb (GstBus *bus, GstMessage *msg, gpointer data);
- Q_SIGNALS:
-        void finish();
-        void error();
-        void levelChanged();
-        void positionChanged();
-        void loadFinished();
+    void newpad(GstElement* decodebin, GstPad* pad, gpointer data);
+    static GstBusSyncReply bus_cb(GstBus* bus, GstMessage* msg, gpointer data);
+Q_SIGNALS:
+    void finish();
+    void error();
+    void levelChanged();
+    void positionChanged();
+    void loadFinished();
 
- private slots:
-        void loadThreadFinished();
-        void messageReceived(GstMessage* message);
+private slots:
+    void loadThreadFinished();
+    void messageReceived(GstMessage* message);
 
- private:
+private:
+    struct PlayerPrivate* p;
 
-        struct PlayerPrivate *p;
-
-        GstElement *pipeline;
-        GstBus *bus;
-        gint64 Gstart, Glength;
-        void setLink(int, QUrl&);
-        void asyncOpen(QUrl url);
-        void cleanup();
-        void sync_set_state(GstElement*, GstState);
-   };
+    GstElement* pipeline;
+    GstBus* bus;
+    gint64 Gstart, Glength;
+    void setLink(int, QUrl&);
+    void asyncOpen(QUrl url);
+    void cleanup();
+    void sync_set_state(GstElement*, GstState);
+};
 
 #endif

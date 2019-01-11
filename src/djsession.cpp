@@ -122,8 +122,12 @@ void DjSession::searchTracks()
   */
 Track* DjSession::getRandomTrack()
 {
-    Track* track = 0;
+    if (p->currentDj == nullptr)
+        return nullptr;
+
+    Track* track = nullptr;
     int i = 0;
+
     Filter* f = p->currentDj->requestFilter();
     int maxCount = 0;
 
@@ -222,7 +226,7 @@ void DjSession::playDefaultList()
 
 void DjSession::on_dj_filterChanged(Filter* f)
 {
-    //qDebug() << Q_FUNC_INFO ;
+    qDebug() << Q_FUNC_INFO;
     int cnt = p->database->getCount(f->path(), f->genre(), f->artist());
     f->setLength(p->database->lastLengthSum());
     f->setCount(cnt);

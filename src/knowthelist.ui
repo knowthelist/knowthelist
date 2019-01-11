@@ -345,7 +345,8 @@ color: #ffffff;
 background-color: #444444;
  border: 1px solid #cccccc;
  border-radius: 12px;
-}</string>
+}
+</string>
   </property>
   <widget class="QWidget" name="centralwidget">
    <property name="styleSheet">
@@ -7633,6 +7634,12 @@ p, li { white-space: pre-wrap; }
    <container>1</container>
   </customwidget>
   <customwidget>
+   <class>CustomDial</class>
+   <extends>QWidget</extends>
+   <header>customdial.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
    <class>PlayerWidget</class>
    <extends>QWidget</extends>
    <header>playerwidget.h</header>
@@ -7648,12 +7655,6 @@ p, li { white-space: pre-wrap; }
    <class>FancyTabWidget</class>
    <extends>QWidget</extends>
    <header>fancytabwidget.h</header>
-   <container>1</container>
-  </customwidget>
-  <customwidget>
-   <class>CustomDial</class>
-   <extends>QWidget</extends>
-   <header>customdial.h</header>
    <container>1</container>
   </customwidget>
  </customwidgets>

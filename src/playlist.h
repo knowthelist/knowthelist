@@ -15,7 +15,6 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-
 #ifndef PLAYLIST_H
 #define PLAYLIST_H
 
@@ -23,124 +22,124 @@
 
 #include <QTreeWidget>
 
-class Playlist: public QTreeWidget
-{
-  Q_OBJECT
-  public:
-      Playlist(QWidget* parent=0);
-      ~Playlist();
-      //virtual void keyPressEvent   (   QKeyEvent* e   );
-      //virtual bool isExecuteArea( const QPoint& point );
-      
+class Playlist : public QTreeWidget {
+    Q_OBJECT
+public:
+    Playlist(QWidget* parent = nullptr);
+    ~Playlist();
+    //virtual void keyPressEvent   (   QKeyEvent* e   );
+    //virtual bool isExecuteArea( const QPoint& point );
 
-      enum Mode  { Tracklist = 0,
-                   Playlist_Single = 1,
-                   Playlist_Multi = 2
-                 };
+    enum Mode { Tracklist = 0,
+        Playlist_Single = 1,
+        Playlist_Multi = 2
+    };
 
-      /** Add a songs to the plalist*/
-      void addTrack( QUrl file, PlaylistItem *after );
-      void appendSong( Track *track );
-      void addTrack( Track *track, PlaylistItem *after );
-      void appendSong( QString songFileName );
-      void appendList( QList<QUrl>,  PlaylistItem *after );
-      void appendTracks( const QList<Track*> tracks, PlaylistItem* after );
+    /** Add a songs to the plalist*/
+    void addTrack(QUrl file, PlaylistItem* after);
+    void appendSong(Track* track);
+    void addTrack(Track* track, PlaylistItem* after);
+    void appendSong(QString songFileName);
+    void appendList(QList<QUrl>, PlaylistItem* after);
+    void appendTracks(const QList<Track*> tracks, PlaylistItem* after);
 
-      void saveXML( const QString& ) const;
-      void loadXML( const QString& );
+    void saveXML(const QString&) const;
+    void loadXML(const QString&);
 
-      //----------------
-      PlaylistItem *firstTrack() const { return firstChild(); }
-      PlaylistItem *nextTrack() const { return nextPlaylistItem ; }
-      PlaylistItem *currentTrack() const { return currentPlaylistItem; }
-      PlaylistItem *dragTrack() const { return (PlaylistItem*)this->currentItem(); }
-      PlaylistItem *newTrack() const { return newPlaylistItem ; }
-      QList<Track*> allTracks();
-      bool isCurrentList() const { return m_isCurrentList; }
-      void setIsCurrentList( bool b ) {m_isCurrentList = b; handleChanges();}
+    //----------------
+    PlaylistItem* firstTrack() const { return firstChild(); }
+    PlaylistItem* nextTrack() const { return nextPlaylistItem; }
+    PlaylistItem* currentTrack() const { return currentPlaylistItem; }
+    PlaylistItem* dragTrack() const { return (PlaylistItem*)this->currentItem(); }
+    PlaylistItem* newTrack() const { return newPlaylistItem; }
+    QList<Track*> allTracks();
+    bool isCurrentList() const { return m_isCurrentList; }
+    void setIsCurrentList(bool b)
+    {
+        m_isCurrentList = b;
+        handleChanges();
+    }
 
-      bool isEmpty() const { return this->topLevelItemCount() == 0; }
-      bool isFirst() const { return this->topLevelItemCount() == 1; }
+    bool isEmpty() const { return this->topLevelItemCount() == 0; }
+    bool isFirst() const { return this->topLevelItemCount() == 1; }
 
-      void setPlaylistMode(Mode);
-      void setAutoClearOn( bool b ) {autoClearOn = b;}
+    void setPlaylistMode(Mode);
+    void setAutoClearOn(bool b) { autoClearOn = b; }
 
-      QString defaultPlaylistPath();
-      static void showTrackInfo( Track* bundle );
-      PlaylistItem* lastChild() const {return (PlaylistItem*)topLevelItem(topLevelItemCount()-1);}
-      int countTrack() const {return topLevelItemCount();}
+    QString defaultPlaylistPath();
+    static void showTrackInfo(Track* bundle);
+    PlaylistItem* lastChild() const { return (PlaylistItem*)topLevelItem(topLevelItemCount() - 1); }
+    int countTrack() const { return topLevelItemCount(); }
 
-      //ToDo: what is for private only? Sort!
+    //ToDo: what is for private only? Sort!
 
+protected:
+    void keyPressEvent(QKeyEvent* event);
+    void mousePressEvent(QMouseEvent* event);
+    void mouseMoveEvent(QMouseEvent* event);
+    void mouseReleaseEvent(QMouseEvent* event);
+    void mouseDoubleClickEvent(QMouseEvent* event);
+    void dragEnterEvent(QDragEnterEvent* event);
+    void dropEvent(QDropEvent* event);
+    void dragMoveEvent(QDragMoveEvent* event);
+    void dragLeaveEvent(QDragLeaveEvent* event);
+    void paintEvent(QPaintEvent* event); //For better DropTarget
 
+    QMimeData* mimeData;
+    QDrag* drag;
+    QRect dropSite;
+    Qt::DropAction dropAction;
+    bool showDropHighlighter;
 
-  protected:
-      void keyPressEvent (QKeyEvent * event);
-      void mousePressEvent(QMouseEvent *event);
-      void mouseMoveEvent(QMouseEvent *event);
-      void mouseReleaseEvent(QMouseEvent *event);
-      void mouseDoubleClickEvent(QMouseEvent *event);
-      void dragEnterEvent(QDragEnterEvent *event);
-      void dropEvent(QDropEvent *event);
-      void dragMoveEvent (QDragMoveEvent *event);
-      void dragLeaveEvent (QDragLeaveEvent *event);
-      void paintEvent ( QPaintEvent* event ); //For better DropTarget
+public Q_SLOTS:
+    void appendList(QList<QUrl>);
+    void appendTracks(const QList<Track*> tracks);
+    void changeTracks(const QList<Track*> tracks);
+    void addCurrentTrack(Track*);
+    void addNextTrack(Track*);
+    void removeSelectedItems();
+    void setPlaying(bool plays) { m_isPlaying = plays; }
+    bool isPlaying() { return m_isPlaying; }
+    void setAlternateMax(int max)
+    {
+        m_alternateMax = max;
+        fillNoColumn();
+    }
+    void skipForward();
+    void skipRewind();
+    void onRatingChanged(float);
 
+Q_SIGNALS:
+    void currentTrackChanged(Track*);
+    void trackDoubleClicked(Track*);
+    void trackPropertyChanged(Track*);
+    void trackSelected(Track*);
+    void wantSearch(QString);
+    void wantLoad(Track*, QString);
+    void countChanged(int);
+    void countChanged(QList<Track*>);
 
+private:
+    void setCurrentPlaylistItem(PlaylistItem*);
+    void setNextPlaylistItem(PlaylistItem*);
+    void removePlaylistItem(PlaylistItem*);
+    void checkCurrentItem();
 
-      QMimeData *mimeData;
-      QDrag *drag;
-      QRect dropSite;
-      Qt::DropAction dropAction;
-      bool showDropHighlighter;
+    void updateNextPlaylistItem();
+    void updateCurrentPlaylistItem();
+    void updatePlaylistItems();
 
-    public Q_SLOTS:
-     void appendList( QList<QUrl> );
-     void appendTracks( const QList<Track*> tracks);
-     void changeTracks( const QList<Track*> tracks);
-     void addCurrentTrack( Track* );
-     void addNextTrack( Track* );
-     void removeSelectedItems();
-     void setPlaying(bool plays) { m_isPlaying = plays; }
-     bool isPlaying() { return m_isPlaying; }
-     void setAlternateMax(int max) { m_alternateMax = max; fillNoColumn(); }
-     void skipForward();
-     void skipRewind();
-     void onRatingChanged(float);
+    int m_recursionCount;
+    int mDropVisualizerWidth;
+    int m_alternateMax;
+    void fillNoColumn();
+    void performDrag();
+    QTimer* timer;
+    QTimer* timerDragLock;
+    bool ignoreNextRelease;
+    bool m_dragLocked;
 
-        Q_SIGNALS:
-          void  currentTrackChanged(Track*);
-          void  trackDoubleClicked( Track* );
-          void  trackPropertyChanged( Track* );
-          void  trackSelected( Track* );
-          void  wantSearch(QString);
-          void  wantLoad(Track*, QString);
-          void  countChanged(int);
-          void  countChanged(QList<Track*>);
-
-      
-   private:
-    
-          void setCurrentPlaylistItem( PlaylistItem* );
-          void setNextPlaylistItem( PlaylistItem* );
-          void removePlaylistItem( PlaylistItem* );
-          void checkCurrentItem();
-
-          void updateNextPlaylistItem();
-          void updateCurrentPlaylistItem();
-          void updatePlaylistItems();
-
-      int  m_recursionCount;
-      int mDropVisualizerWidth;
-      int m_alternateMax;
-      void fillNoColumn();
-      void performDrag();
-      QTimer *timer;
-      QTimer *timerDragLock;
-      bool ignoreNextRelease;
-      bool m_dragLocked;
-
-      QPoint startPos;
+    QPoint startPos;
 
     bool m_isPlaying;
     bool m_isCurrentList;
@@ -149,35 +148,30 @@ class Playlist: public QTreeWidget
 
     bool autoClearOn;
 
-
-    PlaylistItem *nextPlaylistItem ;    //the item to be played after the current track
-    PlaylistItem *previousPlaylistItem;
-    PlaylistItem *newPlaylistItem ;     //the latest item
-    PlaylistItem *currentPlaylistItem; //the item that is playing
-    PlaylistItem *m_marker;             //the item that has the drag/drop marker under it
+    PlaylistItem* nextPlaylistItem; //the item to be played after the current track
+    PlaylistItem* previousPlaylistItem;
+    PlaylistItem* newPlaylistItem; //the latest item
+    PlaylistItem* currentPlaylistItem; //the item that is playing
+    PlaylistItem* m_marker; //the item that has the drag/drop marker under it
 
     QColor m_CurrentTrackColor;
     QColor m_NextTrackColor;
 
     Mode m_PlaylistMode;
 
-      inline PlaylistItem *firstChild() const { return (PlaylistItem*)topLevelItem(0); }
-      inline PlaylistItem *lastItem() const { return lastChild(); }
+    inline PlaylistItem* firstChild() const { return (PlaylistItem*)topLevelItem(0); }
+    inline PlaylistItem* lastItem() const { return lastChild(); }
 
-      
-    private Q_SLOTS:
+private Q_SLOTS:
 
-        void showContextMenu( PlaylistItem *, int );
-        void slotItemClicked(QTreeWidgetItem*,int);
-        void slotItemDoubleClicked (QTreeWidgetItem *sender, int column );
-        void emitClicked();
-        void timeoutDragLock();
-        void handleChanges();
-        void slotItemChanged( QTreeWidgetItem * current, QTreeWidgetItem * previous );
-        void dummySlot();
-        
+    void showContextMenu(PlaylistItem*, int);
+    void slotItemClicked(QTreeWidgetItem*, int);
+    void slotItemDoubleClicked(QTreeWidgetItem* sender, int column);
+    void emitClicked();
+    void timeoutDragLock();
+    void handleChanges();
+    void slotItemChanged(QTreeWidgetItem* current, QTreeWidgetItem* previous);
+    void dummySlot();
 };
 
-
-      
 #endif

@@ -16,28 +16,27 @@
  */
 
 #include "playerwidget.h"
-#include "ui_playerwidget.h"
 #include "player.h"
 #include "trackanalyser.h"
+#include "ui_playerwidget.h"
 #include "vumeter.h"
 
 #include <QDragEnterEvent>
 
-struct PlayerWidgetPrivate
-{
+struct PlayerWidgetPrivate {
     bool isEndAnnounced;
 };
 
-PlayerWidget::PlayerWidget(QWidget *parent) :
-    QWidget(parent),
-    ui(new Ui::PlayerWidget),
-    songTime(0),
-    mTrackFinishEmitTime(12000),
-    m_CurrentTrack(0),
-    remainCueTime(0),
-    m_isStarted(false),
-    m_isHanging(false),
-    p(new PlayerWidgetPrivate)
+PlayerWidget::PlayerWidget(QWidget* parent)
+    : QWidget(parent)
+    , ui(new Ui::PlayerWidget)
+    , songTime(0)
+    , mTrackFinishEmitTime(12000)
+    , m_CurrentTrack(0)
+    , remainCueTime(0)
+    , m_isStarted(false)
+    , m_isHanging(false)
+    , p(new PlayerWidgetPrivate)
 {
     ui->setupUi(this);
 
@@ -56,47 +55,47 @@ PlayerWidget::PlayerWidget(QWidget *parent) :
     ui->butPlay->setIconSize(QSize(26, 26));
     ui->butCue->setChecked(false);
 
-   vuMeter = ui->vuMeter;
-   vuMeter->setOrientation( Qt::Horizontal );
-   vuMeter->LevelColorNormal.setRgb( 112,146,190 );
-   vuMeter->LevelColorHigh.setRgb( 218,59,9 );
-   vuMeter->LevelColorOff.setRgb( 31,45,65 );
-   vuMeter->setLinesPerSegment( 2 );
-   vuMeter->setSpacesBetweenSegments( 1 );
-   vuMeter->setSegmentsPerPeak( 2 );
+    vuMeter = ui->vuMeter;
+    vuMeter->setOrientation(Qt::Horizontal);
+    vuMeter->LevelColorNormal.setRgb(112, 146, 190);
+    vuMeter->LevelColorHigh.setRgb(218, 59, 9);
+    vuMeter->LevelColorOff.setRgb(31, 45, 65);
+    vuMeter->setLinesPerSegment(2);
+    vuMeter->setSpacesBetweenSegments(1);
+    vuMeter->setSegmentsPerPeak(2);
 
-   timerLevel = new QTimer(this);
-   connect( timerLevel, SIGNAL(timeout()), SLOT(timerLevel_timeOut()) );
+    timerLevel = new QTimer(this);
+    connect(timerLevel, SIGNAL(timeout()), SLOT(timerLevel_timeOut()));
 
-   timerPosition = new QTimer(this);
-   connect( timerPosition, SIGNAL(timeout()), SLOT(timerPosition_timeOut()) );
+    timerPosition = new QTimer(this);
+    connect(timerPosition, SIGNAL(timeout()), SLOT(timerPosition_timeOut()));
 
-   connect(player, SIGNAL(finish()), this, SLOT(playerFinished()));
-   connect(player, SIGNAL(error()), this, SLOT(playerError()));
-   connect(player, SIGNAL(loadFinished()), this, SLOT(playerLoaded()));
+    connect(player, SIGNAL(finish()), this, SLOT(playerFinished()));
+    connect(player, SIGNAL(error()), this, SLOT(playerError()));
+    connect(player, SIGNAL(loadFinished()), this, SLOT(playerLoaded()));
 
-   ui->lblTitle->setText( "" );
-   ui->lblInfo->setText( "" );
+    ui->lblTitle->setText("");
+    ui->lblInfo->setText("");
 
-   QFont font = ui->lblInfo->font();
-   QFont fonttime = ui->lblTime->font();
+    QFont font = ui->lblInfo->font();
+    QFont fonttime = ui->lblTime->font();
 #if defined(Q_OS_DARWIN)
-   int newSize = font.pointSize()-4;
-   fonttime.setPointSize(fonttime.pointSize()+2);
+    int newSize = font.pointSize() - 4;
+    fonttime.setPointSize(fonttime.pointSize() + 2);
 #else
-   int newSize = font.pointSize()-1;
+    int newSize = font.pointSize() - 1;
 #endif
-   font.setPointSize(newSize);
-   ui->lblInfo->setFont(font);
-   ui->lblTime->setFont(fonttime);
-   ui->lblTimeRemain->setFont(fonttime);
+    font.setPointSize(newSize);
+    ui->lblInfo->setFont(font);
+    ui->lblTime->setFont(fonttime);
+    ui->lblTimeRemain->setFont(fonttime);
 
-   m_isStarted = false;
-   setAcceptDrops( true );
-   this->stop();
+    m_isStarted = false;
+    setAcceptDrops(true);
+    this->stop();
 
-   trackanalyser = new TrackAnalyser(this);
-   connect(trackanalyser, SIGNAL(finishGain()),this,SLOT(analyseGainFinished()));
+    trackanalyser = new TrackAnalyser(this);
+    connect(trackanalyser, SIGNAL(finishGain()), this, SLOT(analyseGainFinished()));
 }
 
 PlayerWidget::~PlayerWidget()
@@ -109,48 +108,46 @@ PlayerWidget::~PlayerWidget()
     delete p;
 }
 
-
 void PlayerWidget::setVolume(double volume)
 {
-  player->setVolume(volume);
+    player->setVolume(volume);
 }
 
 void PlayerWidget::setGain(double gain)
 {
-  player->setGain(gain);
+    player->setGain(gain);
 }
 
-void PlayerWidget::setInfo(QPair<int,int> info)
+void PlayerWidget::setInfo(QPair<int, int> info)
 {
     QString strTrack = (info.first > 1) ? tr("Tracks") : tr("Track");
     ui->lblInfo->setText(QString("%1 %2       %3 %4")
-                         .arg(info.first)
-                         .arg(strTrack)
-                         .arg(Track::prettyTime( info.second))
-                         .arg(tr("Hours")));
+                             .arg(info.first)
+                             .arg(strTrack)
+                             .arg(Track::prettyTime(info.second))
+                             .arg(tr("Hours")));
 }
 
 void PlayerWidget::setEqualizer(EqBand band, int value)
 {
     //ranging from -24.0 to +12.0.
-    player->setEqualizer("band"+QString::number(band), (value - 240) / 10.0);
+    player->setEqualizer("band" + QString::number(band), (value - 240) / 10.0);
 }
 
 void PlayerWidget::setPositionMarkers()
 {
-    if ( trackanalyser->finished()) {
-        if (m_skipSilentEnd){
-            qDebug() << Q_FUNC_INFO <<"endPosition:"<<trackanalyser->endPosition();
-            qDebug() << Q_FUNC_INFO <<"length:"<<trackanalyser->length();
-            remainCueTime=trackanalyser->endPosition().msecsTo(trackanalyser->length());
-        }
-        else
+    if (trackanalyser->finished()) {
+        if (m_skipSilentEnd && trackanalyser->endPosition() > QTime(0, 0)) {
+            qDebug() << Q_FUNC_INFO << "endPosition:" << trackanalyser->endPosition();
+            qDebug() << Q_FUNC_INFO << "length:" << trackanalyser->length();
+            remainCueTime = trackanalyser->endPosition().msecsTo(trackanalyser->length());
+        } else
             remainCueTime = 0;
 
-        ui->txtCue->setText("-" + QString::number(remainCueTime/1000));
+        ui->txtCue->setText("-" + QString::number(remainCueTime / 1000));
     }
 
-    if ( !m_isStarted && m_skipSilentBegin && trackanalyser->finished()) {
+    if (!m_isStarted && m_skipSilentBegin && trackanalyser->finished()) {
         player->setPosition(trackanalyser->startPosition());
         ui->butCue->setChecked(true);
     }
@@ -158,18 +155,17 @@ void PlayerWidget::setPositionMarkers()
 
 void PlayerWidget::play()
 {
-  m_isStarted = true;
-  if (m_CurrentTrack){
-    ui->butPlay->setIcon(QIcon(":pause.png"));
-    ui->butPlay->setChecked(true);
-    player->play();
-    ui->butCue->setChecked(false);
-    timerLevel->start( 50 );
-    timerPosition->start( 100 );
-    Q_EMIT statusChanged(m_isStarted);
-  }
-  else
-      m_isHanging=true;
+    m_isStarted = true;
+    if (m_CurrentTrack) {
+        ui->butPlay->setIcon(QIcon(":pause.png"));
+        ui->butPlay->setChecked(true);
+        player->play();
+        ui->butCue->setChecked(false);
+        timerLevel->start(50);
+        timerPosition->start(100);
+        Q_EMIT statusChanged(m_isStarted);
+    } else
+        m_isHanging = true;
 }
 
 void PlayerWidget::pause()
@@ -182,7 +178,7 @@ void PlayerWidget::pause()
     timerPosition->stop();
     vuMeter->reset();
     Q_EMIT statusChanged(m_isStarted);
-    Q_EMIT levelChanged(0,0);
+    Q_EMIT levelChanged(0, 0);
 }
 
 void PlayerWidget::stop()
@@ -196,28 +192,26 @@ void PlayerWidget::stop()
     timerPosition->stop();
     vuMeter->reset();
     Q_EMIT statusChanged(m_isStarted);
-    Q_EMIT levelChanged(0,0);
+    Q_EMIT levelChanged(0, 0);
 }
 
 void PlayerWidget::on_butPlay_clicked()
 {
-    if ( m_isStarted ) {
-      this->pause();
-    }
-    else {
-      this->play();
+    if (m_isStarted) {
+        this->pause();
+    } else {
+        this->play();
     }
 }
 
 void PlayerWidget::analyseGainFinished()
 {
-    qDebug() << Q_FUNC_INFO <<":"<<objectName();
+    qDebug() << Q_FUNC_INFO << ":" << objectName();
     // got gain factor -> emit
-    if (trackanalyser->gainDB()!=TrackAnalyser::GAIN_INVALID){
+    if (trackanalyser->gainDB() != TrackAnalyser::GAIN_INVALID) {
         Q_EMIT gainChanged(trackanalyser->gainFactor());
-
     }
-    if ( m_CurrentTrack ){
+    if (m_CurrentTrack) {
         setPositionMarkers();
         updateTimeAndPositionDisplay();
     }
@@ -225,49 +219,49 @@ void PlayerWidget::analyseGainFinished()
 
 void PlayerWidget::timerLevel_timeOut()
 {
-      vuMeter->setValueLeft(player->levelLeft());
-      vuMeter->setValueRight(player->levelRight());
-      Q_EMIT levelChanged(player->levelOutLeft(),player->levelOutRight());
+    vuMeter->setValueLeft(player->levelLeft());
+    vuMeter->setValueRight(player->levelRight());
+    Q_EMIT levelChanged(player->levelOutLeft(), player->levelOutRight());
 }
 
 void PlayerWidget::timerPosition_timeOut()
 {
-      updateTimeAndPositionDisplay();
+    updateTimeAndPositionDisplay();
 }
 
 void PlayerWidget::dragEnterEvent(QDragEnterEvent* event)
 {
     //ToDo: remove forein classname tracklist"
-    if ( !event->source() ) return;
+    if (!event->source())
+        return;
     event->setDropAction(Qt::CopyAction);
-     QString sourceSite = event->source()->objectName();
-     QString dropSite = this->objectName();
-     qDebug() << "PlayerWidget: dragEnterEvent: sourceSite=" << sourceSite << " dropSite=" << dropSite;
-     if ( sourceSite.left(4) == dropSite.left(4) || sourceSite.left(9) == "tracklist" ) {
-         qDebug() << "PlayerWidget: dragEnterEvent: acceptProposedAction";
+    QString sourceSite = event->source()->objectName();
+    QString dropSite = this->objectName();
+    qDebug() << "PlayerWidget: dragEnterEvent: sourceSite=" << sourceSite << " dropSite=" << dropSite;
+    if (sourceSite.left(4) == dropSite.left(4) || sourceSite.left(9) == "tracklist") {
+        qDebug() << "PlayerWidget: dragEnterEvent: acceptProposedAction";
         event->acceptProposedAction();
-     }
+    }
 }
 
-void PlayerWidget::dragMoveEvent(QDragMoveEvent *event)
+void PlayerWidget::dragMoveEvent(QDragMoveEvent* event)
 {
     event->acceptProposedAction();
 }
 
-void PlayerWidget::dropEvent( QDropEvent *event )
+void PlayerWidget::dropEvent(QDropEvent* event)
 {
     qDebug() << "PlayerWidget: dragEnterEvent: " << event->mimeData();
     if (event->mimeData()->hasUrls()) {
-            QList<QUrl> urlList = event->mimeData()->urls(); // returns list of QUrls
-            event->ignore();
+        QList<QUrl> urlList = event->mimeData()->urls(); // returns list of QUrls
+        event->ignore();
 
-            if ( urlList.size() > 0) // if at least one QUrl is present in list
-            {
-                //load first
-                loadFile(urlList.at(1));
-            }
-     }
-    else if (event->mimeData()->hasFormat("text/playlistitem")) {
+        if (urlList.size() > 0) // if at least one QUrl is present in list
+        {
+            //load first
+            loadFile(urlList.at(1));
+        }
+    } else if (event->mimeData()->hasFormat("text/playlistitem")) {
 
         //decode playlistitem
         QByteArray itemData = event->mimeData()->data("text/playlistitem");
@@ -279,66 +273,64 @@ void PlayerWidget::dropEvent( QDropEvent *event )
         event->accept();
 
         //publish dropped Tracks to connected playlist
-        foreach ( QStringList tag, tags) {
-            Track *track = new Track(tag);
-            Q_EMIT trackDropped( track );
+        foreach (QStringList tag, tags) {
+            Track* track = new Track(tag);
+            Q_EMIT trackDropped(track);
         }
 
-    }
-    else
-       event->ignore();
+    } else
+        event->ignore();
 }
 
-void PlayerWidget::loadFile( QUrl file)
+void PlayerWidget::loadFile(QUrl file)
 {
     qDebug() << Q_FUNC_INFO << "url=" << file;
-    loadTrack( new Track(file));
+    loadTrack(new Track(file));
 }
 
-void PlayerWidget::loadTrack( Track *track)
+void PlayerWidget::loadTrack(Track* track)
 {
-    if ( track )
-        qDebug() << Q_FUNC_INFO <<":"<<objectName()<< " track="<<track->url();
+    if (track)
+        qDebug() << Q_FUNC_INFO << ":" << objectName() << " track=" << track->url();
 
     m_CurrentTrack = track;
 
-    if ( track != nullptr ) {
+    if (track != nullptr) {
 
-      drawTitle();
+        drawTitle();
 
-      bool doPlay = m_isStarted;
-      player->stop();
+        bool doPlay = m_isStarted;
+        player->stop();
 
-      QUrl url = track->url();
-      player->open(url);
+        QUrl url = track->url();
+        player->open(url);
 
-      trackanalyser->setMode(TrackAnalyser::STANDARD);
-      trackanalyser->open(url);
+        trackanalyser->setMode(TrackAnalyser::STANDARD);
+        trackanalyser->open(url);
 
-      if ( doPlay )
-          player->play();
+        if (doPlay)
+            player->play();
 
+    } else {
+        if (player->lastError != "")
+            ui->lblTitle->setText(player->lastError);
+        else
+            ui->lblTitle->setText("no track");
+
+        ui->lblTime->setText("-:-");
+        ui->lblTimeMs->setText(".-");
+        ui->lblTimeRemain->setText("-:-");
+        ui->lblTimeRemainMs->setText(".-");
+        stop();
     }
-    else {
-      if (player->lastError!="")
-          ui->lblTitle->setText( player->lastError );
-      else
-          ui->lblTitle->setText( "no track" );
 
-      ui->lblTime->setText("-:-");
-      ui->lblTimeMs->setText(".-");
-      ui->lblTimeRemain->setText("-:-");
-      ui->lblTimeRemainMs->setText(".-");
-      stop();
-    }
-
-    remainCueTime=0;
-    ui->sliPosition->setValue( 0 );
+    remainCueTime = 0;
+    ui->sliPosition->setValue(0);
     ui->txtCue->setText("-");
     ui->butCue->setChecked(false);
 }
 
-void PlayerWidget::resizeEvent( QResizeEvent* e )
+void PlayerWidget::resizeEvent(QResizeEvent* e)
 {
     QWidget::resizeEvent(e);
 
@@ -348,9 +340,9 @@ void PlayerWidget::resizeEvent( QResizeEvent* e )
 void PlayerWidget::drawTitle()
 {
     int width = ui->lblTitle->width() - 2;
-    if ( width < 300)
+    if (width < 300)
         ui->lblTitle->setStyleSheet("* { font-size: 13pt; }");
-    else if ( width < 400)
+    else if (width < 400)
         ui->lblTitle->setStyleSheet("* { font-size: 14pt; }");
     else
         ui->lblTitle->setStyleSheet("* { font-size: 16pt; }");
@@ -358,20 +350,20 @@ void PlayerWidget::drawTitle()
     QFontMetrics metrix(ui->lblTitle->font());
 
     QString clippedText = tr("No track");
-    if ( m_CurrentTrack )
+    if (m_CurrentTrack)
         clippedText = metrix.elidedText(m_CurrentTrack->prettyTitle(), Qt::ElideRight, width);
 
-    ui->lblTitle->setText( clippedText );
+    ui->lblTitle->setText(clippedText);
 }
 
 float PlayerWidget::currentLevelLeft()
 {
-     return player->levelOutLeft();
+    return player->levelOutLeft();
 }
 
 float PlayerWidget::currentLevelRight()
 {
-     return player->levelOutRight();
+    return player->levelOutRight();
 }
 
 void PlayerWidget::updateTimeAndPositionDisplay(bool isPassive)
@@ -379,15 +371,15 @@ void PlayerWidget::updateTimeAndPositionDisplay(bool isPassive)
 
     QTime length = player->length();
     QTime curpos = player->position();
-    QTime remain(0,0,0);
+    QTime remain(0, 0, 0);
     long remainMs;
 
     //Some tracks deliver no length in state pause
-    if ( length == QTime(0,0) && m_CurrentTrack)
-       length = QTime(0,0,0).addSecs(m_CurrentTrack->length());
+    if (length == QTime(0, 0) && m_CurrentTrack)
+        length = QTime(0, 0, 0).addSecs(m_CurrentTrack->length());
 
-    remainMs=curpos.msecsTo(length);
-    remain = QTime(0,0,0).addMSecs(remainMs);
+    remainMs = curpos.msecsTo(length);
+    remain = QTime(0, 0, 0).addMSecs(remainMs);
 
     //qDebug()<<remainMs << " :" <<remain;
 
@@ -399,34 +391,32 @@ void PlayerWidget::updateTimeAndPositionDisplay(bool isPassive)
     //Signal end of track or media error
     //ToDo: better recognition of media error (play pressed but player is not running)
 
-    if ( (remainMs-remainCueTime-mTrackFinishEmitTime <=0
-                && 0 < remainMs )
-                || m_isHanging )    {
-        if (!p->isEndAnnounced ) {
-            qDebug() << Q_FUNC_INFO <<":"<<objectName()<<" EMIT aboutFinished";
-            qDebug() << Q_FUNC_INFO <<": curpos:"<< curpos;
-            qDebug() << Q_FUNC_INFO <<": remainMs:"<< remainMs;
-            qDebug() << Q_FUNC_INFO <<": remainCueTime:"<< remainCueTime;
-            qDebug() << Q_FUNC_INFO <<": mTrackFinishEmitTime:"<< mTrackFinishEmitTime;
-            qDebug() << Q_FUNC_INFO <<": m_isHanging:"<< m_isHanging;
+    if ((remainMs - remainCueTime - mTrackFinishEmitTime <= 0
+            && 0 < remainMs)
+        || m_isHanging) {
+        if (!p->isEndAnnounced) {
+            qDebug() << Q_FUNC_INFO << ":" << objectName() << " EMIT aboutFinished";
+            qDebug() << Q_FUNC_INFO << ": curpos:" << curpos;
+            qDebug() << Q_FUNC_INFO << ": remainMs:" << remainMs;
+            qDebug() << Q_FUNC_INFO << ": remainCueTime:" << remainCueTime;
+            qDebug() << Q_FUNC_INFO << ": mTrackFinishEmitTime:" << mTrackFinishEmitTime;
+            qDebug() << Q_FUNC_INFO << ": m_isHanging:" << m_isHanging;
 
             //send signals only once
             p->isEndAnnounced = true;
             Q_EMIT aboutFinished();
             Q_EMIT trackPlayed(m_CurrentTrack);
         }
-    }
-    else
+    } else
         p->isEndAnnounced = false;
 
     //update position slider only if triggerd by timer
     if (isPassive) {
-        if (length != QTime(0,0,0))
-            ui->sliPosition->setValue(curpos.msecsTo(QTime(0,0,0)) * 1000 / length.msecsTo(QTime(0,0,0)));
+        if (length != QTime(0, 0, 0))
+            ui->sliPosition->setValue(curpos.msecsTo(QTime(0, 0, 0)) * 1000 / length.msecsTo(QTime(0, 0, 0)));
         else
             ui->sliPosition->setValue(0);
     }
-
 }
 
 void PlayerWidget::playerError()
@@ -446,10 +436,10 @@ void PlayerWidget::playerLoaded()
 
 void PlayerWidget::on_butRew_clicked()
 {
-    if (player->position()<QTime(0,0,3))
+    if (player->position() < QTime(0, 0, 3))
         Q_EMIT rewindPressed();
     else
-        player->setPosition(QTime(0,0,0));
+        player->setPosition(QTime(0, 0, 0));
 }
 
 void PlayerWidget::on_butFwd_clicked()
@@ -457,20 +447,19 @@ void PlayerWidget::on_butFwd_clicked()
     Q_EMIT forwardPressed();
 }
 
-void PlayerWidget::setTrackFinishEmitTime( const int sec )
+void PlayerWidget::setTrackFinishEmitTime(const int sec)
 {
-    if ( sec >= 0 && sec < 60 )
-        mTrackFinishEmitTime = sec*1000;
+    if (sec >= 0 && sec < 60)
+        mTrackFinishEmitTime = sec * 1000;
 }
-
 
 void PlayerWidget::on_sliPosition_sliderMoved(int value)
 {
-    uint length = -player->length().msecsTo(QTime(0,0,0));
+    uint length = -player->length().msecsTo(QTime(0, 0, 0));
     if (length != 0 && value > 0) {
         QTime pos = QTime(0, 0, 0);
         pos = pos.addMSecs(length * (value / 1000.0));
-                qDebug()<<"pos:"<<pos;
+        qDebug() << "pos:" << pos;
         player->setPosition(pos);
     }
     updateTimeAndPositionDisplay(false);
@@ -480,25 +469,24 @@ void PlayerWidget::on_sliPosition_actionTriggered(int action)
 {
     //a workaround for page moving
     int posi;
-    switch (action)
-    {
-        case 3:
-            posi=ui->sliPosition->value()+100;
-            break;
-        case 4:
-            posi=ui->sliPosition->value()-100;
-            if (posi<100)
-                posi=1;
-            break;
-        case 1:
-            posi=ui->sliPosition->value()+10;
-            break;
-        case 2:
-            posi=ui->sliPosition->value()-10;
-            break;
-        default:
-            return;
-            break;
+    switch (action) {
+    case 3:
+        posi = ui->sliPosition->value() + 100;
+        break;
+    case 4:
+        posi = ui->sliPosition->value() - 100;
+        if (posi < 100)
+            posi = 1;
+        break;
+    case 1:
+        posi = ui->sliPosition->value() + 10;
+        break;
+    case 2:
+        posi = ui->sliPosition->value() - 10;
+        break;
+    default:
+        return;
+        break;
     }
 
     this->on_sliPosition_sliderMoved(posi);
@@ -512,6 +500,3 @@ void PlayerWidget::on_butCue_clicked()
     player->setPosition(trackanalyser->startPosition());
     updateTimeAndPositionDisplay();
 }
-
-
-

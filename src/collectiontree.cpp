@@ -79,7 +79,7 @@ CollectionTree::~CollectionTree()
 void CollectionTree::createTrunk()
 {
     //qDebug() << Q_FUNC_INFO;
-    CollectionTreeItem* item = 0;
+    CollectionTreeItem* item = nullptr;
 
     clear();
 

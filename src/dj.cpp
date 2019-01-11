@@ -47,6 +47,7 @@ Dj::~Dj()
 
 void Dj::addFilter(Filter* filter)
 {
+    //qDebug() << Q_FUNC_INFO;
     p->filters.append(filter);
     connect(filter, SIGNAL(activated()),
         this, SLOT(on_filter_activated()));
@@ -81,7 +82,7 @@ int Dj::activeFilterIdx()
 
 void Dj::on_filter_filterChanged()
 {
-    //qDebug() << Q_FUNC_INFO ;
+    qDebug() << Q_FUNC_INFO;
     Filter* f = qobject_cast<Filter*>(QObject::sender());
     Q_EMIT filterChanged(f);
 }
@@ -145,6 +146,9 @@ void Dj::checkSequence()
 //      - DJwidget: Playbutton für start
 Filter* Dj::requestFilter()
 {
+    if (p->filters.isEmpty())
+        return nullptr;
+
     p->filter = p->filters.at(p->rotation);
 
     p->filter->setUsage(p->filter->usage() + 1);

@@ -18,33 +18,31 @@
 #ifndef DJFILTERWIDGET_H
 #define DJFILTERWIDGET_H
 
-#include <QWidget>
-#include <QTimer>
 #include "filter.h"
-
+#include <QTimer>
+#include <QWidget>
 
 namespace Ui {
-    class DjFilterWidget;
+class DjFilterWidget;
 }
 
 class DjFilterWidget : public QWidget {
     Q_OBJECT
 public:
-    DjFilterWidget(QWidget *parent = 0);
+    DjFilterWidget(QWidget* parent = nullptr);
     ~DjFilterWidget();
 
-    void setFilter(Filter *filter);
+    void setFilter(Filter* filter);
     Filter* filter();
     void setID(QString value);
     void slideCloseWidget(bool open);
-    void setAllGenres(QStringList &values);
+    void setAllGenres(QStringList& values);
     void setAllArtists(QStringList values);
 
-
 protected:
-    void changeEvent(QEvent *event);
+    void changeEvent(QEvent* event);
     void mousePressEvent(QMouseEvent* event);
-    void keyPressEvent(QKeyEvent *e);
+    void keyPressEvent(QKeyEvent* e);
 
 Q_SIGNALS:
     void deleted();
@@ -56,16 +54,16 @@ private:
 
 private slots:
     void on_pushActivate_clicked();
-    void on_txtPath_textChanged(QString );
-    void on_cmbGenres_editTextChanged(QString );
-    void on_cmbArtists_editTextChanged(QString );
+    void on_txtPath_textChanged(QString);
+    void on_cmbGenres_editTextChanged(QString);
+    void on_cmbArtists_editTextChanged(QString);
     void on_sliFilterValue_valueChanged(int value);
     void slotSetFilter();
     void onFilterStatusChanged(bool b);
     void onFilterCountChanged();
     void onFilterUsageChanged();
     void onFilterMaxUsageChanged();
-    void on_lbl1_linkActivated(const QString &link);
+    void on_lbl1_linkActivated(const QString& link);
     void timerSlide_timeOut();
     void on_pushClose_clicked();
 };

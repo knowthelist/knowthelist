@@ -23,19 +23,18 @@
 #include <QWidget>
 #include <QtGui>
 
-class DjBrowser : public QWidget
-{
+class DjBrowser : public QWidget {
     Q_OBJECT
 public:
-    explicit DjBrowser(QWidget *parent = 0);
+    explicit DjBrowser(QWidget* parent = nullptr);
     ~DjBrowser();
     void updateList();
     void saveSettings();
-    
+
 signals:
     void selectionChanged(Dj*);
     void selectionStarted();
-    
+
 public slots:
     void addDj();
     void loadDj();
@@ -45,8 +44,7 @@ public slots:
     void removeFilter();
 
 private:
-    class DjBrowserPrivate *p;
-    
+    class DjBrowserPrivate* p;
 };
 
 #endif // DJBROWSER_H

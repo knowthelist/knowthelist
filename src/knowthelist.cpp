@@ -426,15 +426,17 @@ void Knowthelist::closeEvent(QCloseEvent* event)
     settings.setValue("isEnabledAutoDJCount", djSession->isEnabledAutoDJCount());
 
     Dj* dj = djSession->currentDj();
-    QList<Filter*> f = dj->filters();
+    if (dj != nullptr) {
+        QList<Filter*> f = dj->filters();
 
-    settings.setValue("currentDjActiveFilter", QString("%1").arg(djSession->currentDj()->activeFilterIdx()));
+        settings.setValue("currentDjActiveFilter", QString("%1").arg(djSession->currentDj()->activeFilterIdx()));
 
-    for (int i = 0; i < f.count(); i++) {
-        settings.setValue(QString("editAutoDJPath%1").arg(i), f.at(i)->path());
-        settings.setValue(QString("editAutoDJGenre%1").arg(i), f.at(i)->genre());
-        settings.setValue(QString("editAutoDJArtist%1").arg(i), f.at(i)->artist());
-        settings.setValue(QString("editAutoDJValue%1").arg(i), QString("%1").arg(f.at(i)->maxUsage()));
+        for (int i = 0; i < f.count(); i++) {
+            settings.setValue(QString("editAutoDJPath%1").arg(i), f.at(i)->path());
+            settings.setValue(QString("editAutoDJGenre%1").arg(i), f.at(i)->genre());
+            settings.setValue(QString("editAutoDJArtist%1").arg(i), f.at(i)->artist());
+            settings.setValue(QString("editAutoDJValue%1").arg(i), QString("%1").arg(f.at(i)->maxUsage()));
+        }
     }
 
     settings.setValue("checkAutoFade", ui->toggleAutoFade->isChecked());
@@ -723,6 +725,9 @@ void Knowthelist::setFaderModeToPlayer()
 
 void Knowthelist::editSettings()
 {
+    // save DJ settings before change anything
+    djBrowser->saveSettings();
+
     // update hardware infos
     monitorPlayer->readDevices();
     QSettings settings;
@@ -756,6 +761,8 @@ bool Knowthelist::initMonitorPlayer()
 
 void Knowthelist::startAutoDj()
 {
+    if (ui->toggleAutoDJ->isChecked())
+        ui->toggleAutoDJ->setChecked(false);
     ui->toggleAutoDJ->setChecked(true);
 }
 
@@ -875,23 +882,26 @@ void Knowthelist::on_toggleAGC_toggled(bool checked)
 void Knowthelist::on_toggleAutoDJ_toggled(bool checked)
 {
     if (checked) {
-        //AutoDJ on
+        // AutoDJ on
 
-        //For an empty list
+        // For an empty list
         if (playList1->isEmpty())
             playList1->addCurrentTrack(djSession->getRandomTrack());
 
         if (playList2->isEmpty())
             playList2->addCurrentTrack(djSession->getRandomTrack());
 
-        //Fill both playlists
+        // Fill both playlists
         djSession->updatePlaylists();
 
-        //Start playing
+        // Start playing
         if (!player1->isStarted() && !player2->isStarted())
             fadeNow();
-        //Activate Autofade
+
+        // Activate Autofade
         ui->toggleAutoFade->setChecked(true);
+
+        //ui->fr
     } else {
         m_AutoDJGenre = collectionBrowser->filterText();
     }

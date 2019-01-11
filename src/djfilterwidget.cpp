@@ -27,6 +27,7 @@ struct DjFilterWidgetPrivate {
     Filter* filter;
     QTimer* timerSlide;
     int targetWidth;
+    bool ready;
 };
 
 DjFilterWidget::DjFilterWidget(QWidget* parent)
@@ -44,23 +45,6 @@ DjFilterWidget::DjFilterWidget(QWidget* parent)
     ui->txtPath->setAttribute(Qt::WA_MacShowFocusRect, false);
     ui->cmbGenres->setAttribute(Qt::WA_MacShowFocusRect, false);
     ui->cmbArtists->setAttribute(Qt::WA_MacShowFocusRect, false);
-#if defined(Q_OS_DARWIN)
-    djfw = new DjFilterWidget(p->listDjFilters);
-    djfw->setID(QString::number(i + 1));
-    djfw->setAllGenres(p->allGenres);
-    djfw->setAllArtists(p->allArtists);
-    djfw->setFilter(dj->filters().at(i));
-    itm = new QListWidgetItem(p->listDjFilters);
-    itm->setSizeHint(QSize(0, 75));
-    p->listDjFilters->addItem(itm);
-    p->listDjFilters->setItemWidget(itm, djfw);
-    dj->filters().at(i)->update();
-    connect(djfw, SIGNAL(deleted()), this, SLOT(removeFilter()));
-    ui->cmbArtists->setStyleSheet("QComboBox { margin: 0 3 0 3;}");
-    ui->cmbGenres->setStyleSheet("QComboBox { margin: 0 3 0 3;}");
-    ui->fraFilterTextBoxes->layout()->setContentsMargins(0, 13, 13, 14);
-    ui->fraFilterTextBoxes->layout()->setSpacing(-1);
-#endif
 
     ui->lblFilterValue->setText(QString::null);
     ui->stackDisplay->setCount(0);
@@ -135,8 +119,10 @@ void DjFilterWidget::setID(QString value)
 
 void DjFilterWidget::setFilter(Filter* filter)
 {
-    timer->stop();
     qDebug() << Q_FUNC_INFO << "START";
+
+    timer->stop();
+    p->ready = false;
     p->filter = filter;
     onFilterCountChanged();
     onFilterMaxUsageChanged();
@@ -151,6 +137,7 @@ void DjFilterWidget::setFilter(Filter* filter)
         this, SLOT(onFilterUsageChanged()));
     connect(p->filter, SIGNAL(maxUsageChanged()),
         this, SLOT(onFilterMaxUsageChanged()));
+    p->ready = true;
     qDebug() << Q_FUNC_INFO << "END";
 }
 
@@ -167,23 +154,29 @@ void DjFilterWidget::on_sliFilterValue_valueChanged(int value)
 
 void DjFilterWidget::on_txtPath_textChanged(QString)
 {
-    if (timer->isActive())
-        timer->stop();
-    timer->start();
+    if (p->ready) {
+        if (timer->isActive())
+            timer->stop();
+        timer->start();
+    }
 }
 
 void DjFilterWidget::on_cmbGenres_editTextChanged(QString)
 {
-    if (timer->isActive())
-        timer->stop();
-    timer->start();
+    if (p->ready) {
+        if (timer->isActive())
+            timer->stop();
+        timer->start();
+    }
 }
 
 void DjFilterWidget::on_cmbArtists_editTextChanged(QString)
 {
-    if (timer->isActive())
-        timer->stop();
-    timer->start();
+    if (p->ready) {
+        if (timer->isActive())
+            timer->stop();
+        timer->start();
+    }
 }
 
 void DjFilterWidget::on_pushActivate_clicked()
