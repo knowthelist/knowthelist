@@ -5857,6 +5857,34 @@ min-height: 16px;
             <bool>true</bool>
            </property>
           </widget>
+          <widget class="QLabel" name="lblDjName">
+           <property name="geometry">
+            <rect>
+             <x>4</x>
+             <y>344</y>
+             <width>191</width>
+             <height>21</height>
+            </rect>
+           </property>
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="font">
+            <font>
+             <family>DejaVu Sans Mono</family>
+             <pointsize>11</pointsize>
+            </font>
+           </property>
+           <property name="text">
+            <string>Knowthelist</string>
+           </property>
+           <property name="alignment">
+            <set>Qt::AlignCenter</set>
+           </property>
+          </widget>
           <zorder>phVU2</zorder>
           <zorder>ledFadeLeft</zorder>
           <zorder>toggleAutoFade</zorder>
@@ -5888,6 +5916,7 @@ min-height: 16px;
           <zorder>potLow_2</zorder>
           <zorder>potGain_1</zorder>
           <zorder>potGain_2</zorder>
+          <zorder>lblDjName</zorder>
          </widget>
         </item>
         <item>

@@ -269,6 +269,7 @@ void Knowthelist::createUI()
     ui->sideTab->AddTab(djBrowser, QIcon(pixmap2), tr("AutoDJ"));
     ui->sideTab->setContextMenuPolicy(Qt::NoContextMenu);
     connect(djBrowser, SIGNAL(selectionChanged(Dj*)), djSession, SLOT(setCurrentDj(Dj*)));
+    connect(djBrowser, SIGNAL(selectionChanged(Dj*)), this, SLOT(currentDjChanged(Dj*)));
     connect(djBrowser, SIGNAL(selectionStarted()), this, SLOT(startAutoDj()));
 
     //Add the FileBrowser
@@ -757,6 +758,12 @@ bool Knowthelist::initMonitorPlayer()
 
     qDebug() << Q_FUNC_INFO << "END ";
     return true;
+}
+
+void Knowthelist::currentDjChanged(Dj* dj)
+{
+    // show Dj Name on panel
+    ui->lblDjName->setText(dj->name);
 }
 
 void Knowthelist::startAutoDj()

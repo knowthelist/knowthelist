@@ -400,6 +400,9 @@ double Player::volume()
 void Player::setVolume(double v)
 {
     gdouble vol = static_cast<gdouble>(v);
+    if (vol < 0.001) {
+        vol = 0.001;
+    }
 
     GstElement* volume = gst_bin_get_by_name(GST_BIN(pipeline), "volume");
     g_object_set(G_OBJECT(volume), "volume", vol, nullptr);
