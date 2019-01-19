@@ -9,4 +9,5 @@ knowthelist.app*
 qrc_*.cpp
 knowthelist
 knowthelist_*.qm
+*~
 

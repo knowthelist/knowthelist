@@ -1,3 +1,16 @@
+knowthelist (2.3.1-1) unstable; urgency=medium
+
+  * Switched from localsrc to uridecodebin (gstreamer) in players
+  * Optimized VUMeter draw algorithm
+  * Added a custom dial to have a unique look of the EQ dials
+  * Auto formated code
+  * Bugfix playlist drag/drop, improvements AutoDJ
+  * Corrected summarised count of AutoDJ
+  * AutoDJ: save settings before reload
+  * Added DJ label on main panel to show the name of the current AutoDJ
+
+ -- Mario Stephan <mstephan@shared-files.de>  Fri, 18 Jan 2019 17:50:46 +0100
+
 knowthelist (2.3.0-3) unstable; urgency=medium
 
   * Removed build depends for gstreamer 0.10 (Closes: #799710).
