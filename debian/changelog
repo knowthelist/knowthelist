@@ -3,7 +3,7 @@ knowthelist (2.3.1) unstable; urgency=medium
   * Switched from localsrc to uridecodebin (gstreamer) in players
   * Optimized VUMeter draw algorithm
   * Added a custom dial to have a unique look of the EQ dials
-  * Auto formated code
+  * Auto formatted code
   * Bugfix playlist drag/drop, improvements AutoDJ
   * Corrected summarised count of AutoDJ
   * AutoDJ: save settings before reload
