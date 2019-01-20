@@ -8,14 +8,9 @@ knowthelist (2.3.1-1) unstable; urgency=medium
   * Corrected summarised count of AutoDJ
   * AutoDJ: save settings before reload
   * Added DJ label on main panel to show the name of the current AutoDJ
+  * Removed build depends for gstreamer 0.10
 
  -- Mario Stephan <mstephan@shared-files.de>  Fri, 18 Jan 2019 17:50:46 +0100
-
-knowthelist (2.3.0-3) unstable; urgency=medium
-
-  * Removed build depends for gstreamer 0.10 (Closes: #799710).
-
- -- Mario Stephan <mstephan@shared-files.de>  Fri, 11 Dec 2015 00:57:45 +0100
 
 knowthelist (2.3.0-2) unstable; urgency=medium
 
