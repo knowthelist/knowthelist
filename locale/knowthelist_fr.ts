@@ -1024,7 +1024,7 @@ p, li { white-space: pre-wrap; }
     <message>
         <location filename="../src/settingsdialog.ui" line="538"/>
         <source>Minimum tracks within each playlist </source>
-        <translation>Nombre minimum de pistes dans chaque liste de lecture</translation>
+        <translation>Nombre minimum de pistes dans chaque liste de lecture </translation>
     </message>
     <message>
         <location filename="../src/settingsdialog.ui" line="564"/>
