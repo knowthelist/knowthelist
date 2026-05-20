@@ -10,3 +10,9 @@ qrc_*.cpp
 knowthelist
 knowthelist_*.qm
 *.log
+
+# Qt / qmake generated files
+.qmake.stash
+Makefile
+Makefile.*
+object_script.*
