@@ -16,3 +16,10 @@ knowthelist_*.qm
 Makefile
 Makefile.*
 object_script.*
+
+build/*
+dist/*
+Build/*
+build-*/
+dist-*/
+*.pro.user

@@ -30,9 +30,18 @@ Build:
 - cd ~/src
 - git clone https://github.com/knowthelist/knowthelist.git
 - cd knowthelist
-- qmake (or: cmake -B build && cmake --build build)
-- make
-- ./knowthelist
+
+qmake build:
+
+    $ qmake6
+    $ make
+    $ ./knowthelist
+
+cmake build:
+
+    $ cmake -S . -B build
+    $ cmake --build build -j
+    $ ./build/knowthelist
 
 macOS:
 ----------
@@ -42,8 +51,13 @@ It can be compiled to a .app bundle, suitable for placing in /Applications.
 Install the required dependencies using [Homebrew](https://brew.sh):
 
     $ brew install qt gstreamer gst-plugins-base gst-plugins-good gst-plugins-bad taglib
-    $ qmake
+    $ qmake6
     $ make
+
+or with CMake:
+
+    $ cmake -S . -B build
+    $ cmake --build build -j
 
 An icon for "knowthelist" should now be in your main macOS Applications list, ready to launch.
 

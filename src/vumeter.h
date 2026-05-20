@@ -67,6 +67,7 @@ protected:
 private:
     struct VUMeterPrivate* p;
     void drawMeter();
+    void updateMeterGeometry();
 };
 
 #endif
