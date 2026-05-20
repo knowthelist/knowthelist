@@ -273,7 +273,7 @@ void PlayerWidget::dropEvent(QDropEvent* event)
         event->accept();
 
         //publish dropped Tracks to connected playlist
-        foreach (QStringList tag, tags) {
+        for (const QStringList& tag : tags) {
             Track* track = new Track(tag);
             Q_EMIT trackDropped(track);
         }

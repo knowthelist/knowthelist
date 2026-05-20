@@ -283,9 +283,9 @@ void QLed::paintLed(Shape shape, Look look)
     QImage image(size, QImage::Format_ARGB32_Premultiplied);
     image.fill(0);
     QRadialGradient fillGradient(center, smallestSize / 2.0, QPointF(center.x(), size.height() / 3.0));
-    const QColor fillColor = d->state != Off ? d->color : d->color.dark(d->darkFactor);
-    fillGradient.setColorAt(0.0, fillColor.light(250));
-    fillGradient.setColorAt(0.5, fillColor.light(130));
+    const QColor fillColor = d->state != Off ? d->color : d->color.darker(d->darkFactor);
+    fillGradient.setColorAt(0.0, fillColor.lighter(250));
+    fillGradient.setColorAt(0.5, fillColor.lighter(130));
     fillGradient.setColorAt(1.0, fillColor);
     QConicalGradient borderGradient(center, look == Sunken ? 90 : -90);
     QColor borderColor = palette().color(QPalette::Dark);

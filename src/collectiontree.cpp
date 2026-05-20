@@ -1,5 +1,5 @@
 /*
-    Copyright (C) 2005-2014 Mario Stephan <mstephan@shared-files.de>
+    Copyright (C) 2005-2026 Mario Stephan <mstephan@shared-files.de>
 
     This library is free software; you can redistribute it and/or modify
     it under the terms of the GNU Lesser General Public License as published
@@ -18,16 +18,15 @@
 #include "collectiontree.h"
 #include "collectiontreeitem.h"
 #include <QApplication>
+#include <QDrag>
+#include <QDragEnterEvent>
+#include <QDropEvent>
 #include <QHeaderView>
 #include <QMenu>
 #include <QMessageBox>
 #include <QMouseEvent>
-#include <QtGui>
-#if QT_VERSION >= 0x050000
+#include <QWidget>
 #include <QtConcurrent/QtConcurrent>
-#else
-#include <QtConcurrentRun>
-#endif
 
 struct CollectionTreePrivate {
     CollectionDB* database;
@@ -97,8 +96,8 @@ void CollectionTree::createTrunk()
     case MODEGENRE:
         tags = p->database->selectGenres();
         if (item)
-            item->setGenre(QString::null);
-        foreach (QStringList tag, tags) {
+            item->setGenre(QString());
+        for (const QStringList& tag : tags) {
             item = new CollectionTreeItem(this);
             item->setGenre(tag[0]);
         }
@@ -108,8 +107,8 @@ void CollectionTree::createTrunk()
     case MODEYEAR:
         tags = p->database->selectYears();
         if (item)
-            item->setYear(QString::null);
-        foreach (QStringList tag, tags) {
+            item->setYear(QString());
+        for (const QStringList& tag : tags) {
             item = new CollectionTreeItem(this);
             item->setYear(tag[0]);
         }
@@ -119,8 +118,8 @@ void CollectionTree::createTrunk()
     default:
         tags = p->database->selectArtists();
         if (item)
-            item->setArtist(QString::null);
-        foreach (QStringList tag, tags) {
+            item->setArtist(QString());
+        for (const QStringList& tag : tags) {
             item = new CollectionTreeItem(this);
             item->setArtist(tag[0]);
         }
@@ -131,7 +130,7 @@ void CollectionTree::createTrunk()
 
 void CollectionTree::on_itemExpanded(QTreeWidgetItem* item)
 {
-    qDebug() << Q_FUNC_INFO << endl;
+    qDebug() << Q_FUNC_INFO ;
     if (!item)
         return;
 
@@ -143,21 +142,21 @@ void CollectionTree::on_itemExpanded(QTreeWidgetItem* item)
         QTreeWidgetItem::ChildIndicatorPolicy policy = QTreeWidgetItem::ShowIndicator;
 
         //Retrieve children from database
-        if (collItem->artist() != QString::null) {
+        if (collItem->artist() != QString()) {
             tags = p->database->selectAlbums(collItem->year(), collItem->genre(), collItem->artist());
             policy = QTreeWidgetItem::DontShowIndicator;
         } else {
             tags = p->database->selectArtists(collItem->year(), collItem->genre());
         }
 
-        foreach (QStringList tag, tags) {
+        for (const QStringList& tag : tags) {
             CollectionTreeItem* child = new CollectionTreeItem(item);
 
             child->setYear(collItem->year());
             child->setGenre(collItem->genre());
             child->setArtist(collItem->artist());
 
-            if (collItem->artist() == QString::null)
+            if (collItem->artist() == QString())
                 child->setArtist(tag[0]);
             else
                 child->setAlbum(tag[0]);
@@ -170,7 +169,7 @@ void CollectionTree::on_itemExpanded(QTreeWidgetItem* item)
 
 void CollectionTree::triggerRandomSelection()
 {
-    QFuture<void> future = QtConcurrent::run(this, &CollectionTree::asynchronTriggerRandomSelection);
+    QFuture<void> future = QtConcurrent::run([this]() { asynchronTriggerRandomSelection(); });
 }
 
 void CollectionTree::asynchronTriggerRandomSelection()
@@ -179,9 +178,6 @@ void CollectionTree::asynchronTriggerRandomSelection()
     p->tracks.clear();
 
     // init qrand
-    QTime time = QTime::currentTime();
-    qsrand((uint)time.msec());
-
     for (int i = 0; i < 15; i++) {
 
         Track* track;
@@ -202,7 +198,7 @@ void CollectionTree::asynchronTriggerRandomSelection()
 
 void CollectionTree::on_currentItemChanged(QTreeWidgetItem* item)
 {
-    QFuture<void> future = QtConcurrent::run(this, &CollectionTree::asynchronCurrentItemChanged, item);
+    QFuture<void> future = QtConcurrent::run([this, item]() { asynchronCurrentItemChanged(item); });
 }
 
 void CollectionTree::asynchronCurrentItemChanged(QTreeWidgetItem* item)
@@ -215,7 +211,7 @@ void CollectionTree::asynchronCurrentItemChanged(QTreeWidgetItem* item)
     QList<QStringList> tags;
 
     CollectionTreeItem* collItem = static_cast<CollectionTreeItem*>(item);
-    qDebug() << Q_FUNC_INFO << "Artist: " << collItem->artist() << " Album: " << collItem->album() << endl;
+    qDebug() << Q_FUNC_INFO << "Artist: " << collItem->artist() << " Album: " << collItem->album() ;
 
     //Retrieve songs from database
     tags = p->database->selectTracks(collItem->year(), collItem->genre(), collItem->artist(), collItem->album());
@@ -226,14 +222,14 @@ void CollectionTree::asynchronCurrentItemChanged(QTreeWidgetItem* item)
     qDebug() << Q_FUNC_INFO << "Song count: " << tags.count();
 
     //add tags to this track list
-    foreach (QStringList tag, tags) {
+    for (const QStringList& tag : tags) {
         //qDebug() << Q_FUNC_INFO <<": is playlistitem; tags:"<<tags;
         p->tracks.append(new Track(tag));
     }
 
     emit selectionChanged(p->tracks);
 
-    //qDebug() << Q_FUNC_INFO << "[End]" << endl;
+    //qDebug() << Q_FUNC_INFO << "[End]" ;
 }
 
 QString CollectionTree::filter()

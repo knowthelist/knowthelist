@@ -17,12 +17,8 @@
 
 #include "trackanalyser.h"
 
-#include <QtGui>
-#if QT_VERSION >= 0x050000
- #include <QtConcurrent/QtConcurrent>
-#else
- #include <QtConcurrentRun>
-#endif
+#include <QWidget>
+#include <QtConcurrent/QtConcurrent>
 
 #define AUDIOFREQ 32000
 #define SCAN_DURATION 60
@@ -100,11 +96,7 @@ void TrackAnalyser::newpad (GstElement *src,
         }
 
         /* check media type */
-#ifdef GST_API_VERSION_1
-        caps = gst_pad_query_caps (new_pad, nullptr);
-#else
-        caps = gst_pad_get_caps (new_pad);
-#endif
+        caps = gst_pad_query_caps(new_pad, nullptr);
         str = gst_caps_get_structure (caps, 0);
         if (!g_strrstr (gst_structure_get_name (str), "audio")) {
                 gst_caps_unref (caps);
@@ -158,11 +150,7 @@ bool TrackAnalyser::prepare()
         gst_element_link (p->analysis, p->cutter);
         gst_element_link (p->cutter, p->sink);
 
-#ifdef GST_API_VERSION_1
-        gst_bus_set_sync_handler (bus, bus_cb, this, nullptr);
-#else
-        gst_bus_set_sync_handler (bus, bus_cb, this);
-#endif
+        gst_bus_set_sync_handler(bus, bus_cb, this, nullptr);
 
         return pipeline;
 }
@@ -233,7 +221,7 @@ void TrackAnalyser::open(QUrl url)
 {
     //To avoid delays load track in another thread
     qDebug() << Q_FUNC_INFO <<":"<<parentWidget()->objectName()<<" url="<<url;
-    QFuture<void> future = QtConcurrent::run( this, &TrackAnalyser::asyncOpen,url);
+    QFuture<void> future = QtConcurrent::run([this, url]() { asyncOpen(url); });
     p->watcher.setFuture(future);
 }
 
@@ -293,12 +281,7 @@ QTime TrackAnalyser::length()
 
         gint64 value=0;
 
-#ifdef GST_API_VERSION_1
-        if(gst_element_query_duration(pipeline, GST_FORMAT_TIME, &value)) {
-#else
-        GstFormat fmt = GST_FORMAT_TIME;
-        if(gst_element_query_duration(pipeline, &fmt, &value)) {
-#endif
+        if (gst_element_query_duration(pipeline, GST_FORMAT_TIME, &value)) {
             //qDebug() << Q_FUNC_INFO <<  " new value:" <<value;
             m_MaxPosition = QTime(0,0).addMSecs( static_cast<uint>( ( value / GST_MSECOND ) )); // nanosec -> msec
         }

@@ -1,5 +1,5 @@
 /*
-    Copyright (C) 2005-2019 Mario Stephan <mstephan@shared-files.de>
+    Copyright (C) 2005-2026 Mario Stephan <mstephan@shared-files.de>
 
     This library is free software; you can redistribute it and/or modify
     it under the terms of the GNU Lesser General Public License as published
@@ -17,12 +17,8 @@
 
 #include "player.h"
 
-#include <QtGui>
-#if QT_VERSION >= 0x050000
+#include <QWidget>
 #include <QtConcurrent/QtConcurrent>
-#else
-#include <QtConcurrentRun>
-#endif
 
 void Player::sync_set_state(GstElement* element, GstState state)
 {
@@ -68,11 +64,7 @@ void Player::newpad(GstElement* src,
     }
 
     /* check media type */
-#ifdef GST_API_VERSION_1
     caps = gst_pad_query_caps(new_pad, nullptr);
-#else
-    caps = gst_pad_get_caps(new_pad);
-#endif
     str = gst_caps_get_structure(caps, 0);
     if (!g_strrstr(gst_structure_get_name(str), "audio")) {
         gst_caps_unref(caps);
@@ -158,7 +150,7 @@ bool Player::prepare()
     QDir pd(QCoreApplication::applicationDirPath() + "/../plugins");
     scanner_path = QCoreApplication::applicationDirPath() + "/../plugins/gst-plugin-scanner";
     plugin_path = QCoreApplication::applicationDirPath() + "/../plugins/gstreamer";
-    registry_filename = QStandardPaths::writableLocation(QStandardPaths::DataLocation) + QString("/gst-registry-%1-bin").arg(QCoreApplication::applicationVersion());
+    registry_filename = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation) + QString("/gst-registry-%1-bin").arg(QCoreApplication::applicationVersion());
 
     if (pd.exists())
         setenv("GST_PLUGIN_SCANNER", scanner_path.toLocal8Bit().constData(), 1);
@@ -192,11 +184,7 @@ bool Player::prepare()
     pipeline = gst_pipeline_new("pipeline");
     bus = gst_pipeline_get_bus(GST_PIPELINE(pipeline));
 
-#ifdef GST_API_VERSION_1
     caps_value = "audio/x-raw";
-#else
-    caps_value = "audio/x-raw-int";
-#endif
     caps = gst_caps_new_simple(caps_value.toLatin1().data(),
         "channels", G_TYPE_INT, 2, NULL);
 
@@ -226,11 +214,7 @@ bool Player::prepare()
     gst_element_link_filtered(vol, levelout, caps);
     gst_element_link(levelout, sink);
 
-#ifdef GST_API_VERSION_1
     gst_bus_set_sync_handler(bus, bus_cb, this, nullptr);
-#else
-    gst_bus_set_sync_handler(bus, bus_cb, this);
-#endif
 
     qDebug() << Q_FUNC_INFO << " "
              << "END";
@@ -265,7 +249,7 @@ void Player::open(QUrl url)
 {
     //To avoid delays load track in another thread
     qDebug() << Q_FUNC_INFO << ":" << parentWidget()->objectName() << " url=" << url;
-    QFuture<void> future = QtConcurrent::run(this, &Player::asyncOpen, url);
+    QFuture<void> future = QtConcurrent::run([this, url]() { asyncOpen(url); });
     p->watcher.setFuture(future);
 }
 
@@ -353,12 +337,7 @@ QTime Player::position()
 
         gint64 value = 0;
 
-#ifdef GST_API_VERSION_1
         if (gst_element_query_position(pipeline, GST_FORMAT_TIME, &value)) {
-#else
-        GstFormat fmt = GST_FORMAT_TIME;
-        if (gst_element_query_position(pipeline, &fmt, &value)) {
-#endif
             p->position = static_cast<int>((value / GST_MSECOND));
             return QTime(0, 0).addMSecs(p->position); // nanosec -> msec
         }
@@ -373,12 +352,7 @@ QTime Player::length()
 
     if (p->length == 0 && pipeline) {
 
-#ifdef GST_API_VERSION_1
         if (gst_element_query_duration(pipeline, GST_FORMAT_TIME, &value)) {
-#else
-        GstFormat fmt = GST_FORMAT_TIME;
-        if (gst_element_query_duration(pipeline, &fmt, &value)) {
-#endif
             p->length = static_cast<int>((value / GST_MSECOND));
         } else
             qDebug() << Q_FUNC_INFO << ": Can not get duration";
@@ -482,28 +456,11 @@ void Player::messageReceived(GstMessage* message)
             gdouble rms;
             gint i;
 
-#ifdef GST_API_VERSION_1
-            const GValue* array_val;
-            GValueArray* peak_arr;
-
-            array_val = gst_structure_get_value(s, "peak");
-            peak_arr = (GValueArray*)g_value_get_boxed(array_val);
-            channels = peak_arr->n_values;
+            const GValue* array_val = gst_structure_get_value(s, "peak");
+            channels = (gint)gst_value_list_get_size(array_val);
 
             for (i = 0; i < channels; ++i) {
-                peak_dB = g_value_get_double(peak_arr->values + i);
-#else
-            const GValue* list;
-            const GValue* value;
-
-            list = gst_structure_get_value(s, "peak");
-            channels = gst_value_list_get_size(list);
-
-            for (i = 0; i < channels; ++i) {
-                list = gst_structure_get_value(s, "peak");
-                value = gst_value_list_get_value(list, i);
-                peak_dB = g_value_get_double(value);
-#endif
+                peak_dB = g_value_get_double(gst_value_list_get_value(array_val, i));
                 /* converting from dB to normal gives us a value between 0.0 and 1.0 */
                 rms = pow(10, peak_dB / 20);
                 if (i == 0)
@@ -518,28 +475,11 @@ void Player::messageReceived(GstMessage* message)
             gdouble rms;
             gint i;
 
-#ifdef GST_API_VERSION_1
-            const GValue* array_val;
-            GValueArray* peak_arr;
-
-            array_val = gst_structure_get_value(s, "peak");
-            peak_arr = (GValueArray*)g_value_get_boxed(array_val);
-            channels = peak_arr->n_values;
+            const GValue* array_val = gst_structure_get_value(s, "peak");
+            channels = (gint)gst_value_list_get_size(array_val);
 
             for (i = 0; i < channels; ++i) {
-                peak_dB = g_value_get_double(peak_arr->values + i);
-#else
-            const GValue* list;
-            const GValue* value;
-
-            list = gst_structure_get_value(s, "peak");
-            channels = gst_value_list_get_size(list);
-
-            for (i = 0; i < channels; ++i) {
-                list = gst_structure_get_value(s, "peak");
-                value = gst_value_list_get_value(list, i);
-                peak_dB = g_value_get_double(value);
-#endif
+                peak_dB = g_value_get_double(gst_value_list_get_value(array_val, i));
 
                 /* converting from dB to normal gives us a value between 0.0 and 1.0 */
                 rms = pow(10, peak_dB / 20);

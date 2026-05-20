@@ -1,6 +1,6 @@
 /*
     Copyright (C) 2004 Max Howell <max.howell@methylblue.com>
-    Copyright (C) 2005-2014 Mario Stephan <mstephan@shared-files.de>
+    Copyright (C) 2005-2026 Mario Stephan <mstephan@shared-files.de>
 
     This library is free software; you can redistribute it and/or modify
     it under the terms of the GNU Lesser General Public License as published
@@ -129,13 +129,13 @@ void Track::readTags()
         if (fileref.tag()) {
             TagLib::Tag* tag = fileref.tag();
 
-            p->title = !tag->title().isNull() ? TStringToQString(tag->title()).trimmed() : QObject::tr("Unknown");
-            p->artist = !tag->artist().isNull() ? TStringToQString(tag->artist()).trimmed() : QObject::tr("Unknown");
-            p->album = !tag->album().isNull() ? TStringToQString(tag->album()).trimmed() : QObject::tr("Unknown");
+            p->title = !tag->title().isEmpty() ? TStringToQString(tag->title()).trimmed() : QObject::tr("Unknown");
+            p->artist = !tag->artist().isEmpty() ? TStringToQString(tag->artist()).trimmed() : QObject::tr("Unknown");
+            p->album = !tag->album().isEmpty() ? TStringToQString(tag->album()).trimmed() : QObject::tr("Unknown");
             p->comment = TStringToQString(tag->comment()).trimmed();
-            p->genre = !tag->genre().isNull() ? TStringToQString(tag->genre()).trimmed() : QObject::tr("Unknown");
-            p->year = tag->year() ? QString::number(tag->year()) : QString::null;
-            p->tracknumber = tag->track() ? QString::number(tag->track()) : QString::null;
+            p->genre = !tag->genre().isEmpty() ? TStringToQString(tag->genre()).trimmed() : QObject::tr("Unknown");
+            p->year = tag->year() ? QString::number(tag->year()) : QString();
+            p->tracknumber = tag->track() ? QString::number(tag->track()) : QString();
             p->length = fileref.audioProperties()->length();
             p->counter = 0;
             p->rate = 0;
@@ -160,7 +160,7 @@ bool Track::operator==(Track* track)
 
 bool Track::containIn(QList<Track*> list)
 {
-    foreach (Track* i, list) {
+    for (Track* i : list) {
         if (*i == this) {
             return true;
         }
@@ -235,7 +235,7 @@ QImage Track::defaultImage()
 QString Track::prettyTitle() const
 {
 
-    QString s = QString::null;
+    QString s = QString();
     if (p->artist != QObject::tr("Unknown"))
         s += p->artist + " - ";
     s += p->title;
@@ -360,7 +360,7 @@ int Track::rate() { return p->rate; }
 QString Track::year() { return p->year; }
 QString Track::comment() { return p->comment; }
 QString Track::genre() { return p->genre; }
-QString Track::tracknumber() { return p->tracknumber > 0 ? p->tracknumber : "0"; }
+QString Track::tracknumber() { return !p->tracknumber.isEmpty() ? p->tracknumber : "0"; }
 int Track::counter() { return p->counter; }
 QString Track::prettyLength() { return prettyLength(p->length); }
 Track::Options Track::flags() { return p->flags; }

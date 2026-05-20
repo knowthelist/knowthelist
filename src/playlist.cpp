@@ -1,5 +1,5 @@
 /*
-    Copyright (C) 2005-2019 Mario Stephan <mstephan@shared-files.de>
+    Copyright (C) 2005-2026 Mario Stephan <mstephan@shared-files.de>
 
     This library is free software; you can redistribute it and/or modify
     it under the terms of the GNU Lesser General Public License as published
@@ -22,7 +22,12 @@
 #include <Qt>
 #include <qdebug.h>
 
-#include <QtGui>
+#include <QDrag>
+#include <QDragEnterEvent>
+#include <QDropEvent>
+#include <QMouseEvent>
+#include <QDesktopServices>
+#include <QWidget>
 #include <QtXml>
 #include <qprogressdialog.h>
 #include <qscrollbar.h>
@@ -227,7 +232,7 @@ void Playlist::appendTracks(const QList<Track*> tracks)
 
 void Playlist::appendTracks(QList<Track*> tracks, PlaylistItem* after)
 {
-    foreach (Track* track, tracks) {
+    for (Track* track : tracks) {
         if (track != nullptr) {
             addTrack(new Track(*track), after);
             after = this->newTrack();
@@ -445,11 +450,7 @@ void Playlist::skipRewind()
 
 QString Playlist::defaultPlaylistPath()
 {
-#if QT_VERSION >= 0x050000
-    QString pathName = QStandardPaths::standardLocations(QStandardPaths::DataLocation).at(0);
-#else
-    QString pathName = QDesktopServices::storageLocation(QDesktopServices::DataLocation);
-#endif
+    QString pathName = QStandardPaths::standardLocations(QStandardPaths::AppDataLocation).at(0);
     QDir path(pathName);
 
     if (!path.exists())
@@ -517,7 +518,7 @@ void Playlist::saveXML(const QString& path) const
     playlistElem.appendChild(listElem);
 
     QTextStream stream(&file);
-    stream.setCodec("UTF-8");
+    stream.setEncoding(QStringConverter::Utf8);
     stream << "<?xml version=\"1.0\" encoding=\"utf8\"?>\n";
     stream << newdoc.toString();
     file.close();
@@ -531,7 +532,7 @@ void Playlist::loadXML(const QString& path)
     if (file.open(QFile::ReadOnly)) {
         QTextStream stream(&file);
 
-        stream.setCodec(QTextCodec::codecForName("utf8"));
+        stream.setEncoding(QStringConverter::Utf8);
         QDomDocument d;
         if (!d.setContent(stream.readAll())) {
             qDebug() << "Could not load XML\n";
@@ -817,7 +818,7 @@ void Playlist::dropEvent(QDropEvent* event)
         stream >> tags;
 
         // add Tracks to this playlist
-        foreach (QStringList tag, tags) {
+        for (const QStringList& tag : tags) {
             qDebug() << Q_FUNC_INFO << ": is playlistitem; tags:" << tags;
             addTrack(new Track(tag), m_marker);
             m_marker = this->newTrack();
@@ -922,7 +923,7 @@ void Playlist::keyPressEvent(QKeyEvent* e)
     else if (e->key() == Qt::Key_P)
         Q_EMIT trackDoubleClicked(item->track());
     else if (e->key() == Qt::CTRL + Qt::Key_S)
-        Q_EMIT wantSearch(QString::null);
+        Q_EMIT wantSearch(QString());
     else
         QTreeWidget::keyPressEvent(e);
 }

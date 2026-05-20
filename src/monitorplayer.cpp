@@ -1,5 +1,5 @@
 /*
-    Copyright (C) 2005-2019 Mario Stephan <mstephan@shared-files.de>
+    Copyright (C) 2005-2026 Mario Stephan <mstephan@shared-files.de>
     This library is free software; you can redistribute it and/or modify
     it under the terms of the GNU Lesser General Public License as published
     by the Free Software Foundation; either version 2.1 of the License, or
@@ -12,12 +12,8 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include <QtGui>
-#if QT_VERSION >= 0x050000
+#include <QWidget>
 #include <QtConcurrent/QtConcurrent>
-#else
-#include <QtConcurrentRun>
-#endif
 
 #if defined(Q_OS_DARWIN)
 #include <CoreAudio/AudioHardware.h>
@@ -72,11 +68,7 @@ void MonitorPlayer::newpad(GstElement* src,
     }
 
     /* check media type */
-#ifdef GST_API_VERSION_1
     caps = gst_pad_query_caps(new_pad, nullptr);
-#else
-    caps = gst_pad_get_caps(new_pad);
-#endif
     str = gst_caps_get_structure(caps, 0);
     if (!g_strrstr(gst_structure_get_name(str), "audio")) {
         gst_caps_unref(caps);
@@ -164,11 +156,7 @@ bool MonitorPlayer::prepare()
     bus = gst_pipeline_get_bus(GST_PIPELINE(pipeline));
     src = gst_element_factory_make("uridecodebin", "source");
 
-#ifdef GST_API_VERSION_1
     caps_value = "audio/x-raw";
-#else
-    caps_value = "audio/x-raw-int";
-#endif
     caps = gst_caps_new_simple(caps_value.toLatin1().data(),
         "channels", G_TYPE_INT, 2, NULL);
     g_signal_connect(src, "pad-added", G_CALLBACK(cb_newpad_mp), this);
@@ -203,11 +191,7 @@ bool MonitorPlayer::prepare()
 
     gst_element_set_state(src, GST_STATE_NULL);
 
-#ifdef GST_API_VERSION_1
     gst_bus_set_sync_handler(bus, bus_cb, this, nullptr);
-#else
-    gst_bus_set_sync_handler(bus, bus_cb, this);
-#endif
 
     qDebug() << Q_FUNC_INFO << " "
              << "END";
@@ -227,7 +211,7 @@ void MonitorPlayer::open(QUrl url)
     }
     // To avoid delays, load track in another thread
     qDebug() << Q_FUNC_INFO << ":" << parentWidget()->objectName() << " url=" << url;
-    QFuture<void> future = QtConcurrent::run(this, &MonitorPlayer::asyncOpen, url);
+    QFuture<void> future = QtConcurrent::run([this, url]() { asyncOpen(url); });
     p->watcher.setFuture(future);
 }
 
@@ -308,12 +292,7 @@ QTime MonitorPlayer::position()
 
         gint64 value = 0;
 
-#ifdef GST_API_VERSION_1
         if (gst_element_query_position(pipeline, GST_FORMAT_TIME, &value)) {
-#else
-        GstFormat fmt = GST_FORMAT_TIME;
-        if (gst_element_query_position(pipeline, &fmt, &value)) {
-#endif
             p->position = static_cast<uint>((value / GST_MSECOND));
             return QTime(0, 0).addMSecs(p->position); // nanosec -> msec
         }
@@ -328,12 +307,7 @@ QTime MonitorPlayer::length()
 
     if (p->length == 0 && pipeline) {
 
-#ifdef GST_API_VERSION_1
         if (gst_element_query_duration(pipeline, GST_FORMAT_TIME, &value)) {
-#else
-        GstFormat fmt = GST_FORMAT_TIME;
-        if (gst_element_query_duration(pipeline, &fmt, &value)) {
-#endif
             p->length = static_cast<uint>((value / GST_MSECOND));
         }
     }
@@ -452,7 +426,7 @@ BOOL CALLBACK DSEnumProc(LPGUID lpGUID, const WCHAR* lpszDesc,
 {
     if (lpGUID) {
         QList<dsDevice>* l = reinterpret_cast<QList<dsDevice>*>(ctx);
-        *l << dsDevice(QString::fromUtf16(reinterpret_cast<const ushort*>(lpszDesc)), QUuid(*lpGUID));
+        *l << dsDevice(QString::fromWCharArray(lpszDesc), QUuid(*lpGUID));
     }
 
     return (true);
@@ -484,7 +458,7 @@ void MonitorPlayer::readDevices()
 
     DirectSoundEnumerate(DSEnumProc, reinterpret_cast<void*>(&qlOutput));
 
-    foreach (dev, qlOutput) {
+    for (const auto& dev : qlOutput) {
         p->devices.insert(dev.second.toString(), dev.first);
     }
 
@@ -493,7 +467,7 @@ void MonitorPlayer::readDevices()
     AudioObjectPropertyAddress propertyAddress;
     propertyAddress.mSelector = kAudioHardwarePropertyDevices;
     propertyAddress.mScope = kAudioDevicePropertyScopeOutput;
-    propertyAddress.mElement = kAudioObjectPropertyElementMaster;
+    propertyAddress.mElement = kAudioObjectPropertyElementMain;
 
     OSStatus status = AudioObjectGetPropertyDataSize(kAudioObjectSystemObject, &propertyAddress, 0, NULL, &dataSize);
     if (kAudioHardwareNoError != status) {
@@ -566,7 +540,7 @@ void MonitorPlayer::messageReceived(GstMessage* message)
     }
     case GST_MESSAGE_STATE_CHANGED: {
         GstState old_state, new_state;
-        gst_message_parse_state_changed(message, &old_state, &new_state, NULL);
+    gst_message_parse_state_changed(message, &old_state, &new_state, NULL);
         switch (new_state) {
         case GST_STATE_PAUSED:
         case GST_STATE_NULL:
@@ -587,28 +561,11 @@ void MonitorPlayer::messageReceived(GstMessage* message)
             gdouble rms;
             gint i;
 
-#ifdef GST_API_VERSION_1
-            const GValue* array_val;
-            GValueArray* peak_arr;
-
-            array_val = gst_structure_get_value(s, "peak");
-            peak_arr = (GValueArray*)g_value_get_boxed(array_val);
-            channels = peak_arr->n_values;
+            const GValue* array_val = gst_structure_get_value(s, "peak");
+            channels = (gint)gst_value_list_get_size(array_val);
 
             for (i = 0; i < channels; ++i) {
-                peak_dB = g_value_get_double(peak_arr->values + i);
-#else
-            const GValue* list;
-            const GValue* value;
-
-            list = gst_structure_get_value(s, "peak");
-            channels = gst_value_list_get_size(list);
-
-            for (i = 0; i < channels; ++i) {
-                list = gst_structure_get_value(s, "peak");
-                value = gst_value_list_get_value(list, i);
-                peak_dB = g_value_get_double(value);
-#endif
+                peak_dB = g_value_get_double(gst_value_list_get_value(array_val, i));
                 /* converting from dB to normal gives us a value between 0.0 and 1.0 */
                 rms = pow(10, peak_dB / 20);
                 if (i == 0)

@@ -1,6 +1,6 @@
 /*
     Copyright (C) 2004 Max Howell <max.howell@methylblue.com>
-    Copyright (C) 2005-2014 Mario Stephan <mstephan@shared-files.de>
+    Copyright (C) 2005-2026 Mario Stephan <mstephan@shared-files.de>
 
     This library is free software; you can redistribute it and/or modify
     it under the terms of the GNU Lesser General Public License as published
@@ -20,11 +20,7 @@
 
 #include "collectiondb.h"
 
-#if QT_VERSION >= 0x050000
 #include <QtConcurrent/QtConcurrent>
-#else
-#include <QtConcurrentRun>
-#endif
 
 class CollectionUpdaterPrivate {
 public:
@@ -57,7 +53,7 @@ CollectionUpdater::CollectionUpdater()
     p->collectionDB->executeSql("PRAGMA synchronous = OFF;");
 
     if (!p->collectionDB->isDbValid()) {
-        qDebug() << "Rebuilding database!" << endl;
+        qDebug() << "Rebuilding database!" ;
         p->collectionDB->dropTables();
         p->collectionDB->createTables();
         p->collectionDB->dropStatsTable();
@@ -112,13 +108,13 @@ void CollectionUpdater::monitor()
 
     QList<QStringList> entries = p->collectionDB->selectSql("SELECT dir, changedate FROM directories;");
 
-    foreach (QStringList entry, entries) {
+    for (const QStringList& entry : entries) {
         QString dir(entry[0]);
         QString changedate(entry[1]);
         QFileInfo fi(dir);
 
         if (fi.exists()) {
-            if (QString::number(fi.lastModified().toTime_t()) != changedate) {
+            if (QString::number(fi.lastModified().toSecsSinceEpoch()) != changedate) {
                 folders << dir;
                 qDebug() << "Collection dir changed: " << dir;
             }
@@ -130,19 +126,19 @@ void CollectionUpdater::monitor()
     }
 
     if (!folders.isEmpty())
-        QFuture<void> future = QtConcurrent::run(this, &CollectionUpdater::asynchronScan, folders);
+        QFuture<void> future = QtConcurrent::run([this, folders]() { asynchronScan(folders); });
 }
 
 void CollectionUpdater::scan()
 {
     p->incremental = false;
     p->isStoped = false;
-    QFuture<void> future = QtConcurrent::run(this, &CollectionUpdater::asynchronScan, p->dirs);
+    QFuture<void> future = QtConcurrent::run([this]() { asynchronScan(p->dirs); });
 }
 
 void CollectionUpdater::asynchronScan(QStringList dirs)
 {
-    qDebug() << Q_FUNC_INFO << dirs.count() << "dirs" << endl;
+    qDebug() << Q_FUNC_INFO << dirs.count() << "dirs" ;
 
     // avoid multiple runs
     QMutexLocker locker(&p->mutex);
@@ -177,7 +173,7 @@ void CollectionUpdater::readDir(const QString& dir, QStringList& entries)
     QFileInfo fi(dir);
 
     if (fi.exists())
-        p->collectionDB->updateDirStats(dir, (long)fi.lastModified().toTime_t());
+        p->collectionDB->updateDirStats(dir, (long)fi.lastModified().toSecsSinceEpoch());
     else {
         if (p->incremental) {
             p->collectionDB->removeSongsInDir(dir);
@@ -190,7 +186,7 @@ void CollectionUpdater::readDir(const QString& dir, QStringList& entries)
     rDir.setFilter(QDir::Dirs | QDir::Files | QDir::NoDotDot | QDir::NoDot | QDir::NoSymLinks | QDir::Readable);
     QFileInfoList list = rDir.entryInfoList();
 
-    Q_FOREACH (const QFileInfo fi, list) {
+    for (const QFileInfo& fi : list) {
         if (fi.isDir()) {
             if (!p->incremental || !p->collectionDB->isDirInCollection(fi.absoluteFilePath()))
                 readDir(fi.absoluteFilePath(), entries);

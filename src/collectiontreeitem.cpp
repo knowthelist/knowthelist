@@ -1,5 +1,5 @@
 /*
-    Copyright (C) 2005-2014 Mario Stephan <mstephan@shared-files.de>
+    Copyright (C) 2005-2026 Mario Stephan <mstephan@shared-files.de>
 
     This library is free software; you can redistribute it and/or modify
     it under the terms of the GNU Lesser General Public License as published
@@ -92,7 +92,7 @@ void CollectionTreeItem::setGenre(QString value)
 
 void CollectionTreeItem::setTextString(QString value)
 {
-    if (value == QString::null) {
+    if (value.isEmpty()) {
         setText(0, QString("( %1 )").arg(tr("All")));
         setChildIndicatorPolicy(QTreeWidgetItem::DontShowIndicator);
     } else

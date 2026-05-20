@@ -1,5 +1,5 @@
 /*
-    Copyright (C) 2005-2014 Mario Stephan <mstephan@shared-files.de>
+    Copyright (C) 2005-2026 Mario Stephan <mstephan@shared-files.de>
 
     This library is free software; you can redistribute it and/or modify
     it under the terms of the GNU Lesser General Public License as published
@@ -23,7 +23,7 @@
 #include <QFileDialog>
 #include <QMessageBox>
 #include <QtDebug>
-#include <QtGui>
+#include <QWidget>
 #include <QtSql>
 
 class SettingsDialogPrivate {
@@ -90,7 +90,7 @@ SettingsDialog::SettingsDialog(QWidget* parent)
     p->ui.pages->setCurrentIndex(0);
 
     //Collection folder setup
-    p->model = new CollectionSetupModel();
+    p->model = new CollectionSetupModel(this);
 
     p->ui.collectionsTreeView->setModel(p->model);
     p->ui.collectionsTreeView->setColumnHidden(1, true);
@@ -249,7 +249,7 @@ void SettingsDialog::loadDjList(int count)
 void SettingsDialog::on_pushButton_clicked()
 {
     QFileDialog dialog(this);
-    dialog.setFileMode(QFileDialog::DirectoryOnly);
+    dialog.setFileMode(QFileDialog::Directory);
     if (dialog.exec())
         p->ui.txtBrowserRoot->setText(dialog.selectedFiles().first());
 }
@@ -260,7 +260,7 @@ void SettingsDialog::on_pushAbout_clicked()
     msgBox.setIconPixmap(QIcon(":knowthelist.png").pixmap(65, 65));
     msgBox.setText(QString("%1").arg("<h3>Knowthelist</h3>"
                                      "         Version "
-        + QApplication::applicationVersion() + "<br />Copyright (C) 2005-2014 Mario Stephan "
+        + QApplication::applicationVersion() + "<br />Copyright (C) 2005-2026 Mario Stephan "
                                                "<br /><a href='mailto:mstephan@shared-files.de'>mstephan@shared-files.de</a>"
                                                "<br /><br /><a href='http://knowthelist.github.io/knowthelist'>"
                                                "http://knowthelist.github.io/knowthelist</a>"

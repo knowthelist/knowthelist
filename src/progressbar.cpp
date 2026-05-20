@@ -1,5 +1,5 @@
 /*
-    Copyright (C) 2005-2014 Mario Stephan <mstephan@shared-files.de>
+    Copyright (C) 2005-2026 Mario Stephan <mstephan@shared-files.de>
 
     This library is free software; you can redistribute it and/or modify
     it under the terms of the GNU Lesser General Public License as published
@@ -18,14 +18,17 @@
 #include "progressbar.h"
 
 #include <QHBoxLayout>
-#include <QtGui>
+#include <QProgressBar>
+#include <QResizeEvent>
+#include <QToolButton>
+#include <QWidget>
 
 ProgressBar::ProgressBar(QWidget* parent, const char* name)
     : QWidget(parent)
 {
 
     QHBoxLayout* mainLayout = new QHBoxLayout;
-    mainLayout->setMargin(0);
+    mainLayout->setContentsMargins(0, 0, 0, 0);
     mainLayout->setSpacing(1);
 
     bar = new QProgressBar(this);

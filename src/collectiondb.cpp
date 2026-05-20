@@ -1,7 +1,7 @@
 /*
     Copyright (c) 2004 Mark Kretschmann <markey@web.de>
     Copyright (c) 2004 Christian Muehlhaeuser <chris@chris.de>
-    Copyright (C) 2005-2014 Mario Stephan <mstephan@shared-files.de>
+    Copyright (C) 2005-2026 Mario Stephan <mstephan@shared-files.de>
 
     This library is free software; you can redistribute it and/or modify
     it under the terms of the GNU Lesser General Public License as published
@@ -21,8 +21,8 @@
 
 #include <QtSql>
 
-#include <QDesktopServices>
 #include <QMutex>
+#include <QRandomGenerator>
 #include <qimage.h>
 
 struct CollectionDbPrivate {
@@ -73,19 +73,19 @@ public:
         QString ret = "";
         if (!paths.isEmpty()) {
             ret += "AND ( ";
-            foreach (QString path, paths)
+            for (QString path : paths)
                 ret += " lower(tags.url) like lower('%" + path.replace("'", "''") + "%') OR ";
             ret += " 1=2) ";
         }
         if (!genres.isEmpty()) {
             ret += "AND ( ";
-            foreach (QString genre, genres)
+            for (QString genre : genres)
                 ret += " lower(genre.name) like lower('%" + genre.replace("'", "''") + "%') OR ";
             ret += " 1=2) ";
         }
         if (!artists.isEmpty()) {
             ret += "AND ( ";
-            foreach (QString artist, artists)
+            for (QString artist : artists)
                 ret += " lower(artist.name) like lower('%" + artist.replace("'", "''") + "%') OR ";
             ret += " 1=2) ";
         }
@@ -143,7 +143,7 @@ void CollectionDB::setFilterString(QString string)
     p->filterString = string;
     p->sqlQuickFilter = "";
 
-    foreach (QString token, string.split(" ")) {
+    for (const QString& token : string.split(" ")) {
         p->sqlQuickFilter += QString(" AND ( lower(artist.name) LIKE lower('%%1%') OR "
                                      "lower(album.name) LIKE lower('%%1%') OR "
                                      "lower(tags.title) LIKE lower('%%1%') OR "
@@ -503,7 +503,7 @@ QStringList CollectionDB::getRandomEntry(QString path, QString genre, QString ar
     }
 
     if (p->resultCount > 0) {
-        long randomID = (qrand() % p->resultCount);
+        long randomID = QRandomGenerator::global()->bounded((quint32)p->resultCount);
         //qebug() << QString::number(randomID);
         QList<QStringList> entries = selectRandomEntry(QString::number(randomID), path, genre, artist);
 
@@ -519,17 +519,13 @@ QStringList CollectionDB::getRandomEntry(QString path, QString genre, QString ar
 
 QStringList CollectionDB::getRandomEntry()
 {
-    double randMax;
-
-    randMax = RAND_MAX;
-
     if (p->filterString != p->lastFilterString || p->resultCount == 0) {
         //new genre > get new count
         p->lastFilterString = p->filterString;
         p->resultCount = getCount();
     }
 
-    long randomID = (qrand() / randMax) * p->resultCount;
+    long randomID = QRandomGenerator::global()->bounded((quint32)p->resultCount);
     //qDebug() << QString::number(randomID);
     QList<QStringList> entries = selectRandomEntry(QString::number(randomID));
 

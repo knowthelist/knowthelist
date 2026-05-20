@@ -1,5 +1,5 @@
 /*
-    Copyright (C) 2005-2014 Mario Stephan <mstephan@shared-files.de>
+    Copyright (C) 2005-2026 Mario Stephan <mstephan@shared-files.de>
 
     This library is free software; you can redistribute it and/or modify
     it under the terms of the GNU Lesser General Public License as published
@@ -35,7 +35,7 @@ Dj::Dj()
 {
     p->rotation = 0;
     p->filter = nullptr;
-    p->description = QString::null;
+    p->description = QString();
     p->countTracks = 0;
     p->lengthTracks = 0;
 }

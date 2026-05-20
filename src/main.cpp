@@ -1,5 +1,5 @@
 /*
-    Copyright (C) 2005-2014 Mario Stephan <mstephan@shared-files.de>
+    Copyright (C) 2005-2026 Mario Stephan <mstephan@shared-files.de>
 
     This library is free software; you can redistribute it and/or modify
     it under the terms of the GNU Lesser General Public License as published
@@ -19,7 +19,6 @@
 
 #include <QApplication>
 #include <QMessageBox>
-#include <QTextCodec>
 #include <QTranslator>
 #include <QtSql>
 
@@ -27,10 +26,6 @@ int main(int argc, char* argv[])
 {
     QApplication a(argc, argv);
 
-    // init rand
-    qsrand(QDateTime::currentMSecsSinceEpoch() / 1000);
-
-    QTextCodec::setCodecForLocale(QTextCodec::codecForName("UTF-8"));
     a.setQuitOnLastWindowClosed(true);
 
     QCoreApplication::setOrganizationName("knowthelist-org");
@@ -52,7 +47,7 @@ int main(int argc, char* argv[])
 
     QTranslator qtTranslator;
     qtTranslator.load("qt_" + lang,
-        QLibraryInfo::location(QLibraryInfo::TranslationsPath));
+        QLibraryInfo::path(QLibraryInfo::TranslationsPath));
     a.installTranslator(&qtTranslator);
 
     QTranslator localization;
@@ -62,24 +57,13 @@ int main(int argc, char* argv[])
     a.installTranslator(&localization);
 
     if (!QSqlDatabase::drivers().contains("QSQLITE")) {
-#if QT_VERSION >= 0x050000
         QMessageBox::critical(nullptr, QObject::tr("Unable to load database"),
-            QObject::tr("This application needs the QT5 SQLITE "
-                        "driver (libqt5-sql-sqlite)"));
-#else
-        QMessageBox::critical(0, QObject::tr("Unable to load database"),
-            QObject::tr("This application needs the QT4 SQLITE "
-                        "driver (libqt4-sql-sqlite)"));
-#endif
-
+            QObject::tr("This application needs the Qt SQLITE "
+                        "driver (libqt6-sql-sqlite)"));
         return 1;
     }
 
-#if QT_VERSION >= 0x050000
-    QString pathName = QStandardPaths::standardLocations(QStandardPaths::DataLocation).at(0);
-#else
-    QString pathName = QDesktopServices::storageLocation(QDesktopServices::DataLocation);
-#endif
+    QString pathName = QStandardPaths::standardLocations(QStandardPaths::AppDataLocation).at(0);
     QDir path(pathName);
 
     if (!path.exists())

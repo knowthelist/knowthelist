@@ -1,22 +1,20 @@
 #
 # Knowthelist
-# Copyright (C) 2011-2019 Mario Stephan <mstephan@shared-files.de>
+# Copyright (C) 2011-2024 Mario Stephan <mstephan@shared-files.de>
 # License: LGPL-3.0+
 #
 
-DEFINES += APP_VERSION="\\\"2.3.1\\\""
+DEFINES += APP_VERSION="\\\"2.4.0\\\""
 
 QT += core \
     gui \
     xml \
-    sql
+    sql \
+    widgets \
+    concurrent
 
-greaterThan(QT_MAJOR_VERSION, 4){
-     #use qt5 and gstreamer 1.x
-     QT += widgets
-     DEFINES += GST_API_VERSION_1
-}
-#else use qt4 and gstreamer 0.10
+CONFIG += c++17
+DEFINES += GST_API_VERSION_1
 
 TARGET = knowthelist
 TEMPLATE = app
@@ -156,12 +154,14 @@ win32 {
     QMAKE_POST_LINK = $$QMAKE_COPY \"$${DESTDIR}\libgstdirectsoundsink.dll\" \"$${GST_HOME}lib\gstreamer-1.0\" $$escape_expand(\\n\\t)
 }
 macx { 
-    DEFINES += GST_API_VERSION_1
-    INCLUDEPATH += /usr/local/include/gstreamer-1.0 \
-        /usr/local/include/glib-2.0 \
-        /usr/local/lib/glib-2.0/include \
-        /usr/local/include
-    LIBS += -L/usr/local/lib \
+    BREW_PREFIX = $$system(brew --prefix 2>/dev/null)
+    isEmpty(BREW_PREFIX): BREW_PREFIX = /usr/local
+
+    INCLUDEPATH += $${BREW_PREFIX}/include/gstreamer-1.0 \
+        $${BREW_PREFIX}/include/glib-2.0 \
+        $${BREW_PREFIX}/lib/glib-2.0/include \
+        $${BREW_PREFIX}/include
+    LIBS += -L$${BREW_PREFIX}/lib \
         -lgstreamer-1.0 \
         -lglib-2.0 \
         -lgobject-2.0 \
@@ -181,18 +181,8 @@ unix:!macx {
             desktop.files += ../dist/Knowthelist.desktop
             INSTALLS += target icon desktop
 
-contains(DEFINES, GST_API_VERSION_1) {
-    CONFIG += link_pkgconfig \
-        gstreamer-1.0
-    PKGCONFIG += gstreamer-1.0 \
-        taglib alsa
-}
-else {
-    CONFIG += link_pkgconfig \
-        gstreamer
-    PKGCONFIG += gstreamer-0.10 \
-        taglib alsa
-}
+    CONFIG += link_pkgconfig
+    PKGCONFIG += gstreamer-1.0 taglib alsa
 
 }
 RESOURCES += ../images/icons.qrc \

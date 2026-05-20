@@ -19,13 +19,13 @@
 #define COLLECTIONSETUPMODEL_H
 
 #include <QTreeView>
-#include <QDirModel>
+#include <QFileSystemModel>
 
-class CollectionSetupModel : public QDirModel
+class CollectionSetupModel : public QFileSystemModel
 {
   Q_OBJECT
 public:
-    CollectionSetupModel();
+    CollectionSetupModel(QObject* parent = nullptr);
     QStringList dirsChecked();
     void setDirsChecked(QStringList list);
 

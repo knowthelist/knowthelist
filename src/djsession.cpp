@@ -1,5 +1,5 @@
 /*
-    Copyright (C) 2005-2014 Mario Stephan <mstephan@shared-files.de>
+    Copyright (C) 2005-2026 Mario Stephan <mstephan@shared-files.de>
 
     This library is free software; you can redistribute it and/or modify
     it under the terms of the GNU Lesser General Public License as published
@@ -19,11 +19,7 @@
 #include "dj.h"
 #include "track.h"
 
-#if QT_VERSION >= 0x050000
 #include <QtConcurrent/QtConcurrent>
-#else
-#include <QtConcurrentRun>
-#endif
 #include <QtXml>
 
 struct DjSessionPrivate {
@@ -72,10 +68,6 @@ Dj* DjSession::currentDj()
 
 void DjSession::searchTracks()
 {
-    // init qrand
-    QTime time = QTime::currentTime();
-    qsrand((uint)time.msec());
-
     // how many tracks are needed
     p->mutex1.lock();
     int diffCount1 = p->minCount - p->playList1_Tracks.count();
@@ -159,7 +151,7 @@ Track* DjSession::getRandomTrack()
 
 void DjSession::updatePlaylists()
 {
-    QFuture<void> future = QtConcurrent::run(this, &DjSession::searchTracks);
+    QFuture<void> future = QtConcurrent::run([this]() { searchTracks(); });
 }
 
 void DjSession::forceTracks(QList<Track*> tracks)
@@ -217,7 +209,7 @@ void DjSession::playDefaultList()
     qDebug() << Q_FUNC_INFO << "Song count: " << selectedTags.count();
 
     //add tags to this track list
-    foreach (QStringList tag, selectedTags) {
+    for (const QStringList& tag : selectedTags) {
         tracks.append(new Track(tag));
     }
 
@@ -256,7 +248,7 @@ void DjSession::onTracksChanged_Playlist1(QList<Track*> tracks)
 {
     p->playList1_Info.second = 0;
     p->playList1_Tracks = tracks;
-    foreach (Track* track, p->playList1_Tracks) {
+    for (Track* track : p->playList1_Tracks) {
         Track::Options flags = track->flags();
         flags |= Track::isOnFirstPlayer;
         flags &= ~Track::isOnSecondPlayer;
@@ -271,7 +263,7 @@ void DjSession::onTracksChanged_Playlist2(QList<Track*> tracks)
 {
     p->playList2_Info.second = 0;
     p->playList2_Tracks = tracks;
-    foreach (Track* track, p->playList2_Tracks) {
+    for (Track* track : p->playList2_Tracks) {
         Track::Options flags = track->flags();
         flags &= ~Track::isOnFirstPlayer;
         flags |= Track::isOnSecondPlayer;
@@ -417,7 +409,7 @@ void DjSession::savePlaylists(const QString& filename)
     playlistElem.appendChild(listElem);
 
     QTextStream stream(&file);
-    stream.setCodec("UTF-8");
+    stream.setEncoding(QStringConverter::Utf8);
     stream << "<?xml version=\"1.0\" encoding=\"utf8\"?>\n";
     stream << newdoc.toString();
     file.close();

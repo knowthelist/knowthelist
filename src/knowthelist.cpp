@@ -1,5 +1,5 @@
 /*
-    Copyright (C) 2005-2019 Mario Stephan <mstephan@shared-files.de>
+    Copyright (C) 2005-2026 Mario Stephan <mstephan@shared-files.de>
 
     This library is free software; you can redistribute it and/or modify
     it under the terms of the GNU Lesser General Public License as published
@@ -26,11 +26,7 @@
 
 #include <QBoxLayout>
 #include <QSettings>
-#if QT_VERSION >= 0x050000
 #include <QtConcurrent/QtConcurrent>
-#else
-#include <QtConcurrentRun>
-#endif
 #include <QMetaType>
 
 Knowthelist::Knowthelist(QWidget* parent)

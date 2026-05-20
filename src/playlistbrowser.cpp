@@ -1,5 +1,5 @@
 /*
-    Copyright (C) 2005-2014 Mario Stephan <mstephan@shared-files.de>
+    Copyright (C) 2005-2026 Mario Stephan <mstephan@shared-files.de>
 
     This library is free software; you can redistribute it and/or modify
     it under the terms of the GNU Lesser General Public License as published
@@ -65,7 +65,7 @@ PlaylistBrowser::PlaylistBrowser(QWidget *parent) :
     headWidget->setMinimumHeight(25);
 
     QHBoxLayout *headWidgetLayout = new QHBoxLayout;
-    headWidgetLayout->setMargin(0);
+    headWidgetLayout->setContentsMargins(0, 0, 0, 0);
     headWidgetLayout->setSpacing(1);
     headWidgetLayout->setAlignment(Qt::AlignRight);
 
@@ -84,7 +84,7 @@ PlaylistBrowser::PlaylistBrowser(QWidget *parent) :
     mainLayout->addWidget(headWidget);
     mainLayout->addWidget(p->listPlaylists);
 
-    mainLayout->setMargin(0);
+    mainLayout->setContentsMargins(0, 0, 0, 0);
     mainLayout->setSpacing(0);
 
     setMaximumWidth(400);
@@ -160,11 +160,11 @@ void PlaylistBrowser::updateLists()
 
     // read stored lists
     QList<QStringList> listData = p->database->selectPlaylistData();
-    foreach ( QStringList data, listData) {
+    for (const QStringList& data : listData) {
         QString name = data[0];
         int count = data[1].toInt();
         int sum = data[2].toInt();
-        QDateTime date(QDateTime::fromTime_t( data[3].toInt() ));
+        QDateTime date(QDateTime::fromSecsSinceEpoch( data[3].toInt() ));
 
         qDebug() << Q_FUNC_INFO << "add playlist: " << name;
         list = new PlaylistWidget(p->listPlaylists);
@@ -278,7 +278,7 @@ QList<Track*> PlaylistBrowser::selectedTracks()
     qDebug() << Q_FUNC_INFO << "Song count: " << selectedTags.count();
 
     //add tags to this track list
-    foreach ( QStringList tag, selectedTags) {
+    for (const QStringList& tag : selectedTags) {
         tracks.append( new Track(tag));
     }
 
@@ -332,7 +332,7 @@ QList<Track*> PlaylistBrowser::readFileList(QString filename)
     {
         QTextStream stream( &file );
 
-      stream.setCodec( QTextCodec::codecForName("utf8") );
+      stream.setEncoding(QStringConverter::Utf8);
       QDomDocument d;
       if( !d.setContent(stream.readAll()) ) { qDebug() << "Could not load XML\n"; return tracks; }
 
@@ -397,7 +397,7 @@ QPair<int,int> PlaylistBrowser::readFileValues(QString filename)
     {
       QTextStream stream( &file );
 
-      stream.setCodec( QTextCodec::codecForName("utf8") );
+      stream.setEncoding(QStringConverter::Utf8);
       QDomDocument d;
       if( !d.setContent(stream.readAll()) ) { qDebug() << "Could not load XML\n"; return pair; }
 

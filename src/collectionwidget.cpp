@@ -1,5 +1,5 @@
 /*
-    Copyright (C) 2005-2019 Mario Stephan <mstephan@shared-files.de>
+    Copyright (C) 2005-2026 Mario Stephan <mstephan@shared-files.de>
 
     This library is free software; you can redistribute it and/or modify
     it under the terms of the GNU Lesser General Public License as published
@@ -29,7 +29,7 @@
 #include <QPushButton>
 #include <QTimerEvent>
 #include <QVBoxLayout>
-#include <QtGui>
+#include <QWidget>
 
 class CollectionWidgetPrivate {
 public:
@@ -68,7 +68,7 @@ CollectionWidget::CollectionWidget(QWidget* parent)
     headWidget->setMaximumHeight(38);
 
     QHBoxLayout* headWidgetLayout = new QHBoxLayout;
-    headWidgetLayout->setMargin(0);
+    headWidgetLayout->setContentsMargins(0, 0, 0, 0);
     headWidgetLayout->setSpacing(1);
 
     headWidgetLayout->addSpacerItem(
@@ -89,7 +89,7 @@ CollectionWidget::CollectionWidget(QWidget* parent)
     headWidget->raise();
     mainLayout->addWidget(headWidget);
 
-    mainLayout->setMargin(0);
+    mainLayout->setContentsMargins(0, 0, 0, 0);
     mainLayout->setSpacing(0);
 
     connect(pushRandom, SIGNAL(clicked()), p->collectiontree,

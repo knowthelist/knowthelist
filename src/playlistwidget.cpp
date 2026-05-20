@@ -20,7 +20,7 @@ PlaylistWidget::PlaylistWidget(QWidget* parent)
     , ui(new Ui::PlaylistWidget)
 {
     ui->setupUi(this);
-    ui->lblDesciption->setText(QString::null);
+    ui->lblDesciption->setText(QString());
     ui->widgetClose->setMinimumWidth(0);
     ui->widgetClose->setMaximumWidth(0);
 

@@ -32,6 +32,7 @@
 
 #include <QDebug>
 
+#include <QActionGroup>
 #include <QAnimationGroup>
 #include <QColorDialog>
 #include <QHBoxLayout>
@@ -42,7 +43,7 @@
 #include <QSignalMapper>
 #include <QSplitter>
 #include <QStackedLayout>
-#include <QStyleOptionTabV3>
+#include <QStyleOptionTab>
 #include <QToolButton>
 #include <QToolTip>
 #include <QVBoxLayout>
@@ -58,7 +59,7 @@ void FancyTabProxyStyle::drawControl(
     ControlElement element, const QStyleOption* option,
     QPainter* p, const QWidget* widget) const {
 
-  const QStyleOptionTabV3* v_opt = qstyleoption_cast<const QStyleOptionTabV3*>(option);
+  const QStyleOptionTab* v_opt = qstyleoption_cast<const QStyleOptionTab*>(option);
 
   if (element != CE_TabBarTab || !v_opt) {
     QProxyStyle::drawControl(element, option, p, widget);
@@ -493,18 +494,18 @@ FancyTabWidget::FancyTabWidget(QWidget* parent)
     proxy_style_(new FancyTabProxyStyle)
 {
   side_layout_->setSpacing(0);
-  side_layout_->setMargin(0);
+  side_layout_->setContentsMargins(0, 0, 0, 0);
   side_layout_->addSpacerItem(new QSpacerItem(0, 0, QSizePolicy::Fixed, QSizePolicy::Expanding));
 
   side_widget_->setLayout(side_layout_);
   side_widget_->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Expanding);
 
-  top_layout_->setMargin(0);
+  top_layout_->setContentsMargins(0, 0, 0, 0);
   top_layout_->setSpacing(0);
   top_layout_->addLayout(stack_);
 
   QHBoxLayout* main_layout = new QHBoxLayout;
-  main_layout->setMargin(0);
+  main_layout->setContentsMargins(0, 0, 0, 0);
   main_layout->setSpacing(1);
   main_layout->addWidget(side_widget_);
   main_layout->addLayout(top_layout_);
@@ -597,7 +598,7 @@ void FancyTabWidget::SetMode(Mode mode) {
       side_layout_->insertWidget(0, bar);
       tab_bar_ = bar;
 
-      foreach (const Item& item, items_) {
+      for (const Item& item : items_) {
         if (item.type_ == Item::Type_Spacer)
           bar->addSpacer(item.spacer_size_);
         else
@@ -687,7 +688,7 @@ void FancyTabWidget::MakeTabBar(QTabBar::Shape shape, bool text, bool icons,
   else
     side_layout_->insertWidget(0, bar);
 
-  foreach (const Item& item, items_) {
+  for (const Item& item : items_) {
     if (item.type_ != Item::Type_Tab)
       continue;
 

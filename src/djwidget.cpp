@@ -1,5 +1,5 @@
 /*
-    Copyright (C) 2005-2014 Mario Stephan <mstephan@shared-files.de>
+    Copyright (C) 2005-2026 Mario Stephan <mstephan@shared-files.de>
 
     This library is free software; you can redistribute it and/or modify
     it under the terms of the GNU Lesser General Public License as published
@@ -37,7 +37,7 @@ DjWidget::DjWidget(QWidget* parent)
 {
     setFocusPolicy(Qt::ClickFocus);
     ui->setupUi(this);
-    ui->lblDesciption->setText(QString::null);
+    ui->lblDesciption->setText(QString());
     ui->widgetClose->setMinimumWidth(0);
     ui->widgetClose->setMaximumWidth(0);
 

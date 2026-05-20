@@ -1,5 +1,5 @@
 /*
-    Copyright (C) 2005-2019 Mario Stephan <mstephan@shared-files.de>
+    Copyright (C) 2005-2026 Mario Stephan <mstephan@shared-files.de>
 
     This library is free software; you can redistribute it and/or modify
     it under the terms of the GNU Lesser General Public License as published
@@ -16,6 +16,7 @@
 */
 
 #include "vumeter.h"
+#include <QElapsedTimer>
 #include <QPainter>
 #include <QStyleOption>
 #include <QWidget>
@@ -26,7 +27,7 @@ struct VUMeterPrivate {
     double peakLeft;
     double peakRight;
     Qt::Orientation orientation;
-    QTime peakTime;
+    QElapsedTimer peakTime;
     int linesPerSegment;
     int ledSize;
     int spacesInSegments;
@@ -104,7 +105,7 @@ void VUMeter::checkPeakTime()
     if (p->peakTime.elapsed() >= 1000) {
         p->peakLeft = 0;
         p->peakRight = 0;
-        p->peakTime.restart();
+        p->peakTime.start();
         update();
     }
 }
@@ -183,7 +184,7 @@ void VUMeter::paintEvent(QPaintEvent*)
 {
     drawMeter();
     QStyleOption opt;
-    opt.init(this);
+    opt.initFrom(this);
     QPainter p(this);
     style()->drawPrimitive(QStyle::PE_Widget, &opt, &p, this);
 }
