@@ -157,14 +157,24 @@ macx {
     BREW_PREFIX = $$system(brew --prefix 2>/dev/null)
     isEmpty(BREW_PREFIX): BREW_PREFIX = /usr/local
 
-    INCLUDEPATH += $${BREW_PREFIX}/include/gstreamer-1.0 \
-        $${BREW_PREFIX}/include/glib-2.0 \
-        $${BREW_PREFIX}/lib/glib-2.0/include \
-        $${BREW_PREFIX}/include
-    LIBS += -L$${BREW_PREFIX}/lib \
+    # Official GStreamer framework takes priority over Homebrew
+    GST_FRAMEWORK = /Library/Frameworks/GStreamer.framework/Versions/1.0
+    exists($$GST_FRAMEWORK/include/gstreamer-1.0/gst/gst.h) {
+        GST_PREFIX = $$GST_FRAMEWORK
+    } else {
+        GST_PREFIX = $${BREW_PREFIX}
+    }
+
+    INCLUDEPATH += $${GST_PREFIX}/include/gstreamer-1.0 \
+        $${GST_PREFIX}/include/glib-2.0 \
+        $${GST_PREFIX}/lib/glib-2.0/include \
+        $${GST_PREFIX}/include
+    LIBS += -L$${GST_PREFIX}/lib \
         -lgstreamer-1.0 \
         -lglib-2.0 \
-        -lgobject-2.0 \
+        -lgobject-2.0
+
+    LIBS += -L$${BREW_PREFIX}/lib \
         -ltag \
         -framework CoreAudio \
         -framework CoreFoundation

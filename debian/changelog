@@ -1,3 +1,9 @@
+knowthelist (2.4.0-1) unstable; urgency=medium
+
+  * Qt6 compatibility.
+
+ -- Mario Stephan <mstephan@shared-files.de>  Wed, 20 May 2026 00:00:00 +0200
+
 knowthelist (2.3.0-3) unstable; urgency=medium
 
   * Removed build depends for gstreamer 0.10 (Closes: #799710).
