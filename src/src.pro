@@ -168,16 +168,25 @@ macx {
     INCLUDEPATH += $${GST_PREFIX}/include/gstreamer-1.0 \
         $${GST_PREFIX}/include/glib-2.0 \
         $${GST_PREFIX}/lib/glib-2.0/include \
-        $${GST_PREFIX}/include
+        $${BREW_PREFIX}/lib/glib-2.0/include \
+        $${GST_PREFIX}/include \
+        $${BREW_PREFIX}/include
+    # TagLib: use exact brew opt path to avoid picking up GStreamer's bundled TagLib 1.x
+    TAGLIB_PREFIX = $$system(brew --prefix taglib 2>/dev/null)
+    isEmpty(TAGLIB_PREFIX): TAGLIB_PREFIX = $${BREW_PREFIX}/opt/taglib
+    LIBS += -L$${TAGLIB_PREFIX}/lib -ltag
+
     LIBS += -L$${GST_PREFIX}/lib \
         -lgstreamer-1.0 \
         -lglib-2.0 \
         -lgobject-2.0
 
-    LIBS += -L$${BREW_PREFIX}/lib \
-        -ltag \
-        -framework CoreAudio \
+    LIBS += -framework CoreAudio \
         -framework CoreFoundation
+
+    # Add GStreamer framework lib path to rpath so @rpath/libgstreamer-1.0.0.dylib
+    # resolves to the framework (1.28.3) at runtime rather than the dyld fallback
+    QMAKE_LFLAGS += -Wl,-rpath,$${GST_PREFIX}/lib
 
 }
 unix:!macx {
