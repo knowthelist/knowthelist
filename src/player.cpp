@@ -20,6 +20,87 @@
 #include <QWidget>
 #include <QtConcurrent/QtConcurrent>
 
+namespace {
+guint peakValueCount(const GValue* value)
+{
+    if (value == nullptr)
+        return 0;
+    if (GST_VALUE_HOLDS_LIST(value))
+        return gst_value_list_get_size(value);
+    if (GST_VALUE_HOLDS_ARRAY(value))
+        return gst_value_array_get_size(value);
+    if (G_VALUE_HOLDS(value, G_TYPE_VALUE_ARRAY)) {
+        GValueArray* arr = static_cast<GValueArray*>(g_value_get_boxed(value));
+        return arr ? arr->n_values : 0;
+    }
+    return 1;
+}
+
+const GValue* peakValueAt(const GValue* value, guint index)
+{
+    if (value == nullptr)
+        return nullptr;
+    if (GST_VALUE_HOLDS_LIST(value))
+        return gst_value_list_get_value(value, index);
+    if (GST_VALUE_HOLDS_ARRAY(value))
+        return gst_value_array_get_value(value, index);
+    if (G_VALUE_HOLDS(value, G_TYPE_VALUE_ARRAY)) {
+        GValueArray* arr = static_cast<GValueArray*>(g_value_get_boxed(value));
+        if (arr == nullptr || index >= arr->n_values)
+            return nullptr;
+        return g_value_array_get_nth(arr, index);
+    }
+    return index == 0 ? value : nullptr;
+}
+
+bool gValueToDouble(const GValue* value, gdouble* out)
+{
+    if (value == nullptr || out == nullptr)
+        return false;
+
+    if (G_VALUE_HOLDS_DOUBLE(value)) {
+        *out = g_value_get_double(value);
+        return true;
+    }
+    if (G_VALUE_HOLDS_FLOAT(value)) {
+        *out = static_cast<gdouble>(g_value_get_float(value));
+        return true;
+    }
+    if (G_VALUE_HOLDS_INT(value)) {
+        *out = static_cast<gdouble>(g_value_get_int(value));
+        return true;
+    }
+    if (G_VALUE_HOLDS_UINT(value)) {
+        *out = static_cast<gdouble>(g_value_get_uint(value));
+        return true;
+    }
+    if (G_VALUE_HOLDS_INT64(value)) {
+        *out = static_cast<gdouble>(g_value_get_int64(value));
+        return true;
+    }
+    if (G_VALUE_HOLDS_UINT64(value)) {
+        *out = static_cast<gdouble>(g_value_get_uint64(value));
+        return true;
+    }
+
+    return false;
+}
+
+const GValue* levelDbValues(const GstStructure* s, const char** fieldName)
+{
+    if (fieldName != nullptr)
+        *fieldName = "rms";
+
+    const GValue* values = gst_structure_get_value(s, "rms");
+    if (values != nullptr)
+        return values;
+
+    if (fieldName != nullptr)
+        *fieldName = "peak";
+    return gst_structure_get_value(s, "peak");
+}
+}
+
 void Player::sync_set_state(GstElement* element, GstState state)
 {
     GstStateChangeReturn res;
@@ -105,6 +186,10 @@ Player::Player(QWidget* parent)
 {
     p->isStarted = false;
     p->isLoaded = false;
+    p->rms_l = 0;
+    p->rms_r = 0;
+    p->rmsout_l = 0;
+    p->rmsout_r = 0;
 
     connect(&p->watcher, SIGNAL(finished()), this, SLOT(loadThreadFinished()));
 }
@@ -451,18 +536,17 @@ void Player::messageReceived(GstMessage* message)
         const gchar* src_name = GST_MESSAGE_SRC_NAME(message);
 
         if (strcmp(src_name, "levelintern") == 0) {
-            gint channels;
-            gdouble peak_dB;
-            gdouble rms;
-            gint i;
+            const GValue* peakValues = levelDbValues(s, nullptr);
+            const guint channels = peakValueCount(peakValues);
 
-            const GValue* array_val = gst_structure_get_value(s, "peak");
-            channels = (gint)gst_value_list_get_size(array_val);
+            for (guint i = 0; i < channels; ++i) {
+                const GValue* peakValue = peakValueAt(peakValues, i);
+                gdouble peak_dB = 0.0;
+                if (!gValueToDouble(peakValue, &peak_dB))
+                    continue;
 
-            for (i = 0; i < channels; ++i) {
-                peak_dB = g_value_get_double(gst_value_list_get_value(array_val, i));
                 /* converting from dB to normal gives us a value between 0.0 and 1.0 */
-                rms = pow(10, peak_dB / 20);
+                const gdouble rms = pow(10, peak_dB / 20);
                 if (i == 0)
                     p->rms_l = rms;
                 else
@@ -470,19 +554,17 @@ void Player::messageReceived(GstMessage* message)
             }
         }
         if (strcmp(src_name, "levelout") == 0) {
-            gint channels;
-            gdouble peak_dB;
-            gdouble rms;
-            gint i;
+            const GValue* peakValues = levelDbValues(s, nullptr);
+            const guint channels = peakValueCount(peakValues);
 
-            const GValue* array_val = gst_structure_get_value(s, "peak");
-            channels = (gint)gst_value_list_get_size(array_val);
-
-            for (i = 0; i < channels; ++i) {
-                peak_dB = g_value_get_double(gst_value_list_get_value(array_val, i));
+            for (guint i = 0; i < channels; ++i) {
+                const GValue* peakValue = peakValueAt(peakValues, i);
+                gdouble peak_dB = 0.0;
+                if (!gValueToDouble(peakValue, &peak_dB))
+                    continue;
 
                 /* converting from dB to normal gives us a value between 0.0 and 1.0 */
-                rms = pow(10, peak_dB / 20);
+                const gdouble rms = pow(10, peak_dB / 20);
                 if (i == 0)
                     p->rmsout_l = rms;
                 else

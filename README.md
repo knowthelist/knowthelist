@@ -19,11 +19,15 @@ Runs under Linux, MacOS and Windows
 
 Needed packages for building:
 ------------------
-- Qt6			core,gui,xml,sql,widgets,concurrent https://www.qt.io
-- taglib		http://taglib.github.io
-- gstreamer-1.0	https://gstreamer.freedesktop.org
-- gstreamer-1.0-plugins-* https://gstreamer.freedesktop.org/documentation/plugins_doc.html
-- alsa-devel		(Linux only)
+Linux (Debian/Ubuntu):
+
+        $ sudo apt update
+        $ sudo apt install build-essential cmake qt6-base-dev qt6-base-dev-tools qmake6 \
+            libtag1-dev libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev \
+            gstreamer1.0-plugins-base gstreamer1.0-plugins-good gstreamer1.0-plugins-bad \
+            libasound2-dev
+
+`libtag1-dev` is the Debian/Ubuntu package name for TagLib development headers.
 
 Build:
 ----------

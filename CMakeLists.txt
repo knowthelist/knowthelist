@@ -37,7 +37,9 @@ endif()
 
 find_package(Qt6 REQUIRED COMPONENTS Core Gui Widgets Xml Sql Concurrent)
 
-qt_standard_project_setup()
+if(COMMAND qt_standard_project_setup)
+    qt_standard_project_setup()
+endif()
 
 # Flatpak-specific setup: the Qt6 host tools and pkg-config cannot run
 # without their host libraries. Pin the Flatpak's own pkg-config and point
