@@ -532,8 +532,8 @@ void Player::messageReceived(GstMessage* message)
                 if (!gValueToDouble(peakValue, &peak_dB))
                     continue;
 
-                /* converting from dB to normal gives us a value between 0.0 and 1.0 */
-                const gdouble rms = pow(10, peak_dB / 20);
+                /* cube-root power law: maps [-60..0] dBFS to ~[0..1] so loud music reaches the red zone */
+                const gdouble rms = pow(10.0, peak_dB / 20.0);
                 if (i == 0)
                     p->rms_l = rms;
                 else
@@ -550,8 +550,8 @@ void Player::messageReceived(GstMessage* message)
                 if (!gValueToDouble(peakValue, &peak_dB))
                     continue;
 
-                /* converting from dB to normal gives us a value between 0.0 and 1.0 */
-                const gdouble rms = pow(10, peak_dB / 20);
+                /* cube-root power law: maps [-60..0] dBFS to ~[0..1] so loud music reaches the red zone */
+                const gdouble rms = pow(10.0, peak_dB / 20.0);
                 if (i == 0)
                     p->rmsout_l = rms;
                 else

@@ -117,9 +117,9 @@ void Knowthelist::createUI()
     vuMeter2->setGeometry(ui->phVU2->geometry());
     monitorMeter->setGeometry(ui->phVUMeter->geometry());
 
-    ui->potGain_1->setRange(10, 180);
+    ui->potGain_1->setRange(10, 600);
     ui->potGain_1->setValue(100);
-    ui->potGain_2->setRange(10, 180);
+    ui->potGain_2->setRange(10, 600);
     ui->potGain_2->setValue(100);
 
     timerMonitor = new QTimer(this);
@@ -462,14 +462,14 @@ void Knowthelist::showCollectionSetup()
 
 void Knowthelist::player1_levelChanged(double left, double right)
 {
-    vuMeter1->setValueLeft(left * 3.0);
-    vuMeter1->setValueRight(right * 3.0);
+    vuMeter1->setValueLeft(left);
+    vuMeter1->setValueRight(right);
 }
 
 void Knowthelist::player2_levelChanged(double left, double right)
 {
-    vuMeter2->setValueLeft(left * 3.0);
-    vuMeter2->setValueRight(right * 3.0);
+    vuMeter2->setValueLeft(left);
+    vuMeter2->setValueRight(right);
 }
 
 void Knowthelist::player_aboutTrackFinished()
@@ -878,8 +878,14 @@ void Knowthelist::on_potGain_2_valueChanged(int value)
 
 void Knowthelist::on_toggleAGC_toggled(bool checked)
 {
-    Q_UNUSED(checked);
     ui->ledAGC->toggle();
+    if (checked) {
+        timerGain1->start();
+        timerGain2->start();
+    } else {
+        timerGain1->stop();
+        timerGain2->stop();
+    }
 }
 
 void Knowthelist::on_toggleAutoDJ_toggled(bool checked)

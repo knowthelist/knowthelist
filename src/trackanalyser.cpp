@@ -139,6 +139,7 @@ bool TrackAnalyser::prepare()
 
         g_object_set (p->analysis, "message", TRUE, NULL);
         g_object_set (p->analysis, "num-tracks", 1, NULL);
+        g_object_set (p->analysis, "reference-level", -12.0, NULL);
         g_object_set (p->cutter, "threshold-dB", -25.0, NULL);
 
         g_object_set (G_OBJECT (p->spectrum), "bands", spect_bands, "threshold", -80,
