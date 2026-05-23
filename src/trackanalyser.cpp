@@ -18,6 +18,7 @@
 #include "trackanalyser.h"
 
 #include <QWidget>
+#include <QMutexLocker>
 #include <QtConcurrent/QtConcurrent>
 
 #define AUDIOFREQ 32000
@@ -63,6 +64,9 @@ void TrackAnalyser::sync_set_state(GstElement* element, GstState state)
 
 TrackAnalyser::~TrackAnalyser()
 {
+    if (p->watcher.isRunning())
+        p->watcher.waitForFinished();
+
     cleanup();
     delete p;
     p = nullptr;
@@ -139,7 +143,9 @@ bool TrackAnalyser::prepare()
 
         g_object_set (p->analysis, "message", TRUE, NULL);
         g_object_set (p->analysis, "num-tracks", 1, NULL);
-        g_object_set (p->analysis, "reference-level", -12.0, NULL);
+        // ReplayGain reference levels are typically positive dB values; a negative
+        // value is rejected by the property on this build.
+        g_object_set (p->analysis, "reference-level", 89.0, NULL);
         g_object_set (p->cutter, "threshold-dB", -25.0, NULL);
 
         g_object_set (G_OBJECT (p->spectrum), "bands", spect_bands, "threshold", -80,
@@ -228,7 +234,7 @@ void TrackAnalyser::open(QUrl url)
 
 void TrackAnalyser::asyncOpen(QUrl url)
 {
-    p->mutex.lock();
+    QMutexLocker locker(&p->mutex);
     m_GainDB = GAIN_INVALID;
     //m_StartPosition = QTime(0,0);
     p->spectralFlux.clear();
@@ -244,7 +250,6 @@ void TrackAnalyser::asyncOpen(QUrl url)
     m_finished=false;
 
     gst_object_unref(src);
-    p->mutex.unlock();
 }
 
 void TrackAnalyser::loadThreadFinished()

@@ -91,6 +91,7 @@ PlayerWidget::PlayerWidget(QWidget* parent)
     ui->lblTimeRemain->setFont(fonttime);
 
     m_isStarted = false;
+    m_pendingPlay = false;
     setAcceptDrops(true);
     this->stop();
 
@@ -173,6 +174,7 @@ void PlayerWidget::pause()
     ui->butPlay->setIcon(QIcon(":play.png"));
     ui->butPlay->setChecked(false);
     m_isStarted = false;
+    m_pendingPlay = false;
     player->pause();
     timerLevel->stop();
     timerPosition->stop();
@@ -187,6 +189,7 @@ void PlayerWidget::stop()
     ui->butPlay->setChecked(false);
     m_isStarted = false;
     m_isHanging = false;
+    m_pendingPlay = false;
     player->stop();
     timerLevel->stop();
     timerPosition->stop();
@@ -303,6 +306,7 @@ void PlayerWidget::loadTrack(Track* track)
         qDebug() << Q_FUNC_INFO << ":" << objectName() << " track=" << track->url();
 
     m_CurrentTrack = track;
+    m_pendingPlay = false;
 
     if (track != nullptr) {
 
@@ -317,8 +321,7 @@ void PlayerWidget::loadTrack(Track* track)
         trackanalyser->setMode(TrackAnalyser::STANDARD);
         trackanalyser->open(url);
 
-        if (doPlay)
-            player->play();
+        m_pendingPlay = doPlay;
 
     } else {
         if (player->lastError != "")
@@ -441,6 +444,11 @@ void PlayerWidget::playerFinished()
 void PlayerWidget::playerLoaded()
 {
     updateTimeAndPositionDisplay();
+
+    if (m_pendingPlay) {
+        m_pendingPlay = false;
+        play();
+    }
 }
 
 void PlayerWidget::on_butRew_clicked()

@@ -18,9 +18,22 @@
 #include "player.h"
 
 #include <QWidget>
+#include <QMutexLocker>
 #include <QtConcurrent/QtConcurrent>
 
 namespace {
+constexpr gdouble kMeterMinDb = -80.0;
+
+bool holdsLegacyValueArray(const GValue* value)
+{
+#ifdef G_TYPE_VALUE_ARRAY
+    return value != nullptr && G_VALUE_HOLDS(value, G_TYPE_VALUE_ARRAY);
+#else
+    Q_UNUSED(value);
+    return false;
+#endif
+}
+
 guint peakValueCount(const GValue* value)
 {
     if (value == nullptr)
@@ -29,6 +42,12 @@ guint peakValueCount(const GValue* value)
         return gst_value_list_get_size(value);
     if (GST_VALUE_HOLDS_ARRAY(value))
         return gst_value_array_get_size(value);
+    if (holdsLegacyValueArray(value)) {
+#ifdef G_TYPE_VALUE_ARRAY
+        const GValueArray* values = static_cast<const GValueArray*>(g_value_get_boxed(value));
+        return values != nullptr ? values->n_values : 0;
+#endif
+    }
     return 1;
 }
 
@@ -40,6 +59,12 @@ const GValue* peakValueAt(const GValue* value, guint index)
         return gst_value_list_get_value(value, index);
     if (GST_VALUE_HOLDS_ARRAY(value))
         return gst_value_array_get_value(value, index);
+    if (holdsLegacyValueArray(value)) {
+#ifdef G_TYPE_VALUE_ARRAY
+        GValueArray* values = static_cast<GValueArray*>(g_value_get_boxed(value));
+        return values != nullptr ? g_value_array_get_nth(values, index) : nullptr;
+#endif
+    }
     return index == 0 ? value : nullptr;
 }
 
@@ -71,6 +96,11 @@ bool gValueToDouble(const GValue* value, gdouble* out)
     if (G_VALUE_HOLDS_UINT64(value)) {
         *out = static_cast<gdouble>(g_value_get_uint64(value));
         return true;
+    }
+
+    if (GST_VALUE_HOLDS_LIST(value) || GST_VALUE_HOLDS_ARRAY(value) || holdsLegacyValueArray(value)) {
+        const GValue* nested = peakValueAt(value, 0);
+        return nested != nullptr && nested != value ? gValueToDouble(nested, out) : false;
     }
 
     return false;
@@ -186,6 +216,9 @@ Player::Player(QWidget* parent)
 
 Player::~Player()
 {
+    if (p->watcher.isRunning())
+        p->watcher.waitForFinished();
+
     cleanup();
     delete p;
     p = nullptr;
@@ -330,7 +363,7 @@ void Player::open(QUrl url)
 
 void Player::asyncOpen(QUrl url)
 {
-    p->mutex.lock();
+    QMutexLocker locker(&p->mutex);
     p->length = 0;
     p->position = 0;
     p->isLoaded = false;
@@ -348,7 +381,6 @@ void Player::asyncOpen(QUrl url)
     setPosition(QTime(0, 0));
 
     gst_object_unref(src);
-    p->mutex.unlock();
 }
 
 void Player::loadThreadFinished()
@@ -507,13 +539,18 @@ void Player::messageReceived(GstMessage* message)
     case GST_MESSAGE_STATE_CHANGED: {
         GstState old_state, new_state;
         gst_message_parse_state_changed(message, &old_state, &new_state, nullptr);
-        switch (new_state) {
-        case GST_STATE_PAUSED:
-        case GST_STATE_NULL:
-            p->rms_l = p->rms_r = 0;
-            p->rmsout_l = p->rmsout_r = 0;
-        default:
-            break;
+        const GstObject* source = GST_MESSAGE_SRC(message);
+        qDebug() << Q_FUNC_INFO << "state-changed from" << GST_OBJECT_NAME(source)
+                 << gst_element_state_get_name(old_state) << "->" << gst_element_state_get_name(new_state);
+        if (source == GST_OBJECT(pipeline)) {
+            switch (new_state) {
+            case GST_STATE_PAUSED:
+            case GST_STATE_NULL:
+                p->rms_l = p->rms_r = 0;
+                p->rmsout_l = p->rmsout_r = 0;
+            default:
+                break;
+            }
         }
         break;
     }
@@ -521,6 +558,10 @@ void Player::messageReceived(GstMessage* message)
     case GST_MESSAGE_ELEMENT: {
         const GstStructure* s = gst_message_get_structure(message);
         const gchar* src_name = GST_MESSAGE_SRC_NAME(message);
+        const gchar* structure_name = s != nullptr ? gst_structure_get_name(s) : "<no-structure>";
+
+        qDebug() << Q_FUNC_INFO << "element message from" << src_name
+                 << "structure" << structure_name;
 
         if (strcmp(src_name, "levelintern") == 0) {
             const GValue* peakValues = levelDbValues(s, nullptr);
@@ -529,11 +570,15 @@ void Player::messageReceived(GstMessage* message)
             for (guint i = 0; i < channels; ++i) {
                 const GValue* peakValue = peakValueAt(peakValues, i);
                 gdouble peak_dB = 0.0;
-                if (!gValueToDouble(peakValue, &peak_dB))
+                if (!gValueToDouble(peakValue, &peak_dB)) {
+                    qDebug() << Q_FUNC_INFO << "levelintern channel" << i
+                             << "unsupported value type"
+                             << (peakValue != nullptr ? G_VALUE_TYPE_NAME(peakValue) : "<null>");
                     continue;
+                }
 
-                /* Map roughly [-60..0] dBFS to [0..1] so the meter stays readable. */
-                const gdouble level = qBound(0.0, (peak_dB + 60.0) / 60.0, 1.0);
+                /* Map roughly [-80..0] dBFS to [0..1] so very quiet output still shows. */
+                const gdouble level = qBound(0.0, (peak_dB - kMeterMinDb) / (-kMeterMinDb), 1.0);
                 qDebug() << Q_FUNC_INFO << "levelintern channel" << i
                          << "peak_dB" << peak_dB << "level" << level;
                 if (i == 0)
@@ -549,11 +594,15 @@ void Player::messageReceived(GstMessage* message)
             for (guint i = 0; i < channels; ++i) {
                 const GValue* peakValue = peakValueAt(peakValues, i);
                 gdouble peak_dB = 0.0;
-                if (!gValueToDouble(peakValue, &peak_dB))
+                if (!gValueToDouble(peakValue, &peak_dB)) {
+                    qDebug() << Q_FUNC_INFO << "levelout channel" << i
+                             << "unsupported value type"
+                             << (peakValue != nullptr ? G_VALUE_TYPE_NAME(peakValue) : "<null>");
                     continue;
+                }
 
-                /* Map roughly [-60..0] dBFS to [0..1] so the meter stays readable. */
-                const gdouble level = qBound(0.0, (peak_dB + 60.0) / 60.0, 1.0);
+                /* Map roughly [-80..0] dBFS to [0..1] so very quiet output still shows. */
+                const gdouble level = qBound(0.0, (peak_dB - kMeterMinDb) / (-kMeterMinDb), 1.0);
                 qDebug() << Q_FUNC_INFO << "levelout channel" << i
                          << "peak_dB" << peak_dB << "level" << level;
                 if (i == 0)

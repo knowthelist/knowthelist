@@ -135,6 +135,7 @@ private:
     long remainCueTime;
     bool m_isStarted;
     bool m_isHanging;
+    bool m_pendingPlay;
     bool m_skipSilentEnd;
     bool m_skipSilentBegin;
 
