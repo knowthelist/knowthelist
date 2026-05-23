@@ -136,7 +136,7 @@ void Track::readTags()
             p->genre = !tag->genre().isEmpty() ? TStringToQString(tag->genre()).trimmed() : QObject::tr("Unknown");
             p->year = tag->year() ? QString::number(tag->year()) : QString();
             p->tracknumber = tag->track() ? QString::number(tag->track()) : QString();
-            p->length = fileref.audioProperties()->length();
+            p->length = fileref.audioProperties()->lengthInSeconds();
             p->counter = 0;
             p->rate = 0;
 

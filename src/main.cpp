@@ -46,7 +46,7 @@ int main(int argc, char* argv[])
         lang = QLocale::system().name();
 
     QTranslator qtTranslator;
-    qtTranslator.load("qt_" + lang,
+    (void)qtTranslator.load("qt_" + lang,
         QLibraryInfo::path(QLibraryInfo::TranslationsPath));
     a.installTranslator(&qtTranslator);
 

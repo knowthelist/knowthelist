@@ -35,10 +35,6 @@ guint peakValueCount(const GValue* value)
         return gst_value_list_get_size(value);
     if (GST_VALUE_HOLDS_ARRAY(value))
         return gst_value_array_get_size(value);
-    if (G_VALUE_HOLDS(value, G_TYPE_VALUE_ARRAY)) {
-        GValueArray* arr = static_cast<GValueArray*>(g_value_get_boxed(value));
-        return arr ? arr->n_values : 0;
-    }
     return 1;
 }
 
@@ -50,12 +46,6 @@ const GValue* peakValueAt(const GValue* value, guint index)
         return gst_value_list_get_value(value, index);
     if (GST_VALUE_HOLDS_ARRAY(value))
         return gst_value_array_get_value(value, index);
-    if (G_VALUE_HOLDS(value, G_TYPE_VALUE_ARRAY)) {
-        GValueArray* arr = static_cast<GValueArray*>(g_value_get_boxed(value));
-        if (arr == nullptr || index >= arr->n_values)
-            return nullptr;
-        return g_value_array_get_nth(arr, index);
-    }
     return index == 0 ? value : nullptr;
 }
 

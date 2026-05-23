@@ -643,7 +643,6 @@ void Playlist::onRatingChanged(float rate)
     if (RatingWidget* rateWidget = dynamic_cast<RatingWidget*>(QObject::sender())) {
 
         QModelIndex modidx = indexAt(QPoint(0, rateWidget->pos().y()));
-        (PlaylistItem*)this->itemFromIndex(modidx);
         if (PlaylistItem* item = (PlaylistItem*)this->itemFromIndex(modidx)) {
             Track* track = item->track();
             if (track) {
@@ -922,7 +921,7 @@ void Playlist::keyPressEvent(QKeyEvent* e)
         Q_EMIT wantLoad(item->track(), "Right");
     else if (e->key() == Qt::Key_P)
         Q_EMIT trackDoubleClicked(item->track());
-    else if (e->key() == Qt::CTRL + Qt::Key_S)
+    else if (e->key() == (Qt::CTRL | Qt::Key_S).toCombined())
         Q_EMIT wantSearch(QString());
     else
         QTreeWidget::keyPressEvent(e);
@@ -953,37 +952,32 @@ void Playlist::showContextMenu(PlaylistItem* item, int col)
     popup.setTitle(item->track()->prettyTitle(50));
     if (m_PlaylistMode == Playlist::Tracklist) {
         popup.addAction(style()->standardPixmap(QStyle::SP_MediaPlay),
-            tr("Add to PlayList&1"), this, SLOT(dummySlot()),
-            Qt::Key_1); //, LOAD1
+            tr("Add to PlayList&1"), Qt::Key_1, this, SLOT(dummySlot())); //, LOAD1
         popup.addAction(style()->standardPixmap(QStyle::SP_MediaPlay),
-            tr("Add to PlayList&2"), this, SLOT(dummySlot()),
-            Qt::Key_2); //, LOAD2
+            tr("Add to PlayList&2"), Qt::Key_2, this, SLOT(dummySlot())); //, LOAD2
     }
     if (!m_isPlaying && !isCurrentPlaylistItem && m_PlaylistMode != Playlist::Tracklist)
         popup.addAction(style()->standardPixmap(QStyle::SP_MediaPlay), tr("&Load"),
-            this, SLOT(dummySlot()), Qt::Key_L);
+            Qt::Key_L, this, SLOT(dummySlot()));
     if (!isCurrentPlaylistItem && m_PlaylistMode != Playlist::Tracklist)
         popup.addAction(style()->standardPixmap(QStyle::SP_ArrowRight),
-            tr("Load as &Next"), this, SLOT(dummySlot()), Qt::Key_N);
+            tr("Load as &Next"), Qt::Key_N, this, SLOT(dummySlot()));
     popup.addSeparator();
     popup.addAction(style()->standardPixmap(QStyle::SP_DriveCDIcon),
-        tr("&Prelisten Track"), this, SLOT(dummySlot()), Qt::Key_P);
+        tr("&Prelisten Track"), Qt::Key_P, this, SLOT(dummySlot()));
     popup.addSeparator();
     popup.addAction(style()->standardPixmap(QStyle::SP_ArrowRight),
-        tr("&Search for: '%1'").arg(item->text(col)), this,
-        SLOT(dummySlot()), Qt::Key_S);
+        tr("&Search for: '%1'").arg(item->text(col)),
+        Qt::Key_S, this, SLOT(dummySlot()));
     popup.addSeparator();
     if (!isCurrentPlaylistItem && m_PlaylistMode != Playlist::Tracklist)
         popup.addAction(style()->standardPixmap(QStyle::SP_TrashIcon),
-            tr("&Remove Selected"), this, SLOT(removeSelectedItems()),
-            Qt::Key_Delete);
+            tr("&Remove Selected"), Qt::Key_Delete, this, SLOT(removeSelectedItems()));
     popup.addSeparator();
     popup.addAction(style()->standardPixmap(QStyle::SP_DirOpenIcon),
-        tr("&Open File Location"), this, SLOT(dummySlot()),
-        Qt::Key_O);
+        tr("&Open File Location"), Qt::Key_O, this, SLOT(dummySlot()));
     popup.addAction(style()->standardPixmap(QStyle::SP_MessageBoxInformation),
-        tr("&View Tag Information"), this, SLOT(dummySlot()),
-        Qt::Key_V);
+        tr("&View Tag Information"), Qt::Key_V, this, SLOT(dummySlot()));
 
     QAction* a = popup.exec(QCursor::pos());
     if (!a)
