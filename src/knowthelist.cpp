@@ -32,6 +32,8 @@
 Knowthelist::Knowthelist(QWidget* parent)
     : QMainWindow(parent)
     , ui(new Ui::Knowthelist)
+    , gain1Target(100)
+    , gain2Target(100)
 {
     ui->setupUi(this);
 
@@ -117,9 +119,9 @@ void Knowthelist::createUI()
     vuMeter2->setGeometry(ui->phVU2->geometry());
     monitorMeter->setGeometry(ui->phVUMeter->geometry());
 
-    ui->potGain_1->setRange(10, 600);
+    ui->potGain_1->setRange(10, 250);
     ui->potGain_1->setValue(100);
-    ui->potGain_2->setRange(10, 600);
+    ui->potGain_2->setRange(10, 250);
     ui->potGain_2->setValue(100);
 
     timerMonitor = new QTimer(this);
@@ -462,12 +464,14 @@ void Knowthelist::showCollectionSetup()
 
 void Knowthelist::player1_levelChanged(double left, double right)
 {
+    qDebug() << Q_FUNC_INFO << "player1" << "left" << left << "right" << right;
     vuMeter1->setValueLeft(left);
     vuMeter1->setValueRight(right);
 }
 
 void Knowthelist::player2_levelChanged(double left, double right)
 {
+    qDebug() << Q_FUNC_INFO << "player2" << "left" << left << "right" << right;
     vuMeter2->setValueLeft(left);
     vuMeter2->setValueRight(right);
 }
@@ -882,6 +886,8 @@ void Knowthelist::on_toggleAGC_toggled(bool checked)
     if (checked) {
         timerGain1->start();
         timerGain2->start();
+        timerGain1_timeOut();
+        timerGain2_timeOut();
     } else {
         timerGain1->stop();
         timerGain2->stop();

@@ -319,13 +319,16 @@ void CollectionTree::showContextMenu(QTreeWidgetItem* item, int col)
     QMenu popup(this);
 
     popup.setTitle(item->text(0));
-    popup.addAction(style()->standardPixmap(QStyle::SP_MediaPlay), tr("Add to PlayList&1"),
-        Qt::Key_1, this, SLOT(onLoad1Triggered())); //, LOAD1
-    popup.addAction(style()->standardPixmap(QStyle::SP_MediaPlay), tr("Add to PlayList&2"),
-        Qt::Key_2, this, SLOT(onLoad2Triggered())); //, LOAD2
+    QAction* a = popup.addAction(tr("Add to PlayList&1"), this, SLOT(onLoad1Triggered()));
+    a->setIcon(QIcon(style()->standardPixmap(QStyle::SP_MediaPlay)));
+    a->setShortcut(Qt::Key_1);
+    a = popup.addAction(tr("Add to PlayList&2"), this, SLOT(onLoad2Triggered()));
+    a->setIcon(QIcon(style()->standardPixmap(QStyle::SP_MediaPlay)));
+    a->setShortcut(Qt::Key_2);
     popup.addSeparator();
-    popup.addAction(style()->standardPixmap(QStyle::SP_BrowserReload), tr("Re-scan collection"),
-        Qt::Key_R, this, SLOT(onRescanTriggered()));
+    a = popup.addAction(tr("Re-scan collection"), this, SLOT(onRescanTriggered()));
+    a->setIcon(QIcon(style()->standardPixmap(QStyle::SP_BrowserReload)));
+    a->setShortcut(Qt::Key_R);
 
     popup.exec(QCursor::pos());
 }

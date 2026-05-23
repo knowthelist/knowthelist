@@ -948,38 +948,50 @@ void Playlist::showContextMenu(PlaylistItem* item, int col)
     const bool isCurrentPlaylistItem = (item == currentPlaylistItem);
 
     QMenu popup(this);
+    QAction* a = nullptr;
 
     popup.setTitle(item->track()->prettyTitle(50));
     if (m_PlaylistMode == Playlist::Tracklist) {
-        popup.addAction(style()->standardPixmap(QStyle::SP_MediaPlay),
-            tr("Add to PlayList&1"), Qt::Key_1, this, SLOT(dummySlot())); //, LOAD1
-        popup.addAction(style()->standardPixmap(QStyle::SP_MediaPlay),
-            tr("Add to PlayList&2"), Qt::Key_2, this, SLOT(dummySlot())); //, LOAD2
+        a = popup.addAction(tr("Add to PlayList&1"), this, SLOT(dummySlot()));
+        a->setIcon(QIcon(style()->standardPixmap(QStyle::SP_MediaPlay)));
+        a->setShortcut(Qt::Key_1);
+        a = popup.addAction(tr("Add to PlayList&2"), this, SLOT(dummySlot()));
+        a->setIcon(QIcon(style()->standardPixmap(QStyle::SP_MediaPlay)));
+        a->setShortcut(Qt::Key_2);
     }
-    if (!m_isPlaying && !isCurrentPlaylistItem && m_PlaylistMode != Playlist::Tracklist)
-        popup.addAction(style()->standardPixmap(QStyle::SP_MediaPlay), tr("&Load"),
-            Qt::Key_L, this, SLOT(dummySlot()));
-    if (!isCurrentPlaylistItem && m_PlaylistMode != Playlist::Tracklist)
-        popup.addAction(style()->standardPixmap(QStyle::SP_ArrowRight),
-            tr("Load as &Next"), Qt::Key_N, this, SLOT(dummySlot()));
+    if (!m_isPlaying && !isCurrentPlaylistItem && m_PlaylistMode != Playlist::Tracklist) {
+        a = popup.addAction(tr("&Load"), this, SLOT(dummySlot()));
+        a->setIcon(QIcon(style()->standardPixmap(QStyle::SP_MediaPlay)));
+        a->setShortcut(Qt::Key_L);
+    }
+    if (!isCurrentPlaylistItem && m_PlaylistMode != Playlist::Tracklist) {
+        a = popup.addAction(tr("Load as &Next"), this, SLOT(dummySlot()));
+        a->setIcon(QIcon(style()->standardPixmap(QStyle::SP_ArrowRight)));
+        a->setShortcut(Qt::Key_N);
+    }
     popup.addSeparator();
-    popup.addAction(style()->standardPixmap(QStyle::SP_DriveCDIcon),
-        tr("&Prelisten Track"), Qt::Key_P, this, SLOT(dummySlot()));
+    a = popup.addAction(tr("&Prelisten Track"), this, SLOT(dummySlot()));
+    a->setIcon(QIcon(style()->standardPixmap(QStyle::SP_DriveCDIcon)));
+    a->setShortcut(Qt::Key_P);
     popup.addSeparator();
-    popup.addAction(style()->standardPixmap(QStyle::SP_ArrowRight),
-        tr("&Search for: '%1'").arg(item->text(col)),
-        Qt::Key_S, this, SLOT(dummySlot()));
+    a = popup.addAction(tr("&Search for: '%1'").arg(item->text(col)), this, SLOT(dummySlot()));
+    a->setIcon(QIcon(style()->standardPixmap(QStyle::SP_ArrowRight)));
+    a->setShortcut(Qt::Key_S);
     popup.addSeparator();
-    if (!isCurrentPlaylistItem && m_PlaylistMode != Playlist::Tracklist)
-        popup.addAction(style()->standardPixmap(QStyle::SP_TrashIcon),
-            tr("&Remove Selected"), Qt::Key_Delete, this, SLOT(removeSelectedItems()));
+    if (!isCurrentPlaylistItem && m_PlaylistMode != Playlist::Tracklist) {
+        a = popup.addAction(tr("&Remove Selected"), this, SLOT(removeSelectedItems()));
+        a->setIcon(QIcon(style()->standardPixmap(QStyle::SP_TrashIcon)));
+        a->setShortcut(Qt::Key_Delete);
+    }
     popup.addSeparator();
-    popup.addAction(style()->standardPixmap(QStyle::SP_DirOpenIcon),
-        tr("&Open File Location"), Qt::Key_O, this, SLOT(dummySlot()));
-    popup.addAction(style()->standardPixmap(QStyle::SP_MessageBoxInformation),
-        tr("&View Tag Information"), Qt::Key_V, this, SLOT(dummySlot()));
+    a = popup.addAction(tr("&Open File Location"), this, SLOT(dummySlot()));
+    a->setIcon(QIcon(style()->standardPixmap(QStyle::SP_DirOpenIcon)));
+    a->setShortcut(Qt::Key_O);
+    a = popup.addAction(tr("&View Tag Information"), this, SLOT(dummySlot()));
+    a->setIcon(QIcon(style()->standardPixmap(QStyle::SP_MessageBoxInformation)));
+    a->setShortcut(Qt::Key_V);
 
-    QAction* a = popup.exec(QCursor::pos());
+    a = popup.exec(QCursor::pos());
     if (!a)
         return;
     QKeySequence shortcut = a->shortcut();

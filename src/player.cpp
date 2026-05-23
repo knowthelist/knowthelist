@@ -532,12 +532,14 @@ void Player::messageReceived(GstMessage* message)
                 if (!gValueToDouble(peakValue, &peak_dB))
                     continue;
 
-                /* cube-root power law: maps [-60..0] dBFS to ~[0..1] so loud music reaches the red zone */
-                const gdouble rms = pow(10.0, peak_dB / 20.0);
+                /* Map roughly [-60..0] dBFS to [0..1] so the meter stays readable. */
+                const gdouble level = qBound(0.0, (peak_dB + 60.0) / 60.0, 1.0);
+                qDebug() << Q_FUNC_INFO << "levelintern channel" << i
+                         << "peak_dB" << peak_dB << "level" << level;
                 if (i == 0)
-                    p->rms_l = rms;
+                    p->rms_l = level;
                 else
-                    p->rms_r = rms;
+                    p->rms_r = level;
             }
         }
         if (strcmp(src_name, "levelout") == 0) {
@@ -550,12 +552,14 @@ void Player::messageReceived(GstMessage* message)
                 if (!gValueToDouble(peakValue, &peak_dB))
                     continue;
 
-                /* cube-root power law: maps [-60..0] dBFS to ~[0..1] so loud music reaches the red zone */
-                const gdouble rms = pow(10.0, peak_dB / 20.0);
+                /* Map roughly [-60..0] dBFS to [0..1] so the meter stays readable. */
+                const gdouble level = qBound(0.0, (peak_dB + 60.0) / 60.0, 1.0);
+                qDebug() << Q_FUNC_INFO << "levelout channel" << i
+                         << "peak_dB" << peak_dB << "level" << level;
                 if (i == 0)
-                    p->rmsout_l = rms;
+                    p->rmsout_l = level;
                 else
-                    p->rmsout_r = rms;
+                    p->rmsout_r = level;
             }
         }
     } break;

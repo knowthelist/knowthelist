@@ -1387,7 +1387,7 @@ QLabel{
                   <font>
                    <family>DejaVu Sans Mono</family>
                    <pointsize>15</pointsize>
-                   <weight>50</weight>
+                   <weight>400</weight>
                    <bold>false</bold>
                    <kerning>false</kerning>
                   </font>
@@ -1851,7 +1851,7 @@ QLabel{
                   <font>
                    <family>DejaVu Sans Mono</family>
                    <pointsize>10</pointsize>
-                   <weight>50</weight>
+                   <weight>400</weight>
                    <bold>false</bold>
                   </font>
                  </property>
@@ -2835,7 +2835,7 @@ QLabel{
                   <font>
                    <family>DejaVu Sans Mono</family>
                    <pointsize>11</pointsize>
-                   <weight>50</weight>
+                   <weight>400</weight>
                    <bold>false</bold>
                   </font>
                  </property>
@@ -3109,7 +3109,7 @@ QLabel{
               </property>
               <property name="font">
                <font>
-                <weight>75</weight>
+                <weight>700</weight>
                 <bold>true</bold>
                </font>
               </property>

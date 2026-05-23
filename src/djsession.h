@@ -21,10 +21,9 @@
 
 #include "dj.h"
 #include "collectiondb.h"
+#include "track.h"
 
 #include <QObject>
-
-class Track;
 
 class DjSession : public QObject
 {

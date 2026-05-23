@@ -208,9 +208,18 @@ RESOURCES += ../images/icons.qrc \
     ../locale/locale.qrc
 ICON = ../dist/headset.icns
 
-isEmpty(QMAKE_LRELEASE) {
-win32:QMAKE_LRELEASE = $$[QT_INSTALL_BINS]\lrelease.exe
-else:QMAKE_LRELEASE = $$[QT_INSTALL_BINS]/lrelease
+win32 {
+    QMAKE_LRELEASE = $$[QT_INSTALL_BINS]\\lrelease.exe
+}
+macx {
+    QMAKE_LRELEASE = $$[QT_INSTALL_BINS]/lrelease
+}
+unix:!macx {
+    exists(/usr/bin/lrelease) {
+        QMAKE_LRELEASE = /usr/bin/lrelease
+    } else {
+        QMAKE_LRELEASE = $$[QT_INSTALL_BINS]/lrelease
+    }
 }
 
 lrelease.commands = $$QMAKE_LRELEASE ${QMAKE_FILE_IN}

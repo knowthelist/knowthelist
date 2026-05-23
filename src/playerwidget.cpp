@@ -219,9 +219,18 @@ void PlayerWidget::analyseGainFinished()
 
 void PlayerWidget::timerLevel_timeOut()
 {
-    vuMeter->setValueLeft(player->levelLeft());
-    vuMeter->setValueRight(player->levelRight());
-    Q_EMIT levelChanged(player->levelOutLeft(), player->levelOutRight());
+    const double inLeft = player->levelLeft();
+    const double inRight = player->levelRight();
+    const double outLeft = player->levelOutLeft();
+    const double outRight = player->levelOutRight();
+
+    qDebug() << Q_FUNC_INFO << objectName()
+             << "inL" << inLeft << "inR" << inRight
+             << "outL" << outLeft << "outR" << outRight;
+
+    vuMeter->setValueLeft(inLeft);
+    vuMeter->setValueRight(inRight);
+    Q_EMIT levelChanged(outLeft, outRight);
 }
 
 void PlayerWidget::timerPosition_timeOut()

@@ -355,7 +355,7 @@ p, li { white-space: pre-wrap; }
           <property name="font">
            <font>
             <pointsize>14</pointsize>
-            <weight>75</weight>
+            <weight>700</weight>
             <bold>true</bold>
            </font>
           </property>
