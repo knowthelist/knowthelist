@@ -19,6 +19,7 @@
 #define PLAYERWIDGET_H
 
 #include <QLabel>
+#include <QAbstractButton>
 #include <QStyle>
 #include <QToolButton>
 #include <QVBoxLayout>
@@ -84,6 +85,7 @@ public Q_SLOTS:
     void analyseTempoFinished();
     void setEqualizer(EqBand, int);
     void setInfo(QPair<int, int> info);
+    void on_butBeatMode_clicked(bool checked);
 
 Q_SIGNALS:
     void trackFinished();
@@ -128,6 +130,7 @@ private:
     void createUI(QBoxLayout* appLayout);
     void resizeEvent(QResizeEvent* e);
     void drawTitle();
+    void applyBeatVisualLayout(bool enabled);
 
     Player* player;
     TrackAnalyser* trackanalyser;
@@ -138,6 +141,7 @@ private:
 
     QTimer* timerLevel;
     QTimer* timerPosition;
+    QAbstractButton* m_beatModeButton;
     void dropEvent(QDropEvent*);
     void dragEnterEvent(QDragEnterEvent*);
     void dragMoveEvent(QDragMoveEvent*);

@@ -241,6 +241,7 @@ void DjSession::onTrackPropertyChanged(Track* track)
 {
     if (track) {
         p->database->setSongRate(track->url().toLocalFile(), track->rate());
+        p->database->setSongBpm(track->url().toLocalFile(), track->bpm());
     }
 }
 

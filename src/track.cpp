@@ -102,24 +102,12 @@ Track::Track(const QStringList& list)
         p->counter = QString(list.at(8)).toInt();
     }
     if (list.count() == 10) {
-        // Legacy/new simple rows without flags: rate at index 9.
         p->rate = QString(list.at(9)).toInt();
-    } else if (list.count() == 11) {
-        const int value10 = QString(list.at(10)).toInt();
-        if (value10 >= 0 && value10 <= 7) {
-            // Legacy playlist rows: [.., counter, rate, flags]
-            p->rate = QString(list.at(9)).toInt();
-            p->flags = QFlag(value10);
-        } else {
-            // New rows: [.., counter, bpm, rate]
-            p->bpm = QString(list.at(9)).toInt();
-            p->rate = value10;
-        }
-    } else if (list.count() > 11) {
-        // New playlist rows: [.., counter, bpm, rate, flags]
+    } else if (list.count() >= 11) {
         p->bpm = QString(list.at(9)).toInt();
         p->rate = QString(list.at(10)).toInt();
-        p->flags = QFlag(list.at(11).toInt());
+        if (list.count() > 11)
+            p->flags = QFlag(list.at(11).toInt());
     }
 }
 

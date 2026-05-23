@@ -115,20 +115,9 @@ PlayerWidget::PlayerWidget(QWidget* parent)
     , m_bpmAnalysed(false)
     , m_bpm(0)
     , p(new PlayerWidgetPrivate)
+    , m_beatModeButton(nullptr)
 {
     ui->setupUi(this);
-
-    // Make room for a larger meter/beat view and move summary info to the bottom.
-    setMinimumHeight(182);
-    ui->frame_3->setMaximumHeight(195);
-    ui->fraDisplay->setMaximumHeight(195);
-    ui->fraDisplay->setMaximumWidth(QWIDGETSIZE_MAX);
-    ui->fraVuMeter->setMaximumWidth(QWIDGETSIZE_MAX);
-    ui->fraVuMeter->setMinimumHeight(70);
-    ui->fraInfo->setMaximumWidth(QWIDGETSIZE_MAX);
-    ui->fraDigits->setMaximumWidth(QWIDGETSIZE_MAX);
-    ui->vuMeter->setMaximumWidth(QWIDGETSIZE_MAX);
-    ui->vuMeter->setMinimumHeight(64);
 
     if (QGridLayout* mainGrid = qobject_cast<QGridLayout*>(ui->frame_3->layout())) {
         mainGrid->setContentsMargins(4, 1, 4, 1);
@@ -172,6 +161,11 @@ PlayerWidget::PlayerWidget(QWidget* parent)
     bpmWidget = new PlayerBpmWidget(vuMeter->parentWidget());
     bpmWidget->setGeometry(vuMeter->geometry());
     bpmWidget->hide();
+
+    m_beatModeButton = findChild<QAbstractButton*>("butBeatMode");
+
+    QSettings settings;
+    applyBeatVisualLayout(settings.value("beatSyncVisualMode", false).toBool());
 
     timerLevel = new QTimer(this);
     connect(timerLevel, SIGNAL(timeout()), SLOT(timerLevel_timeOut()));
@@ -236,6 +230,13 @@ void PlayerWidget::setGain(double gain)
 void PlayerWidget::setBeatVisualMode(bool enabled)
 {
     m_beatVisualMode = enabled;
+    if (m_beatModeButton) {
+        m_beatModeButton->setChecked(enabled);
+        m_beatModeButton->setText(enabled ? tr("BPM") : tr("VU"));
+    }
+    QSettings settings;
+    settings.setValue("beatSyncVisualMode", enabled);
+    applyBeatVisualLayout(enabled);
     if (m_beatVisualMode) {
         vuMeter->hide();
         bpmWidget->show();
@@ -243,6 +244,27 @@ void PlayerWidget::setBeatVisualMode(bool enabled)
         bpmWidget->hide();
         vuMeter->show();
     }
+}
+
+void PlayerWidget::applyBeatVisualLayout(bool enabled)
+{
+    setMinimumHeight(enabled ? 182 : 130);
+    ui->frame_3->setMaximumHeight(enabled ? 195 : 130);
+    ui->fraDisplay->setMaximumHeight(enabled ? 195 : 124);
+    ui->fraDisplay->setMaximumWidth(QWIDGETSIZE_MAX);
+    ui->fraVuMeter->setMaximumWidth(QWIDGETSIZE_MAX);
+    ui->fraVuMeter->setMinimumHeight(enabled ? 70 : 31);
+    ui->fraInfo->setMaximumWidth(QWIDGETSIZE_MAX);
+    ui->fraDigits->setMaximumWidth(QWIDGETSIZE_MAX);
+    ui->vuMeter->setMaximumWidth(QWIDGETSIZE_MAX);
+    ui->vuMeter->setMinimumHeight(enabled ? 64 : 31);
+
+    if (enabled)
+        ui->lblInfo->setStyleSheet("font-size: 9pt;");
+    else
+        ui->lblInfo->setStyleSheet("font-size: 11pt;");
+
+    drawTitle();
 }
 
 void PlayerWidget::setInfo(QPair<int, int> info)
@@ -531,12 +553,21 @@ void PlayerWidget::resizeEvent(QResizeEvent* e)
 void PlayerWidget::drawTitle()
 {
     int width = ui->lblTitle->width() - 2;
-    if (width < 300)
-        ui->lblTitle->setStyleSheet("* { font-size: 13pt; }");
-    else if (width < 400)
-        ui->lblTitle->setStyleSheet("* { font-size: 14pt; }");
-    else
-        ui->lblTitle->setStyleSheet("* { font-size: 16pt; }");
+    if (m_beatVisualMode) {
+        if (width < 300)
+            ui->lblTitle->setStyleSheet("* { font-size: 13pt; }");
+        else if (width < 400)
+            ui->lblTitle->setStyleSheet("* { font-size: 14pt; }");
+        else
+            ui->lblTitle->setStyleSheet("* { font-size: 16pt; }");
+    } else {
+        if (width < 300)
+            ui->lblTitle->setStyleSheet("* { font-size: 15pt; }");
+        else if (width < 400)
+            ui->lblTitle->setStyleSheet("* { font-size: 16pt; }");
+        else
+            ui->lblTitle->setStyleSheet("* { font-size: 18pt; }");
+    }
 
     QFontMetrics metrix(ui->lblTitle->font());
 
@@ -641,6 +672,11 @@ void PlayerWidget::on_butRew_clicked()
 void PlayerWidget::on_butFwd_clicked()
 {
     Q_EMIT forwardPressed();
+}
+
+void PlayerWidget::on_butBeatMode_clicked(bool checked)
+{
+    setBeatVisualMode(checked);
 }
 
 void PlayerWidget::setTrackFinishEmitTime(const int sec)

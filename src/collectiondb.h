@@ -38,6 +38,7 @@ public:
 
     void incSongCounter(const QString url);
     void setSongRate(const QString url, int rate);
+    void setSongBpm(const QString url, int bpm);
     void updateDirStats(QString path, const long datetime);
     void removeSongsInDir(QString path);
     bool isDirInCollection(QString path);

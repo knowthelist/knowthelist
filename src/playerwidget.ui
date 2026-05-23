@@ -134,7 +134,11 @@ QScrollBar:left-arrow:horizontal, QScrollBar::right-arrow:horizontal {
      }
 
      QScrollBar::add-page:horizontal, QScrollBar::sub-page:horizontal {
-         background: none;
+       background: qlineargradient(
+     x1:0, y1:0, x2:0, y2:1,
+     stop:0.1 #303030,
+     stop:1 #141414
+   );
      }
 QFrame#fraDisplay{
  border: 1px solid #a2a2a2;
@@ -3060,6 +3064,37 @@ QLabel{
               </property>
               <property name="text">
                <string/>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QPushButton" name="butBeatMode">
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
+              </property>
+              <property name="minimumSize">
+               <size>
+                <width>36</width>
+                <height>16</height>
+               </size>
+              </property>
+              <property name="maximumSize">
+               <size>
+                <width>46</width>
+                <height>22</height>
+               </size>
+              </property>
+              <property name="toolTip">
+               <string>Switch between VU meter and BPM display</string>
+              </property>
+              <property name="text">
+               <string notr="true">VU</string>
+              </property>
+              <property name="checkable">
+               <bool>true</bool>
               </property>
              </widget>
             </item>

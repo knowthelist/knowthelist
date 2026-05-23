@@ -20,7 +20,10 @@
 
 #include "track.h"
 
+#include <QQueue>
 #include <QTreeWidget>
+
+class TrackAnalyser;
 
 class Playlist : public QTreeWidget {
     Q_OBJECT
@@ -74,6 +77,7 @@ public:
     //ToDo: what is for private only? Sort!
 
 protected:
+    void resizeEvent(QResizeEvent* event);
     void keyPressEvent(QKeyEvent* event);
     void mousePressEvent(QMouseEvent* event);
     void mouseMoveEvent(QMouseEvent* event);
@@ -120,6 +124,7 @@ Q_SIGNALS:
     void countChanged(QList<Track*>);
 
 private:
+    void applyModeColumnLayout();
     void setCurrentPlaylistItem(PlaylistItem*);
     void setNextPlaylistItem(PlaylistItem*);
     void removePlaylistItem(PlaylistItem*);
@@ -172,6 +177,16 @@ private Q_SLOTS:
     void handleChanges();
     void slotItemChanged(QTreeWidgetItem* current, QTreeWidgetItem* previous);
     void dummySlot();
+    void analyseTempoFinished();
+
+private:
+    void queueTempoScan(Track* track);
+    void startTempoScan();
+
+    TrackAnalyser* m_tempoAnalyser;
+    QQueue<QString> m_tempoScanQueue;
+    QString m_tempoScanUrl;
+    bool m_tempoScanActive;
 };
 
 #endif

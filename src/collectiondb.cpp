@@ -205,6 +205,20 @@ void CollectionDB::setSongRate(const QString url, int rate)
                    .arg(rate));
 }
 
+void CollectionDB::setSongBpm(const QString url, int bpm)
+{
+    if (bpm <= 0)
+        return;
+
+    QString command = QString("INSERT INTO analysis_cache (url, bpm, beat_offset_ms, changedate) "
+                              "VALUES('%1', %2, COALESCE((SELECT beat_offset_ms FROM analysis_cache WHERE url = '%1'), 0), strftime('%s','now')) "
+                              "ON CONFLICT(url) DO UPDATE SET bpm=excluded.bpm, changedate=excluded.changedate;")
+                          .arg(escapeString(url))
+                          .arg(bpm);
+
+    executeSql(command);
+}
+
 void CollectionDB::resetSongCounter()
 {
     executeSql(QString("DELETE FROM statistics;"));

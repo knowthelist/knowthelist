@@ -17,6 +17,7 @@
 
 #include "playlist.h"
 #include "playlistitem.h"
+#include "trackanalyser.h"
 
 #include <QMenu>
 #include <Qt>
@@ -37,6 +38,7 @@
 #include <QMessageBox>
 #include <QPainter>
 #include <qfile.h>
+#include <QSettings>
 
 Playlist::Playlist(QWidget* parent)
     : QTreeWidget(parent)
@@ -55,6 +57,8 @@ Playlist::Playlist(QWidget* parent)
     , m_isInternDrop(false)
     , m_dragLocked(false)
     , isChangeSignalEnabled(true)
+    , m_tempoAnalyser(new TrackAnalyser(this))
+    , m_tempoScanActive(false)
 {
 
     setSortingEnabled(false);
@@ -99,6 +103,8 @@ Playlist::Playlist(QWidget* parent)
     connect(this,
         SIGNAL(currentItemChanged(QTreeWidgetItem*, QTreeWidgetItem*)),
         this, SLOT(slotItemChanged(QTreeWidgetItem*, QTreeWidgetItem*)));
+
+    connect(m_tempoAnalyser, SIGNAL(finishTempo()), this, SLOT(analyseTempoFinished()));
 }
 
 Playlist::~Playlist()
@@ -128,6 +134,9 @@ void Playlist::addTrack(Track* track, PlaylistItem* after)
     QObject::connect(rating, SIGNAL(RatingChanged(float)),
         SLOT(onRatingChanged(float)));
     setItemWidget(item, PlaylistItem::Column_Rate, rating);
+
+    if (m_PlaylistMode != Playlist::Tracklist && track->bpm() <= 0)
+        queueTempoScan(track);
 }
 
 /** Add a track and set it as current item */
@@ -241,14 +250,12 @@ void Playlist::appendTracks(QList<Track*> tracks, PlaylistItem* after)
     checkCurrentItem();
 }
 
-void Playlist::setPlaylistMode(Mode newMode)
+void Playlist::applyModeColumnLayout()
 {
-    m_PlaylistMode = newMode;
+    const int width = viewport()->width();
+    const double percent = qMax(1, width) / 100.0;
 
-    double percent = this->size().width() / 100.0;
-
-    switch (m_PlaylistMode) {
-    case Playlist::Tracklist:
+    if (m_PlaylistMode == Playlist::Tracklist) {
         header()->hideSection(PlaylistItem::Column_No);
         header()->showSection(PlaylistItem::Column_Played);
         header()->showSection(PlaylistItem::Column_Year);
@@ -261,32 +268,47 @@ void Playlist::setPlaylistMode(Mode newMode)
         header()->resizeSection(PlaylistItem::Column_Title, 22 * percent);
         header()->resizeSection(PlaylistItem::Column_Album, 20 * percent);
         header()->resizeSection(PlaylistItem::Column_Length, 7 * percent);
-        header()->resizeSection(PlaylistItem::Column_BPM, 6 * percent);
+        header()->resizeSection(PlaylistItem::Column_BPM, qMax(48, static_cast<int>(6 * percent)));
         header()->resizeSection(PlaylistItem::Column_Genre, 10 * percent);
         header()->resizeSection(PlaylistItem::Column_Year, 8 * percent);
         header()->resizeSection(PlaylistItem::Column_Tracknumber, 5 * percent);
         header()->resizeSection(PlaylistItem::Column_Played, 5 * percent);
         header()->resizeSection(PlaylistItem::Column_Rate, 75);
+    } else {
+        header()->showSection(PlaylistItem::Column_No);
+        header()->showSection(PlaylistItem::Column_Artist);
+        header()->showSection(PlaylistItem::Column_Title);
+        header()->showSection(PlaylistItem::Column_Length);
+        header()->showSection(PlaylistItem::Column_BPM);
+        header()->hideSection(PlaylistItem::Column_Played);
+        header()->hideSection(PlaylistItem::Column_Year);
+        header()->hideSection(PlaylistItem::Column_Genre);
+        header()->hideSection(PlaylistItem::Column_Tracknumber);
+        header()->hideSection(PlaylistItem::Column_Album);
+        header()->hideSection(PlaylistItem::Column_Rate);
+        header()->resizeSection(PlaylistItem::Column_No, qMax(44, static_cast<int>(6 * percent)));
+        header()->resizeSection(PlaylistItem::Column_Artist, 40 * percent);
+        header()->resizeSection(PlaylistItem::Column_Title, 40 * percent);
+        header()->resizeSection(PlaylistItem::Column_Length, qMax(66, static_cast<int>(10 * percent)));
+        header()->resizeSection(PlaylistItem::Column_BPM, qMax(52, static_cast<int>(8 * percent)));
+        header()->resizeSection(PlaylistItem::Column_Rate, 0);
+    }
+}
+
+void Playlist::setPlaylistMode(Mode newMode)
+{
+    m_PlaylistMode = newMode;
+
+    switch (m_PlaylistMode) {
+    case Playlist::Tracklist:
+        applyModeColumnLayout();
         setSortingEnabled(true);
         sortByColumn(PlaylistItem::Column_Played, Qt::DescendingOrder);
         m_CurrentTrackColor = Qt::white;
         m_NextTrackColor = Qt::white;
         break;
     default:
-        header()->showSection(PlaylistItem::Column_No);
-        header()->hideSection(PlaylistItem::Column_Played);
-        header()->hideSection(PlaylistItem::Column_Year);
-        header()->hideSection(PlaylistItem::Column_Genre);
-        header()->hideSection(PlaylistItem::Column_Tracknumber);
-        header()->hideSection(PlaylistItem::Column_Album);
-        header()->hideSection(PlaylistItem::Column_BPM);
-        header()->hideSection(PlaylistItem::Column_Rate);
-        header()->resizeSection(PlaylistItem::Column_No, 6 * percent);
-        header()->resizeSection(PlaylistItem::Column_Artist, 40 * percent);
-        header()->resizeSection(PlaylistItem::Column_Title, 40 * percent);
-        header()->resizeSection(PlaylistItem::Column_Length, 10 * percent);
-        header()->resizeSection(PlaylistItem::Column_BPM, 0);
-        header()->resizeSection(PlaylistItem::Column_Rate, 0);
+        applyModeColumnLayout();
         setSortingEnabled(false);
         m_CurrentTrackColor = QColor(255, 100, 100);
         m_NextTrackColor = QColor(200, 200, 255);
@@ -297,7 +319,72 @@ void Playlist::setPlaylistMode(Mode newMode)
         header()->restoreState(
             settings.value("playlist_" + objectName()).toByteArray());
 
+    // Re-apply mode constraints after restoring user state so required columns
+    // stay visible and widths adapt to current widget width.
+    applyModeColumnLayout();
+
     handleChanges();
+}
+
+void Playlist::resizeEvent(QResizeEvent* event)
+{
+    QTreeWidget::resizeEvent(event);
+    applyModeColumnLayout();
+}
+
+void Playlist::queueTempoScan(Track* track)
+{
+    if (!track)
+        return;
+
+    const QString url = track->url().toString();
+    if (url.isEmpty() || m_tempoScanQueue.contains(url) || url == m_tempoScanUrl)
+        return;
+
+    m_tempoScanQueue.enqueue(url);
+    if (!m_tempoScanActive)
+        startTempoScan();
+}
+
+void Playlist::startTempoScan()
+{
+    if (m_tempoScanActive || m_tempoScanQueue.isEmpty())
+        return;
+
+    m_tempoScanUrl = m_tempoScanQueue.dequeue();
+    m_tempoScanActive = true;
+
+    QSettings settings;
+    // Playlist background scan gets a slightly longer window than live deck scan
+    // for more stable BPM estimation.
+    m_tempoAnalyser->setTempoScanDurationSeconds(qMax(12, settings.value("beatSyncScanSeconds", 8).toInt()));
+    m_tempoAnalyser->setMode(TrackAnalyser::TEMPO);
+    m_tempoAnalyser->open(QUrl(m_tempoScanUrl));
+}
+
+void Playlist::analyseTempoFinished()
+{
+    const int bpm = m_tempoAnalyser->bpm();
+    if (!m_tempoScanUrl.isEmpty() && bpm > 0) {
+        QList<QTreeWidgetItem*> matches = findItems(m_tempoScanUrl, Qt::MatchExactly, PlaylistItem::Column_Url);
+        for (QTreeWidgetItem* match : matches) {
+            PlaylistItem* item = dynamic_cast<PlaylistItem*>(match);
+            if (!item)
+                continue;
+
+            Track* track = item->track();
+            if (!track)
+                continue;
+
+            track->setBpm(bpm);
+            item->setText(PlaylistItem::Column_BPM, QString::number(bpm));
+            emit trackPropertyChanged(track);
+        }
+    }
+
+    m_tempoScanUrl.clear();
+    m_tempoScanActive = false;
+    startTempoScan();
 }
 
 void Playlist::checkCurrentItem()

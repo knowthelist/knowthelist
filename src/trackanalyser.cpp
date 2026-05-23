@@ -521,6 +521,8 @@ void TrackAnalyser::finalizeAnalysis()
 
 void TrackAnalyser::detectTempo()
 {
+    static const int kMinBpm = 70;
+    static const int kMaxBpm = 200;
     const int THRESHOLD_WINDOW_SIZE = 10;
     const float MULTIPLIER = 1.5f;
     QList<float> prunedSpectralFlux;
@@ -589,14 +591,14 @@ void TrackAnalyser::detectTempo()
 
             double bpm = (static_cast<double>(p->fft_res) * 60.0) / static_cast<double>(delta);
 
-            // Fold harmonics into DJ-relevant range.
-            while (bpm < 80.0)
+            // Fold harmonics into a broad DJ-relevant range.
+            while (bpm < static_cast<double>(kMinBpm))
                 bpm *= 2.0;
-            while (bpm > 180.0)
+            while (bpm > static_cast<double>(kMaxBpm))
                 bpm *= 0.5;
 
-            if (bpm >= 60.0 && bpm <= 240.0) {
-                const int bpmBin = qBound(60, qRound(bpm), 240);
+            if (bpm >= static_cast<double>(kMinBpm) && bpm <= static_cast<double>(kMaxBpm)) {
+                const int bpmBin = qBound(kMinBpm, qRound(bpm), kMaxBpm);
                 const float pairWeight = qMax(0.01f, peaks.at(onsets.at(j)));
                 score[bpmBin] += static_cast<double>(baseWeight * pairWeight);
             }
@@ -605,18 +607,62 @@ void TrackAnalyser::detectTempo()
 
     int bestBpm = 0;
     double bestScore = 0.0;
-    for (int bpmBin = 60; bpmBin <= 240; ++bpmBin) {
+    for (int bpmBin = kMinBpm; bpmBin <= kMaxBpm; ++bpmBin) {
         if (score[bpmBin] > bestScore) {
             bestScore = score[bpmBin];
             bestBpm = bpmBin;
         }
     }
 
-    if (bestBpm == 0) {
-        // fallback for sparse onset material
-        bestBpm = qRound(AutoCorrelation(peaks, peaks.count(), 60, 240, p->fft_res));
+    auto supportFor = [&](int bpmBin) {
+        if (bpmBin < kMinBpm || bpmBin > kMaxBpm)
+            return 0.0;
+
+        double support = 0.0;
+        for (int d = -2; d <= 2; ++d) {
+            const int idx = qBound(kMinBpm, bpmBin + d, kMaxBpm);
+            support += score[idx] * ((d == 0) ? 1.0 : 0.7);
+        }
+
+        if (bpmBin * 2 <= kMaxBpm)
+            support += 0.30 * score[bpmBin * 2];
+        if (bpmBin / 2 >= kMinBpm)
+            support += 0.20 * score[bpmBin / 2];
+
+        return support;
+    };
+
+    int votedBpm = bestBpm;
+    double votedSupport = supportFor(votedBpm);
+    if (votedBpm > 0) {
+        const int halfBpm = qRound(votedBpm * 0.5);
+        const int doubleBpm = votedBpm * 2;
+        const double halfSupport = supportFor(halfBpm);
+        const double doubleSupport = supportFor(doubleBpm);
+
+        if (halfSupport > votedSupport * 1.15) {
+            votedBpm = halfBpm;
+            votedSupport = halfSupport;
+        }
+        if (doubleSupport > votedSupport * 1.15) {
+            votedBpm = doubleBpm;
+            votedSupport = doubleSupport;
+        }
     }
-    p->bpm = bestBpm;
+
+    const int autoCorrBpm = qRound(AutoCorrelation(peaks, peaks.count(), kMinBpm, kMaxBpm, p->fft_res));
+    int finalBpm = votedBpm;
+    if (finalBpm == 0) {
+        finalBpm = autoCorrBpm;
+    } else if (autoCorrBpm >= kMinBpm && autoCorrBpm <= kMaxBpm) {
+        if (qAbs(autoCorrBpm - finalBpm) <= 3) {
+            finalBpm = qRound(0.6 * finalBpm + 0.4 * autoCorrBpm);
+        } else if (supportFor(autoCorrBpm) > votedSupport * 1.20) {
+            finalBpm = autoCorrBpm;
+        }
+    }
+
+    p->bpm = qBound(0, finalBpm, kMaxBpm);
     qDebug() << Q_FUNC_INFO << "interval-vote bpm:" << p->bpm;
 
     // Use the strongest early onset as a stable beat-cue phase anchor.

@@ -272,16 +272,23 @@ void Knowthelist::createUI()
     //MonitorPlayer
     initMonitorPlayer();
 
-    //change slider style for linux
-#if defined(Q_OS_LINUX)
+    // Keep mixer/monitor sliders neutral and avoid platform accent color stripes.
+#if defined(Q_OS_LINUX) || defined(Q_OS_DARWIN)
     QString sliderStyle = QString(
+        "QSlider { background: transparent; }"
         "QSlider::sub-page:vertical { background: qlineargradient(x1: 0, y1: 0, x2:1, y2: 0,"
         "   stop: 0.4 #666, stop: 0 #111111 ); border: 1px solid #444; border-radius: 2px;}"
         "QSlider::add-page:vertical {background: qlineargradient(x1: 0, y1: 0, x2:1, y2: 0,"
         "   stop: 0 #111,stop: 0.4 #666); border: 1px solid #333; border-radius: 2px;}"
         "QSlider::sub-page:horizontal,QSlider::add-page:horizontal  {"
         "   background: qlineargradient(x1: 0, y1: 0,    x2: 0, y2: 1,"
-        "   stop: 0 #111, stop: 0.6 #666 ); border: 1px solid #222; border-radius: 2px;}");
+        "   stop: 0 #111, stop: 0.6 #666 ); border: 1px solid #222; border-radius: 2px;}"
+        "QSlider::groove:horizontal {"
+        "   height: 6px; margin: 0 8px; background: #1a1a1a; border: 1px solid #2c2c2c; border-radius: 2px; }"
+        "QSlider::groove:vertical {"
+        "   width: 6px; margin: 8px 0; background: #1a1a1a; border: 1px solid #2c2c2c; border-radius: 2px; }"
+        "QSlider::tick-mark:horizontal { background: #8f8f8f; width: 1px; height: 4px; }"
+        "QSlider::tick-mark:vertical { background: #8f8f8f; width: 4px; height: 1px; }");
 
     ui->frameMixer->setStyleSheet(sliderStyle);
     ui->MonitorPlayer->setStyleSheet(sliderStyle);
