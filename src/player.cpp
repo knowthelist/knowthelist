@@ -23,6 +23,12 @@
 
 namespace {
 constexpr gdouble kMeterMinDb = -80.0;
+constexpr bool kLogStateChanges = false;
+
+#if defined(__GNUC__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#endif
 
 bool holdsLegacyValueArray(const GValue* value)
 {
@@ -34,6 +40,50 @@ bool holdsLegacyValueArray(const GValue* value)
 #endif
 }
 
+guint legacyValueArrayCount(const GValue* value)
+{
+#ifdef G_TYPE_VALUE_ARRAY
+    const GValueArray* values = static_cast<const GValueArray*>(g_value_get_boxed(value));
+    return values != nullptr ? values->n_values : 0;
+#else
+    Q_UNUSED(value);
+    return 0;
+#endif
+}
+
+const GValue* legacyValueArrayAt(const GValue* value, guint index)
+{
+#ifdef G_TYPE_VALUE_ARRAY
+    GValueArray* values = static_cast<GValueArray*>(g_value_get_boxed(value));
+    return values != nullptr ? g_value_array_get_nth(values, index) : nullptr;
+#else
+    Q_UNUSED(value);
+    Q_UNUSED(index);
+    return nullptr;
+#endif
+}
+
+#if defined(__GNUC__)
+#pragma GCC diagnostic pop
+#endif
+
+void configureLevelMessaging(GstElement* levelElement)
+{
+    if (levelElement == nullptr)
+        return;
+
+    GObjectClass* klass = G_OBJECT_GET_CLASS(levelElement);
+    if (klass == nullptr)
+        return;
+
+    if (g_object_class_find_property(klass, "message") != nullptr)
+        g_object_set(levelElement, "message", TRUE, NULL);
+    if (g_object_class_find_property(klass, "post-messages") != nullptr)
+        g_object_set(levelElement, "post-messages", TRUE, NULL);
+    if (g_object_class_find_property(klass, "interval") != nullptr)
+        g_object_set(levelElement, "interval", static_cast<gint64>(50 * GST_MSECOND), NULL);
+}
+
 guint peakValueCount(const GValue* value)
 {
     if (value == nullptr)
@@ -42,12 +92,8 @@ guint peakValueCount(const GValue* value)
         return gst_value_list_get_size(value);
     if (GST_VALUE_HOLDS_ARRAY(value))
         return gst_value_array_get_size(value);
-    if (holdsLegacyValueArray(value)) {
-#ifdef G_TYPE_VALUE_ARRAY
-        const GValueArray* values = static_cast<const GValueArray*>(g_value_get_boxed(value));
-        return values != nullptr ? values->n_values : 0;
-#endif
-    }
+    if (holdsLegacyValueArray(value))
+        return legacyValueArrayCount(value);
     return 1;
 }
 
@@ -59,12 +105,8 @@ const GValue* peakValueAt(const GValue* value, guint index)
         return gst_value_list_get_value(value, index);
     if (GST_VALUE_HOLDS_ARRAY(value))
         return gst_value_array_get_value(value, index);
-    if (holdsLegacyValueArray(value)) {
-#ifdef G_TYPE_VALUE_ARRAY
-        GValueArray* values = static_cast<GValueArray*>(g_value_get_boxed(value));
-        return values != nullptr ? g_value_array_get_nth(values, index) : nullptr;
-#endif
-    }
+    if (holdsLegacyValueArray(value))
+        return legacyValueArrayAt(value, index);
     return index == 0 ? value : nullptr;
 }
 
@@ -118,6 +160,20 @@ const GValue* levelDbValues(const GstStructure* s, const char** fieldName)
     if (fieldName != nullptr)
         *fieldName = "peak";
     return gst_structure_get_value(s, "peak");
+}
+
+void configureAudioSink(GstElement* sink)
+{
+    if (sink == nullptr)
+        return;
+
+    GObjectClass* klass = G_OBJECT_GET_CLASS(sink);
+    if (klass == nullptr)
+        return;
+
+    // Starting without async preroll avoids startup stalls on some Linux setups.
+    if (g_object_class_find_property(klass, "async") != nullptr)
+        g_object_set(sink, "async", FALSE, NULL);
 }
 }
 
@@ -189,6 +245,8 @@ struct PlayerPrivate {
     QString error;
     int length;
     int position;
+    int playBasePosition;
+    QElapsedTimer playTimer;
     double volume;
     double rms_l;
     double rms_r;
@@ -210,6 +268,7 @@ Player::Player(QWidget* parent)
     p->rms_r = 0;
     p->rmsout_l = 0;
     p->rmsout_r = 0;
+    p->playBasePosition = 0;
 
     connect(&p->watcher, SIGNAL(finished()), this, SLOT(loadThreadFinished()));
 }
@@ -306,10 +365,28 @@ bool Player::prepare()
     vol = gst_element_factory_make("volume", "volume");
     levelout = gst_element_factory_make("level", "levelout");
     equalizer = gst_element_factory_make("equalizer-3bands", "equalizer");
-    sink = gst_element_factory_make("autoaudiosink", "sink");
+#if defined(Q_OS_UNIX) && !defined(Q_OS_DARWIN)
+    sink = gst_element_factory_make("alsasink", "sink");
+    if (sink == nullptr)
+        sink = gst_element_factory_make("pulsesink", "sink");
+    if (sink == nullptr)
+        sink = gst_element_factory_make("autoaudiosink", "sink");
 
-    g_object_set(level, "message", TRUE, NULL);
-    g_object_set(levelout, "message", TRUE, NULL);
+    if (sink != nullptr) {
+        GObjectClass* sinkClass = G_OBJECT_GET_CLASS(sink);
+        if (sinkClass != nullptr && g_object_class_find_property(sinkClass, "device") != nullptr)
+            g_object_set(sink, "device", "default", NULL);
+    }
+#else
+    sink = gst_element_factory_make("autoaudiosink", "sink");
+#endif
+
+    configureAudioSink(sink);
+    if (kLogStateChanges)
+        qDebug() << Q_FUNC_INFO << "using audio sink" << (sink != nullptr ? GST_OBJECT_NAME(sink) : "<none>");
+
+    configureLevelMessaging(level);
+    configureLevelMessaging(levelout);
     g_object_set(level, "peak-ttl", 300000000000, NULL);
 
     gst_bin_add_many(GST_BIN(pipeline), src, conv, resample, level, gain, equalizer, levelout, vol, sink, NULL);
@@ -403,6 +480,8 @@ void Player::play()
     if (p->isLoaded) {
         qDebug() << Q_FUNC_INFO << ":" << parentWidget()->objectName() << " call GST_STATE_PLAYING";
         gst_element_set_state(GST_ELEMENT(pipeline), GST_STATE_PLAYING);
+        p->playBasePosition = p->position;
+        p->playTimer.restart();
     } else {
         qDebug() << Q_FUNC_INFO << ":" << parentWidget()->objectName() << " is not loaded";
     }
@@ -410,6 +489,8 @@ void Player::play()
 void Player::stop()
 {
     p->isStarted = false;
+    p->playBasePosition = 0;
+    p->playTimer.invalidate();
     gst_element_set_state(GST_ELEMENT(pipeline), GST_STATE_READY);
 }
 
@@ -417,6 +498,10 @@ void Player::pause()
 {
     if (isPlaying()) {
         p->isStarted = false;
+        const QTime now = position();
+        p->position = QTime(0, 0).msecsTo(now);
+        p->playBasePosition = p->position;
+        p->playTimer.invalidate();
         gst_element_set_state(GST_ELEMENT(pipeline), GST_STATE_PAUSED);
     }
 }
@@ -446,8 +531,17 @@ QTime Player::position()
 
         if (gst_element_query_position(pipeline, GST_FORMAT_TIME, &value)) {
             p->position = static_cast<int>((value / GST_MSECOND));
+            p->playBasePosition = p->position;
+            if (p->isStarted && !p->playTimer.isValid())
+                p->playTimer.start();
             return QTime(0, 0).addMSecs(p->position); // nanosec -> msec
         }
+
+        if (p->isStarted && p->playTimer.isValid()) {
+            p->position = p->playBasePosition + static_cast<int>(p->playTimer.elapsed());
+            return QTime(0, 0).addMSecs(p->position);
+        }
+
         return QTime(0, 0).addMSecs(p->position); // nanosec -> msec
     }
     return QTime(0, 0);
@@ -540,8 +634,10 @@ void Player::messageReceived(GstMessage* message)
         GstState old_state, new_state;
         gst_message_parse_state_changed(message, &old_state, &new_state, nullptr);
         const GstObject* source = GST_MESSAGE_SRC(message);
-        qDebug() << Q_FUNC_INFO << "state-changed from" << GST_OBJECT_NAME(source)
-                 << gst_element_state_get_name(old_state) << "->" << gst_element_state_get_name(new_state);
+        if (kLogStateChanges) {
+            qDebug() << Q_FUNC_INFO << "state-changed from" << GST_OBJECT_NAME(source)
+                     << gst_element_state_get_name(old_state) << "->" << gst_element_state_get_name(new_state);
+        }
         if (source == GST_OBJECT(pipeline)) {
             switch (new_state) {
             case GST_STATE_PAUSED:
@@ -560,8 +656,10 @@ void Player::messageReceived(GstMessage* message)
         const gchar* src_name = GST_MESSAGE_SRC_NAME(message);
         const gchar* structure_name = s != nullptr ? gst_structure_get_name(s) : "<no-structure>";
 
-        qDebug() << Q_FUNC_INFO << "element message from" << src_name
-                 << "structure" << structure_name;
+        if (kLogStateChanges) {
+            qDebug() << Q_FUNC_INFO << "element message from" << src_name
+                     << "structure" << structure_name;
+        }
 
         if (strcmp(src_name, "levelintern") == 0) {
             const GValue* peakValues = levelDbValues(s, nullptr);
@@ -571,16 +669,17 @@ void Player::messageReceived(GstMessage* message)
                 const GValue* peakValue = peakValueAt(peakValues, i);
                 gdouble peak_dB = 0.0;
                 if (!gValueToDouble(peakValue, &peak_dB)) {
-                    qDebug() << Q_FUNC_INFO << "levelintern channel" << i
-                             << "unsupported value type"
-                             << (peakValue != nullptr ? G_VALUE_TYPE_NAME(peakValue) : "<null>");
+                    if (kLogStateChanges) {
+                        qDebug() << Q_FUNC_INFO << "levelintern channel" << i
+                                 << "unsupported value type"
+                                 << (peakValue != nullptr ? G_VALUE_TYPE_NAME(peakValue) : "<null>");
+                    }
                     continue;
                 }
 
-                /* Map roughly [-80..0] dBFS to [0..1] so very quiet output still shows. */
-                const gdouble level = qBound(0.0, (peak_dB - kMeterMinDb) / (-kMeterMinDb), 1.0);
-                qDebug() << Q_FUNC_INFO << "levelintern channel" << i
-                         << "peak_dB" << peak_dB << "level" << level;
+                /* Keep the raw deck meter calmer: compress mid-level energy so red reflects real peaks. */
+                const gdouble linear = qBound(0.0, (peak_dB - kMeterMinDb) / (-kMeterMinDb), 1.0);
+                const gdouble level = pow(linear, 1.6);
                 if (i == 0)
                     p->rms_l = level;
                 else
@@ -595,16 +694,16 @@ void Player::messageReceived(GstMessage* message)
                 const GValue* peakValue = peakValueAt(peakValues, i);
                 gdouble peak_dB = 0.0;
                 if (!gValueToDouble(peakValue, &peak_dB)) {
-                    qDebug() << Q_FUNC_INFO << "levelout channel" << i
-                             << "unsupported value type"
-                             << (peakValue != nullptr ? G_VALUE_TYPE_NAME(peakValue) : "<null>");
+                    if (kLogStateChanges) {
+                        qDebug() << Q_FUNC_INFO << "levelout channel" << i
+                                 << "unsupported value type"
+                                 << (peakValue != nullptr ? G_VALUE_TYPE_NAME(peakValue) : "<null>");
+                    }
                     continue;
                 }
 
                 /* Map roughly [-80..0] dBFS to [0..1] so very quiet output still shows. */
                 const gdouble level = qBound(0.0, (peak_dB - kMeterMinDb) / (-kMeterMinDb), 1.0);
-                qDebug() << Q_FUNC_INFO << "levelout channel" << i
-                         << "peak_dB" << peak_dB << "level" << level;
                 if (i == 0)
                     p->rmsout_l = level;
                 else

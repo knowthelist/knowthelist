@@ -13,6 +13,7 @@
 */
 
 #include <QWidget>
+#include <QMutexLocker>
 #include <QtConcurrent/QtConcurrent>
 
 #if defined(Q_OS_DARWIN)
@@ -27,6 +28,23 @@
 #include "monitorplayer.h"
 
 namespace {
+void configureLevelMessaging(GstElement* levelElement)
+{
+    if (levelElement == nullptr)
+        return;
+
+    GObjectClass* klass = G_OBJECT_GET_CLASS(levelElement);
+    if (klass == nullptr)
+        return;
+
+    if (g_object_class_find_property(klass, "message") != nullptr)
+        g_object_set(levelElement, "message", TRUE, NULL);
+    if (g_object_class_find_property(klass, "post-messages") != nullptr)
+        g_object_set(levelElement, "post-messages", TRUE, NULL);
+    if (g_object_class_find_property(klass, "interval") != nullptr)
+        g_object_set(levelElement, "interval", static_cast<gint64>(50 * GST_MSECOND), NULL);
+}
+
 guint peakValueCount(const GValue* value)
 {
     if (value == nullptr)
@@ -190,6 +208,9 @@ MonitorPlayer::MonitorPlayer(QWidget* parent)
 
 MonitorPlayer::~MonitorPlayer()
 {
+    if (p->watcher.isRunning())
+        p->watcher.waitForFinished();
+
     cleanup();
     delete p;
     p = nullptr;
@@ -258,7 +279,7 @@ bool MonitorPlayer::prepare()
 #endif
 
     gst_bin_add_many(GST_BIN(pipeline), src, conv, resample, level, vol, sink, NULL);
-    g_object_set(level, "message", TRUE, NULL);
+    configureLevelMessaging(level);
     gst_element_link(conv, resample);
     gst_element_link_filtered(resample, level, caps);
     gst_element_link(level, vol);
@@ -292,7 +313,7 @@ void MonitorPlayer::open(QUrl url)
 
 void MonitorPlayer::asyncOpen(QUrl url)
 {
-    p->mutex.lock();
+    QMutexLocker locker(&p->mutex);
     p->length = 0;
     p->isLoaded = false;
     p->error = "";
@@ -306,7 +327,6 @@ void MonitorPlayer::asyncOpen(QUrl url)
     setPosition(QTime(0, 0));
 
     gst_object_unref(src);
-    p->mutex.unlock();
 }
 
 void MonitorPlayer::loadThreadFinished()

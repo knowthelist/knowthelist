@@ -43,7 +43,7 @@ TrackAnalyser::TrackAnalyser(QWidget *parent) :
     , p( new TrackAnalyser_Private )
 {
     p->fft_res = 435; //sample rate for fft samples in Hz
-    for (int i=0;i<spect_bands;i++)
+    for (guint i = 0; i < spect_bands; ++i)
         p->lastSpectrum[i]=0.0;
 
     gst_init (nullptr, nullptr);
@@ -461,9 +461,6 @@ float TrackAnalyser::AutoCorrelation( QList<float> buffer, int frames, int minBp
 
     float maxCorr = 0;
     int maxLag = 0;
-    float std_bpm = 120.0f;
-    float std_dev = 0.8f;
-
     int maxOffset = sampleRate * 60 / minBpm;
     int minOffset = sampleRate * 60 / maxBpm;
     if (frames > buffer.count()) frames=buffer.count();

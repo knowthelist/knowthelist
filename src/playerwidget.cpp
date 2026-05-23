@@ -227,10 +227,6 @@ void PlayerWidget::timerLevel_timeOut()
     const double outLeft = player->levelOutLeft();
     const double outRight = player->levelOutRight();
 
-    qDebug() << Q_FUNC_INFO << objectName()
-             << "inL" << inLeft << "inR" << inRight
-             << "outL" << outLeft << "outR" << outRight;
-
     vuMeter->setValueLeft(inLeft);
     vuMeter->setValueRight(inRight);
     Q_EMIT levelChanged(outLeft, outRight);
