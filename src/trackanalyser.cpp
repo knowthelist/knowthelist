@@ -19,7 +19,10 @@
 
 #include <QWidget>
 #include <QMutexLocker>
+#include <QTimer>
 #include <QtConcurrent/QtConcurrent>
+#include <QVector>
+#include <QMetaObject>
 
 #define AUDIOFREQ 32000
 #define SCAN_DURATION 60
@@ -32,8 +35,15 @@ struct TrackAnalyser_Private
         guint64 fft_res;
         float lastSpectrum[spect_bands];
         QList<float> spectralFlux;
+    QList<GstClockTime> spectralFluxTimes;
         int bpm;
+    GstClockTime tempoStartTimestamp;
+    bool tempoWindowStarted;
+    int tempoScanDurationSeconds;
         GstElement *src, *conv, *sink, *cutter, *audio, *analysis, *spectrum;
+        QTimer* tempoTimeout;
+        bool finishQueued;
+        bool shuttingDown;
         TrackAnalyser::modeType analysisMode;
 };
 
@@ -42,7 +52,20 @@ TrackAnalyser::TrackAnalyser(QWidget *parent) :
     pipeline(nullptr), m_finished(false)
     , p( new TrackAnalyser_Private )
 {
-    p->fft_res = 435; //sample rate for fft samples in Hz
+    p->fft_res = 120; // lower message rate reduces analysis cost while keeping enough onset resolution
+    p->bpm = 0;
+    p->analysisMode = STANDARD;
+    p->tempoStartTimestamp = 0;
+    p->tempoWindowStarted = false;
+    p->tempoScanDurationSeconds = 20;
+    p->finishQueued = false;
+    p->shuttingDown = false;
+    p->tempoTimeout = new QTimer(this);
+    p->tempoTimeout->setSingleShot(true);
+    connect(p->tempoTimeout, &QTimer::timeout, this, [this]() {
+        if (p->analysisMode == TEMPO)
+            need_finish();
+    });
     for (guint i = 0; i < spect_bands; ++i)
         p->lastSpectrum[i]=0.0;
 
@@ -64,6 +87,14 @@ void TrackAnalyser::sync_set_state(GstElement* element, GstState state)
 
 TrackAnalyser::~TrackAnalyser()
 {
+    {
+        QMutexLocker locker(&p->mutex);
+        p->shuttingDown = true;
+    }
+
+    p->tempoTimeout->stop();
+    gst_element_set_state(GST_ELEMENT(pipeline), GST_STATE_NULL);
+
     if (p->watcher.isRunning())
         p->watcher.waitForFinished();
 
@@ -167,6 +198,21 @@ int TrackAnalyser::bpm()
     return  p->bpm;
 }
 
+QTime TrackAnalyser::beatPosition()
+{
+    return m_BeatPosition;
+}
+
+int TrackAnalyser::tempoScanDurationSeconds() const
+{
+    return p->tempoScanDurationSeconds;
+}
+
+void TrackAnalyser::setTempoScanDurationSeconds(int seconds)
+{
+    p->tempoScanDurationSeconds = qBound(5, seconds, 60);
+}
+
 double TrackAnalyser::gainDB()
 {
     return  m_GainDB;
@@ -228,26 +274,42 @@ void TrackAnalyser::open(QUrl url)
 {
     //To avoid delays load track in another thread
     qDebug() << Q_FUNC_INFO <<":"<<parentWidget()->objectName()<<" url="<<url;
+    if (p->watcher.isRunning())
+        p->watcher.waitForFinished();
+
     QFuture<void> future = QtConcurrent::run([this, url]() { asyncOpen(url); });
     p->watcher.setFuture(future);
 }
 
 void TrackAnalyser::asyncOpen(QUrl url)
 {
-    QMutexLocker locker(&p->mutex);
-    m_GainDB = GAIN_INVALID;
-    //m_StartPosition = QTime(0,0);
-    p->spectralFlux.clear();
+    {
+        QMutexLocker locker(&p->mutex);
+        if (p->shuttingDown)
+            return;
+        m_GainDB = GAIN_INVALID;
+        p->spectralFlux.clear();
+        p->spectralFluxTimes.clear();
+        p->bpm = 0;
+        p->tempoStartTimestamp = 0;
+        p->tempoWindowStarted = false;
+        p->finishQueued = false;
+        m_finished = false;
+        m_BeatPosition = QTime();
+    }
 
     sync_set_state (GST_ELEMENT (pipeline), GST_STATE_NULL);
 
+    {
+        QMutexLocker locker(&p->mutex);
+        if (p->shuttingDown)
+            return;
+    }
 
     GstElement *src = gst_bin_get_by_name(GST_BIN(pipeline), "source");
     g_object_set (G_OBJECT (src), "uri", (const char*)url.toString().toUtf8(), nullptr);
 
     sync_set_state (GST_ELEMENT (pipeline), GST_STATE_PAUSED);
-
-    m_finished=false;
 
     gst_object_unref(src);
 }
@@ -270,6 +332,10 @@ void TrackAnalyser::loadThreadFinished()
 void TrackAnalyser::start()
 {
     qDebug() << Q_FUNC_INFO <<":"<<parentWidget()->objectName();
+    if (p->analysisMode == TEMPO)
+        p->tempoTimeout->start((p->tempoScanDurationSeconds + 2) * 1000);
+    else
+        p->tempoTimeout->stop();
     gst_element_set_state (GST_ELEMENT (pipeline), GST_STATE_PLAYING);
 }
 
@@ -299,6 +365,12 @@ QTime TrackAnalyser::length()
 
 void TrackAnalyser::messageReceived(GstMessage *message)
 {
+    {
+        QMutexLocker locker(&p->mutex);
+            if (p->shuttingDown || m_finished || p->finishQueued)
+        return;
+    }
+
         switch (GST_MESSAGE_TYPE (message)) {
         case GST_MESSAGE_ERROR: {
                 GError *err;
@@ -348,7 +420,25 @@ void TrackAnalyser::messageReceived(GstMessage *message)
                   }
                   //Spectral flux (comparing the power spectrum for one frame against the previous frame)
                   //for onset detection
-                  p->spectralFlux.append( flux );
+                  {
+                      QMutexLocker locker(&p->mutex);
+                      p->spectralFlux.append(flux);
+                      p->spectralFluxTimes.append(timestamp);
+                  }
+
+                  if (p->analysisMode == TrackAnalyser::TEMPO) {
+                      if (!p->tempoWindowStarted) {
+                          p->tempoWindowStarted = true;
+                          p->tempoStartTimestamp = timestamp;
+                      }
+
+                      const GstClockTime scanWindow = static_cast<GstClockTime>(p->tempoScanDurationSeconds) * GST_SECOND;
+                      const int maxFrames = p->tempoScanDurationSeconds * static_cast<int>(p->fft_res);
+                      if (timestamp >= p->tempoStartTimestamp + scanWindow
+                          || p->spectralFlux.size() >= maxFrames) {
+                          need_finish();
+                      }
+                  }
 
                 }
                 // data for Start and End time detection
@@ -394,43 +484,78 @@ void TrackAnalyser::messageReceived(GstMessage *message)
 
 void TrackAnalyser::need_finish()
 {
-    m_finished=true;
-    switch (p->analysisMode)
     {
-        case TEMPO:
-            detectTempo();
-            Q_EMIT finishTempo();
-            break;
-        default:
-            Q_EMIT finishGain();
+        QMutexLocker locker(&p->mutex);
+        if (m_finished || p->finishQueued)
+            return;
+        p->finishQueued = true;
+    }
+
+    // Finalize on the Qt thread to avoid UI-thread races from Gst callback threads.
+    QMetaObject::invokeMethod(this, "finalizeAnalysis", Qt::QueuedConnection);
+}
+
+void TrackAnalyser::finalizeAnalysis()
+{
+    TrackAnalyser::modeType mode;
+    {
+        QMutexLocker locker(&p->mutex);
+        if (m_finished)
+            return;
+        m_finished = true;
+        p->finishQueued = false;
+        mode = p->analysisMode;
+    }
+
+    p->tempoTimeout->stop();
+    // Non-blocking stop to avoid potential bus callback deadlocks.
+    gst_element_set_state(GST_ELEMENT(pipeline), GST_STATE_NULL);
+
+    if (mode == TEMPO) {
+        detectTempo();
+        Q_EMIT finishTempo();
+    } else {
+        Q_EMIT finishGain();
     }
 }
 
 void TrackAnalyser::detectTempo()
 {
-    int THRESHOLD_WINDOW_SIZE = 10;
-    float MULTIPLIER = 1.5f;
+    const int THRESHOLD_WINDOW_SIZE = 10;
+    const float MULTIPLIER = 1.5f;
     QList<float> prunedSpectralFlux;
     QList<float> threshold;
     QList<float> peaks;
 
+    QList<float> spectralFlux;
+    {
+        QMutexLocker locker(&p->mutex);
+        spectralFlux = p->spectralFlux;
+    }
+
+    if (spectralFlux.isEmpty()) {
+        p->bpm = 0;
+        m_BeatPosition = m_StartPosition;
+        return;
+    }
+
     //calculate the running average for spectral flux.
-    for( int i = 0; i < p->spectralFlux.size(); i++ )
+     for( int i = 0; i < spectralFlux.size(); i++ )
     {
        int start = qMax( 0, i - THRESHOLD_WINDOW_SIZE );
-       int end = qMin( p->spectralFlux.size() - 1, i + THRESHOLD_WINDOW_SIZE );
+       int end = qMin( spectralFlux.size() - 1, i + THRESHOLD_WINDOW_SIZE );
        float mean = 0;
        for( int j = start; j <= end; j++ )
-          mean += p->spectralFlux.at(j);
-       mean /= (end - start);
+          mean += spectralFlux.at(j);
+         mean /= (end - start + 1);
        threshold.append( mean * MULTIPLIER );
     }
 
     //take only the signifikat onsets above threshold
     for( int i = 0; i < threshold.size(); i++ )
     {
-       if( threshold.at(i) <= p->spectralFlux.at(i) )
-          prunedSpectralFlux.append( p->spectralFlux.at(i) - threshold.at(i) );
+         if( threshold.at(i) <= spectralFlux.at(i) )
+             prunedSpectralFlux.append( spectralFlux.at(i) - threshold.at(i) );
        else
           prunedSpectralFlux.append( (float)0 );
     }
@@ -444,16 +569,72 @@ void TrackAnalyser::detectTempo()
           peaks.append( (float)0 );
     }
 
-    //use autocorrelation to retrieve time periode of peaks
-    float bpm = AutoCorrelation(peaks, peaks.count(), 60, 240, p->fft_res);
-    qDebug() << Q_FUNC_INFO << "autocorrelation bpm:"<<bpm;
+    // Build an onset list and estimate BPM by weighted interval voting.
+    QVector<int> onsets;
+    onsets.reserve(peaks.size() / 3);
+    for (int i = 1; i < peaks.size() - 1; ++i) {
+        if (peaks.at(i) > 0.0f && peaks.at(i) >= peaks.at(i - 1) && peaks.at(i) > peaks.at(i + 1))
+            onsets.append(i);
+    }
 
-    //tempo-harmonics issue
-    //if ( bpm < 72.0 ) {
-    //    bpm *= 2;
-    //    qDebug() << Q_FUNC_INFO << "guess bpm:"<<bpm;
-    //} //We dont care about tempo-harmonics issue -> music fits anyway -> factor: 2x or 0.5x
-    p->bpm = qRound(bpm);
+    QVector<double> score(241, 0.0);
+    for (int i = 0; i < onsets.size(); ++i) {
+        const int base = onsets.at(i);
+        const float baseWeight = qMax(0.01f, peaks.at(base));
+        const int upper = qMin(onsets.size(), i + 10);
+        for (int j = i + 1; j < upper; ++j) {
+            const int delta = onsets.at(j) - base;
+            if (delta <= 0)
+                continue;
+
+            double bpm = (static_cast<double>(p->fft_res) * 60.0) / static_cast<double>(delta);
+
+            // Fold harmonics into DJ-relevant range.
+            while (bpm < 80.0)
+                bpm *= 2.0;
+            while (bpm > 180.0)
+                bpm *= 0.5;
+
+            if (bpm >= 60.0 && bpm <= 240.0) {
+                const int bpmBin = qBound(60, qRound(bpm), 240);
+                const float pairWeight = qMax(0.01f, peaks.at(onsets.at(j)));
+                score[bpmBin] += static_cast<double>(baseWeight * pairWeight);
+            }
+        }
+    }
+
+    int bestBpm = 0;
+    double bestScore = 0.0;
+    for (int bpmBin = 60; bpmBin <= 240; ++bpmBin) {
+        if (score[bpmBin] > bestScore) {
+            bestScore = score[bpmBin];
+            bestBpm = bpmBin;
+        }
+    }
+
+    if (bestBpm == 0) {
+        // fallback for sparse onset material
+        bestBpm = qRound(AutoCorrelation(peaks, peaks.count(), 60, 240, p->fft_res));
+    }
+    p->bpm = bestBpm;
+    qDebug() << Q_FUNC_INFO << "interval-vote bpm:" << p->bpm;
+
+    // Use the strongest early onset as a stable beat-cue phase anchor.
+    int strongestPeakIdx = -1;
+    float strongestPeak = 0.0f;
+    for (int i = 0; i < peaks.size(); ++i) {
+        if (peaks.at(i) > strongestPeak) {
+            strongestPeak = peaks.at(i);
+            strongestPeakIdx = i;
+        }
+    }
+
+    if (strongestPeakIdx >= 0 && strongestPeak > 0.0f) {
+        const qint64 offsetMs = static_cast<qint64>((1000.0 * strongestPeakIdx) / p->fft_res);
+        m_BeatPosition = m_StartPosition.addMSecs(static_cast<int>(offsetMs));
+    } else {
+        m_BeatPosition = m_StartPosition;
+    }
 }
 
 float TrackAnalyser::AutoCorrelation( QList<float> buffer, int frames, int minBpm, int maxBpm, int sampleRate)

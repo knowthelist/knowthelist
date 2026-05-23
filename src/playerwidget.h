@@ -26,6 +26,7 @@
 #include <QtCore/QTimer>
 
 #include "player.h"
+#include "playerbpmwidget.h"
 #include "vumeter.h"
 
 #include "playlistitem.h"
@@ -59,6 +60,13 @@ public:
     int TrackFinishEmitTime() { return mTrackFinishEmitTime; }
     void setVolume(double volume);
     void setGain(double gain);
+    int currentBpm() const { return m_bpm; }
+    QTime currentPosition() const;
+    QTime beatPosition() const { return m_beatPosition; }
+    void alignCueToReferenceBeat(int referenceBpm, const QTime& referencePosition);
+    void setBeatSyncEnabled(bool enabled) { m_beatSyncEnabled = enabled; }
+    void setBeatCueEnabled(bool enabled) { m_beatCueEnabled = enabled; }
+    void setBeatVisualMode(bool enabled);
     void setSkipSilentEnd(bool checked)
     {
         m_skipSilentEnd = checked;
@@ -73,6 +81,7 @@ public:
 public Q_SLOTS:
     void loadTrack(Track*);
     void analyseGainFinished();
+    void analyseTempoFinished();
     void setEqualizer(EqBand, int);
     void setInfo(QPair<int, int> info);
 
@@ -85,6 +94,7 @@ Q_SIGNALS:
     void rewindPressed();
     void statusChanged(bool);
     void gainChanged(double);
+    void tempoChanged(int bpm, QTime beatPosition);
     void levelChanged(double, double);
 
 private Q_SLOTS:
@@ -105,6 +115,7 @@ private Q_SLOTS:
 
 protected:
     VUMeter* vuMeter;
+    PlayerBpmWidget* bpmWidget;
 
     long songTime;
 
@@ -120,6 +131,7 @@ private:
 
     Player* player;
     TrackAnalyser* trackanalyser;
+    TrackAnalyser* tempoAnalyser;
     float m_level;
     QLabel* m_positionLabel;
     QLabel* m_volumeLabel;
@@ -138,6 +150,12 @@ private:
     bool m_pendingPlay;
     bool m_skipSilentEnd;
     bool m_skipSilentBegin;
+    bool m_beatSyncEnabled;
+    bool m_beatCueEnabled;
+    bool m_beatVisualMode;
+    bool m_bpmAnalysed;
+    int m_bpm;
+    QTime m_beatPosition;
 
     struct PlayerWidgetPrivate* p;
 };

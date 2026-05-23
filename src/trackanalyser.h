@@ -43,10 +43,13 @@ public:
     double gainFactor();
     QTime startPosition();
     QTime endPosition();
+    QTime beatPosition();
     int bpm();
     bool finished() {return m_finished;}
     void setMode(modeType mode);
     void setPosition(QTime position);
+    int tempoScanDurationSeconds() const;
+    void setTempoScanDurationSeconds(int seconds);
 
     QTime length();
     static const int GAIN_INVALID=-99;
@@ -62,6 +65,7 @@ public:
  private slots:
     void messageReceived(GstMessage* message);
     void loadThreadFinished();
+     void finalizeAnalysis();
 
  private:
     struct TrackAnalyser_Private *p;
@@ -71,6 +75,7 @@ public:
         double m_GainDB;
         QTime m_StartPosition;
         QTime m_EndPosition;
+        QTime m_BeatPosition;
         QTime m_MaxPosition;
         bool m_finished;
 

@@ -67,6 +67,7 @@ public:
     QString genre();
     int length();
     int counter();
+    int bpm();
     int rate();
     QString tracknumber();
     QString prettyLength();
@@ -87,6 +88,7 @@ public:
     void setLength(QString);
     void setLengthFromPretty(QString);
     void setCounter(QString);
+    void setBpm(int);
     void setRate(int);
     void setFlags(Track::Options flags);
 

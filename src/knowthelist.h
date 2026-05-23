@@ -19,6 +19,7 @@
 #define KNOWTHELIST_H
 
 #include "collectionwidget.h"
+#include "beatsyncwidget.h"
 #include "djbrowser.h"
 #include "djsession.h"
 #include "filebrowser.h"
@@ -31,6 +32,7 @@
 
 #include <QMainWindow>
 #include <QSplitter>
+#include <QTime>
 
 namespace Ui {
 class Knowthelist;
@@ -71,6 +73,8 @@ private Q_SLOTS:
     void player2_trackFinished();
     void player1_levelChanged(double left, double right);
     void player2_levelChanged(double left, double right);
+    void player1_tempoChanged(int bpm, QTime beatPosition);
+    void player2_tempoChanged(int bpm, QTime beatPosition);
 
     void slider1_valueChanged(int);
     void slider2_valueChanged(int);
@@ -84,6 +88,7 @@ private Q_SLOTS:
 
     void timerGain1_timeOut();
     void timerGain2_timeOut();
+    void timerBeatSyncVisual_timeOut();
     void Track_doubleClicked(Track*);
     void trackList_wantLoad(Track*, QString target);
     void Track_selectionChanged(Track*);
@@ -110,11 +115,13 @@ private:
     bool isFading;
     VUMeter* vuMeter1;
     VUMeter* vuMeter2;
+    BeatSyncWidget* beatSyncWidget;
     VUMeter* monitorMeter;
     QTimer* timerMeter;
     QTimer* timerMonitor;
     QTimer* timerGain1;
     QTimer* timerGain2;
+    QTimer* timerBeatSyncVisual;
     Playlist* playList1;
     Playlist* playList2;
     Playlist* trackList;
@@ -143,6 +150,10 @@ private:
     int mMinTracks;
     bool wantSeek;
     Track* m_MonitorTrack;
+    int m_Player1Bpm;
+    int m_Player2Bpm;
+    QTime m_Player1BeatPosition;
+    QTime m_Player2BeatPosition;
 
 protected:
     virtual void closeEvent(QCloseEvent*);

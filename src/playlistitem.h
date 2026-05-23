@@ -63,7 +63,8 @@ public:
                       Column_Genre = 7,
                       Column_Tracknumber = 8,
                       Column_Length = 9,
-                      Column_Rate = 10};
+                      Column_BPM = 10,
+                      Column_Rate = 11};
 signals:
 
     private:

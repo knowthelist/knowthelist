@@ -74,7 +74,7 @@ Playlist::Playlist(QWidget* parent)
     headers << tr("Url") << tr("No") << tr("Played") << tr("Artist")
             << tr("Title");
     headers << tr("Album") << tr("Year") << tr("Genre") << tr("Track");
-    headers << tr("Length") << tr("Rate");
+        headers << tr("Length") << tr("BPM") << tr("Rate");
 
     QTreeWidgetItem* headeritem = new QTreeWidgetItem(headers);
     setHeaderItem(headeritem);
@@ -255,11 +255,13 @@ void Playlist::setPlaylistMode(Mode newMode)
         header()->showSection(PlaylistItem::Column_Genre);
         header()->showSection(PlaylistItem::Column_Tracknumber);
         header()->showSection(PlaylistItem::Column_Album);
+        header()->showSection(PlaylistItem::Column_BPM);
         header()->showSection(PlaylistItem::Column_Rate);
         header()->resizeSection(PlaylistItem::Column_Artist, 22 * percent);
         header()->resizeSection(PlaylistItem::Column_Title, 22 * percent);
         header()->resizeSection(PlaylistItem::Column_Album, 20 * percent);
         header()->resizeSection(PlaylistItem::Column_Length, 7 * percent);
+        header()->resizeSection(PlaylistItem::Column_BPM, 6 * percent);
         header()->resizeSection(PlaylistItem::Column_Genre, 10 * percent);
         header()->resizeSection(PlaylistItem::Column_Year, 8 * percent);
         header()->resizeSection(PlaylistItem::Column_Tracknumber, 5 * percent);
@@ -277,11 +279,13 @@ void Playlist::setPlaylistMode(Mode newMode)
         header()->hideSection(PlaylistItem::Column_Genre);
         header()->hideSection(PlaylistItem::Column_Tracknumber);
         header()->hideSection(PlaylistItem::Column_Album);
+        header()->hideSection(PlaylistItem::Column_BPM);
         header()->hideSection(PlaylistItem::Column_Rate);
         header()->resizeSection(PlaylistItem::Column_No, 6 * percent);
         header()->resizeSection(PlaylistItem::Column_Artist, 40 * percent);
         header()->resizeSection(PlaylistItem::Column_Title, 40 * percent);
         header()->resizeSection(PlaylistItem::Column_Length, 10 * percent);
+        header()->resizeSection(PlaylistItem::Column_BPM, 0);
         header()->resizeSection(PlaylistItem::Column_Rate, 0);
         setSortingEnabled(false);
         m_CurrentTrackColor = QColor(255, 100, 100);

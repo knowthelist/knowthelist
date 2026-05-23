@@ -21,7 +21,11 @@
 #include "ui_settingsdialog.h"
 
 #include <QFileDialog>
+#include <QGroupBox>
+#include <QCheckBox>
+#include <QLabel>
 #include <QMessageBox>
+#include <QSpinBox>
 #include <QtDebug>
 #include <QWidget>
 #include <QtSql>
@@ -31,6 +35,13 @@ public:
     Ui::SettingsDialog ui;
     QWidget* parent;
     CollectionSetupModel* model;
+    QGroupBox* beatSyncGroup;
+    QCheckBox* checkBeatSyncEnabled;
+    QCheckBox* checkBeatCueEnabled;
+    QCheckBox* checkBeatAnalyzeTempo;
+    QCheckBox* checkBeatVisualMode;
+    QSpinBox* spinBeatScanSeconds;
+    QLabel* labelBeatScanSeconds;
 };
 
 SettingsDialog::SettingsDialog(QWidget* parent)
@@ -110,6 +121,29 @@ SettingsDialog::SettingsDialog(QWidget* parent)
     connect(p->ui.pushResetStats, SIGNAL(clicked()), this, SIGNAL(resetStatsPressed()));
 
     connect(p->ui.countDJ, SIGNAL(valueChanged(int)), this, SLOT(loadDjList(int)));
+
+    // Beat sync options are shown in the Fader page to keep transition settings in one place.
+    p->beatSyncGroup = new QGroupBox(tr("Beat Sync"), p->ui.page);
+    p->beatSyncGroup->setGeometry(QRect(10, 210, 380, 120));
+
+    p->checkBeatSyncEnabled = new QCheckBox(tr("Enable BPM analysis and beat sync cue"), p->beatSyncGroup);
+    p->checkBeatSyncEnabled->setGeometry(QRect(10, 20, 360, 20));
+
+    p->checkBeatCueEnabled = new QCheckBox(tr("Cue on detected beat"), p->beatSyncGroup);
+    p->checkBeatCueEnabled->setGeometry(QRect(10, 42, 250, 20));
+
+    p->checkBeatAnalyzeTempo = new QCheckBox(tr("Analyze BPM automatically on load"), p->beatSyncGroup);
+    p->checkBeatAnalyzeTempo->setGeometry(QRect(10, 64, 280, 20));
+
+    p->checkBeatVisualMode = new QCheckBox(tr("Show beat pulse instead of VU in player meters"), p->beatSyncGroup);
+    p->checkBeatVisualMode->setGeometry(QRect(10, 86, 360, 20));
+
+    p->labelBeatScanSeconds = new QLabel(tr("Fast BPM scan (seconds):"), p->ui.page);
+    p->labelBeatScanSeconds->setGeometry(QRect(410, 232, 150, 20));
+
+    p->spinBeatScanSeconds = new QSpinBox(p->ui.page);
+    p->spinBeatScanSeconds->setGeometry(QRect(565, 230, 70, 24));
+    p->spinBeatScanSeconds->setRange(5, 60);
 }
 
 SettingsDialog::~SettingsDialog()
@@ -151,6 +185,11 @@ void SettingsDialog::accept()
     //Silent settings
     settings.setValue("checkAutoCue", p->ui.checkAutoCue->isChecked());
     settings.setValue("checkSkipSilentEnd", p->ui.checkSkipSilentEnd->isChecked());
+    settings.setValue("beatSyncEnabled", p->checkBeatSyncEnabled->isChecked());
+    settings.setValue("beatSyncCueEnabled", p->checkBeatCueEnabled->isChecked());
+    settings.setValue("beatSyncAnalyzeTempo", p->checkBeatAnalyzeTempo->isChecked());
+    settings.setValue("beatSyncVisualMode", p->checkBeatVisualMode->isChecked());
+    settings.setValue("beatSyncScanSeconds", p->spinBeatScanSeconds->value());
 
     //AutoDJ
     settings.setValue("minTracks", p->ui.minTracks->value());
@@ -204,6 +243,11 @@ bool SettingsDialog::loadSettings()
     //Silent setting
     p->ui.checkSkipSilentEnd->setChecked(settings.value("checkSkipSilentEnd", true).toBool());
     p->ui.checkAutoCue->setChecked(settings.value("checkAutoCue", true).toBool());
+    p->checkBeatSyncEnabled->setChecked(settings.value("beatSyncEnabled", true).toBool());
+    p->checkBeatCueEnabled->setChecked(settings.value("beatSyncCueEnabled", true).toBool());
+    p->checkBeatAnalyzeTempo->setChecked(settings.value("beatSyncAnalyzeTempo", true).toBool());
+    p->checkBeatVisualMode->setChecked(settings.value("beatSyncVisualMode", false).toBool());
+    p->spinBeatScanSeconds->setValue(settings.value("beatSyncScanSeconds", 8).toInt());
 
     //AutoDJ
     p->ui.minTracks->setValue(settings.value("minTracks", "6").toInt());

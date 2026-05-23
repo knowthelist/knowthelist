@@ -17,15 +17,88 @@
 
 #include "playerwidget.h"
 #include "player.h"
+#include "playerbpmwidget.h"
 #include "trackanalyser.h"
 #include "ui_playerwidget.h"
 #include "vumeter.h"
 
 #include <QDragEnterEvent>
+#include <QSettings>
+#include <QtSql/QSqlDatabase>
+#include <QtSql/QSqlQuery>
+#include <QtSql/QSqlError>
+#include <cmath>
 
 struct PlayerWidgetPrivate {
     bool isEndAnnounced;
 };
+
+namespace {
+struct CachedTempo {
+    bool valid;
+    int bpm;
+    int beatOffsetMs;
+
+    CachedTempo()
+        : valid(false)
+        , bpm(0)
+        , beatOffsetMs(0)
+    {
+    }
+};
+
+bool ensureTempoCacheTable()
+{
+    QSqlDatabase db = QSqlDatabase::database();
+    if (!db.isValid() || !db.isOpen())
+        return false;
+
+    QSqlQuery q(db);
+    return q.exec("CREATE TABLE IF NOT EXISTS analysis_cache ("
+                  "url VARCHAR(120) PRIMARY KEY,"
+                  "bpm INTEGER,"
+                  "beat_offset_ms INTEGER,"
+                  "changedate INTEGER );");
+}
+
+CachedTempo loadCachedTempo(const QUrl& url)
+{
+    CachedTempo cached;
+    if (!ensureTempoCacheTable())
+        return cached;
+
+    QSqlQuery q(QSqlDatabase::database());
+    q.prepare("SELECT bpm, beat_offset_ms FROM analysis_cache WHERE url = :url");
+    q.bindValue(":url", url.toLocalFile());
+    if (!q.exec())
+        return cached;
+
+    if (q.next()) {
+        cached.valid = true;
+        cached.bpm = q.value(0).toInt();
+        cached.beatOffsetMs = q.value(1).toInt();
+    }
+
+    return cached;
+}
+
+void storeCachedTempo(const QUrl& url, int bpm, const QTime& beatPosition)
+{
+    if (bpm <= 0)
+        return;
+    if (!ensureTempoCacheTable())
+        return;
+
+    const int beatOffsetMs = QTime(0, 0).msecsTo(beatPosition);
+    QSqlQuery q(QSqlDatabase::database());
+    q.prepare("INSERT OR REPLACE INTO analysis_cache (url, bpm, beat_offset_ms, changedate) "
+              "VALUES (:url, :bpm, :beat_offset_ms, strftime('%s','now'))");
+    q.bindValue(":url", url.toLocalFile());
+    q.bindValue(":bpm", bpm);
+    q.bindValue(":beat_offset_ms", beatOffsetMs);
+    q.exec();
+}
+}
 
 PlayerWidget::PlayerWidget(QWidget* parent)
     : QWidget(parent)
@@ -36,9 +109,41 @@ PlayerWidget::PlayerWidget(QWidget* parent)
     , remainCueTime(0)
     , m_isStarted(false)
     , m_isHanging(false)
+    , m_beatSyncEnabled(true)
+    , m_beatCueEnabled(true)
+    , m_beatVisualMode(false)
+    , m_bpmAnalysed(false)
+    , m_bpm(0)
     , p(new PlayerWidgetPrivate)
 {
     ui->setupUi(this);
+
+    // Make room for a larger meter/beat view and move summary info to the bottom.
+    setMinimumHeight(182);
+    ui->frame_3->setMaximumHeight(195);
+    ui->fraDisplay->setMaximumHeight(195);
+    ui->fraDisplay->setMaximumWidth(QWIDGETSIZE_MAX);
+    ui->fraVuMeter->setMaximumWidth(QWIDGETSIZE_MAX);
+    ui->fraVuMeter->setMinimumHeight(70);
+    ui->fraInfo->setMaximumWidth(QWIDGETSIZE_MAX);
+    ui->fraDigits->setMaximumWidth(QWIDGETSIZE_MAX);
+    ui->vuMeter->setMaximumWidth(QWIDGETSIZE_MAX);
+    ui->vuMeter->setMinimumHeight(64);
+
+    if (QGridLayout* mainGrid = qobject_cast<QGridLayout*>(ui->frame_3->layout())) {
+        mainGrid->setContentsMargins(4, 1, 4, 1);
+        mainGrid->setVerticalSpacing(2);
+    }
+    if (QLayout* meterLayoutBase = ui->fraVuMeter->layout()) {
+        meterLayoutBase->setContentsMargins(0, 1, 0, 1);
+        meterLayoutBase->setSpacing(0);
+    }
+    if (QVBoxLayout* displayLayout = qobject_cast<QVBoxLayout*>(ui->fraDisplay->layout())) {
+        displayLayout->setContentsMargins(6, 2, 6, 2);
+        displayLayout->setSpacing(2);
+        displayLayout->removeWidget(ui->fraInfo);
+        displayLayout->addWidget(ui->fraInfo);
+    }
 
     p->isEndAnnounced = false;
 
@@ -63,6 +168,10 @@ PlayerWidget::PlayerWidget(QWidget* parent)
     vuMeter->setLinesPerSegment(2);
     vuMeter->setSpacesBetweenSegments(1);
     vuMeter->setSegmentsPerPeak(2);
+
+    bpmWidget = new PlayerBpmWidget(vuMeter->parentWidget());
+    bpmWidget->setGeometry(vuMeter->geometry());
+    bpmWidget->hide();
 
     timerLevel = new QTimer(this);
     connect(timerLevel, SIGNAL(timeout()), SLOT(timerLevel_timeOut()));
@@ -97,6 +206,9 @@ PlayerWidget::PlayerWidget(QWidget* parent)
 
     trackanalyser = new TrackAnalyser(this);
     connect(trackanalyser, SIGNAL(finishGain()), this, SLOT(analyseGainFinished()));
+
+    tempoAnalyser = new TrackAnalyser(this);
+    connect(tempoAnalyser, SIGNAL(finishTempo()), this, SLOT(analyseTempoFinished()));
 }
 
 PlayerWidget::~PlayerWidget()
@@ -106,6 +218,8 @@ PlayerWidget::~PlayerWidget()
     delete timerLevel;
     delete trackanalyser;
     trackanalyser = nullptr;
+    delete tempoAnalyser;
+    tempoAnalyser = nullptr;
     delete p;
 }
 
@@ -117,6 +231,18 @@ void PlayerWidget::setVolume(double volume)
 void PlayerWidget::setGain(double gain)
 {
     player->setGain(gain);
+}
+
+void PlayerWidget::setBeatVisualMode(bool enabled)
+{
+    m_beatVisualMode = enabled;
+    if (m_beatVisualMode) {
+        vuMeter->hide();
+        bpmWidget->show();
+    } else {
+        bpmWidget->hide();
+        vuMeter->show();
+    }
 }
 
 void PlayerWidget::setInfo(QPair<int, int> info)
@@ -179,6 +305,7 @@ void PlayerWidget::pause()
     timerLevel->stop();
     timerPosition->stop();
     vuMeter->reset();
+    bpmWidget->clearEnvelope();
     Q_EMIT statusChanged(m_isStarted);
     Q_EMIT levelChanged(0, 0);
 }
@@ -194,6 +321,7 @@ void PlayerWidget::stop()
     timerLevel->stop();
     timerPosition->stop();
     vuMeter->reset();
+    bpmWidget->clearEnvelope();
     Q_EMIT statusChanged(m_isStarted);
     Q_EMIT levelChanged(0, 0);
 }
@@ -217,7 +345,32 @@ void PlayerWidget::analyseGainFinished()
     if (m_CurrentTrack) {
         setPositionMarkers();
         updateTimeAndPositionDisplay();
+
+        if (m_beatSyncEnabled) {
+            QSettings settings;
+            const bool analyseTempo = settings.value("beatSyncAnalyzeTempo", true).toBool();
+            if (analyseTempo && !m_bpmAnalysed)
+                bpmWidget->setState(0, player->position(), m_beatPosition, m_isStarted, false);
+        }
     }
+}
+
+void PlayerWidget::analyseTempoFinished()
+{
+    if (!m_CurrentTrack)
+        return;
+
+    m_bpmAnalysed = true;
+    m_bpm = tempoAnalyser->bpm();
+    m_beatPosition = tempoAnalyser->beatPosition();
+
+    if (m_bpm > 0)
+        Q_EMIT tempoChanged(m_bpm, m_beatPosition);
+
+    if (m_CurrentTrack)
+        storeCachedTempo(m_CurrentTrack->url(), m_bpm, m_beatPosition);
+
+    bpmWidget->setState(m_bpm, player->position(), m_beatPosition, m_isStarted, true);
 }
 
 void PlayerWidget::timerLevel_timeOut()
@@ -227,8 +380,15 @@ void PlayerWidget::timerLevel_timeOut()
     const double outLeft = player->levelOutLeft();
     const double outRight = player->levelOutRight();
 
-    vuMeter->setValueLeft(inLeft);
-    vuMeter->setValueRight(inRight);
+    const float env = static_cast<float>(qBound(0.0, qMax(inLeft, inRight), 1.0));
+    bpmWidget->appendEnvelopeSample(env);
+
+    if (m_beatVisualMode) {
+        bpmWidget->setState(m_bpm, player->position(), m_beatPosition, m_isStarted, m_bpmAnalysed);
+    } else {
+        vuMeter->setValueLeft(inLeft);
+        vuMeter->setValueRight(inRight);
+    }
     Q_EMIT levelChanged(outLeft, outRight);
 }
 
@@ -303,6 +463,11 @@ void PlayerWidget::loadTrack(Track* track)
 
     m_CurrentTrack = track;
     m_pendingPlay = false;
+    m_bpmAnalysed = false;
+    m_bpm = 0;
+    m_beatPosition = QTime();
+    bpmWidget->setState(m_bpm, QTime(0, 0), m_beatPosition, false, false);
+    bpmWidget->clearEnvelope();
 
     if (track != nullptr) {
 
@@ -316,6 +481,23 @@ void PlayerWidget::loadTrack(Track* track)
 
         trackanalyser->setMode(TrackAnalyser::STANDARD);
         trackanalyser->open(url);
+
+        if (m_beatSyncEnabled) {
+            QSettings settings;
+            const bool analyseTempo = settings.value("beatSyncAnalyzeTempo", true).toBool();
+            const CachedTempo cached = loadCachedTempo(url);
+            if (cached.valid && cached.bpm > 0) {
+                m_bpmAnalysed = true;
+                m_bpm = cached.bpm;
+                m_beatPosition = QTime(0, 0).addMSecs(cached.beatOffsetMs);
+                bpmWidget->setState(m_bpm, player->position(), m_beatPosition, m_isStarted, true);
+                Q_EMIT tempoChanged(m_bpm, m_beatPosition);
+            } else if (analyseTempo) {
+                tempoAnalyser->setTempoScanDurationSeconds(settings.value("beatSyncScanSeconds", 8).toInt());
+                tempoAnalyser->setMode(TrackAnalyser::TEMPO);
+                tempoAnalyser->open(url);
+            }
+        }
 
         m_pendingPlay = doPlay;
 
@@ -343,6 +525,7 @@ void PlayerWidget::resizeEvent(QResizeEvent* e)
     QWidget::resizeEvent(e);
 
     drawTitle();
+    bpmWidget->setGeometry(vuMeter->geometry());
 }
 
 void PlayerWidget::drawTitle()
@@ -510,6 +693,49 @@ void PlayerWidget::on_butCue_clicked()
 {
     //ToDo: Visualize skipped silent at start and at the end (color bar)
     this->pause();
-    player->setPosition(trackanalyser->startPosition());
+
+    QTime cuePosition = trackanalyser->startPosition();
+    if (m_beatCueEnabled && m_bpm > 0 && m_beatPosition.isValid())
+        cuePosition = m_beatPosition;
+
+    player->setPosition(cuePosition);
     updateTimeAndPositionDisplay();
 }
+
+QTime PlayerWidget::currentPosition() const
+{
+    return player->position();
+}
+
+void PlayerWidget::alignCueToReferenceBeat(int referenceBpm, const QTime& referencePosition)
+{
+    if (m_isStarted || m_bpm <= 0 || referenceBpm <= 0)
+        return;
+
+    const double ownBeatMs = 60000.0 / static_cast<double>(m_bpm);
+    const double refBeatMs = 60000.0 / static_cast<double>(referenceBpm);
+
+    const qint64 refMs = QTime(0, 0).msecsTo(referencePosition);
+    const double refPhase = fmod(static_cast<double>(refMs), refBeatMs);
+
+    const QTime baseCue = m_beatPosition.isValid() ? m_beatPosition : trackanalyser->startPosition();
+    const qint64 baseCueMs = QTime(0, 0).msecsTo(baseCue);
+
+    qint64 bestMs = baseCueMs;
+    double bestErr = 1e9;
+
+    for (int beat = 0; beat < 64; ++beat) {
+        const qint64 candidateMs = baseCueMs + static_cast<qint64>(beat * ownBeatMs);
+        double phase = fmod(static_cast<double>(candidateMs), refBeatMs);
+        double err = qAbs(phase - refPhase);
+        err = qMin(err, refBeatMs - err);
+        if (err < bestErr) {
+            bestErr = err;
+            bestMs = candidateMs;
+        }
+    }
+
+    player->setPosition(QTime(0, 0).addMSecs(static_cast<int>(bestMs)));
+    updateTimeAndPositionDisplay(false);
+}
+

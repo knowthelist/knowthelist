@@ -111,6 +111,7 @@ CollectionDB::CollectionDB()
                        " INNER JOIN year ON tags.year = year.id "
                        " INNER JOIN genre ON tags.genre = genre.id "
                        " LEFT OUTER JOIN statistics ON tags.url = statistics.url "
+                       " LEFT OUTER JOIN analysis_cache ON tags.url = analysis_cache.url "
                        " LEFT OUTER JOIN favorites ON tags.url = favorites.url WHERE 1=1 ";
 
     p->sqlFromStringPL = "FROM tags "
@@ -120,7 +121,13 @@ CollectionDB::CollectionDB()
                          " INNER JOIN genre ON tags.genre = genre.id "
                          " INNER JOIN playlists ON tags.url = playlists.url "
                          " LEFT OUTER JOIN statistics ON tags.url = statistics.url "
+                         " LEFT OUTER JOIN analysis_cache ON tags.url = analysis_cache.url "
                          " LEFT OUTER JOIN favorites ON tags.url = favorites.url WHERE 1=1 ";
+    executeSql("CREATE TABLE IF NOT EXISTS analysis_cache ("
+               "url VARCHAR(120) PRIMARY KEY,"
+               "bpm INTEGER,"
+               "beat_offset_ms INTEGER,"
+               "changedate INTEGER );");
 }
 
 CollectionDB::~CollectionDB()
@@ -381,6 +388,11 @@ void CollectionDB::createTables(bool temporary)
         executeSql(QString("CREATE TABLE IF NOT EXISTS directories ("
                            "dir VARCHAR(100) UNIQUE,"
                            "changedate INTEGER );"));
+        executeSql(QString("CREATE TABLE IF NOT EXISTS analysis_cache ("
+                           "url VARCHAR(120) PRIMARY KEY,"
+                           "bpm INTEGER,"
+                           "beat_offset_ms INTEGER,"
+                           "changedate INTEGER );"));
     }
 }
 
@@ -587,7 +599,7 @@ uint CollectionDB::lastMaxCount()
 
 QList<QStringList> CollectionDB::selectRandomEntry(QString rownum, QString path, QString genre, QString artist)
 {
-    QString command = "SELECT tags.url, artist.name, tags.title, album.name, year.name, genre.name, tags.track, tags.length, statistics.playcounter, favorites.rate "
+    QString command = "SELECT tags.url, artist.name, tags.title, album.name, year.name, genre.name, tags.track, tags.length, statistics.playcounter, IFNULL(analysis_cache.bpm, 0), favorites.rate "
         + p->sqlFromString
         + p->sqlQuickFilter
         + p->selectionFilterForRandom(path, genre, artist) + " LIMIT 1 OFFSET " + rownum + ";";
@@ -640,7 +652,7 @@ QList<QStringList> CollectionDB::selectAlbums(QString year, QString genre, QStri
 
 QList<QStringList> CollectionDB::selectTracks(QString year, QString genre, QString artist, QString album)
 {
-    QString command = "SELECT DISTINCT tags.url, artist.name, tags.title, album.name, year.name, genre.name, tags.track, tags.length, statistics.playcounter, favorites.rate "
+    QString command = "SELECT DISTINCT tags.url, artist.name, tags.title, album.name, year.name, genre.name, tags.track, tags.length, statistics.playcounter, IFNULL(analysis_cache.bpm, 0), favorites.rate "
         + p->sqlFromString
         + p->sqlQuickFilter
         + p->selectionFilter(year, genre, artist, album) + "ORDER BY artist.name DESC, album.name DESC, tags.track;";
@@ -650,7 +662,7 @@ QList<QStringList> CollectionDB::selectTracks(QString year, QString genre, QStri
 
 QList<QStringList> CollectionDB::selectHotTracks()
 {
-    QString command = "SELECT DISTINCT tags.url, artist.name, tags.title, album.name, year.name, genre.name, tags.track, tags.length, statistics.playcounter, favorites.rate "
+    QString command = "SELECT DISTINCT tags.url, artist.name, tags.title, album.name, year.name, genre.name, tags.track, tags.length, statistics.playcounter, IFNULL(analysis_cache.bpm, 0), favorites.rate "
         + p->sqlFromString + "AND statistics.playcounter>0 "
                              "ORDER BY statistics.playcounter DESC "
                              "LIMIT 20 OFFSET 0;";
@@ -660,7 +672,7 @@ QList<QStringList> CollectionDB::selectHotTracks()
 
 QList<QStringList> CollectionDB::selectLastTracks()
 {
-    QString command = "SELECT DISTINCT tags.url, artist.name, tags.title, album.name, year.name, genre.name, tags.track, tags.length, statistics.playcounter, favorites.rate "
+    QString command = "SELECT DISTINCT tags.url, artist.name, tags.title, album.name, year.name, genre.name, tags.track, tags.length, statistics.playcounter, IFNULL(analysis_cache.bpm, 0), favorites.rate "
         + p->sqlFromString + "AND statistics.playcounter>0 "
                              "ORDER BY statistics.accessdate DESC "
                              "LIMIT 20 OFFSET 0;";
@@ -670,7 +682,7 @@ QList<QStringList> CollectionDB::selectLastTracks()
 
 QList<QStringList> CollectionDB::selectFavoritesTracks()
 {
-    QString command = "SELECT DISTINCT tags.url, artist.name, tags.title, album.name, year.name, genre.name, tags.track, tags.length, statistics.playcounter, favorites.rate "
+    QString command = "SELECT DISTINCT tags.url, artist.name, tags.title, album.name, year.name, genre.name, tags.track, tags.length, statistics.playcounter, IFNULL(analysis_cache.bpm, 0), favorites.rate "
         + p->sqlFromString + "AND favorites.rate>0 "
                              "ORDER BY favorites.rate DESC ";
 
@@ -690,7 +702,7 @@ QList<QStringList> CollectionDB::selectPlaylistData()
 
 QList<QStringList> CollectionDB::selectPlaylistTracks(QString name)
 {
-    QString command = "SELECT tags.url, artist.name, tags.title, album.name, year.name, genre.name, tags.track, tags.length, statistics.playcounter, favorites.rate, playlists.flags  "
+    QString command = "SELECT tags.url, artist.name, tags.title, album.name, year.name, genre.name, tags.track, tags.length, statistics.playcounter, IFNULL(analysis_cache.bpm, 0), favorites.rate, playlists.flags  "
         + p->sqlFromStringPL + "AND playlists.name ='" + escapeString(name) + "' "
                                                                               "ORDER BY playlists.norder";
 
