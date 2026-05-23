@@ -85,6 +85,28 @@ QPushButton#butCue:checked {
  );
  color: black;
 }
+QPushButton#butSync {
+ color: #dddddd;
+ border: 1.5px solid #1a5a9a;
+ border-radius: 4px;
+ padding: 1px;
+ background: qlineargradient(
+   x1:0, y1:0, x2:0, y2:0.3,
+   stop:0.2 #4080c0,
+   stop:1 #1a3a6a
+ );
+ max-height: 22px;
+ min-height: 10px;
+ font-weight: bold;
+}
+QPushButton#butSync:pressed {
+ background: qlineargradient(
+   x1:0, y1:0, x2:0, y2:0.3,
+   stop:0.2 white,
+   stop:1 #3a9aff
+ );
+ color: black;
+}
 QScrollBar:horizontal {
          border: 2px solid grey;
           background: qlineargradient(
@@ -3095,6 +3117,34 @@ QLabel{
               </property>
               <property name="checkable">
                <bool>true</bool>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QPushButton" name="butSync">
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
+              </property>
+              <property name="minimumSize">
+               <size>
+                <width>36</width>
+                <height>16</height>
+               </size>
+              </property>
+              <property name="maximumSize">
+               <size>
+                <width>46</width>
+                <height>22</height>
+               </size>
+              </property>
+              <property name="toolTip">
+               <string>Sync beat phase to the other deck</string>
+              </property>
+              <property name="text">
+               <string notr="true">SYNC</string>
               </property>
              </widget>
             </item>

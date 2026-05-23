@@ -138,7 +138,7 @@ SettingsDialog::SettingsDialog(QWidget* parent)
     p->checkBeatVisualMode = new QCheckBox(tr("Show beat pulse instead of VU in player meters"), p->beatSyncGroup);
     p->checkBeatVisualMode->setGeometry(QRect(10, 86, 360, 20));
 
-    p->labelBeatScanSeconds = new QLabel(tr("Fast BPM scan (seconds):"), p->ui.page);
+    p->labelBeatScanSeconds = new QLabel(tr("BPM scan duration (seconds):"), p->ui.page);
     p->labelBeatScanSeconds->setGeometry(QRect(410, 232, 150, 20));
 
     p->spinBeatScanSeconds = new QSpinBox(p->ui.page);
@@ -247,7 +247,7 @@ bool SettingsDialog::loadSettings()
     p->checkBeatCueEnabled->setChecked(settings.value("beatSyncCueEnabled", true).toBool());
     p->checkBeatAnalyzeTempo->setChecked(settings.value("beatSyncAnalyzeTempo", true).toBool());
     p->checkBeatVisualMode->setChecked(settings.value("beatSyncVisualMode", false).toBool());
-    p->spinBeatScanSeconds->setValue(settings.value("beatSyncScanSeconds", 8).toInt());
+    p->spinBeatScanSeconds->setValue(settings.value("beatSyncScanSeconds", 16).toInt());
 
     //AutoDJ
     p->ui.minTracks->setValue(settings.value("minTracks", "6").toInt());

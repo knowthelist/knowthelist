@@ -46,6 +46,8 @@ public:
     void setVolume(double);
     void setGain(double);
     void setEqualizer(QString, double);
+    void setRate(double rate);
+    double rate() const;
 
     QTime length();
     bool isPlaying();

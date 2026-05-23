@@ -108,6 +108,11 @@ void Knowthelist::createUI()
     timerAutoFader = new QTimer(this);
     connect(timerAutoFader, SIGNAL(timeout()), SLOT(timerAutoFader_timerOut()));
 
+    m_rateRestorePlayer = nullptr;
+    m_rateRestoreTimer = new QTimer(this);
+    m_rateRestoreTimer->setInterval(500);
+    connect(m_rateRestoreTimer, &QTimer::timeout, this, &Knowthelist::timerRateRestore_timeOut);
+
     vuMeter2 = new VUMeter(ui->frameMixer);
     vuMeter2->setLinesPerSegment(2);
     vuMeter2->setSpacesBetweenSegments(1);
@@ -189,6 +194,8 @@ void Knowthelist::createUI()
     connect(player2, SIGNAL(levelChanged(double, double)), SLOT(player2_levelChanged(double, double)));
     connect(player1, SIGNAL(tempoChanged(int, QTime)), SLOT(player1_tempoChanged(int, QTime)));
     connect(player2, SIGNAL(tempoChanged(int, QTime)), SLOT(player2_tempoChanged(int, QTime)));
+    connect(player1, &PlayerWidget::syncRequested, this, &Knowthelist::player1_syncRequested);
+    connect(player2, &PlayerWidget::syncRequested, this, &Knowthelist::player2_syncRequested);
 
     connect(player1, SIGNAL(statusChanged(bool)), playList1, SLOT(setPlaying(bool)));
     connect(player2, SIGNAL(statusChanged(bool)), playList2, SLOT(setPlaying(bool)));
@@ -276,19 +283,27 @@ void Knowthelist::createUI()
 #if defined(Q_OS_LINUX) || defined(Q_OS_DARWIN)
     QString sliderStyle = QString(
         "QSlider { background: transparent; }"
+        "QSlider::handle:horizontal {"
+        "   background: qlineargradient(x1:0, y1:0, x2:1, y2:0,"
+        "      stop: 0 #000, stop: 0.1 #222, stop: 0.38 #444, stop:0.5 #ccc,"
+        "      stop:0.6 #444, stop:0.9 #222, stop:1 #000 );"
+        "   border: 1px solid #5c5c5c; width: 18px; margin: 1px 0; border-radius: 3px; }"
+        "QSlider::handle:vertical {"
+        "   background: qlineargradient(x1:0, y1:0, x2:0, y2:1,"
+        "      stop: 0 #000, stop: 0.1 #222, stop: 0.38 #444, stop:0.5 #ccc,"
+        "      stop:0.6 #444, stop:0.9 #222, stop:1 #000 );"
+        "   border: 1px solid #5c5c5c; width: 12px; min-height: 15px; margin: 0 2px; border-radius: 3px; }"
         "QSlider::sub-page:vertical { background: qlineargradient(x1: 0, y1: 0, x2:1, y2: 0,"
         "   stop: 0.4 #666, stop: 0 #111111 ); border: 1px solid #444; border-radius: 2px;}"
         "QSlider::add-page:vertical {background: qlineargradient(x1: 0, y1: 0, x2:1, y2: 0,"
         "   stop: 0 #111,stop: 0.4 #666); border: 1px solid #333; border-radius: 2px;}"
         "QSlider::sub-page:horizontal,QSlider::add-page:horizontal  {"
         "   background: qlineargradient(x1: 0, y1: 0,    x2: 0, y2: 1,"
-        "   stop: 0 #111, stop: 0.6 #666 ); border: 1px solid #222; border-radius: 2px;}"
-        "QSlider::groove:horizontal {"
-        "   height: 6px; margin: 0 8px; background: #1a1a1a; border: 1px solid #2c2c2c; border-radius: 2px; }"
-        "QSlider::groove:vertical {"
-        "   width: 6px; margin: 8px 0; background: #1a1a1a; border: 1px solid #2c2c2c; border-radius: 2px; }"
-        "QSlider::tick-mark:horizontal { background: #8f8f8f; width: 1px; height: 4px; }"
-        "QSlider::tick-mark:vertical { background: #8f8f8f; width: 4px; height: 1px; }");
+        "   stop: 0 #111, stop: 0.6 #666 ); border: 1px solid #222; border-radius: 2px;}");
+        // Note: QSlider::groove must NOT be styled here. Styling the groove puts Qt into its
+        // full CSS rendering path which disables native tick-mark drawing. The sliders have
+        // tickPosition=TicksBothSides set in the .ui file; tick rendering requires the native
+        // (non-groove-CSS) path. Handle + page colours are safe to style without breaking ticks.
 
     ui->frameMixer->setStyleSheet(sliderStyle);
     ui->MonitorPlayer->setStyleSheet(sliderStyle);
@@ -550,12 +565,16 @@ void Knowthelist::player1_tempoChanged(int bpm, QTime beatPosition)
     m_Player1BeatPosition = beatPosition;
 
     QSettings settings;
-    if (!settings.value("beatSyncEnabled", true).toBool())
+    if (!settings.value("beatSyncEnabled", true).toBool() || bpm <= 0)
         return;
 
-    // If deck A is running and deck B is waiting, pre-cue B to the nearest matching beat phase.
-    if (player1->isStarted() && !player2->isStarted() && bpm > 0)
-        player2->alignCueToReferenceBeat(bpm, player1->currentPosition());
+    // Deck A analysis done: align whichever deck is waiting to the running deck.
+    if (player1->isStarted() && !player2->isStarted())
+        // A running, B waiting → pre-cue B to A
+        player2->alignCueToReferenceBeat(bpm, player1->currentPosition(), beatPosition);
+    else if (!player1->isStarted() && player2->isStarted() && m_Player2Bpm > 0)
+        // A waiting, B running → pre-cue A to B
+        player1->alignCueToReferenceBeat(m_Player2Bpm, player2->currentPosition(), m_Player2BeatPosition);
 }
 
 void Knowthelist::player2_tempoChanged(int bpm, QTime beatPosition)
@@ -564,12 +583,32 @@ void Knowthelist::player2_tempoChanged(int bpm, QTime beatPosition)
     m_Player2BeatPosition = beatPosition;
 
     QSettings settings;
-    if (!settings.value("beatSyncEnabled", true).toBool())
+    if (!settings.value("beatSyncEnabled", true).toBool() || bpm <= 0)
         return;
 
-    // If deck B is running and deck A is waiting, pre-cue A to the nearest matching beat phase.
-    if (player2->isStarted() && !player1->isStarted() && bpm > 0)
-        player1->alignCueToReferenceBeat(bpm, player2->currentPosition());
+    // Deck B analysis done: align whichever deck is waiting to the running deck.
+    if (player2->isStarted() && !player1->isStarted())
+        // B running, A waiting → pre-cue A to B
+        player1->alignCueToReferenceBeat(bpm, player2->currentPosition(), beatPosition);
+    else if (!player2->isStarted() && player1->isStarted() && m_Player1Bpm > 0)
+        // B waiting, A running → pre-cue B to A
+        player2->alignCueToReferenceBeat(m_Player1Bpm, player1->currentPosition(), m_Player1BeatPosition);
+}
+
+void Knowthelist::player1_syncRequested()
+{
+    // SYNC pressed on deck A: snap deck A's beat phase to deck B (the master).
+    if (m_Player2Bpm <= 0 || !player2->isStarted())
+        return;
+    player1->syncNowToReferenceBeat(m_Player2Bpm, player2->currentPosition(), m_Player2BeatPosition);
+}
+
+void Knowthelist::player2_syncRequested()
+{
+    // SYNC pressed on deck B: snap deck B's beat phase to deck A (the master).
+    if (m_Player1Bpm <= 0 || !player1->isStarted())
+        return;
+    player2->syncNowToReferenceBeat(m_Player1Bpm, player1->currentPosition(), m_Player1BeatPosition);
 }
 
 void Knowthelist::player_aboutTrackFinished()
@@ -634,17 +673,39 @@ void Knowthelist::fadeNow()
 {
     //Fade now!
     if (!isFading && (playList1->countTrack() > 0 || playList2->countTrack() > 0)) {
+        PlayerWidget* incoming = nullptr;
+        PlayerWidget* outgoing = nullptr;
+        int incomingBpm = 0;
+        int outgoingBpm = 0;
+
         if (ui->sliFader->value() > 100) {
             m_xfadeDir = -1;
             if (!player1->isStarted())
                 player1->play();
+            incoming = player1;
+            outgoing = player2;
+            incomingBpm = m_Player1Bpm;
+            outgoingBpm = m_Player2Bpm;
             //Fader has 200 steps * 5 = 1000ms
             timerAutoFader->start(mAutofadeLength * 5);
         } else {
             m_xfadeDir = 1;
             if (!player2->isStarted())
                 player2->play();
+            incoming = player2;
+            outgoing = player1;
+            incomingBpm = m_Player2Bpm;
+            outgoingBpm = m_Player1Bpm;
             timerAutoFader->start(mAutofadeLength * 5);
+        }
+
+        // Tempo-sync: pitch the incoming deck to match the outgoing deck's BPM.
+        // The rate is restored gradually after the crossfade completes.
+        m_rateRestoreTimer->stop();
+        m_rateRestorePlayer = incoming;
+        if (incomingBpm > 0 && outgoingBpm > 0) {
+            const double syncRate = static_cast<double>(outgoingBpm) / incomingBpm;
+            incoming->setTempoRate(syncRate);
         }
 
         isFading = true;
@@ -720,6 +781,10 @@ void Knowthelist::timerAutoFader_timerOut()
         }
         if (ui->toggleAutoDJ->isChecked())
             djSession->updatePlaylists();
+
+        // Start gradual rate restoration for the now-playing deck.
+        if (m_rateRestorePlayer && !qFuzzyCompare(m_rateRestorePlayer->tempoRate(), 1.0))
+            m_rateRestoreTimer->start();
     }
     if (ui->sliFader->value() >= ui->sliFader->maximum()) {
         //Fade from 1 to 2 is done
@@ -735,8 +800,29 @@ void Knowthelist::timerAutoFader_timerOut()
         }
         if (ui->toggleAutoDJ->isChecked())
             djSession->updatePlaylists();
+
+        // Start gradual rate restoration for the now-playing deck.
+        if (m_rateRestorePlayer && !qFuzzyCompare(m_rateRestorePlayer->tempoRate(), 1.0))
+            m_rateRestoreTimer->start();
     }
     changeVolumes();
+}
+
+void Knowthelist::timerRateRestore_timeOut()
+{
+    if (!m_rateRestorePlayer) {
+        m_rateRestoreTimer->stop();
+        return;
+    }
+    const double current = m_rateRestorePlayer->tempoRate();
+    constexpr double kStep = 0.001; // 0.1% per 500 ms tick
+    if (qAbs(current - 1.0) <= kStep) {
+        m_rateRestorePlayer->setTempoRate(1.0);
+        m_rateRestoreTimer->stop();
+        m_rateRestorePlayer = nullptr;
+    } else {
+        m_rateRestorePlayer->setTempoRate(current + (current < 1.0 ? kStep : -kStep));
+    }
 }
 
 void Knowthelist::savePlaylists()

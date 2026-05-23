@@ -21,6 +21,7 @@
 #include "track.h"
 
 #include <QQueue>
+#include <QSet>
 #include <QTreeWidget>
 
 class TrackAnalyser;
@@ -181,11 +182,14 @@ private Q_SLOTS:
 
 private:
     void queueTempoScan(Track* track);
+    bool queueIdleTempoRescanCandidate();
     void startTempoScan();
 
     TrackAnalyser* m_tempoAnalyser;
     QQueue<QString> m_tempoScanQueue;
+    QSet<QString> m_tempoRescanDone;
     QString m_tempoScanUrl;
+    int m_tempoRescanCursor;
     bool m_tempoScanActive;
 };
 

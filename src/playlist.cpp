@@ -58,6 +58,7 @@ Playlist::Playlist(QWidget* parent)
     , m_dragLocked(false)
     , isChangeSignalEnabled(true)
     , m_tempoAnalyser(new TrackAnalyser(this))
+    , m_tempoRescanCursor(0)
     , m_tempoScanActive(false)
 {
 
@@ -220,6 +221,9 @@ void Playlist::appendList(const QList<QUrl> urls, PlaylistItem* after)
 
 void Playlist::changeTracks(const QList<Track*> tracks)
 {
+    m_tempoScanQueue.clear();
+    m_tempoRescanDone.clear();
+    m_tempoRescanCursor = 0;
     clear();
     appendTracks(tracks);
 }
@@ -241,6 +245,11 @@ void Playlist::appendTracks(const QList<Track*> tracks)
 
 void Playlist::appendTracks(QList<Track*> tracks, PlaylistItem* after)
 {
+    if (topLevelItemCount() == 0) {
+        m_tempoRescanDone.clear();
+        m_tempoRescanCursor = 0;
+    }
+
     for (Track* track : tracks) {
         if (track != nullptr) {
             addTrack(new Track(*track), after);
@@ -275,6 +284,8 @@ void Playlist::applyModeColumnLayout()
         header()->resizeSection(PlaylistItem::Column_Played, 5 * percent);
         header()->resizeSection(PlaylistItem::Column_Rate, 75);
     } else {
+        const int viewWidth = qMax(1, width);
+
         header()->showSection(PlaylistItem::Column_No);
         header()->showSection(PlaylistItem::Column_Artist);
         header()->showSection(PlaylistItem::Column_Title);
@@ -286,11 +297,30 @@ void Playlist::applyModeColumnLayout()
         header()->hideSection(PlaylistItem::Column_Tracknumber);
         header()->hideSection(PlaylistItem::Column_Album);
         header()->hideSection(PlaylistItem::Column_Rate);
-        header()->resizeSection(PlaylistItem::Column_No, qMax(44, static_cast<int>(6 * percent)));
-        header()->resizeSection(PlaylistItem::Column_Artist, 40 * percent);
-        header()->resizeSection(PlaylistItem::Column_Title, 40 * percent);
-        header()->resizeSection(PlaylistItem::Column_Length, qMax(66, static_cast<int>(10 * percent)));
-        header()->resizeSection(PlaylistItem::Column_BPM, qMax(52, static_cast<int>(8 * percent)));
+
+        int noW = qMax(32, static_cast<int>(0.07 * viewWidth));
+        int lenW = qMax(52, static_cast<int>(0.10 * viewWidth));
+        int bpmW = qMax(44, static_cast<int>(0.08 * viewWidth));
+
+        int fixed = noW + lenW + bpmW;
+        const int gutter = 6;
+        if (fixed + gutter > viewWidth) {
+            const double scale = static_cast<double>(qMax(1, viewWidth - gutter)) / static_cast<double>(fixed);
+            noW = qMax(26, static_cast<int>(noW * scale));
+            lenW = qMax(40, static_cast<int>(lenW * scale));
+            bpmW = qMax(36, static_cast<int>(bpmW * scale));
+            fixed = noW + lenW + bpmW;
+        }
+
+        int variable = qMax(80, viewWidth - fixed - gutter);
+        int artistW = qMax(40, variable / 2);
+        int titleW = qMax(40, variable - artistW);
+
+        header()->resizeSection(PlaylistItem::Column_No, noW);
+        header()->resizeSection(PlaylistItem::Column_Artist, artistW);
+        header()->resizeSection(PlaylistItem::Column_Title, titleW);
+        header()->resizeSection(PlaylistItem::Column_Length, lenW);
+        header()->resizeSection(PlaylistItem::Column_BPM, bpmW);
         header()->resizeSection(PlaylistItem::Column_Rate, 0);
     }
 }
@@ -301,6 +331,7 @@ void Playlist::setPlaylistMode(Mode newMode)
 
     switch (m_PlaylistMode) {
     case Playlist::Tracklist:
+        setHorizontalScrollBarPolicy(Qt::ScrollBarAsNeeded);
         applyModeColumnLayout();
         setSortingEnabled(true);
         sortByColumn(PlaylistItem::Column_Played, Qt::DescendingOrder);
@@ -308,6 +339,7 @@ void Playlist::setPlaylistMode(Mode newMode)
         m_NextTrackColor = Qt::white;
         break;
     default:
+        setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
         applyModeColumnLayout();
         setSortingEnabled(false);
         m_CurrentTrackColor = QColor(255, 100, 100);
@@ -346,9 +378,48 @@ void Playlist::queueTempoScan(Track* track)
         startTempoScan();
 }
 
+bool Playlist::queueIdleTempoRescanCandidate()
+{
+    if (m_PlaylistMode == Playlist::Tracklist)
+        return false;
+
+    const int count = topLevelItemCount();
+    if (count <= 0)
+        return false;
+
+    for (int offset = 0; offset < count; ++offset) {
+        const int index = (m_tempoRescanCursor + offset) % count;
+        PlaylistItem* item = dynamic_cast<PlaylistItem*>(topLevelItem(index));
+        if (!item || !item->track())
+            continue;
+
+        Track* track = item->track();
+        if (track->bpm() <= 0)
+            continue;
+
+        const QString url = track->url().toString();
+        if (url.isEmpty())
+            continue;
+        if (url == m_tempoScanUrl || m_tempoScanQueue.contains(url))
+            continue;
+        if (m_tempoRescanDone.contains(url))
+            continue;
+
+        m_tempoScanQueue.enqueue(url);
+        m_tempoRescanDone.insert(url);
+        m_tempoRescanCursor = (index + 1) % qMax(1, count);
+        return true;
+    }
+
+    return false;
+}
+
 void Playlist::startTempoScan()
 {
-    if (m_tempoScanActive || m_tempoScanQueue.isEmpty())
+    if (m_tempoScanActive)
+        return;
+
+    if (m_tempoScanQueue.isEmpty() && !queueIdleTempoRescanCandidate())
         return;
 
     m_tempoScanUrl = m_tempoScanQueue.dequeue();
@@ -357,7 +428,7 @@ void Playlist::startTempoScan()
     QSettings settings;
     // Playlist background scan gets a slightly longer window than live deck scan
     // for more stable BPM estimation.
-    m_tempoAnalyser->setTempoScanDurationSeconds(qMax(12, settings.value("beatSyncScanSeconds", 8).toInt()));
+    m_tempoAnalyser->setTempoScanDurationSeconds(qMax(18, settings.value("beatSyncScanSeconds", 16).toInt()));
     m_tempoAnalyser->setMode(TrackAnalyser::TEMPO);
     m_tempoAnalyser->open(QUrl(m_tempoScanUrl));
 }

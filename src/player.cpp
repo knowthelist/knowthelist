@@ -248,6 +248,7 @@ struct PlayerPrivate {
     int playBasePosition;
     QElapsedTimer playTimer;
     double volume;
+    double rate;
     double rms_l;
     double rms_r;
     double rmsout_l;
@@ -264,6 +265,7 @@ Player::Player(QWidget* parent)
 {
     p->isStarted = false;
     p->isLoaded = false;
+    p->rate = 1.0;
     p->rms_l = 0;
     p->rms_r = 0;
     p->rmsout_l = 0;
@@ -389,10 +391,22 @@ bool Player::prepare()
     configureLevelMessaging(levelout);
     g_object_set(level, "peak-ttl", 300000000000, NULL);
 
-    gst_bin_add_many(GST_BIN(pipeline), src, conv, resample, level, gain, equalizer, levelout, vol, sink, NULL);
+    // scaletempo enables tempo change without pitch shift (time-stretching).
+    // Falls back gracefully if the plugin is not installed.
+    GstElement* scaletempo = gst_element_factory_make("scaletempo", "scaletempo");
 
-    gst_element_link(conv, resample);
-    gst_element_link_filtered(resample, level, caps);
+    if (scaletempo) {
+        gst_bin_add_many(GST_BIN(pipeline), src, conv, resample, scaletempo, level, gain, equalizer, levelout, vol, sink, NULL);
+        gst_element_link(conv, resample);
+        gst_element_link(resample, scaletempo);
+        gst_element_link_filtered(scaletempo, level, caps);
+    } else {
+        qDebug() << Q_FUNC_INFO << "scaletempo not available – rate changes will affect pitch";
+        gst_bin_add_many(GST_BIN(pipeline), src, conv, resample, level, gain, equalizer, levelout, vol, sink, NULL);
+        gst_element_link(conv, resample);
+        gst_element_link_filtered(resample, level, caps);
+    }
+
     gst_element_link(level, gain);
     gst_element_link(gain, equalizer);
     gst_element_link(equalizer, vol);
@@ -516,11 +530,31 @@ void Player::setPosition(QTime position)
 {
     int time_milliseconds = QTime(0, 0).msecsTo(position);
     gint64 time_nanoseconds = (time_milliseconds * GST_MSECOND);
-    gst_element_seek(pipeline, 1.0, GST_FORMAT_TIME, GST_SEEK_FLAG_FLUSH,
+    // Preserve current playback rate across seeks.
+    gst_element_seek(pipeline, p->rate, GST_FORMAT_TIME, GST_SEEK_FLAG_FLUSH,
         GST_SEEK_TYPE_SET, time_nanoseconds,
         GST_SEEK_TYPE_NONE, GST_CLOCK_TIME_NONE);
     p->position = time_milliseconds;
     emit positionChanged();
+}
+
+void Player::setRate(double rate)
+{
+    if (qFuzzyCompare(rate, p->rate))
+        return;
+    p->rate = rate;
+    gint64 pos = 0;
+    if (!gst_element_query_position(pipeline, GST_FORMAT_TIME, &pos))
+        pos = static_cast<gint64>(p->position) * GST_MSECOND;
+    gst_element_seek(pipeline, rate, GST_FORMAT_TIME,
+        static_cast<GstSeekFlags>(GST_SEEK_FLAG_FLUSH | GST_SEEK_FLAG_ACCURATE),
+        GST_SEEK_TYPE_SET, pos,
+        GST_SEEK_TYPE_NONE, GST_CLOCK_TIME_NONE);
+}
+
+double Player::rate() const
+{
+    return p->rate;
 }
 
 QTime Player::position()

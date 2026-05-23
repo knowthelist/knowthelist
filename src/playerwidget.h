@@ -64,7 +64,12 @@ public:
     int currentBpm() const { return m_bpm; }
     QTime currentPosition() const;
     QTime beatPosition() const { return m_beatPosition; }
-    void alignCueToReferenceBeat(int referenceBpm, const QTime& referencePosition);
+    void setTempoRate(double rate);
+    double tempoRate() const { return m_tempoRate; }
+    void syncNowToReferenceBeat(int referenceBpm, const QTime& referencePosition,
+                                const QTime& referenceBeatAnchor = QTime());
+    void alignCueToReferenceBeat(int referenceBpm, const QTime& referencePosition,
+                                   const QTime& referenceBeatAnchor = QTime());
     void setBeatSyncEnabled(bool enabled) { m_beatSyncEnabled = enabled; }
     void setBeatCueEnabled(bool enabled) { m_beatCueEnabled = enabled; }
     void setBeatVisualMode(bool enabled);
@@ -98,6 +103,7 @@ Q_SIGNALS:
     void gainChanged(double);
     void tempoChanged(int bpm, QTime beatPosition);
     void levelChanged(double, double);
+    void syncRequested();
 
 private Q_SLOTS:
 
@@ -114,6 +120,7 @@ private Q_SLOTS:
     void on_butPlay_clicked();
     void on_butRew_clicked();
     void on_butFwd_clicked();
+    void on_butSync_clicked();
 
 protected:
     VUMeter* vuMeter;
@@ -157,6 +164,7 @@ private:
     bool m_beatSyncEnabled;
     bool m_beatCueEnabled;
     bool m_beatVisualMode;
+    double m_tempoRate;
     bool m_bpmAnalysed;
     int m_bpm;
     QTime m_beatPosition;

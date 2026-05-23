@@ -35,6 +35,7 @@ struct TrackAnalyser_Private
         guint64 fft_res;
         float lastSpectrum[spect_bands];
         QList<float> spectralFlux;
+    QList<float> spectralFluxLow;
     QList<GstClockTime> spectralFluxTimes;
         int bpm;
     GstClockTime tempoStartTimestamp;
@@ -57,7 +58,7 @@ TrackAnalyser::TrackAnalyser(QWidget *parent) :
     p->analysisMode = STANDARD;
     p->tempoStartTimestamp = 0;
     p->tempoWindowStarted = false;
-    p->tempoScanDurationSeconds = 20;
+    p->tempoScanDurationSeconds = 24;
     p->finishQueued = false;
     p->shuttingDown = false;
     p->tempoTimeout = new QTimer(this);
@@ -289,6 +290,7 @@ void TrackAnalyser::asyncOpen(QUrl url)
             return;
         m_GainDB = GAIN_INVALID;
         p->spectralFlux.clear();
+        p->spectralFluxLow.clear();
         p->spectralFluxTimes.clear();
         p->bpm = 0;
         p->tempoStartTimestamp = 0;
@@ -408,14 +410,22 @@ void TrackAnalyser::messageReceived(GstMessage *message)
 
                   magnitudes = gst_structure_get_value (s, "magnitude");
 
-                  float flux = 0;
+                                    float flux = 0;
+                                    float lowFlux = 0;
                   for (i = 0; i < spect_bands; ++i) {
                     //gdouble freq = (gdouble) ((AUDIOFREQ / 2) * i + AUDIOFREQ / 4) / spect_bands;
                     mag = gst_value_list_get_value (magnitudes, i);
                     mag_value = pow (10.0, g_value_get_float (mag)/ 20.0);
                     float value = (mag_value - p->lastSpectrum[i]);
                     p->lastSpectrum[i] = mag_value;
-                    flux += value < 0? 0: value;
+                                        const float positiveValue = value < 0 ? 0 : value;
+                                        flux += positiveValue;
+
+                                        // Weight lower bands stronger to better follow kick/bass transients.
+                                        if (i < 3) {
+                                                const float bassWeight = (i == 0) ? 1.7f : ((i == 1) ? 1.4f : 1.2f);
+                                                lowFlux += positiveValue * bassWeight;
+                                        }
                     //qDebug() << Q_FUNC_INFO <<"freq:"<<freq<<" flux:"<<flux;
                   }
                   //Spectral flux (comparing the power spectrum for one frame against the previous frame)
@@ -423,6 +433,7 @@ void TrackAnalyser::messageReceived(GstMessage *message)
                   {
                       QMutexLocker locker(&p->mutex);
                       p->spectralFlux.append(flux);
+                                            p->spectralFluxLow.append(lowFlux);
                       p->spectralFluxTimes.append(timestamp);
                   }
 
@@ -523,16 +534,12 @@ void TrackAnalyser::detectTempo()
 {
     static const int kMinBpm = 70;
     static const int kMaxBpm = 200;
-    const int THRESHOLD_WINDOW_SIZE = 10;
-    const float MULTIPLIER = 1.5f;
-    QList<float> prunedSpectralFlux;
-    QList<float> threshold;
-    QList<float> peaks;
-
     QList<float> spectralFlux;
+    QList<float> spectralFluxLow;
     {
         QMutexLocker locker(&p->mutex);
         spectralFlux = p->spectralFlux;
+        spectralFluxLow = p->spectralFluxLow;
     }
 
     if (spectralFlux.isEmpty()) {
@@ -541,75 +548,117 @@ void TrackAnalyser::detectTempo()
         return;
     }
 
-    //calculate the running average for spectral flux.
-     for( int i = 0; i < spectralFlux.size(); i++ )
-    {
-       int start = qMax( 0, i - THRESHOLD_WINDOW_SIZE );
-       int end = qMin( spectralFlux.size() - 1, i + THRESHOLD_WINDOW_SIZE );
-       float mean = 0;
-       for( int j = start; j <= end; j++ )
-          mean += spectralFlux.at(j);
-         mean /= (end - start + 1);
-       threshold.append( mean * MULTIPLIER );
-    }
+    if (spectralFluxLow.size() != spectralFlux.size())
+        spectralFluxLow = spectralFlux;
 
-    //take only the signifikat onsets above threshold
-    for( int i = 0; i < threshold.size(); i++ )
-    {
-         if( threshold.at(i) <= spectralFlux.at(i) )
-             prunedSpectralFlux.append( spectralFlux.at(i) - threshold.at(i) );
-       else
-          prunedSpectralFlux.append( (float)0 );
-    }
+    auto buildOnsetEnvelope = [](const QList<float>& input, int thresholdWindow, float thresholdMultiplier) {
+        QList<float> threshold;
+        QList<float> pruned;
+        QList<float> smoothed;
 
-    //peak detection
-    for( int i = 0; i < prunedSpectralFlux.size() - 1; i++ )
-    {
-       if( prunedSpectralFlux.at(i) > prunedSpectralFlux.at(i+1) )
-          peaks.append( prunedSpectralFlux.at(i) );
-       else
-          peaks.append( (float)0 );
-    }
+        threshold.reserve(input.size());
+        pruned.reserve(input.size());
+        smoothed.reserve(input.size());
 
-    // Build an onset list and estimate BPM by weighted interval voting.
-    QVector<int> onsets;
-    onsets.reserve(peaks.size() / 3);
-    for (int i = 1; i < peaks.size() - 1; ++i) {
-        if (peaks.at(i) > 0.0f && peaks.at(i) >= peaks.at(i - 1) && peaks.at(i) > peaks.at(i + 1))
-            onsets.append(i);
-    }
+        for (int i = 0; i < input.size(); ++i) {
+            const int start = qMax(0, i - thresholdWindow);
+            const int end = qMin(input.size() - 1, i + thresholdWindow);
+            float mean = 0.0f;
+            for (int j = start; j <= end; ++j)
+                mean += input.at(j);
+            mean /= qMax(1, end - start + 1);
+            threshold.append(mean * thresholdMultiplier);
+        }
 
-    QVector<double> score(241, 0.0);
-    for (int i = 0; i < onsets.size(); ++i) {
-        const int base = onsets.at(i);
-        const float baseWeight = qMax(0.01f, peaks.at(base));
-        const int upper = qMin(onsets.size(), i + 10);
-        for (int j = i + 1; j < upper; ++j) {
-            const int delta = onsets.at(j) - base;
-            if (delta <= 0)
+        for (int i = 0; i < input.size(); ++i) {
+            const float value = input.at(i) - threshold.at(i);
+            pruned.append(value > 0.0f ? value : 0.0f);
+        }
+
+        for (int i = 0; i < pruned.size(); ++i) {
+            const float prev = (i > 0) ? pruned.at(i - 1) : pruned.at(i);
+            const float curr = pruned.at(i);
+            const float next = (i + 1 < pruned.size()) ? pruned.at(i + 1) : pruned.at(i);
+            smoothed.append((prev + 2.0f * curr + next) * 0.25f);
+        }
+
+        return smoothed;
+    };
+
+    const QList<float> fullEnv = buildOnsetEnvelope(spectralFlux, 12, 1.35f);
+    const QList<float> lowEnv = buildOnsetEnvelope(spectralFluxLow, 14, 1.20f);
+
+    auto pickOnsets = [](const QList<float>& env, int minDistanceFrames) {
+        QVector<int> onsets;
+        onsets.reserve(env.size() / 4);
+        for (int i = 1; i < env.size() - 1; ++i) {
+            if (env.at(i) <= 0.0f || env.at(i) < env.at(i - 1) || env.at(i) <= env.at(i + 1))
                 continue;
 
-            double bpm = (static_cast<double>(p->fft_res) * 60.0) / static_cast<double>(delta);
+            if (onsets.isEmpty()) {
+                onsets.append(i);
+                continue;
+            }
 
-            // Fold harmonics into a broad DJ-relevant range.
-            while (bpm < static_cast<double>(kMinBpm))
-                bpm *= 2.0;
-            while (bpm > static_cast<double>(kMaxBpm))
-                bpm *= 0.5;
-
-            if (bpm >= static_cast<double>(kMinBpm) && bpm <= static_cast<double>(kMaxBpm)) {
-                const int bpmBin = qBound(kMinBpm, qRound(bpm), kMaxBpm);
-                const float pairWeight = qMax(0.01f, peaks.at(onsets.at(j)));
-                score[bpmBin] += static_cast<double>(baseWeight * pairWeight);
+            const int last = onsets.last();
+            if (i - last < minDistanceFrames) {
+                if (env.at(i) > env.at(last))
+                    onsets.last() = i;
+            } else {
+                onsets.append(i);
             }
         }
+        return onsets;
+    };
+
+    const int minDistance = qMax(1, qRound((p->fft_res * 60.0) / 240.0));
+    const QVector<int> onsetsFull = pickOnsets(fullEnv, minDistance);
+    const QVector<int> onsetsLow = pickOnsets(lowEnv, minDistance + 2);
+
+    QVector<double> score(241, 0.0);
+
+    auto voteTempo = [&](const QVector<int>& onsets, const QList<float>& env, double weight) {
+        for (int i = 0; i < onsets.size(); ++i) {
+            const int base = onsets.at(i);
+            const float baseWeight = qMax(0.01f, env.at(base));
+            const int upper = qMin(onsets.size(), i + 18);
+            for (int j = i + 1; j < upper; ++j) {
+                const int delta = onsets.at(j) - base;
+                if (delta <= 0)
+                    continue;
+
+                double bpm = (static_cast<double>(p->fft_res) * 60.0) / static_cast<double>(delta);
+                while (bpm < static_cast<double>(kMinBpm))
+                    bpm *= 2.0;
+                while (bpm > static_cast<double>(kMaxBpm))
+                    bpm *= 0.5;
+
+                if (bpm >= static_cast<double>(kMinBpm) && bpm <= static_cast<double>(kMaxBpm)) {
+                    const int bpmBin = qBound(kMinBpm, qRound(bpm), kMaxBpm);
+                    const float pairWeight = qMax(0.01f, env.at(onsets.at(j)));
+                    const double pairDistancePenalty = 1.0 / (1.0 + 0.08 * (j - i - 1));
+                    score[bpmBin] += weight * static_cast<double>(baseWeight * pairWeight) * pairDistancePenalty;
+                }
+            }
+        }
+    };
+
+    voteTempo(onsetsFull, fullEnv, 1.0);
+    voteTempo(onsetsLow, lowEnv, 1.65);
+
+    QVector<double> smoothedScore = score;
+    for (int bpmBin = kMinBpm; bpmBin <= kMaxBpm; ++bpmBin) {
+        const double prev = score[qMax(kMinBpm, bpmBin - 1)];
+        const double curr = score[bpmBin];
+        const double next = score[qMin(kMaxBpm, bpmBin + 1)];
+        smoothedScore[bpmBin] = 0.2 * prev + 1.0 * curr + 0.2 * next;
     }
 
     int bestBpm = 0;
     double bestScore = 0.0;
     for (int bpmBin = kMinBpm; bpmBin <= kMaxBpm; ++bpmBin) {
-        if (score[bpmBin] > bestScore) {
-            bestScore = score[bpmBin];
+        if (smoothedScore[bpmBin] > bestScore) {
+            bestScore = smoothedScore[bpmBin];
             bestBpm = bpmBin;
         }
     }
@@ -621,62 +670,223 @@ void TrackAnalyser::detectTempo()
         double support = 0.0;
         for (int d = -2; d <= 2; ++d) {
             const int idx = qBound(kMinBpm, bpmBin + d, kMaxBpm);
-            support += score[idx] * ((d == 0) ? 1.0 : 0.7);
+            support += smoothedScore[idx] * ((d == 0) ? 1.0 : 0.7);
         }
 
         if (bpmBin * 2 <= kMaxBpm)
-            support += 0.30 * score[bpmBin * 2];
+            support += 0.30 * smoothedScore[bpmBin * 2];
         if (bpmBin / 2 >= kMinBpm)
-            support += 0.20 * score[bpmBin / 2];
+            support += 0.20 * smoothedScore[bpmBin / 2];
 
         return support;
     };
 
     int votedBpm = bestBpm;
-    double votedSupport = supportFor(votedBpm);
-    if (votedBpm > 0) {
-        const int halfBpm = qRound(votedBpm * 0.5);
-        const int doubleBpm = votedBpm * 2;
-        const double halfSupport = supportFor(halfBpm);
-        const double doubleSupport = supportFor(doubleBpm);
 
-        if (halfSupport > votedSupport * 1.15) {
-            votedBpm = halfBpm;
-            votedSupport = halfSupport;
+    QList<float> combinedEnv;
+    combinedEnv.reserve(fullEnv.size());
+    for (int i = 0; i < fullEnv.size(); ++i)
+        combinedEnv.append(0.6f * fullEnv.at(i) + 0.4f * lowEnv.at(i));
+
+    const int autoCorrBpm = qRound(AutoCorrelation(combinedEnv, combinedEnv.count(), kMinBpm, kMaxBpm, p->fft_res));
+    const int autoCorrLowBpm = qRound(AutoCorrelation(lowEnv, lowEnv.count(), kMinBpm, kMaxBpm, p->fft_res));
+
+    int autoCorrConsensus = autoCorrBpm;
+    if (autoCorrLowBpm >= kMinBpm && autoCorrLowBpm <= kMaxBpm) {
+        if (autoCorrConsensus < kMinBpm || autoCorrConsensus > kMaxBpm)
+            autoCorrConsensus = autoCorrLowBpm;
+        else if (qAbs(autoCorrLowBpm - autoCorrConsensus) <= 4)
+            autoCorrConsensus = qRound(0.5 * autoCorrConsensus + 0.5 * autoCorrLowBpm);
+        else if (qAbs(autoCorrLowBpm * 2 - autoCorrConsensus) <= 4)
+            autoCorrConsensus = autoCorrLowBpm * 2;
+        else if (qAbs(autoCorrLowBpm - autoCorrConsensus * 2) <= 4)
+            autoCorrConsensus = qRound(autoCorrLowBpm * 0.5);
+    }
+
+    QVector<int> candidates;
+    auto addCandidate = [&](int bpm) {
+        if (bpm < kMinBpm || bpm > kMaxBpm)
+            return;
+        if (!candidates.contains(bpm))
+            candidates.append(bpm);
+    };
+
+    addCandidate(votedBpm);
+    addCandidate(bestBpm);
+    addCandidate(qRound(votedBpm * 0.5));
+    addCandidate(votedBpm * 2);
+    addCandidate(qRound(votedBpm * 1.5));
+    addCandidate(qRound(votedBpm / 1.5));
+    addCandidate(autoCorrConsensus);
+    addCandidate(autoCorrLowBpm);
+    addCandidate(qRound(autoCorrConsensus * 1.5));
+    addCandidate(qRound(autoCorrConsensus / 1.5));
+
+    auto candidateStrength = [&](int bpm) {
+        double strength = supportFor(bpm);
+
+        const int half = qRound(bpm * 0.5);
+        const int doub = bpm * 2;
+        const int threeHalf = qRound(bpm * 1.5);
+        const int twoThird = qRound(bpm / 1.5);
+
+        if (half >= kMinBpm)
+            strength += 0.10 * supportFor(half);
+        // Only high-BPM candidates may absorb evidence from their doubled harmonic.
+        // Giving low-BPM candidates credit from their 2x causes persistent half-time aliasing
+        // (e.g. 73 BPM candidate steals evidence from the real 146 BPM tempo).
+        if (doub <= kMaxBpm && bpm >= 100)
+            strength += 0.28 * supportFor(doub);
+        if (threeHalf <= kMaxBpm)
+            strength += 0.24 * supportFor(threeHalf);
+        if (twoThird >= kMinBpm)
+            strength += 0.12 * supportFor(twoThird);
+
+        // For low BPM candidates, prefer promoted 1.5x harmonics when similarly strong.
+        if (bpm < 95) {
+            // Removed: doub credit — causes half-time aliasing for rock/punk tracks.
+            if (threeHalf <= kMaxBpm)
+                strength += 0.12 * supportFor(threeHalf);
         }
-        if (doubleSupport > votedSupport * 1.15) {
-            votedBpm = doubleBpm;
-            votedSupport = doubleSupport;
+
+        if (autoCorrConsensus >= kMinBpm && autoCorrConsensus <= kMaxBpm) {
+            if (qAbs(bpm - autoCorrConsensus) <= 4)
+                strength *= 1.12;
+            else if (qAbs(bpm * 2 - autoCorrConsensus) <= 4 || qAbs(autoCorrConsensus * 2 - bpm) <= 4)
+                strength *= 1.06;
+            else if (qAbs(qRound(bpm * 1.5) - autoCorrConsensus) <= 4 || qAbs(qRound(autoCorrConsensus * 1.5) - bpm) <= 4)
+                strength *= 1.05;
+        }
+
+        return strength;
+    };
+
+    int finalBpm = 0;
+    double finalStrength = 0.0;
+    for (int candidate : candidates) {
+        const double strength = candidateStrength(candidate);
+        if (strength > finalStrength) {
+            finalStrength = strength;
+            finalBpm = candidate;
         }
     }
 
-    const int autoCorrBpm = qRound(AutoCorrelation(peaks, peaks.count(), kMinBpm, kMaxBpm, p->fft_res));
-    int finalBpm = votedBpm;
-    if (finalBpm == 0) {
-        finalBpm = autoCorrBpm;
-    } else if (autoCorrBpm >= kMinBpm && autoCorrBpm <= kMaxBpm) {
-        if (qAbs(autoCorrBpm - finalBpm) <= 3) {
-            finalBpm = qRound(0.6 * finalBpm + 0.4 * autoCorrBpm);
-        } else if (supportFor(autoCorrBpm) > votedSupport * 1.20) {
-            finalBpm = autoCorrBpm;
+    if (finalBpm == 0)
+        finalBpm = (autoCorrConsensus >= kMinBpm && autoCorrConsensus <= kMaxBpm) ? autoCorrConsensus : votedBpm;
+
+    // Low-BPM aliases are common in rock/pop (half tempo, 2:3 relation).
+    // Promote 2x or 1.5x candidates when evidence is close.
+    if (finalBpm >= 68 && finalBpm <= 95) {
+        const double currentSupport = supportFor(finalBpm);
+        const int doubledBpm = finalBpm * 2;
+        const bool hasDoubled = (doubledBpm >= kMinBpm && doubledBpm <= kMaxBpm);
+        double doubledSupport = hasDoubled ? supportFor(doubledBpm) : 0.0;
+
+        // Hard-bias against half-time lock for fast punk/rock style material.
+        if (finalBpm <= 80 && hasDoubled) {
+            double requiredRatio = 0.38;
+            if (autoCorrConsensus >= kMinBpm && autoCorrConsensus <= kMaxBpm
+                && qAbs(doubledBpm - autoCorrConsensus) <= 5) {
+                requiredRatio = 0.30;
+                doubledSupport *= 1.08;
+            }
+            if (autoCorrLowBpm >= kMinBpm && autoCorrLowBpm <= kMaxBpm
+                && qAbs(doubledBpm - autoCorrLowBpm) <= 5) {
+                requiredRatio = qMin(requiredRatio, 0.26);
+                doubledSupport *= 1.06;
+            }
+
+            if (doubledSupport >= currentSupport * requiredRatio)
+                finalBpm = doubledBpm;
+        }
+
+        const double refreshedSupport = supportFor(finalBpm);
+        int promotedBpm = finalBpm;
+        double promotedScore = refreshedSupport;
+
+        const int candidatesToPromote[2] = { finalBpm * 2, qRound(finalBpm * 1.5) };
+        for (int i = 0; i < 2; ++i) {
+            const int candidate = candidatesToPromote[i];
+            if (candidate < kMinBpm || candidate > kMaxBpm)
+                continue;
+
+            double score = supportFor(candidate);
+            if (autoCorrConsensus >= kMinBpm && autoCorrConsensus <= kMaxBpm
+                && qAbs(candidate - autoCorrConsensus) <= 4) {
+                score *= 1.12;
+            }
+            if (autoCorrLowBpm >= kMinBpm && autoCorrLowBpm <= kMaxBpm
+                && qAbs(candidate - autoCorrLowBpm) <= 4) {
+                score *= 1.08;
+            }
+
+            if (score > promotedScore) {
+                promotedScore = score;
+                promotedBpm = candidate;
+            }
+        }
+
+        if (promotedBpm != finalBpm && promotedScore >= refreshedSupport * 0.90)
+            finalBpm = promotedBpm;
+    }
+
+    // Final hard guard against half-time lock-in for tracks that commonly sit
+    // around 140-165 BPM but produce a 70-82 BPM alias.
+    if (finalBpm >= 70 && finalBpm <= 82) {
+        const int doubled = finalBpm * 2;
+        if (doubled <= kMaxBpm) {
+            const double baseSupport = supportFor(finalBpm);
+            double doubledSupport = supportFor(doubled);
+
+            if (autoCorrConsensus >= kMinBpm && autoCorrConsensus <= kMaxBpm
+                && qAbs(doubled - autoCorrConsensus) <= 5) {
+                doubledSupport *= 1.10;
+            }
+            if (autoCorrLowBpm >= kMinBpm && autoCorrLowBpm <= kMaxBpm
+                && qAbs(doubled - autoCorrLowBpm) <= 5) {
+                doubledSupport *= 1.08;
+            }
+
+            // Prefer 2x unless 1x is clearly stronger.
+            if (doubledSupport >= baseSupport * 0.38)
+                finalBpm = doubled;
         }
     }
 
     p->bpm = qBound(0, finalBpm, kMaxBpm);
-    qDebug() << Q_FUNC_INFO << "interval-vote bpm:" << p->bpm;
+    qDebug() << Q_FUNC_INFO << "multi-feature bpm:" << p->bpm;
 
-    // Use the strongest early onset as a stable beat-cue phase anchor.
-    int strongestPeakIdx = -1;
-    float strongestPeak = 0.0f;
-    for (int i = 0; i < peaks.size(); ++i) {
-        if (peaks.at(i) > strongestPeak) {
-            strongestPeak = peaks.at(i);
-            strongestPeakIdx = i;
+    // Use a strong early kick/bass transient as phase anchor when available.
+    int beatAnchorIdx = -1;
+    const QList<float>& anchorEnv = lowEnv.isEmpty() ? fullEnv : lowEnv;
+    float strongestAnchor = 0.0f;
+    for (int i = 0; i < anchorEnv.size(); ++i)
+        strongestAnchor = qMax(strongestAnchor, anchorEnv.at(i));
+
+    if (strongestAnchor > 0.0f) {
+        const float earlyThreshold = strongestAnchor * 0.60f;
+        const int earlyLimit = qMin(anchorEnv.size(), static_cast<int>(p->fft_res * 20));
+        for (int i = 1; i < earlyLimit - 1; ++i) {
+            if (anchorEnv.at(i) >= earlyThreshold
+                && anchorEnv.at(i) >= anchorEnv.at(i - 1)
+                && anchorEnv.at(i) > anchorEnv.at(i + 1)) {
+                beatAnchorIdx = i;
+                break;
+            }
         }
     }
 
-    if (strongestPeakIdx >= 0 && strongestPeak > 0.0f) {
-        const qint64 offsetMs = static_cast<qint64>((1000.0 * strongestPeakIdx) / p->fft_res);
+    if (beatAnchorIdx < 0) {
+        for (int i = 0; i < anchorEnv.size(); ++i) {
+            if (anchorEnv.at(i) > strongestAnchor * 0.95f) {
+                beatAnchorIdx = i;
+                break;
+            }
+        }
+    }
+
+    if (beatAnchorIdx >= 0) {
+        const qint64 offsetMs = static_cast<qint64>((1000.0 * beatAnchorIdx) / p->fft_res);
         m_BeatPosition = m_StartPosition.addMSecs(static_cast<int>(offsetMs));
     } else {
         m_BeatPosition = m_StartPosition;

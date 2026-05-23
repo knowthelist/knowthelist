@@ -75,6 +75,8 @@ private Q_SLOTS:
     void player2_levelChanged(double left, double right);
     void player1_tempoChanged(int bpm, QTime beatPosition);
     void player2_tempoChanged(int bpm, QTime beatPosition);
+    void player1_syncRequested();
+    void player2_syncRequested();
 
     void slider1_valueChanged(int);
     void slider2_valueChanged(int);
@@ -89,6 +91,7 @@ private Q_SLOTS:
     void timerGain1_timeOut();
     void timerGain2_timeOut();
     void timerBeatSyncVisual_timeOut();
+    void timerRateRestore_timeOut();
     void Track_doubleClicked(Track*);
     void trackList_wantLoad(Track*, QString target);
     void Track_selectionChanged(Track*);
@@ -154,6 +157,8 @@ private:
     int m_Player2Bpm;
     QTime m_Player1BeatPosition;
     QTime m_Player2BeatPosition;
+    QTimer* m_rateRestoreTimer;
+    PlayerWidget* m_rateRestorePlayer;
 
 protected:
     virtual void closeEvent(QCloseEvent*);

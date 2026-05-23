@@ -112,6 +112,7 @@ PlayerWidget::PlayerWidget(QWidget* parent)
     , m_beatSyncEnabled(true)
     , m_beatCueEnabled(true)
     , m_beatVisualMode(false)
+    , m_tempoRate(1.0)
     , m_bpmAnalysed(false)
     , m_bpm(0)
     , p(new PlayerWidgetPrivate)
@@ -225,6 +226,12 @@ void PlayerWidget::setVolume(double volume)
 void PlayerWidget::setGain(double gain)
 {
     player->setGain(gain);
+}
+
+void PlayerWidget::setTempoRate(double rate)
+{
+    m_tempoRate = rate;
+    player->setRate(rate);
 }
 
 void PlayerWidget::setBeatVisualMode(bool enabled)
@@ -488,7 +495,7 @@ void PlayerWidget::loadTrack(Track* track)
     m_bpmAnalysed = false;
     m_bpm = 0;
     m_beatPosition = QTime();
-    bpmWidget->setState(m_bpm, QTime(0, 0), m_beatPosition, false, false);
+    bpmWidget->setState(m_bpm, QTime(0, 0), m_beatPosition, false, track == nullptr);
     bpmWidget->clearEnvelope();
 
     if (track != nullptr) {
@@ -514,8 +521,12 @@ void PlayerWidget::loadTrack(Track* track)
                 m_beatPosition = QTime(0, 0).addMSecs(cached.beatOffsetMs);
                 bpmWidget->setState(m_bpm, player->position(), m_beatPosition, m_isStarted, true);
                 Q_EMIT tempoChanged(m_bpm, m_beatPosition);
-            } else if (analyseTempo) {
-                tempoAnalyser->setTempoScanDurationSeconds(settings.value("beatSyncScanSeconds", 8).toInt());
+            }
+
+            // Cached BPM can be stale after detector improvements, so re-check
+            // in the background whenever auto analysis is enabled.
+            if (analyseTempo) {
+                tempoAnalyser->setTempoScanDurationSeconds(qMax(16, settings.value("beatSyncScanSeconds", 16).toInt()));
                 tempoAnalyser->setMode(TrackAnalyser::TEMPO);
                 tempoAnalyser->open(url);
             }
@@ -743,7 +754,8 @@ QTime PlayerWidget::currentPosition() const
     return player->position();
 }
 
-void PlayerWidget::alignCueToReferenceBeat(int referenceBpm, const QTime& referencePosition)
+void PlayerWidget::alignCueToReferenceBeat(int referenceBpm, const QTime& referencePosition,
+                                            const QTime& referenceBeatAnchor)
 {
     if (m_isStarted || m_bpm <= 0 || referenceBpm <= 0)
         return;
@@ -752,26 +764,73 @@ void PlayerWidget::alignCueToReferenceBeat(int referenceBpm, const QTime& refere
     const double refBeatMs = 60000.0 / static_cast<double>(referenceBpm);
 
     const qint64 refMs = QTime(0, 0).msecsTo(referencePosition);
-    const double refPhase = fmod(static_cast<double>(refMs), refBeatMs);
+    // Use the reference beat anchor so the phase is computed relative to an actual beat,
+    // not relative to the absolute track start (which may be in silence).
+    const qint64 refAnchorMs = referenceBeatAnchor.isValid()
+                                   ? QTime(0, 0).msecsTo(referenceBeatAnchor) : 0LL;
 
+    double refPhase = fmod(static_cast<double>(refMs - refAnchorMs), refBeatMs);
+    if (refPhase < 0.0) refPhase += refBeatMs; // guard against refMs < anchor
+
+    // Scale to this track's beat period (handles slightly mismatched BPMs gracefully).
+    const double targetPhase = refPhase * (ownBeatMs / refBeatMs);
+
+    // Base cue: the waiting track's beat anchor (first detected strong beat).
+    // Correct cue positions are: baseCueMs + targetPhase + n * ownBeatMs
+    // — all have phase == targetPhase relative to baseCueMs.
     const QTime baseCue = m_beatPosition.isValid() ? m_beatPosition : trackanalyser->startPosition();
     const qint64 baseCueMs = QTime(0, 0).msecsTo(baseCue);
 
-    qint64 bestMs = baseCueMs;
-    double bestErr = 1e9;
-
-    for (int beat = 0; beat < 64; ++beat) {
-        const qint64 candidateMs = baseCueMs + static_cast<qint64>(beat * ownBeatMs);
-        double phase = fmod(static_cast<double>(candidateMs), refBeatMs);
-        double err = qAbs(phase - refPhase);
-        err = qMin(err, refBeatMs - err);
-        if (err < bestErr) {
-            bestErr = err;
-            bestMs = candidateMs;
-        }
-    }
-
+    const qint64 bestMs = baseCueMs + static_cast<qint64>(targetPhase + 0.5);
     player->setPosition(QTime(0, 0).addMSecs(static_cast<int>(bestMs)));
     updateTimeAndPositionDisplay(false);
+}
+
+void PlayerWidget::syncNowToReferenceBeat(int referenceBpm, const QTime& referencePosition,
+                                          const QTime& referenceBeatAnchor)
+{
+    // Works while playing: seeks to the nearest beat-aligned position.
+    if (m_bpm <= 0 || referenceBpm <= 0)
+        return;
+
+    const double ownBeatMs   = 60000.0 / static_cast<double>(m_bpm);
+    const double refBeatMs   = 60000.0 / static_cast<double>(referenceBpm);
+
+    const qint64 refMs       = QTime(0, 0).msecsTo(referencePosition);
+    const qint64 refAnchorMs = referenceBeatAnchor.isValid()
+                                   ? QTime(0, 0).msecsTo(referenceBeatAnchor) : 0LL;
+
+    double refPhase = fmod(static_cast<double>(refMs - refAnchorMs), refBeatMs);
+    if (refPhase < 0.0) refPhase += refBeatMs;
+
+    // Scale phase to this track's beat period.
+    const double targetPhase = refPhase * (ownBeatMs / refBeatMs);
+
+    // This track's beat anchor.
+    const QTime baseCue  = m_beatPosition.isValid() ? m_beatPosition : trackanalyser->startPosition();
+    const qint64 anchorMs = QTime(0, 0).msecsTo(baseCue);
+    const qint64 currentMs = QTime(0, 0).msecsTo(player->position());
+
+    // Phase of the current position relative to this track's beat anchor.
+    double currentPhase = fmod(static_cast<double>(currentMs - anchorMs), ownBeatMs);
+    if (currentPhase < 0.0) currentPhase += ownBeatMs;
+
+    // Smallest delta (forward or backward within one beat) to land on targetPhase.
+    double delta = targetPhase - currentPhase;
+    if (delta >  ownBeatMs / 2.0) delta -= ownBeatMs;
+    if (delta < -ownBeatMs / 2.0) delta += ownBeatMs;
+
+    const qint64 newMs = qMax(anchorMs, currentMs + static_cast<qint64>(delta + 0.5));
+    player->setPosition(QTime(0, 0).addMSecs(static_cast<int>(newMs)));
+    updateTimeAndPositionDisplay(false);
+
+    // If BPMs differ, also match the tempo rate.
+    if (referenceBpm != m_bpm)
+        setTempoRate(static_cast<double>(referenceBpm) / m_bpm);
+}
+
+void PlayerWidget::on_butSync_clicked()
+{
+    Q_EMIT syncRequested();
 }
 
