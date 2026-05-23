@@ -9,6 +9,30 @@ set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTOUIC ON)
 set(CMAKE_AUTORCC ON)
 
+# macOS: auto-detect Qt6 installed via aqtinstall or Qt online installer
+# when CMAKE_PREFIX_PATH / Qt6_DIR have not been set explicitly.
+if(APPLE AND NOT DEFINED Qt6_DIR)
+    set(_qt6_search_roots
+        "$ENV{HOME}/Qt"
+        "/opt/Qt"
+    )
+    foreach(_root IN LISTS _qt6_search_roots)
+        file(GLOB _candidates "${_root}/6.*/macos/lib/cmake/Qt6")
+        if(_candidates)
+            list(SORT _candidates ORDER DESCENDING)
+            list(GET _candidates 0 _qt6_cmake_dir)
+            get_filename_component(_qt6_prefix "${_qt6_cmake_dir}/../../.." ABSOLUTE)
+            list(PREPEND CMAKE_PREFIX_PATH "${_qt6_prefix}")
+            message(STATUS "Auto-detected Qt6 at ${_qt6_prefix}")
+            break()
+        endif()
+    endforeach()
+    unset(_qt6_search_roots)
+    unset(_candidates)
+    unset(_qt6_cmake_dir)
+    unset(_qt6_prefix)
+endif()
+
 # In a Flatpak sandbox, Qt6 CMake config files usually live in /run/host/usr
 # and are not discoverable by default.
 if(DEFINED ENV{FLATPAK_ID} AND IS_DIRECTORY /run/host/usr)
@@ -55,18 +79,75 @@ if(DEFINED ENV{FLATPAK_ID} AND IS_DIRECTORY /run/host/usr)
 endif()
 find_package(PkgConfig REQUIRED)
 
-# GStreamer via pkg-config
-pkg_check_modules(GSTREAMER REQUIRED gstreamer-1.0)
+# GStreamer: on macOS prefer the official framework (no pkgconfig there),
+# fall back to pkg-config (Homebrew) on other platforms.
+if(APPLE)
+    set(_GST_FRAMEWORK "/Library/Frameworks/GStreamer.framework/Versions/1.0")
+    if(EXISTS "${_GST_FRAMEWORK}/include/gstreamer-1.0/gst/gst.h")
+        set(_GST_PREFIX "${_GST_FRAMEWORK}")
+    else()
+        # fall back to Homebrew GStreamer
+        execute_process(COMMAND brew --prefix gstreamer
+            OUTPUT_VARIABLE _GST_BREW OUTPUT_STRIP_TRAILING_WHITESPACE)
+        if(NOT _GST_BREW)
+            set(_GST_BREW "/usr/local/opt/gstreamer")
+        endif()
+        set(_GST_PREFIX "${_GST_BREW}")
+    endif()
 
-# TagLib: prefer native CMake config, fall back to pkg-config
-find_package(TagLib QUIET)
-if(NOT TagLib_FOUND)
-    pkg_check_modules(TAGLIB REQUIRED taglib)
-    set(TAGLIB_INCLUDE_DIRS ${TAGLIB_INCLUDE_DIRS})
-    set(TAGLIB_LIBRARIES ${TAGLIB_LIBRARIES})
+    find_library(GSTREAMER_LIB gstreamer-1.0 PATHS "${_GST_PREFIX}/lib" NO_DEFAULT_PATH REQUIRED)
+    find_library(GLIB_LIB     glib-2.0       PATHS "${_GST_PREFIX}/lib" NO_DEFAULT_PATH REQUIRED)
+    find_library(GOBJECT_LIB  gobject-2.0    PATHS "${_GST_PREFIX}/lib" NO_DEFAULT_PATH REQUIRED)
+
+    set(GSTREAMER_INCLUDE_DIRS
+        "${_GST_PREFIX}/include/gstreamer-1.0"
+        "${_GST_PREFIX}/include/glib-2.0"
+        "${_GST_PREFIX}/lib/glib-2.0/include"
+    )
+    # Brew glib puts glibconfig.h under lib/glib-2.0/include too; add brew fallback
+    execute_process(COMMAND brew --prefix OUTPUT_VARIABLE _BREW_PREFIX OUTPUT_STRIP_TRAILING_WHITESPACE)
+    if(_BREW_PREFIX AND EXISTS "${_BREW_PREFIX}/lib/glib-2.0/include/glibconfig.h")
+        list(APPEND GSTREAMER_INCLUDE_DIRS "${_BREW_PREFIX}/lib/glib-2.0/include")
+    endif()
+
+    set(GSTREAMER_LIBRARIES "${GSTREAMER_LIB}" "${GLIB_LIB}" "${GOBJECT_LIB}")
+    set(GSTREAMER_LDFLAGS_OTHER "-Wl,-rpath,${_GST_PREFIX}/lib")
+
+    message(STATUS "Using GStreamer from ${_GST_PREFIX}")
+    unset(_GST_FRAMEWORK)
+    unset(_GST_PREFIX)
+    unset(_GST_BREW)
+    unset(_BREW_PREFIX)
 else()
-    set(TAGLIB_INCLUDE_DIRS "")
-    set(TAGLIB_LIBRARIES TagLib::TagLib)
+    pkg_check_modules(GSTREAMER REQUIRED gstreamer-1.0)
+endif()
+
+# TagLib: on macOS use explicit brew opt path to avoid GStreamer framework's
+# bundled TagLib 1.x taking precedence. On other platforms try native CMake
+# config first, fall back to pkg-config.
+if(APPLE)
+    execute_process(COMMAND brew --prefix taglib
+        OUTPUT_VARIABLE _TAGLIB_PREFIX OUTPUT_STRIP_TRAILING_WHITESPACE)
+    if(NOT _TAGLIB_PREFIX)
+        set(_TAGLIB_PREFIX "/usr/local/opt/taglib")
+    endif()
+    find_library(TAGLIB_LIB tag PATHS "${_TAGLIB_PREFIX}/lib" NO_DEFAULT_PATH REQUIRED)
+    find_path(TAGLIB_INC taglib/tag.h PATHS "${_TAGLIB_PREFIX}/include" NO_DEFAULT_PATH REQUIRED)
+    set(TAGLIB_INCLUDE_DIRS "${TAGLIB_INC}")
+    set(TAGLIB_LIBRARIES "${TAGLIB_LIB}")
+    unset(_TAGLIB_PREFIX)
+    unset(TAGLIB_LIB)
+    unset(TAGLIB_INC)
+else()
+    find_package(TagLib QUIET)
+    if(NOT TagLib_FOUND)
+        pkg_check_modules(TAGLIB REQUIRED taglib)
+        set(TAGLIB_INCLUDE_DIRS ${TAGLIB_INCLUDE_DIRS})
+        set(TAGLIB_LIBRARIES ${TAGLIB_LIBRARIES})
+    else()
+        set(TAGLIB_INCLUDE_DIRS "")
+        set(TAGLIB_LIBRARIES TagLib::TagLib)
+    endif()
 endif()
 
 set(SOURCES
