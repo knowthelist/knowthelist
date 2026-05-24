@@ -25,12 +25,14 @@
 #include "filebrowser.h"
 #include "monitorplayer.h"
 #include "playerwidget.h"
+#include "qled.h"
 #include "playlist.h"
 #include "playlistbrowser.h"
 #include "settingsdialog.h"
 #include "vumeter.h"
 
 #include <QMainWindow>
+#include <QPushButton>
 #include <QSplitter>
 #include <QTime>
 
@@ -77,6 +79,10 @@ private Q_SLOTS:
     void player2_tempoChanged(int bpm, QTime beatPosition);
     void player1_syncRequested();
     void player2_syncRequested();
+    void playlist1_currentTrackChanged(Track* track);
+    void playlist2_currentTrackChanged(Track* track);
+    void on_toggleAutoSync_toggled(bool checked);
+    void on_toggleBeatVisual_toggled(bool checked);
 
     void slider1_valueChanged(int);
     void slider2_valueChanged(int);
@@ -107,10 +113,26 @@ private Q_SLOTS:
     void on_sliMonitorVolume_valueChanged(int value);
 
 private:
+    enum FadeSyncPhase {
+        FadeSyncIdle = 0,
+        FadeSyncPreRoll,
+        FadeSyncCrossfade,
+        FadeSyncRestore
+    };
+
     Ui::Knowthelist* ui;
     void createUI();
     void fadeNow();
-    void updateFadeTempoRamp();
+    void beginPlainFade(PlayerWidget* incoming);
+    void beginAutoFadeSync(PlayerWidget* outgoing, PlayerWidget* incoming,
+                           int outgoingBpm, int incomingBpm,
+                           const QTime& outgoingBeatPosition);
+    void applyAutoFadeSharedTempo(double sharedTempoBpm);
+    double autoFadeSharedTempoForStep(int step) const;
+    void clearAutoFadeSyncState();
+    void resetWaitingDeckTempoPreviews();
+    void applyBeatVisualMode(bool enabled);
+    void applyAutoSyncEnabled(bool enabled);
     void setFaderModeToPlayer();
     QTimer* timerAutoFader;
     int m_xfadeDir;
@@ -141,6 +163,10 @@ private:
 
     PlayerWidget* player1;
     PlayerWidget* player2;
+    QPushButton* m_toggleAutoSyncButton;
+    QPushButton* m_toggleBeatVisualButton;
+    QLed* m_syncLed1;
+    QLed* m_syncLed2;
     FileBrowser* filetree;
     PlaylistBrowser* playlistBrowser;
 
@@ -160,12 +186,20 @@ private:
     QTime m_Player2BeatPosition;
     QTimer* m_rateRestoreTimer;
     PlayerWidget* m_rateRestorePlayer;
-    PlayerWidget* m_fadeSyncPlayer;
-    double m_fadeSyncStartRate;
-    double m_fadeSyncTargetRate;
-    int m_fadeSyncStartFader;
-    int m_fadeSyncTargetFader;
-    bool m_fadeSyncRampActive;
+    bool m_autoSyncEnabled;
+    FadeSyncPhase m_fadeSyncPhase;
+    PlayerWidget* m_fadeSyncOutgoingPlayer;
+    PlayerWidget* m_fadeSyncIncomingPlayer;
+    int m_fadeSyncOutgoingBpm;
+    int m_fadeSyncIncomingBpm;
+    QTime m_fadeSyncOutgoingBeatPosition;
+    double m_fadeSyncStartTempoBpm;
+    double m_fadeSyncTargetTempoBpm;
+    int m_fadeSyncStep;
+    int m_fadeSyncPreRollSteps;
+    int m_fadeSyncCrossfadeSteps;
+    int m_fadeSyncRestoreSteps;
+    int m_fadeSyncTotalSteps;
 
 protected:
     virtual void closeEvent(QCloseEvent*);

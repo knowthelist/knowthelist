@@ -26,6 +26,7 @@
 #include <QGridLayout>
 #include <QPushButton>
 #include <QSettings>
+#include <QSignalBlocker>
 #include <QtSql/QSqlDatabase>
 #include <QtSql/QSqlQuery>
 #include <QtSql/QSqlError>
@@ -146,7 +147,6 @@ PlayerWidget::PlayerWidget(QWidget* parent)
     , m_bpmAnalysed(false)
     , m_bpm(0)
     , p(new PlayerWidgetPrivate)
-    , m_beatModeButton(nullptr)
 {
     ui->setupUi(this);
 
@@ -161,8 +161,6 @@ PlayerWidget::PlayerWidget(QWidget* parent)
     if (QVBoxLayout* displayLayout = qobject_cast<QVBoxLayout*>(ui->fraDisplay->layout())) {
         displayLayout->setContentsMargins(6, 2, 6, 2);
         displayLayout->setSpacing(2);
-        displayLayout->removeWidget(ui->fraInfo);
-        displayLayout->addWidget(ui->fraInfo);
     }
 
     p->isEndAnnounced = false;
@@ -179,10 +177,25 @@ PlayerWidget::PlayerWidget(QWidget* parent)
     ui->butRew->setIconSize(QSize(26, 26));
     ui->butPlay->setIconSize(QSize(26, 26));
     ui->butCue->setChecked(false);
+    QAbstractButton* const syncButton = findChild<QAbstractButton*>("butSync");
+    if (syncButton) {
+        syncButton->setCheckable(true);
+        syncButton->setChecked(false);
+    }
+
+    // Display panel takes the bulk; button panel capped to a narrow stripe
+    ui->horizontalLayout->setStretch(0, 4);
+    ui->horizontalLayout->setStretch(1, 1);
+    ui->frame_2->setMaximumWidth(150);
+    ui->frame_3->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+
+    // Track fraVuMeter's own resize so bpmWidget geometry stays in sync
+    ui->fraVuMeter->installEventFilter(this);
 
     ui->frame_4->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
     ui->frame_5->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
     ui->frame_6->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
+    ui->frame_7->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
     ui->frame_4->setMinimumWidth(0);
     ui->frame_5->setMinimumWidth(0);
     ui->frame_6->setMinimumWidth(0);
@@ -192,17 +205,18 @@ PlayerWidget::PlayerWidget(QWidget* parent)
     ui->butFwd->setSizePolicy(QSizePolicy::MinimumExpanding, QSizePolicy::Fixed);
     if (QAbstractButton* beatModeButton = findChild<QAbstractButton*>("butBeatMode"))
         beatModeButton->setSizePolicy(QSizePolicy::MinimumExpanding, QSizePolicy::Fixed);
-    if (QAbstractButton* syncButton = findChild<QAbstractButton*>("butSync")) {
+    if (syncButton) {
         syncButton->setSizePolicy(QSizePolicy::MinimumExpanding, QSizePolicy::Fixed);
         syncButton->show();
         syncButton->raise();
     }
+    // Track fraVuMeter for resize (keeps bpmWidget geometry correct)
+    // and frame_3 for mouse clicks (toggle BPM/VU mode)
+    ui->frame_3->installEventFilter(this);
     ui->butPlay->setMaximumWidth(QWIDGETSIZE_MAX);
     ui->butCue->setMaximumWidth(QWIDGETSIZE_MAX);
     ui->butRew->setMaximumWidth(QWIDGETSIZE_MAX);
     ui->butFwd->setMaximumWidth(QWIDGETSIZE_MAX);
-    if (QAbstractButton* beatModeButton = findChild<QAbstractButton*>("butBeatMode"))
-        beatModeButton->setMaximumWidth(QWIDGETSIZE_MAX);
     if (QAbstractButton* syncButton = findChild<QAbstractButton*>("butSync"))
         syncButton->setMaximumWidth(QWIDGETSIZE_MAX);
 
@@ -216,16 +230,10 @@ PlayerWidget::PlayerWidget(QWidget* parent)
     vuMeter->setSegmentsPerPeak(2);
 
     bpmWidget = new PlayerBpmWidget(vuMeter->parentWidget());
-    QRect meterRect = ui->fraVuMeter->contentsRect();
-    if (QLayout* meterLayout = ui->fraVuMeter->layout()) {
-        const QMargins margins = meterLayout->contentsMargins();
-        meterRect = ui->fraVuMeter->rect().adjusted(margins.left(), margins.top(), -margins.right(), -margins.bottom());
-    }
-    bpmWidget->setGeometry(meterRect);
+    // Initial geometry: will be corrected by eventFilter on first fraVuMeter resize
+    bpmWidget->setGeometry(ui->fraVuMeter->rect());
     bpmWidget->setTempoInfo(m_tempoRate, m_syncAdopting);
     bpmWidget->hide();
-
-    m_beatModeButton = findChild<QAbstractButton*>("butBeatMode");
 
     QSettings settings;
     applyBeatVisualLayout(settings.value("beatSyncVisualMode", false).toBool());
@@ -296,12 +304,30 @@ void PlayerWidget::setTempoRate(double rate)
     m_tempoRate = rate;
     player->setRate(rate);
     bpmWidget->setTempoInfo(m_tempoRate, m_syncAdopting);
+    if (std::fabs(m_tempoRate - 1.0) < 0.001 && !m_syncAdopting)
+        updateSyncButtonState(false);
+}
+
+void PlayerWidget::setSyncActive(bool active)
+{
+    updateSyncButtonState(active);
 }
 
 void PlayerWidget::setSyncAdopting(bool active)
 {
     m_syncAdopting = active;
     bpmWidget->setTempoInfo(m_tempoRate, m_syncAdopting);
+}
+
+void PlayerWidget::updateSyncButtonState(bool active)
+{
+    if (QAbstractButton* syncButton = findChild<QAbstractButton*>("butSync")) {
+        if (syncButton->isChecked() != active) {
+            const QSignalBlocker blocker(syncButton);
+            syncButton->setChecked(active);
+        }
+    }
+    Q_EMIT syncStateChanged(active);
 }
 
 bool PlayerWidget::supportsSmoothTempo() const
@@ -312,10 +338,6 @@ bool PlayerWidget::supportsSmoothTempo() const
 void PlayerWidget::setBeatVisualMode(bool enabled)
 {
     m_beatVisualMode = enabled;
-    if (m_beatModeButton) {
-        m_beatModeButton->setChecked(enabled);
-        m_beatModeButton->setText(enabled ? tr("BPM") : tr("VU"));
-    }
     QSettings settings;
     settings.setValue("beatSyncVisualMode", enabled);
     applyBeatVisualLayout(enabled);
@@ -331,17 +353,26 @@ void PlayerWidget::setBeatVisualMode(bool enabled)
 
 void PlayerWidget::applyBeatVisualLayout(bool enabled)
 {
-    setMinimumHeight(enabled ? 182 : 150);
-    ui->frame_2->setMaximumHeight(enabled ? 195 : 150);
-    ui->frame_3->setMaximumHeight(enabled ? 195 : 150);
-    ui->fraDisplay->setMaximumHeight(enabled ? 195 : 144);
+    // Keep the same outer dimensions in both modes so the player never resizes on toggle
+    setMinimumHeight(182);
+    ui->frame_2->setMaximumHeight(195);
+    ui->frame_3->setMaximumHeight(195);
+    ui->fraDisplay->setMaximumHeight(195);
     ui->fraDisplay->setMaximumWidth(QWIDGETSIZE_MAX);
     ui->fraVuMeter->setMaximumWidth(QWIDGETSIZE_MAX);
-    ui->fraVuMeter->setMinimumHeight(enabled ? 70 : 31);
-    ui->fraInfo->setMaximumWidth(QWIDGETSIZE_MAX);
+    ui->fraVuMeter->setMinimumHeight(110);
     ui->fraDigits->setMaximumWidth(QWIDGETSIZE_MAX);
     ui->vuMeter->setMaximumWidth(QWIDGETSIZE_MAX);
-    ui->vuMeter->setMinimumHeight(enabled ? 64 : 31);
+    if (enabled) {
+        // BPM mode: vuMeter is hidden behind bpmWidget — no height restriction needed
+        ui->vuMeter->setMinimumHeight(31);
+        ui->vuMeter->setMaximumHeight(QWIDGETSIZE_MAX);
+    } else {
+        // VU mode: keep bars at a compact natural height, centred with padding top+bottom
+        ui->vuMeter->setFixedHeight(42);
+        if (QHBoxLayout* meterLayout = qobject_cast<QHBoxLayout*>(ui->fraVuMeter->layout()))
+            meterLayout->setAlignment(ui->vuMeter, Qt::AlignVCenter);
+    }
 
     if (enabled)
         ui->lblInfo->setStyleSheet("font-size: 9pt;");
@@ -390,11 +421,11 @@ void PlayerWidget::updateResponsiveLayout()
     const int syncButtonWidth = veryCompact ? 30 : (compact ? 40 : 52);
     const int iconSize = veryCompact ? 18 : (compact ? 22 : 26);
 
-    ui->frame_5->setMinimumHeight(playButtonHeight);
-    ui->frame_6->setMinimumHeight(smallButtonHeight + 6);
-    ui->frame_4->setMinimumHeight(smallButtonHeight + 2);
-    if (QFrame* syncFrame = findChild<QFrame*>("frame_7"))
-        syncFrame->setMinimumHeight(smallButtonHeight + 4);
+    //ui->frame_5->setMinimumHeight(playButtonHeight);
+    //ui->frame_6->setMinimumHeight(smallButtonHeight + 6);
+    //ui->frame_4->setMinimumHeight(smallButtonHeight + 2);
+    //if (QFrame* syncFrame = findChild<QFrame*>("frame_7"))
+     //   syncFrame->setMinimumHeight(smallButtonHeight + 4);
 
     ui->butPlay->setMinimumSize(QSize(playButtonWidth, playButtonHeight));
     ui->butPlay->setMaximumHeight(playButtonHeight);
@@ -483,6 +514,7 @@ void PlayerWidget::pause()
     m_pendingPlay = false;
     player->pause();
     m_syncAdopting = false;
+    updateSyncButtonState(false);
     timerLevel->stop();
     timerPosition->stop();
     vuMeter->reset();
@@ -501,6 +533,7 @@ void PlayerWidget::stop()
     m_pendingPlay = false;
     m_tempoRate = 1.0;
     m_syncAdopting = false;
+    updateSyncButtonState(false);
     player->stop();
     timerLevel->stop();
     timerPosition->stop();
@@ -675,6 +708,7 @@ void PlayerWidget::loadTrack(Track* track)
     m_tempoRate = 1.0;
     m_syncAdopting = false;
     m_beatPosition = QTime();
+    updateSyncButtonState(false);
     bpmWidget->setState(m_bpm, QTime(0, 0), m_beatPosition, false, track == nullptr);
     bpmWidget->setTempoInfo(m_tempoRate, m_syncAdopting);
     bpmWidget->clearEnvelope();
@@ -737,15 +771,24 @@ void PlayerWidget::loadTrack(Track* track)
 void PlayerWidget::resizeEvent(QResizeEvent* e)
 {
     QWidget::resizeEvent(e);
-
     updateResponsiveLayout();
     drawTitle();
-    QRect meterRect = ui->fraVuMeter->contentsRect();
-    if (QLayout* meterLayout = ui->fraVuMeter->layout()) {
-        const QMargins margins = meterLayout->contentsMargins();
-        meterRect = ui->fraVuMeter->rect().adjusted(margins.left(), margins.top(), -margins.right(), -margins.bottom());
+    // bpmWidget geometry is updated via eventFilter on fraVuMeter
+}
+
+bool PlayerWidget::eventFilter(QObject* obj, QEvent* event)
+{
+    if (obj == ui->fraVuMeter && event->type() == QEvent::Resize) {
+        // fraVuMeter has its final geometry now — fill it exactly
+        bpmWidget->setGeometry(ui->fraVuMeter->rect());
+        return false;
     }
-    bpmWidget->setGeometry(meterRect);
+    if (obj == ui->frame_3 && event->type() == QEvent::MouseButtonPress) {
+        // Click on the display panel toggles BPM/VU mode
+        setBeatVisualMode(!m_beatVisualMode);
+        return true;
+    }
+    return QWidget::eventFilter(obj, event);
 }
 
 void PlayerWidget::drawTitle()
@@ -872,11 +915,6 @@ void PlayerWidget::on_butFwd_clicked()
     Q_EMIT forwardPressed();
 }
 
-void PlayerWidget::on_butBeatMode_clicked(bool checked)
-{
-    setBeatVisualMode(checked);
-}
-
 void PlayerWidget::setTrackFinishEmitTime(const int sec)
 {
     if (sec >= 0 && sec < 60)
@@ -950,25 +988,26 @@ void PlayerWidget::alignCueToReferenceBeat(int referenceBpm, const QTime& refere
     const double ownBeatMs = 60000.0 / static_cast<double>(m_bpm);
     const double refBeatMs = 60000.0 / static_cast<double>(referenceBpm);
 
+    // Use a 4-beat bar for bar-level cue alignment
+    const int    BAR_BEATS = 4;
+    const double refBarMs  = BAR_BEATS * refBeatMs;
+
     const qint64 refMs = QTime(0, 0).msecsTo(referencePosition);
-    // Use the reference beat anchor so the phase is computed relative to an actual beat,
-    // not relative to the absolute track start (which may be in silence).
     const qint64 refAnchorMs = referenceBeatAnchor.isValid()
                                    ? QTime(0, 0).msecsTo(referenceBeatAnchor) : 0LL;
 
-    double refPhase = fmod(static_cast<double>(refMs - refAnchorMs), refBeatMs);
-    if (refPhase < 0.0) refPhase += refBeatMs; // guard against refMs < anchor
+    double refBarPhase = fmod(static_cast<double>(refMs - refAnchorMs), refBarMs);
+    if (refBarPhase < 0.0) refBarPhase += refBarMs;
 
-    // Scale to this track's beat period (handles slightly mismatched BPMs gracefully).
-    const double targetPhase = refPhase * (ownBeatMs / refBeatMs);
+    // Scale to this track's beat period
+    const double targetBarPhase = refBarPhase * (ownBeatMs / refBeatMs);
 
     // Base cue: the waiting track's beat anchor (first detected strong beat).
-    // Correct cue positions are: baseCueMs + targetPhase + n * ownBeatMs
-    // — all have phase == targetPhase relative to baseCueMs.
+    // Best cue position = baseCueMs + targetBarPhase
     const QTime baseCue = m_beatPosition.isValid() ? m_beatPosition : trackanalyser->startPosition();
     const qint64 baseCueMs = QTime(0, 0).msecsTo(baseCue);
 
-    const qint64 bestMs = baseCueMs + static_cast<qint64>(targetPhase + 0.5);
+    const qint64 bestMs = baseCueMs + static_cast<qint64>(targetBarPhase + 0.5);
     player->setPosition(QTime(0, 0).addMSecs(static_cast<int>(bestMs)));
     updateTimeAndPositionDisplay(false);
 }
@@ -976,48 +1015,61 @@ void PlayerWidget::alignCueToReferenceBeat(int referenceBpm, const QTime& refere
 void PlayerWidget::syncNowToReferenceBeat(int referenceBpm, const QTime& referencePosition,
                                           const QTime& referenceBeatAnchor)
 {
-    // Works while playing: seeks to the nearest beat-aligned position.
+    // Works while playing: seeks to the nearest bar-aligned position that puts
+    // this deck on the same beat-of-the-bar as the reference deck, so both
+    // decks share the same beat-1 in a standard 4/4 bar.
     if (m_bpm <= 0 || referenceBpm <= 0)
         return;
 
     const double ownBeatMs   = 60000.0 / static_cast<double>(m_bpm);
     const double refBeatMs   = 60000.0 / static_cast<double>(referenceBpm);
 
+    // Use a 4-beat bar so both decks land on the same beat-of-the-bar (beat 1).
+    const int    BAR_BEATS   = 4;
+    const double ownBarMs    = BAR_BEATS * ownBeatMs;
+    const double refBarMs    = BAR_BEATS * refBeatMs;
+
     const qint64 refMs       = QTime(0, 0).msecsTo(referencePosition);
     const qint64 refAnchorMs = referenceBeatAnchor.isValid()
                                    ? QTime(0, 0).msecsTo(referenceBeatAnchor) : 0LL;
 
-    double refPhase = fmod(static_cast<double>(refMs - refAnchorMs), refBeatMs);
-    if (refPhase < 0.0) refPhase += refBeatMs;
+    // Phase of reference within one bar (0 .. 4×refBeatMs)
+    double refBarPhase = fmod(static_cast<double>(refMs - refAnchorMs), refBarMs);
+    if (refBarPhase < 0.0) refBarPhase += refBarMs;
 
-    // Scale phase to this track's beat period.
-    const double targetPhase = refPhase * (ownBeatMs / refBeatMs);
+    // Scale bar phase to this track's beat period (handles tempo differences)
+    const double targetBarPhase = refBarPhase * (ownBeatMs / refBeatMs);
 
-    // This track's beat anchor.
-    const QTime baseCue  = m_beatPosition.isValid() ? m_beatPosition : trackanalyser->startPosition();
+    // This track's beat anchor
+    const QTime baseCue   = m_beatPosition.isValid() ? m_beatPosition : trackanalyser->startPosition();
     const qint64 anchorMs = QTime(0, 0).msecsTo(baseCue);
     const qint64 currentMs = QTime(0, 0).msecsTo(player->position());
 
-    // Phase of the current position relative to this track's beat anchor.
-    double currentPhase = fmod(static_cast<double>(currentMs - anchorMs), ownBeatMs);
-    if (currentPhase < 0.0) currentPhase += ownBeatMs;
+    // Bar phase of current position
+    double currentBarPhase = fmod(static_cast<double>(currentMs - anchorMs), ownBarMs);
+    if (currentBarPhase < 0.0) currentBarPhase += ownBarMs;
 
-    // Smallest delta (forward or backward within one beat) to land on targetPhase.
-    double delta = targetPhase - currentPhase;
-    if (delta >  ownBeatMs / 2.0) delta -= ownBeatMs;
-    if (delta < -ownBeatMs / 2.0) delta += ownBeatMs;
+    // Smallest delta within ±half a bar (±2 beats) to land on targetBarPhase
+    double delta = targetBarPhase - currentBarPhase;
+    if (delta >  ownBarMs / 2.0) delta -= ownBarMs;
+    if (delta < -ownBarMs / 2.0) delta += ownBarMs;
 
     const qint64 newMs = qMax(anchorMs, currentMs + static_cast<qint64>(delta + 0.5));
     player->setPosition(QTime(0, 0).addMSecs(static_cast<int>(newMs)));
     updateTimeAndPositionDisplay(false);
 
-    // If BPMs differ, also match the tempo rate.
+    // If BPMs differ, also match the tempo rate
     if (referenceBpm != m_bpm)
         setTempoRate(static_cast<double>(referenceBpm) / m_bpm);
 }
 
-void PlayerWidget::on_butSync_clicked()
+void PlayerWidget::on_butSync_toggled(bool checked)
 {
-    Q_EMIT syncRequested();
+    updateSyncButtonState(checked);
+    if (checked) {
+        Q_EMIT syncRequested();
+    } else if (!m_syncAdopting && std::fabs(m_tempoRate - 1.0) >= 0.001) {
+        setTempoRate(1.0);
+    }
 }
 

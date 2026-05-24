@@ -45,6 +45,7 @@ struct TrackAnalyser_Private
         QTimer* tempoTimeout;
         bool finishQueued;
         bool shuttingDown;
+            bool tempoFallbackTried;
         TrackAnalyser::modeType analysisMode;
 };
 
@@ -61,6 +62,7 @@ TrackAnalyser::TrackAnalyser(QWidget *parent) :
     p->tempoScanDurationSeconds = 24;
     p->finishQueued = false;
     p->shuttingDown = false;
+    p->tempoFallbackTried = false;
     p->tempoTimeout = new QTimer(this);
     p->tempoTimeout->setSingleShot(true);
     connect(p->tempoTimeout, &QTimer::timeout, this, [this]() {
@@ -296,6 +298,7 @@ void TrackAnalyser::asyncOpen(QUrl url)
         p->tempoStartTimestamp = 0;
         p->tempoWindowStarted = false;
         p->finishQueued = false;
+        p->tempoFallbackTried = false;
         m_finished = false;
         m_BeatPosition = QTime();
     }
@@ -538,6 +541,7 @@ void TrackAnalyser::need_finish()
 void TrackAnalyser::finalizeAnalysis()
 {
     TrackAnalyser::modeType mode;
+    int collectedTempoFrames = 0;
     {
         QMutexLocker locker(&p->mutex);
         if (m_finished)
@@ -545,6 +549,7 @@ void TrackAnalyser::finalizeAnalysis()
         m_finished = true;
         p->finishQueued = false;
         mode = p->analysisMode;
+        collectedTempoFrames = p->spectralFlux.size();
     }
 
     p->tempoTimeout->stop();
@@ -552,6 +557,32 @@ void TrackAnalyser::finalizeAnalysis()
     gst_element_set_state(GST_ELEMENT(pipeline), GST_STATE_NULL);
 
     if (mode == TEMPO) {
+        const int minimumUsefulFrames = qMax(120, static_cast<int>(p->fft_res) * 2);
+        if (!p->tempoFallbackTried && collectedTempoFrames < minimumUsefulFrames) {
+            qDebug() << Q_FUNC_INFO << ":" << parentWidget()->objectName()
+                     << "retry tempo scan from start after short window frames=" << collectedTempoFrames;
+
+            {
+                QMutexLocker locker(&p->mutex);
+                p->tempoFallbackTried = true;
+                p->spectralFlux.clear();
+                p->spectralFluxLow.clear();
+                p->spectralFluxTimes.clear();
+                p->tempoStartTimestamp = 0;
+                p->tempoWindowStarted = false;
+                p->finishQueued = false;
+                m_finished = false;
+                p->bpm = 0;
+                for (guint i = 0; i < spect_bands; ++i)
+                    p->lastSpectrum[i] = 0.0f;
+            }
+
+            sync_set_state(GST_ELEMENT(pipeline), GST_STATE_PAUSED);
+            setPosition(QTime(0, 0));
+            start();
+            return;
+        }
+
         detectTempo();
         Q_EMIT finishTempo();
     } else {

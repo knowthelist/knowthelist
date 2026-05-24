@@ -33,6 +33,8 @@
 #include "playlistitem.h"
 #include "trackanalyser.h"
 
+class QLed;
+
 namespace Ui {
 class PlayerWidget;
 }
@@ -66,6 +68,7 @@ public:
     QTime beatPosition() const { return m_beatPosition; }
     void setTempoRate(double rate);
     double tempoRate() const { return m_tempoRate; }
+    void setSyncActive(bool active);
     void setSyncAdopting(bool active);
     bool supportsSmoothTempo() const;
     void syncNowToReferenceBeat(int referenceBpm, const QTime& referencePosition,
@@ -93,7 +96,6 @@ public Q_SLOTS:
     void onTrackPropertyChanged(Track* track);
     void setEqualizer(EqBand, int);
     void setInfo(QPair<int, int> info);
-    void on_butBeatMode_clicked(bool checked);
 
 Q_SIGNALS:
     void trackFinished();
@@ -107,6 +109,7 @@ Q_SIGNALS:
     void tempoChanged(int bpm, QTime beatPosition);
     void levelChanged(double, double);
     void syncRequested();
+    void syncStateChanged(bool active);
 
 private Q_SLOTS:
 
@@ -123,7 +126,7 @@ private Q_SLOTS:
     void on_butPlay_clicked();
     void on_butRew_clicked();
     void on_butFwd_clicked();
-    void on_butSync_clicked();
+    void on_butSync_toggled(bool checked);
 
 protected:
     VUMeter* vuMeter;
@@ -138,9 +141,11 @@ private:
         QObject* dstobj, const char* slot_method, QLayout* layout);
 
     void createUI(QBoxLayout* appLayout);
-    void resizeEvent(QResizeEvent* e);
+    void resizeEvent(QResizeEvent* e) override;
+    bool eventFilter(QObject* obj, QEvent* event) override;
     void drawTitle();
     void applyBeatVisualLayout(bool enabled);
+    void updateSyncButtonState(bool active);
     void updateResponsiveLayout();
 
     Player* player;
@@ -152,7 +157,6 @@ private:
 
     QTimer* timerLevel;
     QTimer* timerPosition;
-    QAbstractButton* m_beatModeButton;
     void dropEvent(QDropEvent*);
     void dragEnterEvent(QDragEnterEvent*);
     void dragMoveEvent(QDragMoveEvent*);

@@ -11,8 +11,10 @@
 #define PLAYERBPMWIDGET_H
 
 #include <QTime>
+#include <QTimer>
 #include <QVector>
 #include <QWidget>
+#include <QPainterPath>
 
 class PlayerBpmWidget : public QWidget {
     Q_OBJECT
@@ -27,6 +29,10 @@ public:
 
 protected:
     void paintEvent(QPaintEvent* event) override;
+    void resizeEvent(QResizeEvent* event) override;
+
+private slots:
+    void onUpdateTimer();
 
 private:
     int m_bpm;
@@ -40,6 +46,15 @@ private:
     int m_windowMs;
     int m_sampleIntervalMs;
 
+    // CPU optimisation: throttled repaints + cached envelope geometry
+    QTimer   m_updateTimer;
+    bool     m_envelopeDirty;
+    QRect    m_cachedBand;
+    QPainterPath m_envFillPath;
+    QPainterPath m_topEdgePath;
+    QPainterPath m_bottomEdgePath;
+
+    void rebuildEnvelopePaths(const QRect& band, int centerY, double halfH);
     double phase() const;
 };
 

@@ -445,7 +445,7 @@ background-color: #444444;
           <property name="minimumSize">
            <size>
             <width>194</width>
-            <height>329</height>
+            <height>380</height>
            </size>
           </property>
           <property name="sizeIncrement">
@@ -5861,9 +5861,9 @@ min-height: 16px;
            <property name="geometry">
             <rect>
              <x>4</x>
-             <y>344</y>
-             <width>191</width>
-             <height>21</height>
+             <y>358</y>
+             <width>186</width>
+             <height>16</height>
             </rect>
            </property>
            <property name="sizePolicy">

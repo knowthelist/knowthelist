@@ -41,12 +41,23 @@ Knowthelist::Knowthelist(QWidget* parent)
     , m_Player2Bpm(0)
     , m_rateRestoreTimer(nullptr)
     , m_rateRestorePlayer(nullptr)
-    , m_fadeSyncPlayer(nullptr)
-    , m_fadeSyncStartRate(1.0)
-    , m_fadeSyncTargetRate(1.0)
-    , m_fadeSyncStartFader(0)
-    , m_fadeSyncTargetFader(0)
-    , m_fadeSyncRampActive(false)
+    , m_toggleAutoSyncButton(nullptr)
+    , m_toggleBeatVisualButton(nullptr)
+    , m_syncLed1(nullptr)
+    , m_syncLed2(nullptr)
+    , m_autoSyncEnabled(true)
+    , m_fadeSyncPhase(FadeSyncIdle)
+    , m_fadeSyncOutgoingPlayer(nullptr)
+    , m_fadeSyncIncomingPlayer(nullptr)
+    , m_fadeSyncOutgoingBpm(0)
+    , m_fadeSyncIncomingBpm(0)
+    , m_fadeSyncStartTempoBpm(0.0)
+    , m_fadeSyncTargetTempoBpm(0.0)
+    , m_fadeSyncStep(0)
+    , m_fadeSyncPreRollSteps(0)
+    , m_fadeSyncCrossfadeSteps(0)
+    , m_fadeSyncRestoreSteps(0)
+    , m_fadeSyncTotalSteps(0)
 {
     ui->setupUi(this);
 
@@ -121,6 +132,26 @@ void Knowthelist::createUI()
     m_rateRestoreTimer->setInterval(250);
     connect(m_rateRestoreTimer, &QTimer::timeout, this, &Knowthelist::timerRateRestore_timeOut);
 
+    m_toggleAutoSyncButton = new QPushButton(ui->frameMixer);
+    m_toggleAutoSyncButton->setObjectName("toggleAutoSync");
+    m_toggleAutoSyncButton->setGeometry(QRect(32, 336, 56, 18));
+    m_toggleAutoSyncButton->setMinimumSize(QSize(0, 16));
+    m_toggleAutoSyncButton->setPalette(ui->toggleAutoFade->palette());
+    m_toggleAutoSyncButton->setFont(ui->toggleAutoFade->font());
+    m_toggleAutoSyncButton->setCheckable(true);
+    m_toggleAutoSyncButton->setText(tr("Sync"));
+    connect(m_toggleAutoSyncButton, &QPushButton::toggled, this, &Knowthelist::on_toggleAutoSync_toggled);
+
+    m_toggleBeatVisualButton = new QPushButton(ui->frameMixer);
+    m_toggleBeatVisualButton->setObjectName("toggleBeatVisual");
+    m_toggleBeatVisualButton->setGeometry(QRect(90, 336, 40, 18));
+    m_toggleBeatVisualButton->setMinimumSize(QSize(0, 16));
+    m_toggleBeatVisualButton->setPalette(ui->toggleAutoFade->palette());
+    m_toggleBeatVisualButton->setFont(ui->toggleAutoFade->font());
+    m_toggleBeatVisualButton->setCheckable(true);
+    m_toggleBeatVisualButton->setText(tr("VU"));
+    connect(m_toggleBeatVisualButton, &QPushButton::toggled, this, &Knowthelist::on_toggleBeatVisual_toggled);
+
     vuMeter2 = new VUMeter(ui->frameMixer);
     vuMeter2->setLinesPerSegment(2);
     vuMeter2->setSpacesBetweenSegments(1);
@@ -185,6 +216,8 @@ void Knowthelist::createUI()
 
     connect(playList1, SIGNAL(currentTrackChanged(Track*)), player1, SLOT(loadTrack(Track*)));
     connect(playList2, SIGNAL(currentTrackChanged(Track*)), player2, SLOT(loadTrack(Track*)));
+    connect(playList1, SIGNAL(currentTrackChanged(Track*)), SLOT(playlist1_currentTrackChanged(Track*)));
+    connect(playList2, SIGNAL(currentTrackChanged(Track*)), SLOT(playlist2_currentTrackChanged(Track*)));
     connect(playList1, SIGNAL(trackPropertyChanged(Track*)), player1, SLOT(onTrackPropertyChanged(Track*)));
     connect(playList2, SIGNAL(trackPropertyChanged(Track*)), player2, SLOT(onTrackPropertyChanged(Track*)));
 
@@ -206,6 +239,12 @@ void Knowthelist::createUI()
     connect(player2, SIGNAL(tempoChanged(int, QTime)), SLOT(player2_tempoChanged(int, QTime)));
     connect(player1, &PlayerWidget::syncRequested, this, &Knowthelist::player1_syncRequested);
     connect(player2, &PlayerWidget::syncRequested, this, &Knowthelist::player2_syncRequested);
+    connect(player1, &PlayerWidget::syncStateChanged, this, [this](bool active) {
+        if (m_syncLed1) m_syncLed1->setState(active ? QLed::On : QLed::Off);
+    });
+    connect(player2, &PlayerWidget::syncStateChanged, this, [this](bool active) {
+        if (m_syncLed2) m_syncLed2->setState(active ? QLed::On : QLed::Off);
+    });
 
     connect(player1, SIGNAL(statusChanged(bool)), playList1, SLOT(setPlaying(bool)));
     connect(player2, SIGNAL(statusChanged(bool)), playList2, SLOT(setPlaying(bool)));
@@ -459,8 +498,15 @@ void Knowthelist::loadCurrentSettings()
     player2->setBeatSyncEnabled(beatSyncEnabled);
     player1->setBeatCueEnabled(beatCueEnabled);
     player2->setBeatCueEnabled(beatCueEnabled);
-    player1->setBeatVisualMode(beatVisualMode);
-    player2->setBeatVisualMode(beatVisualMode);
+    m_autoSyncEnabled = settings.value("autoSyncEnabled", beatSyncEnabled).toBool();
+    if (m_toggleAutoSyncButton)
+        m_toggleAutoSyncButton->setChecked(m_autoSyncEnabled);
+    else
+        applyAutoSyncEnabled(m_autoSyncEnabled);
+    if (m_toggleBeatVisualButton)
+        m_toggleBeatVisualButton->setChecked(beatVisualMode);
+    else
+        applyBeatVisualMode(beatVisualMode);
 
     // Mixer VU is always visible. Beat visual mode now affects deck widgets only.
     timerBeatSyncVisual->stop();
@@ -489,6 +535,9 @@ void Knowthelist::closeEvent(QCloseEvent* event)
     settings.setValue("Volume1", QString("%1").arg(ui->slider1->value()));
     settings.setValue("Volume2", QString("%1").arg(ui->slider2->value()));
     settings.setValue("VolumeMonitor", QString("%1").arg(ui->sliMonitorVolume->value()));
+    settings.setValue("autoSyncEnabled", m_autoSyncEnabled);
+    if (m_toggleBeatVisualButton)
+        settings.setValue("beatSyncVisualMode", m_toggleBeatVisualButton->isChecked());
 
     savePlaylists();
 
@@ -574,17 +623,22 @@ void Knowthelist::player1_tempoChanged(int bpm, QTime beatPosition)
     m_Player1Bpm = bpm;
     m_Player1BeatPosition = beatPosition;
 
-    QSettings settings;
-    if (!settings.value("beatSyncEnabled", true).toBool() || bpm <= 0)
+    if (!m_autoSyncEnabled || bpm <= 0)
         return;
 
     // Deck A analysis done: align whichever deck is waiting to the running deck.
-    if (player1->isStarted() && !player2->isStarted())
+    if (player1->isStarted() && !player2->isStarted()) {
         // A running, B waiting → pre-cue B to A
+        player2->setTempoRate(1.0);
+        player2->setSyncAdopting(false);
         player2->alignCueToReferenceBeat(bpm, player1->currentPosition(), beatPosition);
-    else if (!player1->isStarted() && player2->isStarted() && m_Player2Bpm > 0)
+    }
+    else if (!player1->isStarted() && player2->isStarted() && m_Player2Bpm > 0) {
         // A waiting, B running → pre-cue A to B
+        player1->setTempoRate(1.0);
+        player1->setSyncAdopting(false);
         player1->alignCueToReferenceBeat(m_Player2Bpm, player2->currentPosition(), m_Player2BeatPosition);
+    }
 }
 
 void Knowthelist::player2_tempoChanged(int bpm, QTime beatPosition)
@@ -592,32 +646,41 @@ void Knowthelist::player2_tempoChanged(int bpm, QTime beatPosition)
     m_Player2Bpm = bpm;
     m_Player2BeatPosition = beatPosition;
 
-    QSettings settings;
-    if (!settings.value("beatSyncEnabled", true).toBool() || bpm <= 0)
+    if (!m_autoSyncEnabled || bpm <= 0)
         return;
 
     // Deck B analysis done: align whichever deck is waiting to the running deck.
-    if (player2->isStarted() && !player1->isStarted())
+    if (player2->isStarted() && !player1->isStarted()) {
         // B running, A waiting → pre-cue A to B
+        player1->setTempoRate(1.0);
+        player1->setSyncAdopting(false);
         player1->alignCueToReferenceBeat(bpm, player2->currentPosition(), beatPosition);
-    else if (!player2->isStarted() && player1->isStarted() && m_Player1Bpm > 0)
+    }
+    else if (!player2->isStarted() && player1->isStarted() && m_Player1Bpm > 0) {
         // B waiting, A running → pre-cue B to A
+        player2->setTempoRate(1.0);
+        player2->setSyncAdopting(false);
         player2->alignCueToReferenceBeat(m_Player1Bpm, player1->currentPosition(), m_Player1BeatPosition);
+    }
 }
 
 void Knowthelist::player1_syncRequested()
 {
     // SYNC pressed on deck A: snap deck A's beat phase to deck B (the master).
-    if (m_Player2Bpm <= 0 || !player2->isStarted())
+    if (m_Player2Bpm <= 0 || !player2->isStarted()) {
+        player1->setSyncActive(false);
         return;
+    }
     player1->syncNowToReferenceBeat(m_Player2Bpm, player2->currentPosition(), m_Player2BeatPosition);
 }
 
 void Knowthelist::player2_syncRequested()
 {
     // SYNC pressed on deck B: snap deck B's beat phase to deck A (the master).
-    if (m_Player1Bpm <= 0 || !player1->isStarted())
+    if (m_Player1Bpm <= 0 || !player1->isStarted()) {
+        player2->setSyncActive(false);
         return;
+    }
     player2->syncNowToReferenceBeat(m_Player1Bpm, player1->currentPosition(), m_Player1BeatPosition);
 }
 
@@ -679,91 +742,170 @@ void Knowthelist::timerGain2_timeOut()
         timerGain2->stop();
 }
 
+void Knowthelist::beginPlainFade(PlayerWidget* incoming)
+{
+    clearAutoFadeSyncState();
+    m_rateRestoreTimer->stop();
+    m_rateRestorePlayer = nullptr;
+    if (incoming && !incoming->isStarted())
+        incoming->play();
+    timerAutoFader->start(mAutofadeLength * 5);
+}
+
+void Knowthelist::beginAutoFadeSync(PlayerWidget* outgoing, PlayerWidget* incoming,
+                                    int outgoingBpm, int incomingBpm,
+                                    const QTime& outgoingBeatPosition)
+{
+    clearAutoFadeSyncState();
+    m_rateRestoreTimer->stop();
+    m_rateRestorePlayer = nullptr;
+
+    m_fadeSyncPhase = FadeSyncPreRoll;
+    m_fadeSyncOutgoingPlayer = outgoing;
+    m_fadeSyncIncomingPlayer = incoming;
+    m_fadeSyncOutgoingBpm = outgoingBpm;
+    m_fadeSyncIncomingBpm = incomingBpm;
+    m_fadeSyncOutgoingBeatPosition = outgoingBeatPosition;
+    m_fadeSyncStartTempoBpm = qMax(1.0, static_cast<double>(outgoingBpm) * outgoing->tempoRate());
+    m_fadeSyncTargetTempoBpm = qMax(1.0, static_cast<double>(incomingBpm));
+    m_fadeSyncCrossfadeSteps = qMax(1, qAbs((m_xfadeDir < 0 ? ui->sliFader->minimum() : ui->sliFader->maximum()) - ui->sliFader->value()));
+    m_fadeSyncPreRollSteps = qMax(12, m_fadeSyncCrossfadeSteps / 4);
+    m_fadeSyncRestoreSteps = qMax(12, m_fadeSyncCrossfadeSteps / 4);
+    m_fadeSyncTotalSteps = m_fadeSyncPreRollSteps + m_fadeSyncCrossfadeSteps + m_fadeSyncRestoreSteps;
+    m_fadeSyncStep = 0;
+
+    outgoing->setSyncAdopting(true);
+    incoming->setSyncAdopting(false);
+    timerAutoFader->start(mAutofadeLength * 5);
+}
+
+double Knowthelist::autoFadeSharedTempoForStep(int step) const
+{
+    if (m_fadeSyncTotalSteps <= 0)
+        return m_fadeSyncTargetTempoBpm;
+
+    double progress = static_cast<double>(step) / static_cast<double>(m_fadeSyncTotalSteps);
+    progress = qBound(0.0, progress, 1.0);
+
+    const double safeStart = qMax(1.0, m_fadeSyncStartTempoBpm);
+    const double safeTarget = qMax(1.0, m_fadeSyncTargetTempoBpm);
+    const double ratioDistance = qAbs(std::log(safeTarget / safeStart));
+    const double curvePower = 1.15 + qBound(0.0, (ratioDistance - 0.08) * 3.2, 1.35);
+    const double easedProgress = std::pow(progress, curvePower);
+    return std::exp(std::log(safeStart)
+                    + (std::log(safeTarget) - std::log(safeStart)) * easedProgress);
+}
+
+void Knowthelist::applyAutoFadeSharedTempo(double sharedTempoBpm)
+{
+    if (m_fadeSyncOutgoingPlayer && m_fadeSyncOutgoingBpm > 0)
+        m_fadeSyncOutgoingPlayer->setTempoRate(sharedTempoBpm / static_cast<double>(m_fadeSyncOutgoingBpm));
+
+    if (m_fadeSyncPhase != FadeSyncPreRoll && m_fadeSyncIncomingPlayer && m_fadeSyncIncomingBpm > 0)
+        m_fadeSyncIncomingPlayer->setTempoRate(sharedTempoBpm / static_cast<double>(m_fadeSyncIncomingBpm));
+
+    if (m_fadeSyncOutgoingPlayer)
+        m_fadeSyncOutgoingPlayer->setSyncAdopting(m_fadeSyncPhase == FadeSyncPreRoll || m_fadeSyncPhase == FadeSyncCrossfade);
+    if (m_fadeSyncIncomingPlayer)
+        m_fadeSyncIncomingPlayer->setSyncAdopting(m_fadeSyncPhase == FadeSyncCrossfade || m_fadeSyncPhase == FadeSyncRestore);
+}
+
+void Knowthelist::clearAutoFadeSyncState()
+{
+    if (m_fadeSyncOutgoingPlayer)
+        m_fadeSyncOutgoingPlayer->setSyncAdopting(false);
+    if (m_fadeSyncIncomingPlayer)
+        m_fadeSyncIncomingPlayer->setSyncAdopting(false);
+
+    m_fadeSyncPhase = FadeSyncIdle;
+    m_fadeSyncOutgoingPlayer = nullptr;
+    m_fadeSyncIncomingPlayer = nullptr;
+    m_fadeSyncOutgoingBpm = 0;
+    m_fadeSyncIncomingBpm = 0;
+    m_fadeSyncOutgoingBeatPosition = QTime();
+    m_fadeSyncStartTempoBpm = 0.0;
+    m_fadeSyncTargetTempoBpm = 0.0;
+    m_fadeSyncStep = 0;
+    m_fadeSyncPreRollSteps = 0;
+    m_fadeSyncCrossfadeSteps = 0;
+    m_fadeSyncRestoreSteps = 0;
+    m_fadeSyncTotalSteps = 0;
+}
+
+void Knowthelist::resetWaitingDeckTempoPreviews()
+{
+    if (!player1->isStarted()) {
+        player1->setTempoRate(1.0);
+        player1->setSyncAdopting(false);
+    }
+    if (!player2->isStarted()) {
+        player2->setTempoRate(1.0);
+        player2->setSyncAdopting(false);
+    }
+}
+
+void Knowthelist::applyBeatVisualMode(bool enabled)
+{
+    player1->setBeatVisualMode(enabled);
+    player2->setBeatVisualMode(enabled);
+    if (m_toggleBeatVisualButton)
+        m_toggleBeatVisualButton->setText(enabled ? tr("BPM") : tr("VU"));
+}
+
+void Knowthelist::applyAutoSyncEnabled(bool enabled)
+{
+    m_autoSyncEnabled = enabled;
+    if (!enabled) {
+        clearAutoFadeSyncState();
+        resetWaitingDeckTempoPreviews();
+    }
+}
+
 void Knowthelist::fadeNow()
 {
     //Fade now!
     if (!isFading && (playList1->countTrack() > 0 || playList2->countTrack() > 0)) {
         PlayerWidget* incoming = nullptr;
+        PlayerWidget* outgoing = nullptr;
         int incomingBpm = 0;
         int outgoingBpm = 0;
+        QTime outgoingBeatPosition;
 
-        const int fadeStartFader = ui->sliFader->value();
-        if (fadeStartFader > 100) {
+        if (ui->sliFader->value() > 100) {
             m_xfadeDir = -1;
-            if (!player1->isStarted())
-                player1->play();
             incoming = player1;
+            outgoing = player2;
             incomingBpm = m_Player1Bpm;
             outgoingBpm = m_Player2Bpm;
-            //Fader has 200 steps * 5 = 1000ms
-            timerAutoFader->start(mAutofadeLength * 5);
+            outgoingBeatPosition = m_Player2BeatPosition;
         } else {
             m_xfadeDir = 1;
-            if (!player2->isStarted())
-                player2->play();
             incoming = player2;
+            outgoing = player1;
             incomingBpm = m_Player2Bpm;
             outgoingBpm = m_Player1Bpm;
-            timerAutoFader->start(mAutofadeLength * 5);
+            outgoingBeatPosition = m_Player1BeatPosition;
         }
 
-        player1->setSyncAdopting(false);
-        player2->setSyncAdopting(false);
+        const bool useAutoSync = ui->toggleAutoFade->isChecked()
+            && m_autoSyncEnabled
+            && outgoing && incoming
+            && outgoing->isStarted()
+            && !incoming->isStarted()
+            && outgoingBpm > 0 && incomingBpm > 0
+            && outgoing->supportsSmoothTempo()
+            && incoming->supportsSmoothTempo();
 
-        // Tempo-sync: rate-match the incoming deck to the outgoing deck during the fade.
-        m_rateRestoreTimer->stop();
-        m_rateRestorePlayer = incoming;
-        m_fadeSyncPlayer = incoming;
-        m_fadeSyncStartRate = incoming ? incoming->tempoRate() : 1.0;
-        m_fadeSyncTargetRate = 1.0;
-        m_fadeSyncStartFader = fadeStartFader;
-        m_fadeSyncTargetFader = (m_xfadeDir < 0) ? ui->sliFader->minimum() : ui->sliFader->maximum();
-        m_fadeSyncRampActive = false;
-        if (incomingBpm > 0 && outgoingBpm > 0) {
-            const double syncRate = static_cast<double>(outgoingBpm) / incomingBpm;
-            m_fadeSyncTargetRate = syncRate;
-            m_fadeSyncRampActive = incoming->supportsSmoothTempo() && !qFuzzyCompare(syncRate, m_fadeSyncStartRate);
-            incoming->setSyncAdopting(!qFuzzyCompare(syncRate, 1.0));
-            if (m_fadeSyncRampActive)
-                updateFadeTempoRamp();
-            else
-                incoming->setTempoRate(syncRate);
-        } else {
-            incoming->setTempoRate(1.0);
-            incoming->setSyncAdopting(false);
-        }
+        if (useAutoSync)
+            beginAutoFadeSync(outgoing, incoming, outgoingBpm, incomingBpm, outgoingBeatPosition);
+        else
+            beginPlainFade(incoming);
 
         isFading = true;
 
         //ToDo: search for a right time to save
         savePlaylists();
     }
-}
-
-void Knowthelist::updateFadeTempoRamp()
-{
-    if (!m_fadeSyncRampActive || !m_fadeSyncPlayer)
-        return;
-
-    const int totalDistance = qAbs(m_fadeSyncTargetFader - m_fadeSyncStartFader);
-    if (totalDistance <= 0) {
-        m_fadeSyncPlayer->setTempoRate(m_fadeSyncTargetRate);
-        return;
-    }
-
-    const int currentFader = ui->sliFader->value();
-    const int coveredDistance = qAbs(currentFader - m_fadeSyncStartFader);
-    double progress = static_cast<double>(coveredDistance) / static_cast<double>(totalDistance);
-    progress = qBound(0.0, progress, 1.0);
-
-    const double safeStart = qMax(0.01, m_fadeSyncStartRate);
-    const double safeTarget = qMax(0.01, m_fadeSyncTargetRate);
-    const double ratioDistance = qAbs(std::log(safeTarget / safeStart));
-    const double curvePower = 1.0 + qBound(0.0, (ratioDistance - 0.10) * 3.0, 1.0);
-    const double easedProgress = std::pow(progress, curvePower);
-    const double interpolatedRate = std::exp(std::log(safeStart)
-                                             + (std::log(safeTarget) - std::log(safeStart)) * easedProgress);
-    m_fadeSyncPlayer->setTempoRate(interpolatedRate);
 }
 
 void Knowthelist::changeVolumes()
@@ -808,11 +950,85 @@ void Knowthelist::sliFader_valueChanged(int)
 void Knowthelist::timerAutoFader_timerOut()
 
 {
-    //Auto-Fader moves
-    ui->sliFader->setValue(ui->sliFader->value() + m_xfadeDir);
-    updateFadeTempoRamp();
+    if (m_fadeSyncPhase == FadeSyncPreRoll) {
+        m_fadeSyncStep = qMin(m_fadeSyncTotalSteps, m_fadeSyncStep + 1);
+        applyAutoFadeSharedTempo(autoFadeSharedTempoForStep(m_fadeSyncStep));
 
-    //Blinking
+        if (m_fadeSyncStep >= m_fadeSyncPreRollSteps && m_fadeSyncIncomingPlayer) {
+            const int sharedTempoBpm = qMax(1, qRound(autoFadeSharedTempoForStep(m_fadeSyncStep)));
+            m_fadeSyncIncomingPlayer->alignCueToReferenceBeat(sharedTempoBpm,
+                                                              m_fadeSyncOutgoingPlayer->currentPosition(),
+                                                              m_fadeSyncOutgoingBeatPosition);
+            m_fadeSyncIncomingPlayer->setTempoRate(sharedTempoBpm / static_cast<double>(m_fadeSyncIncomingBpm));
+            if (!m_fadeSyncIncomingPlayer->isStarted())
+                m_fadeSyncIncomingPlayer->play();
+            m_fadeSyncPhase = FadeSyncCrossfade;
+        }
+        return;
+    }
+
+    if (m_fadeSyncPhase == FadeSyncCrossfade) {
+        ui->sliFader->setValue(ui->sliFader->value() + m_xfadeDir);
+        m_fadeSyncStep = qMin(m_fadeSyncTotalSteps, m_fadeSyncStep + 1);
+        applyAutoFadeSharedTempo(autoFadeSharedTempoForStep(m_fadeSyncStep));
+
+        if (ui->sliFader->value() % 3 == 0) {
+            if (m_xfadeDir < 0)
+                ui->ledFadeLeft->toggle();
+            else
+                ui->ledFadeRight->toggle();
+        }
+
+        const bool crossedLeft = ui->sliFader->value() <= ui->sliFader->minimum();
+        const bool crossedRight = ui->sliFader->value() >= ui->sliFader->maximum();
+        if (crossedLeft || crossedRight) {
+            if (crossedLeft)
+                ui->ledFadeLeft->off();
+            if (crossedRight)
+                ui->ledFadeRight->off();
+
+            PlayerWidget* finishedPlayer = m_fadeSyncOutgoingPlayer;
+            if (finishedPlayer == player1 && player1->isStarted()) {
+                player1->stop();
+                playList1->skipForward();
+            } else if (finishedPlayer == player2 && player2->isStarted()) {
+                player2->stop();
+                playList2->skipForward();
+            }
+
+            if (ui->toggleAutoDJ->isChecked())
+                djSession->updatePlaylists();
+
+            m_fadeSyncPhase = FadeSyncRestore;
+            if (m_fadeSyncStep >= m_fadeSyncTotalSteps || !m_fadeSyncIncomingPlayer || !m_fadeSyncIncomingPlayer->isStarted()) {
+                if (m_fadeSyncIncomingPlayer)
+                    m_fadeSyncIncomingPlayer->setTempoRate(1.0);
+                timerAutoFader->stop();
+                clearAutoFadeSyncState();
+                isFading = false;
+            }
+        }
+        changeVolumes();
+        return;
+    }
+
+    if (m_fadeSyncPhase == FadeSyncRestore) {
+        m_fadeSyncStep = qMin(m_fadeSyncTotalSteps, m_fadeSyncStep + 1);
+        applyAutoFadeSharedTempo(autoFadeSharedTempoForStep(m_fadeSyncStep));
+
+        if (m_fadeSyncStep >= m_fadeSyncTotalSteps || !m_fadeSyncIncomingPlayer || !m_fadeSyncIncomingPlayer->isStarted()) {
+            if (m_fadeSyncIncomingPlayer)
+                m_fadeSyncIncomingPlayer->setTempoRate(1.0);
+            timerAutoFader->stop();
+            clearAutoFadeSyncState();
+            isFading = false;
+        }
+        return;
+    }
+
+    // Plain crossfade without auto-sync.
+    ui->sliFader->setValue(ui->sliFader->value() + m_xfadeDir);
+
     if (ui->sliFader->value() % 3 == 0) {
         if (m_xfadeDir < 0)
             ui->ledFadeLeft->toggle();
@@ -821,39 +1037,21 @@ void Knowthelist::timerAutoFader_timerOut()
     }
 
     if (ui->sliFader->value() <= ui->sliFader->minimum()) {
-        //Fade from 2 to 1 is done
         timerAutoFader->stop();
         ui->ledFadeLeft->off();
         isFading = false;
-        m_fadeSyncRampActive = false;
-        m_fadeSyncPlayer = nullptr;
-        player1->setSyncAdopting(false);
-        player2->setSyncAdopting(false);
 
-        //ToDo:handle AutoDJ from Playlist
         if (player2->isStarted()) {
             player2->stop();
             playList2->skipForward();
         }
         if (ui->toggleAutoDJ->isChecked())
             djSession->updatePlaylists();
-
-        if (m_rateRestorePlayer == player1 && player1->supportsSmoothTempo() && !qFuzzyCompare(player1->tempoRate(), 1.0))
-            m_rateRestoreTimer->start();
-        else
-            player1->setTempoRate(1.0);
     }
     if (ui->sliFader->value() >= ui->sliFader->maximum()) {
-        //Fade from 1 to 2 is done
         timerAutoFader->stop();
         isFading = false;
         ui->ledFadeRight->off();
-        m_fadeSyncRampActive = false;
-        m_fadeSyncPlayer = nullptr;
-        player1->setSyncAdopting(false);
-        player2->setSyncAdopting(false);
-
-        //ToDo:  handle AutoDJ from Playlist
 
         if (player1->isStarted()) {
             player1->stop();
@@ -861,11 +1059,6 @@ void Knowthelist::timerAutoFader_timerOut()
         }
         if (ui->toggleAutoDJ->isChecked())
             djSession->updatePlaylists();
-
-        if (m_rateRestorePlayer == player2 && player2->supportsSmoothTempo() && !qFuzzyCompare(player2->tempoRate(), 1.0))
-            m_rateRestoreTimer->start();
-        else
-            player2->setTempoRate(1.0);
     }
     changeVolumes();
 }
@@ -1180,7 +1373,39 @@ void Knowthelist::on_toggleAutoFade_toggled(bool checked)
 {
     ui->ledFade->setState(checked ? QLed::On : QLed::Off);
     autoFadeOn = checked;
+    if (!checked) {
+        clearAutoFadeSyncState();
+        resetWaitingDeckTempoPreviews();
+    }
     setFaderModeToPlayer();
+}
+
+void Knowthelist::on_toggleAutoSync_toggled(bool checked)
+{
+    QSettings settings;
+    settings.setValue("autoSyncEnabled", checked);
+    applyAutoSyncEnabled(checked);
+}
+
+void Knowthelist::on_toggleBeatVisual_toggled(bool checked)
+{
+    QSettings settings;
+    settings.setValue("beatSyncVisualMode", checked);
+    applyBeatVisualMode(checked);
+    if (!checked && m_toggleAutoSyncButton && m_toggleAutoSyncButton->isChecked())
+        m_toggleAutoSyncButton->setChecked(false);
+}
+
+void Knowthelist::playlist1_currentTrackChanged(Track* track)
+{
+    Q_UNUSED(track)
+    resetWaitingDeckTempoPreviews();
+}
+
+void Knowthelist::playlist2_currentTrackChanged(Track* track)
+{
+    Q_UNUSED(track)
+    resetWaitingDeckTempoPreviews();
 }
 
 void Knowthelist::on_potHigh_1_valueChanged(int value)
