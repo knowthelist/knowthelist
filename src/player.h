@@ -48,10 +48,12 @@ public:
     void setEqualizer(QString, double);
     void setRate(double rate);
     double rate() const;
+    bool supportsSmoothTempo() const;
 
     QTime length();
     bool isPlaying();
     bool mediaPlayable();
+    bool isLoaded() const;
     QString lastError;
 
     double levelLeft();

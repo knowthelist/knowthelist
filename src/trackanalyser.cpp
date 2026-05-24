@@ -26,7 +26,7 @@
 
 #define AUDIOFREQ 32000
 #define SCAN_DURATION 60
-static const guint spect_bands = 8;
+static const guint spect_bands = 64;
 
 struct TrackAnalyser_Private
 {
@@ -322,8 +322,31 @@ void TrackAnalyser::loadThreadFinished()
     qDebug() << Q_FUNC_INFO <<":"<<parentWidget()->objectName()<<" analysisMode="<<p->analysisMode;
 
     if ( p->analysisMode == TrackAnalyser::TEMPO ){
-        //setPosition( m_EndPosition.addSecs(-SCAN_DURATION) );
-        setPosition(m_StartPosition);
+        QTime tempoStart = QTime(0, 0);
+        const int scanWindowMs = p->tempoScanDurationSeconds * 1000;
+        const int trackLengthMs = QTime(0, 0).msecsTo(length());
+        const int maxStartMs = qMax(0, trackLengthMs - scanWindowMs - 1000);
+
+        int preferredStartMs = 0;
+        if (trackLengthMs > 300000)
+            preferredStartMs = qMax(60000, (trackLengthMs / 2) - (scanWindowMs / 2));
+        else if (trackLengthMs > 210000)
+            preferredStartMs = qMax(45000, (trackLengthMs * 2) / 5);
+        else if (trackLengthMs > 150000)
+            preferredStartMs = qMax(30000, trackLengthMs / 3);
+        else if (trackLengthMs > 90000)
+            preferredStartMs = qMax(15000, trackLengthMs / 5);
+        else if (trackLengthMs > 60000)
+            preferredStartMs = 5000;
+
+        if (maxStartMs > 0)
+            tempoStart = QTime(0, 0).addMSecs(qMin(preferredStartMs, maxStartMs));
+
+        qDebug() << Q_FUNC_INFO << ":" << parentWidget()->objectName()
+                 << " tempoStart=" << tempoStart
+                 << " trackLengthMs=" << trackLengthMs
+                 << " scanWindowMs=" << scanWindowMs;
+        setPosition(tempoStart);
     }
     else {
         m_EndPosition=length();
@@ -421,10 +444,16 @@ void TrackAnalyser::messageReceived(GstMessage *message)
                                         const float positiveValue = value < 0 ? 0 : value;
                                         flux += positiveValue;
 
-                                        // Weight lower bands stronger to better follow kick/bass transients.
-                                        if (i < 3) {
-                                                const float bassWeight = (i == 0) ? 1.7f : ((i == 1) ? 1.4f : 1.2f);
-                                                lowFlux += positiveValue * bassWeight;
+                                        // With 64 bands at 32 kHz, the first few bins cover the real low end
+                                        // much more cleanly than the old 8-band setup, so we can bias the
+                                        // onset envelope toward kick and bass guitar instead of snare energy.
+                                        if (i < 6) {
+                                            const float bassWeight = (i == 0) ? 4.6f
+                                                              : ((i == 1) ? 3.4f
+                                                                  : ((i == 2) ? 2.4f
+                                                                      : ((i == 3) ? 1.7f
+                                                                          : ((i == 4) ? 1.2f : 0.9f))));
+                                            lowFlux += positiveValue * bassWeight;
                                         }
                     //qDebug() << Q_FUNC_INFO <<"freq:"<<freq<<" flux:"<<flux;
                   }
@@ -617,7 +646,7 @@ void TrackAnalyser::detectTempo()
 
     QVector<double> score(241, 0.0);
 
-    auto voteTempo = [&](const QVector<int>& onsets, const QList<float>& env, double weight) {
+    auto voteTempo = [&](const QVector<int>& onsets, const QList<float>& env, double weight, bool lowBandSource) {
         for (int i = 0; i < onsets.size(); ++i) {
             const int base = onsets.at(i);
             const float baseWeight = qMax(0.01f, env.at(base));
@@ -637,14 +666,21 @@ void TrackAnalyser::detectTempo()
                     const int bpmBin = qBound(kMinBpm, qRound(bpm), kMaxBpm);
                     const float pairWeight = qMax(0.01f, env.at(onsets.at(j)));
                     const double pairDistancePenalty = 1.0 / (1.0 + 0.08 * (j - i - 1));
-                    score[bpmBin] += weight * static_cast<double>(baseWeight * pairWeight) * pairDistancePenalty;
+                    const double contribution = weight * static_cast<double>(baseWeight * pairWeight) * pairDistancePenalty;
+                    score[bpmBin] += contribution;
+
+                    if (lowBandSource && bpmBin >= 72 && bpmBin <= 90) {
+                        const int doubledBin = bpmBin * 2;
+                        if (doubledBin >= 140 && doubledBin <= 180)
+                            score[doubledBin] += contribution * 0.65;
+                    }
                 }
             }
         }
     };
 
-    voteTempo(onsetsFull, fullEnv, 1.0);
-    voteTempo(onsetsLow, lowEnv, 1.65);
+    voteTempo(onsetsFull, fullEnv, 1.0, false);
+    voteTempo(onsetsLow, lowEnv, 2.25, true);
 
     QVector<double> smoothedScore = score;
     for (int bpmBin = kMinBpm; bpmBin <= kMaxBpm; ++bpmBin) {
@@ -673,7 +709,9 @@ void TrackAnalyser::detectTempo()
             support += smoothedScore[idx] * ((d == 0) ? 1.0 : 0.7);
         }
 
-        if (bpmBin * 2 <= kMaxBpm)
+        // Let high-BPM candidates absorb some evidence from their half-time alias,
+        // but do not let low-BPM aliases steal support from the real doubled tempo.
+        if (bpmBin * 2 <= kMaxBpm && bpmBin >= 100)
             support += 0.30 * smoothedScore[bpmBin * 2];
         if (bpmBin / 2 >= kMinBpm)
             support += 0.20 * smoothedScore[bpmBin / 2];
@@ -681,12 +719,104 @@ void TrackAnalyser::detectTempo()
         return support;
     };
 
+    auto strongestNear = [&](int center, int radius) {
+        int bestBpmBin = center;
+        double bestSupport = 0.0;
+        const int start = qMax(kMinBpm, center - radius);
+        const int end = qMin(kMaxBpm, center + radius);
+        for (int candidate = start; candidate <= end; ++candidate) {
+            const double candidateSupport = supportFor(candidate);
+            if (candidateSupport > bestSupport) {
+                bestSupport = candidateSupport;
+                bestBpmBin = candidate;
+            }
+        }
+        return QPair<int, double>(bestBpmBin, bestSupport);
+    };
+
+    auto lagCorrelation = [&](const QList<float>& env, double lagFrames) {
+        const int lag = qRound(lagFrames);
+        if (lag <= 0 || lag >= env.size())
+            return 0.0;
+
+        double corr = 0.0;
+        double energy = 0.0;
+        for (int i = 0; i + lag < env.size(); ++i) {
+            const double a = env.at(i);
+            const double b = env.at(i + lag);
+            corr += a * b;
+            energy += a * a + b * b;
+        }
+
+        return energy > 0.0 ? (2.0 * corr) / energy : 0.0;
+    };
+
+    auto strongestLagCorrelation = [&](const QList<float>& env, double lagFrames, int radius) {
+        double best = 0.0;
+        for (int delta = -radius; delta <= radius; ++delta)
+            best = qMax(best, lagCorrelation(env, lagFrames + delta));
+        return best;
+    };
+
     int votedBpm = bestBpm;
+    QStringList debugNotes;
+
+    auto topBinsToString = [&](const QVector<double>& values, int count) {
+        QStringList parts;
+        QVector<bool> used(values.size(), false);
+
+        for (int pick = 0; pick < count; ++pick) {
+            int bestIdx = -1;
+            double bestValue = 0.0;
+            for (int bpmBin = kMinBpm; bpmBin <= kMaxBpm; ++bpmBin) {
+                if (used[bpmBin])
+                    continue;
+                if (values[bpmBin] > bestValue) {
+                    bestValue = values[bpmBin];
+                    bestIdx = bpmBin;
+                }
+            }
+            if (bestIdx < 0 || bestValue <= 0.0)
+                break;
+            used[bestIdx] = true;
+            parts << QString::number(bestIdx) + "=" + QString::number(bestValue, 'f', 3);
+        }
+
+        return parts.join(", ");
+    };
 
     QList<float> combinedEnv;
     combinedEnv.reserve(fullEnv.size());
     for (int i = 0; i < fullEnv.size(); ++i)
         combinedEnv.append(0.6f * fullEnv.at(i) + 0.4f * lowEnv.at(i));
+
+    QVector<double> lagStrength(kMaxBpm + 1, 0.0);
+    double maxLagStrength = 0.0;
+    for (int bpmBin = kMinBpm; bpmBin <= kMaxBpm; ++bpmBin) {
+        const double lag = (static_cast<double>(p->fft_res) * 60.0) / bpmBin;
+        const double combinedBase = strongestLagCorrelation(combinedEnv, lag, 1);
+        const double lowBase = strongestLagCorrelation(lowEnv, lag, 1);
+        const double combinedDouble = strongestLagCorrelation(combinedEnv, lag * 2.0, 2);
+        const double lowDouble = strongestLagCorrelation(lowEnv, lag * 2.0, 2);
+        const double combinedHalf = strongestLagCorrelation(combinedEnv, lag * 0.5, 1);
+        const double lowHalf = strongestLagCorrelation(lowEnv, lag * 0.5, 1);
+
+        double strength = 0.55 * combinedBase + 1.00 * lowBase;
+        if (bpmBin >= 118)
+            strength += 0.45 * combinedDouble + 0.85 * lowDouble;
+        else
+            strength += 0.12 * combinedHalf + 0.18 * lowHalf;
+
+        lagStrength[bpmBin] = strength;
+        maxLagStrength = qMax(maxLagStrength, strength);
+    }
+
+    if (maxLagStrength > 0.0) {
+        for (int bpmBin = kMinBpm; bpmBin <= kMaxBpm; ++bpmBin)
+            lagStrength[bpmBin] /= maxLagStrength;
+    }
+
+    const double bestSupportOverall = qMax(0.0001, supportFor(bestBpm));
 
     const int autoCorrBpm = qRound(AutoCorrelation(combinedEnv, combinedEnv.count(), kMinBpm, kMaxBpm, p->fft_res));
     const int autoCorrLowBpm = qRound(AutoCorrelation(lowEnv, lowEnv.count(), kMinBpm, kMaxBpm, p->fft_res));
@@ -711,6 +841,30 @@ void TrackAnalyser::detectTempo()
             candidates.append(bpm);
     };
 
+    auto addTopPeaks = [&](const QVector<double>& values, int count, int minSpacing) {
+        QVector<bool> used(values.size(), false);
+        for (int pick = 0; pick < count; ++pick) {
+            int peak = -1;
+            double peakValue = 0.0;
+            for (int bpmBin = kMinBpm; bpmBin <= kMaxBpm; ++bpmBin) {
+                if (used[bpmBin])
+                    continue;
+                if (values[bpmBin] > peakValue) {
+                    peakValue = values[bpmBin];
+                    peak = bpmBin;
+                }
+            }
+            if (peak < 0 || peakValue <= 0.0)
+                break;
+
+            addCandidate(peak);
+            const int start = qMax(kMinBpm, peak - minSpacing);
+            const int end = qMin(kMaxBpm, peak + minSpacing);
+            for (int bpmBin = start; bpmBin <= end; ++bpmBin)
+                used[bpmBin] = true;
+        }
+    };
+
     addCandidate(votedBpm);
     addCandidate(bestBpm);
     addCandidate(qRound(votedBpm * 0.5));
@@ -719,8 +873,11 @@ void TrackAnalyser::detectTempo()
     addCandidate(qRound(votedBpm / 1.5));
     addCandidate(autoCorrConsensus);
     addCandidate(autoCorrLowBpm);
+    addCandidate(autoCorrConsensus * 2);
+    addCandidate(autoCorrLowBpm * 2);
     addCandidate(qRound(autoCorrConsensus * 1.5));
     addCandidate(qRound(autoCorrConsensus / 1.5));
+    addTopPeaks(smoothedScore, 6, 3);
 
     auto candidateStrength = [&](int bpm) {
         double strength = supportFor(bpm);
@@ -758,6 +915,12 @@ void TrackAnalyser::detectTempo()
                 strength *= 1.05;
         }
 
+        if (bpm >= kMinBpm && bpm <= kMaxBpm) {
+            const double lagBoost = lagStrength[bpm];
+            const double supportGate = qMin(1.0, supportFor(bpm) / bestSupportOverall);
+            strength += supportFor(bpm) * ((bpm >= 118) ? 0.45 : 0.18) * lagBoost * supportGate;
+        }
+
         return strength;
     };
 
@@ -774,30 +937,78 @@ void TrackAnalyser::detectTempo()
     if (finalBpm == 0)
         finalBpm = (autoCorrConsensus >= kMinBpm && autoCorrConsensus <= kMaxBpm) ? autoCorrConsensus : votedBpm;
 
+    QStringList candidateDebug;
+    QVector<bool> usedCandidate(candidates.size(), false);
+    const int debugCandidateCount = qMin(8, candidates.size());
+    for (int pick = 0; pick < debugCandidateCount; ++pick) {
+        int bestCandidateIndex = -1;
+        double bestCandidateStrength = -1.0;
+        for (int i = 0; i < candidates.size(); ++i) {
+            if (usedCandidate[i])
+                continue;
+            const double strength = candidateStrength(candidates.at(i));
+            if (strength > bestCandidateStrength) {
+                bestCandidateStrength = strength;
+                bestCandidateIndex = i;
+            }
+        }
+        if (bestCandidateIndex < 0)
+            break;
+        usedCandidate[bestCandidateIndex] = true;
+        const int candidate = candidates.at(bestCandidateIndex);
+        candidateDebug << QString::number(candidate)
+                            + "(strength=" + QString::number(bestCandidateStrength, 'f', 3)
+                            + ",support=" + QString::number(supportFor(candidate), 'f', 3) + ")";
+    }
+
     // Low-BPM aliases are common in rock/pop (half tempo, 2:3 relation).
     // Promote 2x or 1.5x candidates when evidence is close.
     if (finalBpm >= 68 && finalBpm <= 95) {
         const double currentSupport = supportFor(finalBpm);
         const int doubledBpm = finalBpm * 2;
         const bool hasDoubled = (doubledBpm >= kMinBpm && doubledBpm <= kMaxBpm);
-        double doubledSupport = hasDoubled ? supportFor(doubledBpm) : 0.0;
+        QPair<int, double> doubledCandidate = hasDoubled ? strongestNear(doubledBpm, 6) : QPair<int, double>(0, 0.0);
+        double doubledSupport = doubledCandidate.second;
+        const int tripletBpm = qRound(finalBpm * 1.5);
+        const double tripletSupport = (tripletBpm >= kMinBpm && tripletBpm <= kMaxBpm)
+            ? supportFor(tripletBpm)
+            : 0.0;
 
         // Hard-bias against half-time lock for fast punk/rock style material.
         if (finalBpm <= 80 && hasDoubled) {
             double requiredRatio = 0.38;
             if (autoCorrConsensus >= kMinBpm && autoCorrConsensus <= kMaxBpm
-                && qAbs(doubledBpm - autoCorrConsensus) <= 5) {
+                && qAbs(doubledCandidate.first - autoCorrConsensus) <= 5) {
                 requiredRatio = 0.30;
                 doubledSupport *= 1.08;
             }
             if (autoCorrLowBpm >= kMinBpm && autoCorrLowBpm <= kMaxBpm
-                && qAbs(doubledBpm - autoCorrLowBpm) <= 5) {
+                && qAbs(doubledCandidate.first - autoCorrLowBpm) <= 5) {
                 requiredRatio = qMin(requiredRatio, 0.26);
                 doubledSupport *= 1.06;
             }
 
-            if (doubledSupport >= currentSupport * requiredRatio)
-                finalBpm = doubledBpm;
+            // Fast 4/4 disco and pop often land around 76-80 BPM as a half-time alias.
+            // Prefer the strongest nearby 2x candidate unless the 3:2 interpretation is clearly stronger.
+            if (doubledCandidate.first >= 150)
+                requiredRatio = qMin(requiredRatio, 0.30);
+
+            debugNotes << QString("half-time guard: base=%1 support=%2 doubled=%3 support=%4 triplet=%5 support=%6 ratio=%7")
+                              .arg(finalBpm)
+                              .arg(currentSupport, 0, 'f', 3)
+                              .arg(doubledCandidate.first)
+                              .arg(doubledSupport, 0, 'f', 3)
+                              .arg(tripletBpm)
+                              .arg(tripletSupport, 0, 'f', 3)
+                              .arg(requiredRatio, 0, 'f', 3);
+
+            if (doubledSupport >= currentSupport * requiredRatio
+                && doubledSupport >= tripletSupport * 0.92) {
+                finalBpm = doubledCandidate.first;
+                debugNotes << QString("half-time guard promoted to %1").arg(finalBpm);
+            } else {
+                debugNotes << QString("half-time guard kept %1").arg(finalBpm);
+            }
         }
 
         const double refreshedSupport = supportFor(finalBpm);
@@ -826,8 +1037,16 @@ void TrackAnalyser::detectTempo()
             }
         }
 
-        if (promotedBpm != finalBpm && promotedScore >= refreshedSupport * 0.90)
+        debugNotes << QString("promotion scan: base=%1 support=%2 best=%3 score=%4")
+                          .arg(finalBpm)
+                          .arg(refreshedSupport, 0, 'f', 3)
+                          .arg(promotedBpm)
+                          .arg(promotedScore, 0, 'f', 3);
+
+        if (promotedBpm != finalBpm && promotedScore >= refreshedSupport * 0.90) {
             finalBpm = promotedBpm;
+            debugNotes << QString("promotion scan switched to %1").arg(finalBpm);
+        }
     }
 
     // Final hard guard against half-time lock-in for tracks that commonly sit
@@ -836,25 +1055,55 @@ void TrackAnalyser::detectTempo()
         const int doubled = finalBpm * 2;
         if (doubled <= kMaxBpm) {
             const double baseSupport = supportFor(finalBpm);
-            double doubledSupport = supportFor(doubled);
+            QPair<int, double> doubledCandidate = strongestNear(doubled, 6);
+            double doubledSupport = doubledCandidate.second;
+            const int triplet = qRound(finalBpm * 1.5);
+            const double tripletSupport = (triplet >= kMinBpm && triplet <= kMaxBpm)
+                ? supportFor(triplet)
+                : 0.0;
 
             if (autoCorrConsensus >= kMinBpm && autoCorrConsensus <= kMaxBpm
-                && qAbs(doubled - autoCorrConsensus) <= 5) {
+                && qAbs(doubledCandidate.first - autoCorrConsensus) <= 5) {
                 doubledSupport *= 1.10;
             }
             if (autoCorrLowBpm >= kMinBpm && autoCorrLowBpm <= kMaxBpm
-                && qAbs(doubled - autoCorrLowBpm) <= 5) {
+                && qAbs(doubledCandidate.first - autoCorrLowBpm) <= 5) {
                 doubledSupport *= 1.08;
             }
 
             // Prefer 2x unless 1x is clearly stronger.
-            if (doubledSupport >= baseSupport * 0.38)
-                finalBpm = doubled;
+            debugNotes << QString("final hard guard: base=%1 support=%2 doubled=%3 support=%4 triplet=%5 support=%6")
+                              .arg(finalBpm)
+                              .arg(baseSupport, 0, 'f', 3)
+                              .arg(doubledCandidate.first)
+                              .arg(doubledSupport, 0, 'f', 3)
+                              .arg(triplet)
+                              .arg(tripletSupport, 0, 'f', 3);
+
+            if (doubledSupport >= baseSupport * 0.34
+                && doubledSupport >= tripletSupport * 0.92) {
+                finalBpm = doubledCandidate.first;
+                debugNotes << QString("final hard guard promoted to %1").arg(finalBpm);
+            } else {
+                debugNotes << QString("final hard guard kept %1").arg(finalBpm);
+            }
         }
     }
 
     p->bpm = qBound(0, finalBpm, kMaxBpm);
-    qDebug() << Q_FUNC_INFO << "multi-feature bpm:" << p->bpm;
+    const QString analyserName = parentWidget() ? parentWidget()->objectName() : QString();
+    qDebug() << Q_FUNC_INFO << ":" << analyserName << "frames:" << spectralFlux.size()
+             << "fullOnsets:" << onsetsFull.size()
+             << "lowOnsets:" << onsetsLow.size();
+    qDebug() << Q_FUNC_INFO << ":" << analyserName << "smoothed peaks:" << topBinsToString(smoothedScore, 8);
+    qDebug() << Q_FUNC_INFO << ":" << analyserName << "lag peaks:" << topBinsToString(lagStrength, 8);
+    qDebug() << Q_FUNC_INFO << ":" << analyserName << "autocorr full:" << autoCorrBpm
+             << "low:" << autoCorrLowBpm
+             << "consensus:" << autoCorrConsensus;
+    qDebug() << Q_FUNC_INFO << ":" << analyserName << "candidates:" << candidateDebug.join(", ");
+    if (!debugNotes.isEmpty())
+        qDebug() << Q_FUNC_INFO << ":" << analyserName << "decision path:" << debugNotes.join(" | ");
+    qDebug() << Q_FUNC_INFO << ":" << analyserName << "multi-feature bpm:" << p->bpm;
 
     // Use a strong early kick/bass transient as phase anchor when available.
     int beatAnchorIdx = -1;

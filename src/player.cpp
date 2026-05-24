@@ -175,6 +175,53 @@ void configureAudioSink(GstElement* sink)
     if (g_object_class_find_property(klass, "async") != nullptr)
         g_object_set(sink, "async", FALSE, NULL);
 }
+
+bool hasWritableProperty(GstElement* element, const char* propertyName)
+{
+    if (element == nullptr || propertyName == nullptr)
+        return false;
+
+    GObjectClass* klass = G_OBJECT_GET_CLASS(element);
+    if (klass == nullptr)
+        return false;
+
+    GParamSpec* spec = g_object_class_find_property(klass, propertyName);
+    return spec != nullptr && (spec->flags & G_PARAM_WRITABLE) != 0;
+}
+
+GstElement* getTempoEffect(GstElement* pipeline)
+{
+    if (pipeline == nullptr)
+        return nullptr;
+    return gst_bin_get_by_name(GST_BIN(pipeline), "tempoeffect");
+}
+
+bool pipelineSupportsSmoothTempo(GstElement* pipeline)
+{
+    GstElement* tempoEffect = getTempoEffect(pipeline);
+    if (tempoEffect == nullptr)
+        return false;
+
+    const bool supported = hasWritableProperty(tempoEffect, "tempo");
+    gst_object_unref(tempoEffect);
+    return supported;
+}
+
+void setTempoEffectRate(GstElement* pipeline, double rate)
+{
+    GstElement* tempoEffect = getTempoEffect(pipeline);
+    if (tempoEffect == nullptr)
+        return;
+
+    if (hasWritableProperty(tempoEffect, "tempo"))
+        g_object_set(G_OBJECT(tempoEffect), "tempo", rate, NULL);
+    if (hasWritableProperty(tempoEffect, "pitch"))
+        g_object_set(G_OBJECT(tempoEffect), "pitch", 1.0, NULL);
+    if (hasWritableProperty(tempoEffect, "rate"))
+        g_object_set(G_OBJECT(tempoEffect), "rate", 1.0, NULL);
+
+    gst_object_unref(tempoEffect);
+}
 }
 
 void Player::sync_set_state(GstElement* element, GstState state)
@@ -391,20 +438,36 @@ bool Player::prepare()
     configureLevelMessaging(levelout);
     g_object_set(level, "peak-ttl", 300000000000, NULL);
 
-    // scaletempo enables tempo change without pitch shift (time-stretching).
-    // Falls back gracefully if the plugin is not installed.
-    GstElement* scaletempo = gst_element_factory_make("scaletempo", "scaletempo");
+    // Prefer a writable tempo effect so runtime tempo changes do not require seeks.
+    GstElement* tempoEffect = gst_element_factory_make("pitch", "tempoeffect");
 
-    if (scaletempo) {
-        gst_bin_add_many(GST_BIN(pipeline), src, conv, resample, scaletempo, level, gain, equalizer, levelout, vol, sink, NULL);
+    if (tempoEffect != nullptr && hasWritableProperty(tempoEffect, "tempo")) {
+        g_object_set(G_OBJECT(tempoEffect), "tempo", 1.0, NULL);
+        if (hasWritableProperty(tempoEffect, "pitch"))
+            g_object_set(G_OBJECT(tempoEffect), "pitch", 1.0, NULL);
+        if (hasWritableProperty(tempoEffect, "rate"))
+            g_object_set(G_OBJECT(tempoEffect), "rate", 1.0, NULL);
+
+        gst_bin_add_many(GST_BIN(pipeline), src, conv, resample, tempoEffect, level, gain, equalizer, levelout, vol, sink, NULL);
         gst_element_link(conv, resample);
-        gst_element_link(resample, scaletempo);
-        gst_element_link_filtered(scaletempo, level, caps);
+        gst_element_link(resample, tempoEffect);
+        gst_element_link_filtered(tempoEffect, level, caps);
     } else {
-        qDebug() << Q_FUNC_INFO << "scaletempo not available – rate changes will affect pitch";
-        gst_bin_add_many(GST_BIN(pipeline), src, conv, resample, level, gain, equalizer, levelout, vol, sink, NULL);
-        gst_element_link(conv, resample);
-        gst_element_link_filtered(resample, level, caps);
+        if (tempoEffect != nullptr)
+            gst_object_unref(tempoEffect);
+
+        tempoEffect = gst_element_factory_make("scaletempo", "tempoeffect");
+        if (tempoEffect != nullptr) {
+            gst_bin_add_many(GST_BIN(pipeline), src, conv, resample, tempoEffect, level, gain, equalizer, levelout, vol, sink, NULL);
+            gst_element_link(conv, resample);
+            gst_element_link(resample, tempoEffect);
+            gst_element_link_filtered(tempoEffect, level, caps);
+        } else {
+            qDebug() << Q_FUNC_INFO << "no smooth tempo element available – tempo changes will use segment seeks";
+            gst_bin_add_many(GST_BIN(pipeline), src, conv, resample, level, gain, equalizer, levelout, vol, sink, NULL);
+            gst_element_link(conv, resample);
+            gst_element_link_filtered(resample, level, caps);
+        }
     }
 
     gst_element_link(level, gain);
@@ -457,9 +520,12 @@ void Player::asyncOpen(QUrl url)
     QMutexLocker locker(&p->mutex);
     p->length = 0;
     p->position = 0;
+    p->rate = 1.0;
     p->isLoaded = false;
     p->error = "";
     lastError = "";
+
+    setTempoEffectRate(pipeline, 1.0);
 
     sync_set_state(GST_ELEMENT(pipeline), GST_STATE_NULL);
 
@@ -503,8 +569,10 @@ void Player::play()
 void Player::stop()
 {
     p->isStarted = false;
+    p->rate = 1.0;
     p->playBasePosition = 0;
     p->playTimer.invalidate();
+    setTempoEffectRate(pipeline, 1.0);
     gst_element_set_state(GST_ELEMENT(pipeline), GST_STATE_READY);
 }
 
@@ -530,8 +598,8 @@ void Player::setPosition(QTime position)
 {
     int time_milliseconds = QTime(0, 0).msecsTo(position);
     gint64 time_nanoseconds = (time_milliseconds * GST_MSECOND);
-    // Preserve current playback rate across seeks.
-    gst_element_seek(pipeline, p->rate, GST_FORMAT_TIME, GST_SEEK_FLAG_FLUSH,
+    const gdouble seekRate = pipelineSupportsSmoothTempo(pipeline) ? 1.0 : p->rate;
+    gst_element_seek(pipeline, seekRate, GST_FORMAT_TIME, GST_SEEK_FLAG_FLUSH,
         GST_SEEK_TYPE_SET, time_nanoseconds,
         GST_SEEK_TYPE_NONE, GST_CLOCK_TIME_NONE);
     p->position = time_milliseconds;
@@ -540,14 +608,45 @@ void Player::setPosition(QTime position)
 
 void Player::setRate(double rate)
 {
+    if (pipeline == nullptr)
+        return;
+
+    if (rate < 0.50)
+        rate = 0.50;
+    else if (rate > 2.00)
+        rate = 2.00;
+
     if (qFuzzyCompare(rate, p->rate))
         return;
+
+    const double previousRate = p->rate;
     p->rate = rate;
+
+    if (!p->isLoaded)
+        return;
+
+    if (pipelineSupportsSmoothTempo(pipeline)) {
+        setTempoEffectRate(pipeline, rate);
+        if (p->isStarted)
+            p->playTimer.restart();
+        return;
+    }
+
     gint64 pos = 0;
     if (!gst_element_query_position(pipeline, GST_FORMAT_TIME, &pos))
         pos = static_cast<gint64>(p->position) * GST_MSECOND;
+
+    p->position = static_cast<int>(pos / GST_MSECOND);
+    p->playBasePosition = p->position;
+    if (p->isStarted)
+        p->playTimer.restart();
+
+    GstSeekFlags flags = GST_SEEK_FLAG_ACCURATE;
+    if (!p->isStarted)
+        flags = static_cast<GstSeekFlags>(flags | GST_SEEK_FLAG_FLUSH);
+
     gst_element_seek(pipeline, rate, GST_FORMAT_TIME,
-        static_cast<GstSeekFlags>(GST_SEEK_FLAG_FLUSH | GST_SEEK_FLAG_ACCURATE),
+        flags,
         GST_SEEK_TYPE_SET, pos,
         GST_SEEK_TYPE_NONE, GST_CLOCK_TIME_NONE);
 }
@@ -555,6 +654,16 @@ void Player::setRate(double rate)
 double Player::rate() const
 {
     return p->rate;
+}
+
+bool Player::isLoaded() const
+{
+    return p->isLoaded;
+}
+
+bool Player::supportsSmoothTempo() const
+{
+    return pipelineSupportsSmoothTempo(pipeline);
 }
 
 QTime Player::position()
@@ -572,7 +681,7 @@ QTime Player::position()
         }
 
         if (p->isStarted && p->playTimer.isValid()) {
-            p->position = p->playBasePosition + static_cast<int>(p->playTimer.elapsed());
+            p->position = p->playBasePosition + static_cast<int>(p->playTimer.elapsed() * p->rate);
             return QTime(0, 0).addMSecs(p->position);
         }
 

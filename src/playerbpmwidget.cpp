@@ -22,6 +22,13 @@ float clamp01(float v)
         return 1.0f;
     return v;
 }
+
+QString formatTempoValue(double tempo)
+{
+    if (qAbs(tempo - qRound(tempo)) < 0.05)
+        return QString::number(qRound(tempo));
+    return QString::number(tempo, 'f', 1);
+}
 }
 
 PlayerBpmWidget::PlayerBpmWidget(QWidget* parent)
@@ -31,6 +38,8 @@ PlayerBpmWidget::PlayerBpmWidget(QWidget* parent)
     , m_beatReference(QTime())
     , m_running(false)
     , m_analysed(false)
+    , m_tempoRate(1.0)
+    , m_syncAdjusting(false)
     , m_windowMs(6000)
     , m_sampleIntervalMs(50)
 {
@@ -44,6 +53,13 @@ void PlayerBpmWidget::setState(int bpm, const QTime& position, const QTime& beat
     m_beatReference = beatReference;
     m_running = running;
     m_analysed = analysed;
+    update();
+}
+
+void PlayerBpmWidget::setTempoInfo(double tempoRate, bool syncAdjusting)
+{
+    m_tempoRate = tempoRate;
+    m_syncAdjusting = syncAdjusting;
     update();
 }
 
@@ -103,12 +119,25 @@ void PlayerBpmWidget::paintEvent(QPaintEvent* event)
     QString bpmText;
     if (!m_analysed)
         bpmText = QString("Analysing BPM...");
-    else if (m_bpm > 0)
+    else if (m_bpm > 0) {
         bpmText = QString::number(m_bpm) + " BPM";
+        const double adjustedTempo = static_cast<double>(m_bpm) * m_tempoRate;
+        if (qAbs(adjustedTempo - static_cast<double>(m_bpm)) >= 0.05)
+            bpmText += " (" + formatTempoValue(adjustedTempo) + ")";
+    }
     else
         bpmText = QString("No BPM detected");
     painter.setPen(QColor(214, 226, 243));
-    painter.drawText(outer.adjusted(8, 2, -8, -2), Qt::AlignLeft | Qt::AlignTop, bpmText);
+    const QRect textRect = outer.adjusted(8, 2, -32, -2);
+    painter.drawText(textRect, Qt::AlignLeft | Qt::AlignTop, bpmText);
+
+    if (m_syncAdjusting) {
+        const int blinkSlice = (QTime::currentTime().msecsSinceStartOfDay() / 300) % 2;
+        painter.setPen(QPen(QColor(255, 190, 64), 1.0));
+        painter.setBrush(blinkSlice == 0 ? QColor(255, 190, 64) : QColor(66, 78, 94));
+        const QRect syncDot(outer.right() - 20, outer.top() + 6, 10, 10);
+        painter.drawEllipse(syncDot);
+    }
 
     const int bandTop = outer.top() + 18;
     const QRect phaseBand(outer.left() + 6, bandTop, outer.width() - 12, qMax(22, outer.bottom() - bandTop - 5));

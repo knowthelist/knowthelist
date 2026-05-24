@@ -66,6 +66,8 @@ public:
     QTime beatPosition() const { return m_beatPosition; }
     void setTempoRate(double rate);
     double tempoRate() const { return m_tempoRate; }
+    void setSyncAdopting(bool active);
+    bool supportsSmoothTempo() const;
     void syncNowToReferenceBeat(int referenceBpm, const QTime& referencePosition,
                                 const QTime& referenceBeatAnchor = QTime());
     void alignCueToReferenceBeat(int referenceBpm, const QTime& referencePosition,
@@ -88,6 +90,7 @@ public Q_SLOTS:
     void loadTrack(Track*);
     void analyseGainFinished();
     void analyseTempoFinished();
+    void onTrackPropertyChanged(Track* track);
     void setEqualizer(EqBand, int);
     void setInfo(QPair<int, int> info);
     void on_butBeatMode_clicked(bool checked);
@@ -138,6 +141,7 @@ private:
     void resizeEvent(QResizeEvent* e);
     void drawTitle();
     void applyBeatVisualLayout(bool enabled);
+    void updateResponsiveLayout();
 
     Player* player;
     TrackAnalyser* trackanalyser;
@@ -165,6 +169,7 @@ private:
     bool m_beatCueEnabled;
     bool m_beatVisualMode;
     double m_tempoRate;
+    bool m_syncAdopting;
     bool m_bpmAnalysed;
     int m_bpm;
     QTime m_beatPosition;

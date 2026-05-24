@@ -110,6 +110,7 @@ private:
     Ui::Knowthelist* ui;
     void createUI();
     void fadeNow();
+    void updateFadeTempoRamp();
     void setFaderModeToPlayer();
     QTimer* timerAutoFader;
     int m_xfadeDir;
@@ -159,6 +160,12 @@ private:
     QTime m_Player2BeatPosition;
     QTimer* m_rateRestoreTimer;
     PlayerWidget* m_rateRestorePlayer;
+    PlayerWidget* m_fadeSyncPlayer;
+    double m_fadeSyncStartRate;
+    double m_fadeSyncTargetRate;
+    int m_fadeSyncStartFader;
+    int m_fadeSyncTargetFader;
+    bool m_fadeSyncRampActive;
 
 protected:
     virtual void closeEvent(QCloseEvent*);

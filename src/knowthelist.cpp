@@ -28,6 +28,7 @@
 #include <QSettings>
 #include <QtConcurrent/QtConcurrent>
 #include <QMetaType>
+#include <cmath>
 
 Knowthelist::Knowthelist(QWidget* parent)
     : QMainWindow(parent)
@@ -38,6 +39,14 @@ Knowthelist::Knowthelist(QWidget* parent)
     , timerBeatSyncVisual(nullptr)
     , m_Player1Bpm(0)
     , m_Player2Bpm(0)
+    , m_rateRestoreTimer(nullptr)
+    , m_rateRestorePlayer(nullptr)
+    , m_fadeSyncPlayer(nullptr)
+    , m_fadeSyncStartRate(1.0)
+    , m_fadeSyncTargetRate(1.0)
+    , m_fadeSyncStartFader(0)
+    , m_fadeSyncTargetFader(0)
+    , m_fadeSyncRampActive(false)
 {
     ui->setupUi(this);
 
@@ -108,9 +117,8 @@ void Knowthelist::createUI()
     timerAutoFader = new QTimer(this);
     connect(timerAutoFader, SIGNAL(timeout()), SLOT(timerAutoFader_timerOut()));
 
-    m_rateRestorePlayer = nullptr;
     m_rateRestoreTimer = new QTimer(this);
-    m_rateRestoreTimer->setInterval(500);
+    m_rateRestoreTimer->setInterval(250);
     connect(m_rateRestoreTimer, &QTimer::timeout, this, &Knowthelist::timerRateRestore_timeOut);
 
     vuMeter2 = new VUMeter(ui->frameMixer);
@@ -177,6 +185,8 @@ void Knowthelist::createUI()
 
     connect(playList1, SIGNAL(currentTrackChanged(Track*)), player1, SLOT(loadTrack(Track*)));
     connect(playList2, SIGNAL(currentTrackChanged(Track*)), player2, SLOT(loadTrack(Track*)));
+    connect(playList1, SIGNAL(trackPropertyChanged(Track*)), player1, SLOT(onTrackPropertyChanged(Track*)));
+    connect(playList2, SIGNAL(trackPropertyChanged(Track*)), player2, SLOT(onTrackPropertyChanged(Track*)));
 
     connect(player1, SIGNAL(forwardPressed()), playList1, SLOT(skipForward()));
     connect(player2, SIGNAL(forwardPressed()), playList2, SLOT(skipForward()));
@@ -674,16 +684,15 @@ void Knowthelist::fadeNow()
     //Fade now!
     if (!isFading && (playList1->countTrack() > 0 || playList2->countTrack() > 0)) {
         PlayerWidget* incoming = nullptr;
-        PlayerWidget* outgoing = nullptr;
         int incomingBpm = 0;
         int outgoingBpm = 0;
 
-        if (ui->sliFader->value() > 100) {
+        const int fadeStartFader = ui->sliFader->value();
+        if (fadeStartFader > 100) {
             m_xfadeDir = -1;
             if (!player1->isStarted())
                 player1->play();
             incoming = player1;
-            outgoing = player2;
             incomingBpm = m_Player1Bpm;
             outgoingBpm = m_Player2Bpm;
             //Fader has 200 steps * 5 = 1000ms
@@ -693,19 +702,35 @@ void Knowthelist::fadeNow()
             if (!player2->isStarted())
                 player2->play();
             incoming = player2;
-            outgoing = player1;
             incomingBpm = m_Player2Bpm;
             outgoingBpm = m_Player1Bpm;
             timerAutoFader->start(mAutofadeLength * 5);
         }
 
-        // Tempo-sync: pitch the incoming deck to match the outgoing deck's BPM.
-        // The rate is restored gradually after the crossfade completes.
+        player1->setSyncAdopting(false);
+        player2->setSyncAdopting(false);
+
+        // Tempo-sync: rate-match the incoming deck to the outgoing deck during the fade.
         m_rateRestoreTimer->stop();
         m_rateRestorePlayer = incoming;
+        m_fadeSyncPlayer = incoming;
+        m_fadeSyncStartRate = incoming ? incoming->tempoRate() : 1.0;
+        m_fadeSyncTargetRate = 1.0;
+        m_fadeSyncStartFader = fadeStartFader;
+        m_fadeSyncTargetFader = (m_xfadeDir < 0) ? ui->sliFader->minimum() : ui->sliFader->maximum();
+        m_fadeSyncRampActive = false;
         if (incomingBpm > 0 && outgoingBpm > 0) {
             const double syncRate = static_cast<double>(outgoingBpm) / incomingBpm;
-            incoming->setTempoRate(syncRate);
+            m_fadeSyncTargetRate = syncRate;
+            m_fadeSyncRampActive = incoming->supportsSmoothTempo() && !qFuzzyCompare(syncRate, m_fadeSyncStartRate);
+            incoming->setSyncAdopting(!qFuzzyCompare(syncRate, 1.0));
+            if (m_fadeSyncRampActive)
+                updateFadeTempoRamp();
+            else
+                incoming->setTempoRate(syncRate);
+        } else {
+            incoming->setTempoRate(1.0);
+            incoming->setSyncAdopting(false);
         }
 
         isFading = true;
@@ -713,6 +738,32 @@ void Knowthelist::fadeNow()
         //ToDo: search for a right time to save
         savePlaylists();
     }
+}
+
+void Knowthelist::updateFadeTempoRamp()
+{
+    if (!m_fadeSyncRampActive || !m_fadeSyncPlayer)
+        return;
+
+    const int totalDistance = qAbs(m_fadeSyncTargetFader - m_fadeSyncStartFader);
+    if (totalDistance <= 0) {
+        m_fadeSyncPlayer->setTempoRate(m_fadeSyncTargetRate);
+        return;
+    }
+
+    const int currentFader = ui->sliFader->value();
+    const int coveredDistance = qAbs(currentFader - m_fadeSyncStartFader);
+    double progress = static_cast<double>(coveredDistance) / static_cast<double>(totalDistance);
+    progress = qBound(0.0, progress, 1.0);
+
+    const double safeStart = qMax(0.01, m_fadeSyncStartRate);
+    const double safeTarget = qMax(0.01, m_fadeSyncTargetRate);
+    const double ratioDistance = qAbs(std::log(safeTarget / safeStart));
+    const double curvePower = 1.0 + qBound(0.0, (ratioDistance - 0.10) * 3.0, 1.0);
+    const double easedProgress = std::pow(progress, curvePower);
+    const double interpolatedRate = std::exp(std::log(safeStart)
+                                             + (std::log(safeTarget) - std::log(safeStart)) * easedProgress);
+    m_fadeSyncPlayer->setTempoRate(interpolatedRate);
 }
 
 void Knowthelist::changeVolumes()
@@ -759,6 +810,7 @@ void Knowthelist::timerAutoFader_timerOut()
 {
     //Auto-Fader moves
     ui->sliFader->setValue(ui->sliFader->value() + m_xfadeDir);
+    updateFadeTempoRamp();
 
     //Blinking
     if (ui->sliFader->value() % 3 == 0) {
@@ -773,6 +825,10 @@ void Knowthelist::timerAutoFader_timerOut()
         timerAutoFader->stop();
         ui->ledFadeLeft->off();
         isFading = false;
+        m_fadeSyncRampActive = false;
+        m_fadeSyncPlayer = nullptr;
+        player1->setSyncAdopting(false);
+        player2->setSyncAdopting(false);
 
         //ToDo:handle AutoDJ from Playlist
         if (player2->isStarted()) {
@@ -782,15 +838,20 @@ void Knowthelist::timerAutoFader_timerOut()
         if (ui->toggleAutoDJ->isChecked())
             djSession->updatePlaylists();
 
-        // Start gradual rate restoration for the now-playing deck.
-        if (m_rateRestorePlayer && !qFuzzyCompare(m_rateRestorePlayer->tempoRate(), 1.0))
+        if (m_rateRestorePlayer == player1 && player1->supportsSmoothTempo() && !qFuzzyCompare(player1->tempoRate(), 1.0))
             m_rateRestoreTimer->start();
+        else
+            player1->setTempoRate(1.0);
     }
     if (ui->sliFader->value() >= ui->sliFader->maximum()) {
         //Fade from 1 to 2 is done
         timerAutoFader->stop();
         isFading = false;
         ui->ledFadeRight->off();
+        m_fadeSyncRampActive = false;
+        m_fadeSyncPlayer = nullptr;
+        player1->setSyncAdopting(false);
+        player2->setSyncAdopting(false);
 
         //ToDo:  handle AutoDJ from Playlist
 
@@ -801,9 +862,10 @@ void Knowthelist::timerAutoFader_timerOut()
         if (ui->toggleAutoDJ->isChecked())
             djSession->updatePlaylists();
 
-        // Start gradual rate restoration for the now-playing deck.
-        if (m_rateRestorePlayer && !qFuzzyCompare(m_rateRestorePlayer->tempoRate(), 1.0))
+        if (m_rateRestorePlayer == player2 && player2->supportsSmoothTempo() && !qFuzzyCompare(player2->tempoRate(), 1.0))
             m_rateRestoreTimer->start();
+        else
+            player2->setTempoRate(1.0);
     }
     changeVolumes();
 }
@@ -814,14 +876,23 @@ void Knowthelist::timerRateRestore_timeOut()
         m_rateRestoreTimer->stop();
         return;
     }
+
+    if (!m_rateRestorePlayer->isStarted()) {
+        m_rateRestorePlayer->setTempoRate(1.0);
+        m_rateRestoreTimer->stop();
+        m_rateRestorePlayer = nullptr;
+        return;
+    }
+
     const double current = m_rateRestorePlayer->tempoRate();
-    constexpr double kStep = 0.001; // 0.1% per 500 ms tick
-    if (qAbs(current - 1.0) <= kStep) {
+    const double delta = qAbs(current - 1.0);
+    const double step = qBound(0.0005, delta * 0.25, 0.0015);
+    if (delta <= step) {
         m_rateRestorePlayer->setTempoRate(1.0);
         m_rateRestoreTimer->stop();
         m_rateRestorePlayer = nullptr;
     } else {
-        m_rateRestorePlayer->setTempoRate(current + (current < 1.0 ? kStep : -kStep));
+        m_rateRestorePlayer->setTempoRate(current + (current < 1.0 ? step : -step));
     }
 }
 

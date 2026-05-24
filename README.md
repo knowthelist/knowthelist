@@ -63,6 +63,10 @@ or with CMake:
     $ cmake -S . -B build
     $ cmake --build build -j
 
+clean before
+cmake --build build --target clean
+cmake --build build -j
+
 An icon for "knowthelist" should now be in your main macOS Applications list, ready to launch.
 
 Windows:

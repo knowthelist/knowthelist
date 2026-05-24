@@ -23,6 +23,8 @@
 #include "vumeter.h"
 
 #include <QDragEnterEvent>
+#include <QGridLayout>
+#include <QPushButton>
 #include <QSettings>
 #include <QtSql/QSqlDatabase>
 #include <QtSql/QSqlQuery>
@@ -34,6 +36,8 @@ struct PlayerWidgetPrivate {
 };
 
 namespace {
+constexpr int kTempoCacheVersion = 9;
+
 struct CachedTempo {
     bool valid;
     int bpm;
@@ -54,11 +58,32 @@ bool ensureTempoCacheTable()
         return false;
 
     QSqlQuery q(db);
-    return q.exec("CREATE TABLE IF NOT EXISTS analysis_cache ("
-                  "url VARCHAR(120) PRIMARY KEY,"
-                  "bpm INTEGER,"
-                  "beat_offset_ms INTEGER,"
-                  "changedate INTEGER );");
+    if (!q.exec("CREATE TABLE IF NOT EXISTS analysis_cache ("
+                "url VARCHAR(120) PRIMARY KEY,"
+                "bpm INTEGER,"
+                "beat_offset_ms INTEGER,"
+                "changedate INTEGER );")) {
+        return false;
+    }
+
+    if (!q.exec("PRAGMA table_info(analysis_cache)"))
+        return false;
+
+    bool hasVersionColumn = false;
+    while (q.next()) {
+        if (q.value(1).toString() == QLatin1String("analysis_version")) {
+            hasVersionColumn = true;
+            break;
+        }
+    }
+
+    if (!hasVersionColumn) {
+        QSqlQuery alterQuery(db);
+        if (!alterQuery.exec("ALTER TABLE analysis_cache ADD COLUMN analysis_version INTEGER DEFAULT 0"))
+            return false;
+    }
+
+    return true;
 }
 
 CachedTempo loadCachedTempo(const QUrl& url)
@@ -68,15 +93,18 @@ CachedTempo loadCachedTempo(const QUrl& url)
         return cached;
 
     QSqlQuery q(QSqlDatabase::database());
-    q.prepare("SELECT bpm, beat_offset_ms FROM analysis_cache WHERE url = :url");
+    q.prepare("SELECT bpm, beat_offset_ms, analysis_version FROM analysis_cache WHERE url = :url");
     q.bindValue(":url", url.toLocalFile());
     if (!q.exec())
         return cached;
 
     if (q.next()) {
-        cached.valid = true;
-        cached.bpm = q.value(0).toInt();
-        cached.beatOffsetMs = q.value(1).toInt();
+        const int analysisVersion = q.value(2).toInt();
+        if (analysisVersion == kTempoCacheVersion) {
+            cached.valid = true;
+            cached.bpm = q.value(0).toInt();
+            cached.beatOffsetMs = q.value(1).toInt();
+        }
     }
 
     return cached;
@@ -91,11 +119,12 @@ void storeCachedTempo(const QUrl& url, int bpm, const QTime& beatPosition)
 
     const int beatOffsetMs = QTime(0, 0).msecsTo(beatPosition);
     QSqlQuery q(QSqlDatabase::database());
-    q.prepare("INSERT OR REPLACE INTO analysis_cache (url, bpm, beat_offset_ms, changedate) "
-              "VALUES (:url, :bpm, :beat_offset_ms, strftime('%s','now'))");
+    q.prepare("INSERT OR REPLACE INTO analysis_cache (url, bpm, beat_offset_ms, changedate, analysis_version) "
+              "VALUES (:url, :bpm, :beat_offset_ms, strftime('%s','now'), :analysis_version)");
     q.bindValue(":url", url.toLocalFile());
     q.bindValue(":bpm", bpm);
     q.bindValue(":beat_offset_ms", beatOffsetMs);
+    q.bindValue(":analysis_version", kTempoCacheVersion);
     q.exec();
 }
 }
@@ -113,6 +142,7 @@ PlayerWidget::PlayerWidget(QWidget* parent)
     , m_beatCueEnabled(true)
     , m_beatVisualMode(false)
     , m_tempoRate(1.0)
+    , m_syncAdopting(false)
     , m_bpmAnalysed(false)
     , m_bpm(0)
     , p(new PlayerWidgetPrivate)
@@ -150,6 +180,32 @@ PlayerWidget::PlayerWidget(QWidget* parent)
     ui->butPlay->setIconSize(QSize(26, 26));
     ui->butCue->setChecked(false);
 
+    ui->frame_4->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
+    ui->frame_5->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
+    ui->frame_6->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
+    ui->frame_4->setMinimumWidth(0);
+    ui->frame_5->setMinimumWidth(0);
+    ui->frame_6->setMinimumWidth(0);
+    ui->butPlay->setSizePolicy(QSizePolicy::MinimumExpanding, QSizePolicy::Fixed);
+    ui->butCue->setSizePolicy(QSizePolicy::MinimumExpanding, QSizePolicy::Fixed);
+    ui->butRew->setSizePolicy(QSizePolicy::MinimumExpanding, QSizePolicy::Fixed);
+    ui->butFwd->setSizePolicy(QSizePolicy::MinimumExpanding, QSizePolicy::Fixed);
+    if (QAbstractButton* beatModeButton = findChild<QAbstractButton*>("butBeatMode"))
+        beatModeButton->setSizePolicy(QSizePolicy::MinimumExpanding, QSizePolicy::Fixed);
+    if (QAbstractButton* syncButton = findChild<QAbstractButton*>("butSync")) {
+        syncButton->setSizePolicy(QSizePolicy::MinimumExpanding, QSizePolicy::Fixed);
+        syncButton->show();
+        syncButton->raise();
+    }
+    ui->butPlay->setMaximumWidth(QWIDGETSIZE_MAX);
+    ui->butCue->setMaximumWidth(QWIDGETSIZE_MAX);
+    ui->butRew->setMaximumWidth(QWIDGETSIZE_MAX);
+    ui->butFwd->setMaximumWidth(QWIDGETSIZE_MAX);
+    if (QAbstractButton* beatModeButton = findChild<QAbstractButton*>("butBeatMode"))
+        beatModeButton->setMaximumWidth(QWIDGETSIZE_MAX);
+    if (QAbstractButton* syncButton = findChild<QAbstractButton*>("butSync"))
+        syncButton->setMaximumWidth(QWIDGETSIZE_MAX);
+
     vuMeter = ui->vuMeter;
     vuMeter->setOrientation(Qt::Horizontal);
     vuMeter->LevelColorNormal.setRgb(112, 146, 190);
@@ -160,7 +216,13 @@ PlayerWidget::PlayerWidget(QWidget* parent)
     vuMeter->setSegmentsPerPeak(2);
 
     bpmWidget = new PlayerBpmWidget(vuMeter->parentWidget());
-    bpmWidget->setGeometry(vuMeter->geometry());
+    QRect meterRect = ui->fraVuMeter->contentsRect();
+    if (QLayout* meterLayout = ui->fraVuMeter->layout()) {
+        const QMargins margins = meterLayout->contentsMargins();
+        meterRect = ui->fraVuMeter->rect().adjusted(margins.left(), margins.top(), -margins.right(), -margins.bottom());
+    }
+    bpmWidget->setGeometry(meterRect);
+    bpmWidget->setTempoInfo(m_tempoRate, m_syncAdopting);
     bpmWidget->hide();
 
     m_beatModeButton = findChild<QAbstractButton*>("butBeatMode");
@@ -197,6 +259,7 @@ PlayerWidget::PlayerWidget(QWidget* parent)
     m_isStarted = false;
     m_pendingPlay = false;
     setAcceptDrops(true);
+    updateResponsiveLayout();
     this->stop();
 
     trackanalyser = new TrackAnalyser(this);
@@ -232,6 +295,18 @@ void PlayerWidget::setTempoRate(double rate)
 {
     m_tempoRate = rate;
     player->setRate(rate);
+    bpmWidget->setTempoInfo(m_tempoRate, m_syncAdopting);
+}
+
+void PlayerWidget::setSyncAdopting(bool active)
+{
+    m_syncAdopting = active;
+    bpmWidget->setTempoInfo(m_tempoRate, m_syncAdopting);
+}
+
+bool PlayerWidget::supportsSmoothTempo() const
+{
+    return player->supportsSmoothTempo();
 }
 
 void PlayerWidget::setBeatVisualMode(bool enabled)
@@ -247,6 +322,7 @@ void PlayerWidget::setBeatVisualMode(bool enabled)
     if (m_beatVisualMode) {
         vuMeter->hide();
         bpmWidget->show();
+        bpmWidget->raise();
     } else {
         bpmWidget->hide();
         vuMeter->show();
@@ -255,9 +331,10 @@ void PlayerWidget::setBeatVisualMode(bool enabled)
 
 void PlayerWidget::applyBeatVisualLayout(bool enabled)
 {
-    setMinimumHeight(enabled ? 182 : 130);
-    ui->frame_3->setMaximumHeight(enabled ? 195 : 130);
-    ui->fraDisplay->setMaximumHeight(enabled ? 195 : 124);
+    setMinimumHeight(enabled ? 182 : 150);
+    ui->frame_2->setMaximumHeight(enabled ? 195 : 150);
+    ui->frame_3->setMaximumHeight(enabled ? 195 : 150);
+    ui->fraDisplay->setMaximumHeight(enabled ? 195 : 144);
     ui->fraDisplay->setMaximumWidth(QWIDGETSIZE_MAX);
     ui->fraVuMeter->setMaximumWidth(QWIDGETSIZE_MAX);
     ui->fraVuMeter->setMinimumHeight(enabled ? 70 : 31);
@@ -272,6 +349,80 @@ void PlayerWidget::applyBeatVisualLayout(bool enabled)
         ui->lblInfo->setStyleSheet("font-size: 11pt;");
 
     drawTitle();
+    updateResponsiveLayout();
+}
+
+void PlayerWidget::updateResponsiveLayout()
+{
+    const int width = this->width();
+    const bool veryCompact = width < 360;
+    const bool compact = width < 500;
+    QAbstractButton* const beatModeButton = findChild<QAbstractButton*>("butBeatMode");
+    QAbstractButton* const syncButton = findChild<QAbstractButton*>("butSync");
+
+    int outerMargin = compact ? 2 : 4;
+    int rowSpacing = veryCompact ? 0 : (compact ? 1 : 2);
+    if (QGridLayout* mainGrid = qobject_cast<QGridLayout*>(ui->frame_3->layout())) {
+        mainGrid->setContentsMargins(outerMargin, 1, outerMargin, 1);
+        mainGrid->setVerticalSpacing(rowSpacing);
+    }
+
+    if (QVBoxLayout* displayLayout = qobject_cast<QVBoxLayout*>(ui->fraDisplay->layout())) {
+        const int horizontalMargin = compact ? 3 : 6;
+        displayLayout->setContentsMargins(horizontalMargin, 2, horizontalMargin, 2);
+        displayLayout->setSpacing(compact ? 1 : 2);
+    }
+
+    if (QLayout* layout = ui->horizontalLayout_2)
+        layout->setSpacing(veryCompact ? 0 : (compact ? 1 : 4));
+    if (QLayout* layout = ui->horizontalLayout_3)
+        layout->setSpacing(veryCompact ? 0 : (compact ? 2 : 6));
+    if (QLayout* layout = ui->horizontalLayout_4)
+        layout->setSpacing(veryCompact ? 0 : (compact ? 1 : 6));
+    if (QLayout* layout = findChild<QLayout*>("horizontalLayout_9"))
+        layout->setSpacing(veryCompact ? 0 : (compact ? 1 : 4));
+
+    const int smallButtonHeight = veryCompact ? 16 : (compact ? 18 : 22);
+    const int playButtonHeight = veryCompact ? 28 : (compact ? 34 : 38);
+    const int playButtonWidth = veryCompact ? 40 : (compact ? 48 : 60);
+    const int cueButtonWidth = veryCompact ? 40 : (compact ? 48 : 59);
+    const int smallButtonWidth = veryCompact ? 18 : (compact ? 24 : 36);
+    const int syncButtonWidth = veryCompact ? 30 : (compact ? 40 : 52);
+    const int iconSize = veryCompact ? 18 : (compact ? 22 : 26);
+
+    ui->frame_5->setMinimumHeight(playButtonHeight);
+    ui->frame_6->setMinimumHeight(smallButtonHeight + 6);
+    ui->frame_4->setMinimumHeight(smallButtonHeight + 2);
+    if (QFrame* syncFrame = findChild<QFrame*>("frame_7"))
+        syncFrame->setMinimumHeight(smallButtonHeight + 4);
+
+    ui->butPlay->setMinimumSize(QSize(playButtonWidth, playButtonHeight));
+    ui->butPlay->setMaximumHeight(playButtonHeight);
+    ui->butCue->setMinimumSize(QSize(cueButtonWidth, smallButtonHeight));
+    ui->butCue->setMaximumHeight(playButtonHeight);
+    ui->butRew->setMinimumSize(QSize(smallButtonWidth, smallButtonHeight));
+    ui->butRew->setMaximumHeight(smallButtonHeight);
+    ui->butFwd->setMinimumSize(QSize(smallButtonWidth, smallButtonHeight));
+    ui->butFwd->setMaximumHeight(smallButtonHeight);
+    if (beatModeButton) {
+        beatModeButton->setMinimumSize(QSize(smallButtonWidth, smallButtonHeight));
+        beatModeButton->setMaximumHeight(smallButtonHeight);
+    }
+    if (syncButton) {
+        syncButton->setMinimumSize(QSize(syncButtonWidth, smallButtonHeight));
+        syncButton->setMaximumHeight(smallButtonHeight);
+        QFont syncFont = syncButton->font();
+        syncFont.setPointSize(veryCompact ? qMax(7, syncFont.pointSize() - 3)
+                                          : (compact ? qMax(8, syncFont.pointSize() - 2)
+                                                     : syncFont.pointSize()));
+        syncButton->setFont(syncFont);
+    }
+
+    ui->butPlay->setIconSize(QSize(iconSize, iconSize));
+    ui->butRew->setIconSize(QSize(iconSize, iconSize));
+    ui->butFwd->setIconSize(QSize(iconSize, iconSize));
+    if (syncButton)
+        syncButton->setText(veryCompact ? tr("S") : tr("SYNC"));
 }
 
 void PlayerWidget::setInfo(QPair<int, int> info)
@@ -331,10 +482,12 @@ void PlayerWidget::pause()
     m_isStarted = false;
     m_pendingPlay = false;
     player->pause();
+    m_syncAdopting = false;
     timerLevel->stop();
     timerPosition->stop();
     vuMeter->reset();
     bpmWidget->clearEnvelope();
+    bpmWidget->setTempoInfo(m_tempoRate, m_syncAdopting);
     Q_EMIT statusChanged(m_isStarted);
     Q_EMIT levelChanged(0, 0);
 }
@@ -346,11 +499,14 @@ void PlayerWidget::stop()
     m_isStarted = false;
     m_isHanging = false;
     m_pendingPlay = false;
+    m_tempoRate = 1.0;
+    m_syncAdopting = false;
     player->stop();
     timerLevel->stop();
     timerPosition->stop();
     vuMeter->reset();
     bpmWidget->clearEnvelope();
+    bpmWidget->setTempoInfo(m_tempoRate, m_syncAdopting);
     Q_EMIT statusChanged(m_isStarted);
     Q_EMIT levelChanged(0, 0);
 }
@@ -400,6 +556,28 @@ void PlayerWidget::analyseTempoFinished()
         storeCachedTempo(m_CurrentTrack->url(), m_bpm, m_beatPosition);
 
     bpmWidget->setState(m_bpm, player->position(), m_beatPosition, m_isStarted, true);
+}
+
+void PlayerWidget::onTrackPropertyChanged(Track* track)
+{
+    if (!track || !m_CurrentTrack)
+        return;
+
+    if (track != m_CurrentTrack && track->url() != m_CurrentTrack->url())
+        return;
+
+    const int trackBpm = track->bpm();
+    if (trackBpm <= 0)
+        return;
+
+    if (m_bpm == trackBpm && m_bpmAnalysed)
+        return;
+
+    if (m_bpm <= 0 || !m_bpmAnalysed) {
+        m_bpm = trackBpm;
+        m_bpmAnalysed = true;
+        bpmWidget->setState(m_bpm, player->position(), m_beatPosition, m_isStarted, true);
+    }
 }
 
 void PlayerWidget::timerLevel_timeOut()
@@ -494,8 +672,11 @@ void PlayerWidget::loadTrack(Track* track)
     m_pendingPlay = false;
     m_bpmAnalysed = false;
     m_bpm = 0;
+    m_tempoRate = 1.0;
+    m_syncAdopting = false;
     m_beatPosition = QTime();
     bpmWidget->setState(m_bpm, QTime(0, 0), m_beatPosition, false, track == nullptr);
+    bpmWidget->setTempoInfo(m_tempoRate, m_syncAdopting);
     bpmWidget->clearEnvelope();
 
     if (track != nullptr) {
@@ -557,8 +738,14 @@ void PlayerWidget::resizeEvent(QResizeEvent* e)
 {
     QWidget::resizeEvent(e);
 
+    updateResponsiveLayout();
     drawTitle();
-    bpmWidget->setGeometry(vuMeter->geometry());
+    QRect meterRect = ui->fraVuMeter->contentsRect();
+    if (QLayout* meterLayout = ui->fraVuMeter->layout()) {
+        const QMargins margins = meterLayout->contentsMargins();
+        meterRect = ui->fraVuMeter->rect().adjusted(margins.left(), margins.top(), -margins.right(), -margins.bottom());
+    }
+    bpmWidget->setGeometry(meterRect);
 }
 
 void PlayerWidget::drawTitle()
