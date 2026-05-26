@@ -165,8 +165,7 @@ private:
     PlayerWidget* player2;
     QPushButton* m_toggleAutoSyncButton;
     QPushButton* m_toggleBeatVisualButton;
-    QLed* m_syncLed1;
-    QLed* m_syncLed2;
+    QLed* m_autoSyncLed;
     FileBrowser* filetree;
     PlaylistBrowser* playlistBrowser;
 

@@ -32,7 +32,7 @@ public:
     TrackAnalyser(QWidget *parent = 0);
     ~TrackAnalyser();
 
-    enum modeType { STANDARD, TEMPO };
+    enum modeType { STANDARD, TEMPO, ENVELOPE };
 
     bool prepare();
     void open(QUrl url);
@@ -45,6 +45,7 @@ public:
     QTime endPosition();
     QTime beatPosition();
     int bpm();
+    QVector<float> amplitudeEnvelope() const;
     bool finished() {return m_finished;}
     void setMode(modeType mode);
     void setPosition(QTime position);
@@ -61,6 +62,7 @@ public:
  Q_SIGNALS:
         void finishGain();
         void finishTempo();
+        void finishEnvelope();
 
  private slots:
     void messageReceived(GstMessage* message);

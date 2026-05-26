@@ -23,10 +23,13 @@
 #include "vumeter.h"
 
 #include <QDragEnterEvent>
+#include <QFontMetrics>
 #include <QGridLayout>
+#include <QHBoxLayout>
 #include <QPushButton>
-#include <QSettings>
 #include <QSignalBlocker>
+#include <QSettings>
+#include <QApplication>
 #include <QtSql/QSqlDatabase>
 #include <QtSql/QSqlQuery>
 #include <QtSql/QSqlError>
@@ -38,6 +41,10 @@ struct PlayerWidgetPrivate {
 
 namespace {
 constexpr int kTempoCacheVersion = 9;
+constexpr int kEnvelopeCacheVersion = 1;
+constexpr double kScrubSeekGain = 3.0;
+constexpr int kScrubSeekMinDeltaMs = 10;
+constexpr int kScrubSeekCoalesceMs = 20;
 
 struct CachedTempo {
     bool valid;
@@ -51,6 +58,57 @@ struct CachedTempo {
     {
     }
 };
+
+struct CachedEnvelope {
+    bool valid;
+    QVector<float> samples;
+
+    CachedEnvelope()
+        : valid(false)
+    {
+    }
+};
+
+QByteArray encodeEnvelopeSamples(const QVector<float>& samples)
+{
+    QByteArray payload;
+    payload.reserve(samples.size() * static_cast<int>(sizeof(float)) + 16);
+    QDataStream out(&payload, QIODevice::WriteOnly);
+    out.setVersion(QDataStream::Qt_5_12);
+    out << samples;
+    return qCompress(payload, 6);
+}
+
+QVector<float> decodeEnvelopeSamples(const QByteArray& compressed)
+{
+    QVector<float> samples;
+    if (compressed.isEmpty())
+        return samples;
+
+    QByteArray payload = qUncompress(compressed);
+    if (payload.isEmpty())
+        return samples;
+
+    QDataStream in(&payload, QIODevice::ReadOnly);
+    in.setVersion(QDataStream::Qt_5_12);
+    in >> samples;
+    return samples;
+}
+
+bool addColumnIfMissing(QSqlDatabase& db, const QString& columnName, const QString& alterSql)
+{
+    QSqlQuery q(db);
+    if (!q.exec("PRAGMA table_info(analysis_cache)"))
+        return false;
+
+    while (q.next()) {
+        if (q.value(1).toString() == columnName)
+            return true;
+    }
+
+    QSqlQuery alterQuery(db);
+    return alterQuery.exec(alterSql);
+}
 
 bool ensureTempoCacheTable()
 {
@@ -67,22 +125,17 @@ bool ensureTempoCacheTable()
         return false;
     }
 
-    if (!q.exec("PRAGMA table_info(analysis_cache)"))
+    if (!addColumnIfMissing(db, QLatin1String("analysis_version"),
+                            QLatin1String("ALTER TABLE analysis_cache ADD COLUMN analysis_version INTEGER DEFAULT 0")))
         return false;
 
-    bool hasVersionColumn = false;
-    while (q.next()) {
-        if (q.value(1).toString() == QLatin1String("analysis_version")) {
-            hasVersionColumn = true;
-            break;
-        }
-    }
+    if (!addColumnIfMissing(db, QLatin1String("envelope_version"),
+                            QLatin1String("ALTER TABLE analysis_cache ADD COLUMN envelope_version INTEGER DEFAULT 0")))
+        return false;
 
-    if (!hasVersionColumn) {
-        QSqlQuery alterQuery(db);
-        if (!alterQuery.exec("ALTER TABLE analysis_cache ADD COLUMN analysis_version INTEGER DEFAULT 0"))
-            return false;
-    }
+    if (!addColumnIfMissing(db, QLatin1String("envelope_data"),
+                            QLatin1String("ALTER TABLE analysis_cache ADD COLUMN envelope_data BLOB")))
+        return false;
 
     return true;
 }
@@ -111,6 +164,29 @@ CachedTempo loadCachedTempo(const QUrl& url)
     return cached;
 }
 
+CachedEnvelope loadCachedEnvelope(const QUrl& url)
+{
+    CachedEnvelope cached;
+    if (!ensureTempoCacheTable())
+        return cached;
+
+    QSqlQuery q(QSqlDatabase::database());
+    q.prepare("SELECT envelope_version, envelope_data FROM analysis_cache WHERE url = :url");
+    q.bindValue(":url", url.toLocalFile());
+    if (!q.exec())
+        return cached;
+
+    if (q.next() && q.value(0).toInt() == kEnvelopeCacheVersion) {
+        const QVector<float> decoded = decodeEnvelopeSamples(q.value(1).toByteArray());
+        if (!decoded.isEmpty()) {
+            cached.valid = true;
+            cached.samples = decoded;
+        }
+    }
+
+    return cached;
+}
+
 void storeCachedTempo(const QUrl& url, int bpm, const QTime& beatPosition)
 {
     if (bpm <= 0)
@@ -120,12 +196,35 @@ void storeCachedTempo(const QUrl& url, int bpm, const QTime& beatPosition)
 
     const int beatOffsetMs = QTime(0, 0).msecsTo(beatPosition);
     QSqlQuery q(QSqlDatabase::database());
-    q.prepare("INSERT OR REPLACE INTO analysis_cache (url, bpm, beat_offset_ms, changedate, analysis_version) "
-              "VALUES (:url, :bpm, :beat_offset_ms, strftime('%s','now'), :analysis_version)");
+    q.prepare("INSERT OR REPLACE INTO analysis_cache (url, bpm, beat_offset_ms, changedate, analysis_version, envelope_version, envelope_data) "
+              "VALUES (:url, :bpm, :beat_offset_ms, strftime('%s','now'), :analysis_version, "
+              "COALESCE((SELECT envelope_version FROM analysis_cache WHERE url = :url), 0), "
+              "(SELECT envelope_data FROM analysis_cache WHERE url = :url))");
     q.bindValue(":url", url.toLocalFile());
     q.bindValue(":bpm", bpm);
     q.bindValue(":beat_offset_ms", beatOffsetMs);
     q.bindValue(":analysis_version", kTempoCacheVersion);
+    q.exec();
+}
+
+void storeCachedEnvelope(const QUrl& url, const QVector<float>& samples)
+{
+    if (samples.isEmpty())
+        return;
+    if (!ensureTempoCacheTable())
+        return;
+
+    QSqlQuery q(QSqlDatabase::database());
+    q.prepare("INSERT OR REPLACE INTO analysis_cache (url, bpm, beat_offset_ms, changedate, analysis_version, envelope_version, envelope_data) "
+              "VALUES (:url, "
+              "COALESCE((SELECT bpm FROM analysis_cache WHERE url = :url), 0), "
+              "COALESCE((SELECT beat_offset_ms FROM analysis_cache WHERE url = :url), 0), "
+              "strftime('%s','now'), "
+              "COALESCE((SELECT analysis_version FROM analysis_cache WHERE url = :url), 0), "
+              ":envelope_version, :envelope_data)");
+    q.bindValue(":url", url.toLocalFile());
+    q.bindValue(":envelope_version", kEnvelopeCacheVersion);
+    q.bindValue(":envelope_data", encodeEnvelopeSamples(samples));
     q.exec();
 }
 }
@@ -144,8 +243,17 @@ PlayerWidget::PlayerWidget(QWidget* parent)
     , m_beatVisualMode(false)
     , m_tempoRate(1.0)
     , m_syncAdopting(false)
+    , m_visualLatencyMs(0)
+    , m_liveEnvelopeStarted(false)
+    , m_liveEnvelopeSmoothed(0.0f)
     , m_bpmAnalysed(false)
     , m_bpm(0)
+    , m_infoBaseText("")
+    , m_envelopeScrubbing(false)
+    , m_envelopeScrubAnchorMs(0)
+    , m_envelopeScrubSeekTimer(nullptr)
+    , m_pendingEnvelopeScrubTargetMs(-1)
+    , m_lastEnvelopeScrubAppliedMs(-1)
     , p(new PlayerWidgetPrivate)
 {
     ui->setupUi(this);
@@ -177,11 +285,6 @@ PlayerWidget::PlayerWidget(QWidget* parent)
     ui->butRew->setIconSize(QSize(26, 26));
     ui->butPlay->setIconSize(QSize(26, 26));
     ui->butCue->setChecked(false);
-    QAbstractButton* const syncButton = findChild<QAbstractButton*>("butSync");
-    if (syncButton) {
-        syncButton->setCheckable(true);
-        syncButton->setChecked(false);
-    }
 
     // Display panel takes the bulk; button panel capped to a narrow stripe
     ui->horizontalLayout->setStretch(0, 4);
@@ -195,7 +298,6 @@ PlayerWidget::PlayerWidget(QWidget* parent)
     ui->frame_4->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
     ui->frame_5->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
     ui->frame_6->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
-    ui->frame_7->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
     ui->frame_4->setMinimumWidth(0);
     ui->frame_5->setMinimumWidth(0);
     ui->frame_6->setMinimumWidth(0);
@@ -205,11 +307,6 @@ PlayerWidget::PlayerWidget(QWidget* parent)
     ui->butFwd->setSizePolicy(QSizePolicy::MinimumExpanding, QSizePolicy::Fixed);
     if (QAbstractButton* beatModeButton = findChild<QAbstractButton*>("butBeatMode"))
         beatModeButton->setSizePolicy(QSizePolicy::MinimumExpanding, QSizePolicy::Fixed);
-    if (syncButton) {
-        syncButton->setSizePolicy(QSizePolicy::MinimumExpanding, QSizePolicy::Fixed);
-        syncButton->show();
-        syncButton->raise();
-    }
     // Track fraVuMeter for resize (keeps bpmWidget geometry correct)
     // and frame_3 for mouse clicks (toggle BPM/VU mode)
     ui->frame_3->installEventFilter(this);
@@ -217,8 +314,6 @@ PlayerWidget::PlayerWidget(QWidget* parent)
     ui->butCue->setMaximumWidth(QWIDGETSIZE_MAX);
     ui->butRew->setMaximumWidth(QWIDGETSIZE_MAX);
     ui->butFwd->setMaximumWidth(QWIDGETSIZE_MAX);
-    if (QAbstractButton* syncButton = findChild<QAbstractButton*>("butSync"))
-        syncButton->setMaximumWidth(QWIDGETSIZE_MAX);
 
     vuMeter = ui->vuMeter;
     vuMeter->setOrientation(Qt::Horizontal);
@@ -228,12 +323,21 @@ PlayerWidget::PlayerWidget(QWidget* parent)
     vuMeter->setLinesPerSegment(2);
     vuMeter->setSpacesBetweenSegments(1);
     vuMeter->setSegmentsPerPeak(2);
+    vuMeter->setMargin(3); // slightly wider center gap between left/right channels
 
     bpmWidget = new PlayerBpmWidget(vuMeter->parentWidget());
     // Initial geometry: will be corrected by eventFilter on first fraVuMeter resize
     bpmWidget->setGeometry(ui->fraVuMeter->rect());
     bpmWidget->setTempoInfo(m_tempoRate, m_syncAdopting);
     bpmWidget->hide();
+    connect(bpmWidget, SIGNAL(envelopeScrubStarted()), this, SLOT(onEnvelopeScrubStarted()));
+    connect(bpmWidget, SIGNAL(envelopeScrubPositionChanged(double,bool)), this, SLOT(onEnvelopeScrubPositionChanged(double,bool)));
+
+    for (int i = 0; i < 4; ++i)
+        m_beatJumpButtons[i] = nullptr;
+    for (int i = 0; i < 3; ++i)
+        m_hotCueButtons[i] = nullptr;
+    createPerformanceControls();
 
     QSettings settings;
     applyBeatVisualLayout(settings.value("beatSyncVisualMode", false).toBool());
@@ -243,6 +347,11 @@ PlayerWidget::PlayerWidget(QWidget* parent)
 
     timerPosition = new QTimer(this);
     connect(timerPosition, SIGNAL(timeout()), SLOT(timerPosition_timeOut()));
+
+    m_envelopeScrubSeekTimer = new QTimer(this);
+    m_envelopeScrubSeekTimer->setSingleShot(true);
+    m_envelopeScrubSeekTimer->setInterval(kScrubSeekCoalesceMs);
+    connect(m_envelopeScrubSeekTimer, SIGNAL(timeout()), SLOT(applyPendingEnvelopeScrubSeek()));
 
     connect(player, SIGNAL(finish()), this, SLOT(playerFinished()));
     connect(player, SIGNAL(error()), this, SLOT(playerError()));
@@ -263,6 +372,23 @@ PlayerWidget::PlayerWidget(QWidget* parent)
     ui->lblInfo->setFont(font);
     ui->lblTime->setFont(fonttime);
     ui->lblTimeRemain->setFont(fonttime);
+    ui->lblTimeMs->setFont(fonttime);
+    ui->lblTimeRemainMs->setFont(fonttime);
+
+    // Keep time labels fixed-width/height to avoid jitter and clipping on macOS.
+    auto fixTimeLabelGeometry = [](QLabel* label, const QString& sampleText) {
+        if (!label)
+            return;
+        label->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Preferred);
+        const QFontMetrics metrics(label->font());
+        label->setFixedWidth(metrics.horizontalAdvance(sampleText) + 8);
+        label->setMinimumHeight(metrics.height() + 4);
+    };
+
+    fixTimeLabelGeometry(ui->lblTime, "00:00");
+    fixTimeLabelGeometry(ui->lblTimeMs, ".8");
+    fixTimeLabelGeometry(ui->lblTimeRemain, "-00:00");
+    fixTimeLabelGeometry(ui->lblTimeRemainMs, ".8");
 
     m_isStarted = false;
     m_pendingPlay = false;
@@ -275,6 +401,9 @@ PlayerWidget::PlayerWidget(QWidget* parent)
 
     tempoAnalyser = new TrackAnalyser(this);
     connect(tempoAnalyser, SIGNAL(finishTempo()), this, SLOT(analyseTempoFinished()));
+
+    envelopeAnalyser = new TrackAnalyser(this);
+    connect(envelopeAnalyser, SIGNAL(finishEnvelope()), this, SLOT(analyseEnvelopeFinished()));
 }
 
 PlayerWidget::~PlayerWidget()
@@ -286,6 +415,8 @@ PlayerWidget::~PlayerWidget()
     trackanalyser = nullptr;
     delete tempoAnalyser;
     tempoAnalyser = nullptr;
+    delete envelopeAnalyser;
+    envelopeAnalyser = nullptr;
     delete p;
 }
 
@@ -389,7 +520,6 @@ void PlayerWidget::updateResponsiveLayout()
     const bool veryCompact = width < 360;
     const bool compact = width < 500;
     QAbstractButton* const beatModeButton = findChild<QAbstractButton*>("butBeatMode");
-    QAbstractButton* const syncButton = findChild<QAbstractButton*>("butSync");
 
     int outerMargin = compact ? 2 : 4;
     int rowSpacing = veryCompact ? 0 : (compact ? 1 : 2);
@@ -418,7 +548,6 @@ void PlayerWidget::updateResponsiveLayout()
     const int playButtonWidth = veryCompact ? 40 : (compact ? 48 : 60);
     const int cueButtonWidth = veryCompact ? 40 : (compact ? 48 : 59);
     const int smallButtonWidth = veryCompact ? 18 : (compact ? 24 : 36);
-    const int syncButtonWidth = veryCompact ? 30 : (compact ? 40 : 52);
     const int iconSize = veryCompact ? 18 : (compact ? 22 : 26);
 
     //ui->frame_5->setMinimumHeight(playButtonHeight);
@@ -439,31 +568,253 @@ void PlayerWidget::updateResponsiveLayout()
         beatModeButton->setMinimumSize(QSize(smallButtonWidth, smallButtonHeight));
         beatModeButton->setMaximumHeight(smallButtonHeight);
     }
-    if (syncButton) {
-        syncButton->setMinimumSize(QSize(syncButtonWidth, smallButtonHeight));
-        syncButton->setMaximumHeight(smallButtonHeight);
-        QFont syncFont = syncButton->font();
-        syncFont.setPointSize(veryCompact ? qMax(7, syncFont.pointSize() - 3)
-                                          : (compact ? qMax(8, syncFont.pointSize() - 2)
-                                                     : syncFont.pointSize()));
-        syncButton->setFont(syncFont);
-    }
 
     ui->butPlay->setIconSize(QSize(iconSize, iconSize));
     ui->butRew->setIconSize(QSize(iconSize, iconSize));
     ui->butFwd->setIconSize(QSize(iconSize, iconSize));
-    if (syncButton)
-        syncButton->setText(veryCompact ? tr("S") : tr("SYNC"));
+
+    for (int i = 0; i < 4; ++i) {
+        if (m_beatJumpButtons[i]) {
+            m_beatJumpButtons[i]->setMinimumSize(QSize(smallButtonWidth + 8, smallButtonHeight));
+            m_beatJumpButtons[i]->setMaximumHeight(smallButtonHeight);
+        }
+    }
+    for (int i = 0; i < 3; ++i) {
+        if (m_hotCueButtons[i]) {
+            m_hotCueButtons[i]->setMinimumSize(QSize(smallButtonWidth + 8, smallButtonHeight));
+            m_hotCueButtons[i]->setMaximumHeight(smallButtonHeight);
+        }
+    }
+}
+
+void PlayerWidget::createPerformanceControls()
+{
+    QVBoxLayout* controls = qobject_cast<QVBoxLayout*>(ui->frame_2->layout());
+    if (!controls)
+        return;
+
+    QFrame* beatJumpFrame = new QFrame(ui->frame_2);
+    beatJumpFrame->setObjectName("frameBeatJump");
+    QHBoxLayout* beatLayout = new QHBoxLayout(beatJumpFrame);
+    beatLayout->setContentsMargins(0, 0, 0, 0);
+    beatLayout->setSpacing(2);
+
+    const int beatSteps[4] = { -1, 1, -4, 4 };
+    const char* beatLabels[4] = { "-1", "+1", "-4", "+4" };
+    for (int i = 0; i < 4; ++i) {
+        m_beatJumpButtons[i] = new QPushButton(QString::fromLatin1(beatLabels[i]), beatJumpFrame);
+        m_beatJumpButtons[i]->setProperty("beats", beatSteps[i]);
+        m_beatJumpButtons[i]->setToolTip(tr("Jump by %1 beat(s)").arg(beatSteps[i]));
+        connect(m_beatJumpButtons[i], SIGNAL(clicked()), this, SLOT(onBeatJumpButtonClicked()));
+        beatLayout->addWidget(m_beatJumpButtons[i]);
+    }
+    controls->addWidget(beatJumpFrame);
+
+    QFrame* hotCueFrame = new QFrame(ui->frame_2);
+    hotCueFrame->setObjectName("frameHotCue");
+    QHBoxLayout* hotLayout = new QHBoxLayout(hotCueFrame);
+    hotLayout->setContentsMargins(0, 0, 0, 0);
+    hotLayout->setSpacing(2);
+
+    const char* cueLabels[3] = { "A", "B", "C" };
+    for (int i = 0; i < 3; ++i) {
+        m_hotCueButtons[i] = new QPushButton(QString::fromLatin1(cueLabels[i]), hotCueFrame);
+        m_hotCueButtons[i]->setProperty("hotCueIndex", i);
+        m_hotCueButtons[i]->setToolTip(tr("Hot cue %1: click to jump, Shift+click to set").arg(QString::fromLatin1(cueLabels[i])));
+        connect(m_hotCueButtons[i], SIGNAL(clicked()), this, SLOT(onHotCueButtonClicked()));
+        hotLayout->addWidget(m_hotCueButtons[i]);
+    }
+    controls->addWidget(hotCueFrame);
+
+    refreshHotCueButtons();
+}
+
+QString PlayerWidget::currentTrackKey() const
+{
+    if (!m_CurrentTrack)
+        return QString();
+    return m_CurrentTrack->url().toLocalFile();
+}
+
+void PlayerWidget::refreshHotCueButtons()
+{
+    const QString key = currentTrackKey();
+    QVector<int> cues = m_hotCuesByTrack.value(key);
+    while (cues.size() < 3)
+        cues.append(-1);
+
+    const char* labels[3] = { "A", "B", "C" };
+    for (int i = 0; i < 3; ++i) {
+        if (!m_hotCueButtons[i])
+            continue;
+        QString txt = QString::fromLatin1(labels[i]);
+        if (cues.at(i) >= 0)
+            txt.append("*");
+        m_hotCueButtons[i]->setText(txt);
+    }
+}
+
+void PlayerWidget::jumpByBeats(int beatCount)
+{
+    if (!m_CurrentTrack || beatCount == 0)
+        return;
+
+    const int beatMs = (m_bpm > 0) ? qRound(60000.0 / static_cast<double>(m_bpm)) : 500;
+    const int curMs = QTime(0, 0).msecsTo(player->position());
+    const int lenMs = QTime(0, 0).msecsTo(player->length());
+
+    int targetMs = curMs + beatCount * beatMs;
+    if (targetMs < 0)
+        targetMs = 0;
+    if (lenMs > 0)
+        targetMs = qMin(targetMs, lenMs);
+
+    player->setPosition(QTime(0, 0).addMSecs(targetMs));
+    ui->butCue->setChecked(false);
+    updateTimeAndPositionDisplay(false);
+}
+
+void PlayerWidget::onBeatJumpButtonClicked()
+{
+    QObject* src = sender();
+    if (!src)
+        return;
+    jumpByBeats(src->property("beats").toInt());
+}
+
+void PlayerWidget::onHotCueButtonClicked()
+{
+    QObject* src = sender();
+    if (!src || !m_CurrentTrack)
+        return;
+
+    const int index = src->property("hotCueIndex").toInt();
+    if (index < 0 || index > 2)
+        return;
+
+    const QString key = currentTrackKey();
+    if (key.isEmpty())
+        return;
+
+    QVector<int>& cues = m_hotCuesByTrack[key];
+    while (cues.size() < 3)
+        cues.append(-1);
+
+    const bool setRequested = (QApplication::keyboardModifiers() & Qt::ShiftModifier);
+    if (setRequested || cues[index] < 0) {
+        cues[index] = QTime(0, 0).msecsTo(player->position());
+    } else {
+        player->setPosition(QTime(0, 0).addMSecs(cues[index]));
+        updateTimeAndPositionDisplay(false);
+    }
+
+    refreshHotCueButtons();
+}
+
+void PlayerWidget::onEnvelopeScrubStarted()
+{
+    m_envelopeScrubbing = true;
+    m_envelopeScrubAnchorMs = QTime(0, 0).msecsTo(player->position());
+    m_pendingEnvelopeScrubTargetMs = -1;
+    m_lastEnvelopeScrubAppliedMs = -1;
+    if (m_envelopeScrubSeekTimer->isActive())
+        m_envelopeScrubSeekTimer->stop();
+    qDebug() << "SCRUB start:" << objectName()
+             << "anchorMs=" << m_envelopeScrubAnchorMs
+             << "playing=" << player->isPlaying();
+}
+
+void PlayerWidget::onEnvelopeScrubPositionChanged(double normalizedPosition, bool finished)
+{
+    if (!m_CurrentTrack)
+        return;
+
+    if (!m_envelopeScrubbing)
+        m_envelopeScrubAnchorMs = QTime(0, 0).msecsTo(player->position());
+
+    m_envelopeScrubbing = !finished;
+
+    const int windowMs = bpmWidget->windowMilliseconds();
+    const double deltaNorm = qBound(-1.0, normalizedPosition, 1.0);
+    int targetMs = m_envelopeScrubAnchorMs - qRound(deltaNorm * static_cast<double>(windowMs) * kScrubSeekGain);
+
+    const int lenMs = QTime(0, 0).msecsTo(player->length());
+    if (targetMs < 0)
+        targetMs = 0;
+    if (lenMs > 0)
+        targetMs = qMin(targetMs, lenMs);
+
+    qDebug() << "SCRUB move:" << objectName()
+             << "deltaNorm=" << deltaNorm
+             << "windowMs=" << windowMs
+             << "anchorMs=" << m_envelopeScrubAnchorMs
+             << "targetMs=" << targetMs
+             << "finished=" << finished;
+
+    if (!finished) {
+        m_pendingEnvelopeScrubTargetMs = targetMs;
+
+        // Skip tiny target changes to avoid seek storm and non-linear feel.
+        if (m_lastEnvelopeScrubAppliedMs >= 0
+            && qAbs(m_pendingEnvelopeScrubTargetMs - m_lastEnvelopeScrubAppliedMs) < kScrubSeekMinDeltaMs) {
+            return;
+        }
+
+        if (!m_envelopeScrubSeekTimer->isActive())
+            m_envelopeScrubSeekTimer->start();
+    } else {
+        if (m_envelopeScrubSeekTimer->isActive())
+            m_envelopeScrubSeekTimer->stop();
+
+        m_pendingEnvelopeScrubTargetMs = targetMs;
+        applyPendingEnvelopeScrubSeek();
+    }
+
+    if (finished) {
+        const int expectedMs = targetMs;
+        QTimer::singleShot(140, this, [this, expectedMs]() {
+            const int actualMs = QTime(0, 0).msecsTo(player->position());
+            qDebug() << "SCRUB replay:" << objectName()
+                     << "expectedMs=" << expectedMs
+                     << "actualMs=" << actualMs
+                     << "deltaMs=" << (actualMs - expectedMs)
+                     << "playing=" << player->isPlaying();
+        });
+    }
+
+    updateTimeAndPositionDisplay(false);
+    
+    // Update waveform window position during scrub so it scrolls in real-time
+    if (!finished || !player->isPlaying()) {
+        bpmWidget->setState(m_bpm, QTime(0, 0).addMSecs(targetMs), m_beatPosition, m_isStarted, m_bpmAnalysed);
+    }
+}
+
+void PlayerWidget::applyPendingEnvelopeScrubSeek()
+{
+    if (m_pendingEnvelopeScrubTargetMs < 0)
+        return;
+
+    const int targetMs = m_pendingEnvelopeScrubTargetMs;
+    m_pendingEnvelopeScrubTargetMs = -1;
+    m_lastEnvelopeScrubAppliedMs = targetMs;
+
+    player->setPosition(QTime(0, 0).addMSecs(targetMs));
+    updateTimeAndPositionDisplay(false);
+    
+    // Refresh waveform window view when scrubbing while paused
+    bpmWidget->setState(m_bpm, player->position(), m_beatPosition, m_isStarted, m_bpmAnalysed);
 }
 
 void PlayerWidget::setInfo(QPair<int, int> info)
 {
     QString strTrack = (info.first > 1) ? tr("Tracks") : tr("Track");
-    ui->lblInfo->setText(QString("%1 %2       %3 %4")
-                             .arg(info.first)
-                             .arg(strTrack)
-                             .arg(Track::prettyTime(info.second))
-                             .arg(tr("Hours")));
+    m_infoBaseText = QString("%1 %2       %3 %4")
+                         .arg(info.first)
+                         .arg(strTrack)
+                         .arg(Track::prettyTime(info.second))
+                         .arg(tr("Hours"));
+    ui->lblInfo->setText(m_infoBaseText);
 }
 
 void PlayerWidget::setEqualizer(EqBand band, int value)
@@ -499,6 +850,12 @@ void PlayerWidget::play()
         ui->butPlay->setChecked(true);
         player->play();
         ui->butCue->setChecked(false);
+        if (!m_liveEnvelopeStarted) {
+            // Keep pre-loaded envelope and continue with live samples.
+            m_liveEnvelopeStarted = true;
+            m_liveEnvelopeSmoothed = 0.0f;
+            m_pendingEnvelope.clear();
+        }
         timerLevel->start(50);
         timerPosition->start(100);
         Q_EMIT statusChanged(m_isStarted);
@@ -514,11 +871,9 @@ void PlayerWidget::pause()
     m_pendingPlay = false;
     player->pause();
     m_syncAdopting = false;
-    updateSyncButtonState(false);
     timerLevel->stop();
     timerPosition->stop();
     vuMeter->reset();
-    bpmWidget->clearEnvelope();
     bpmWidget->setTempoInfo(m_tempoRate, m_syncAdopting);
     Q_EMIT statusChanged(m_isStarted);
     Q_EMIT levelChanged(0, 0);
@@ -533,12 +888,15 @@ void PlayerWidget::stop()
     m_pendingPlay = false;
     m_tempoRate = 1.0;
     m_syncAdopting = false;
-    updateSyncButtonState(false);
     player->stop();
     timerLevel->stop();
     timerPosition->stop();
     vuMeter->reset();
     bpmWidget->clearEnvelope();
+    m_liveEnvelopeStarted = false;
+    m_liveEnvelopeSmoothed = 0.0f;
+    m_pendingEnvelope.clear();
+    m_visualLatencyMs = 0;
     bpmWidget->setTempoInfo(m_tempoRate, m_syncAdopting);
     Q_EMIT statusChanged(m_isStarted);
     Q_EMIT levelChanged(0, 0);
@@ -563,6 +921,11 @@ void PlayerWidget::analyseGainFinished()
     if (m_CurrentTrack) {
         setPositionMarkers();
         updateTimeAndPositionDisplay();
+
+        qDebug() << Q_FUNC_INFO << ":" << objectName()
+             << " prep marker update done"
+             << " analyserFinished=" << trackanalyser->finished()
+             << " cueChecked=" << ui->butCue->isChecked();
 
         if (m_beatSyncEnabled) {
             QSettings settings;
@@ -589,6 +952,20 @@ void PlayerWidget::analyseTempoFinished()
         storeCachedTempo(m_CurrentTrack->url(), m_bpm, m_beatPosition);
 
     bpmWidget->setState(m_bpm, player->position(), m_beatPosition, m_isStarted, true);
+}
+
+void PlayerWidget::analyseEnvelopeFinished()
+{
+    if (!m_CurrentTrack)
+        return;
+
+    const QVector<float> env = envelopeAnalyser->amplitudeEnvelope();
+    if (env.isEmpty())
+        return;
+
+    qDebug() << "ENVELOPE analysis finished:" << objectName() << "samples=" << env.size();
+    storeCachedEnvelope(m_CurrentTrack->url(), env);
+    bpmWidget->setPreloadedEnvelope(env);
 }
 
 void PlayerWidget::onTrackPropertyChanged(Track* track)
@@ -620,11 +997,27 @@ void PlayerWidget::timerLevel_timeOut()
     const double outLeft = player->levelOutLeft();
     const double outRight = player->levelOutRight();
 
-    const float env = static_cast<float>(qBound(0.0, qMax(inLeft, inRight), 1.0));
-    bpmWidget->appendEnvelopeSample(env);
+    // Live envelope: blend RMS body with peak/detail so it keeps visible nuance.
+    const float l = static_cast<float>(qBound(0.0, inLeft, 1.0));
+    const float r = static_cast<float>(qBound(0.0, inRight, 1.0));
+    const float rms = std::sqrt((l * l + r * r) * 0.5f);
+    const float peak = qMax(l, r);
+    const float detail = qBound(0.0f, peak - rms, 1.0f);
+    const float target = qBound(0.0f, 0.70f * rms + 0.30f * peak + 0.20f * detail, 1.0f);
+    m_liveEnvelopeSmoothed = 0.55f * m_liveEnvelopeSmoothed + 0.45f * target;
+    const float env = qBound(0.0f, std::pow(m_liveEnvelopeSmoothed, 0.90f), 1.0f);
+
+    // Stable Player API has no output latency query; keep visual offset neutral.
+    m_visualLatencyMs = 0;
+    const int rawPosMs = QTime(0, 0).msecsTo(player->position());
+    const int visPosMs = qMax(0, rawPosMs - m_visualLatencyMs);
+    const int delaySamples = qBound(0, (m_visualLatencyMs + 25) / 50, 7);
+    m_pendingEnvelope.enqueue(env);
+    if (m_pendingEnvelope.size() > delaySamples && !bpmWidget->isEnvelopePreloaded())
+        bpmWidget->appendEnvelopeSampleAt(visPosMs, m_pendingEnvelope.dequeue());
 
     if (m_beatVisualMode) {
-        bpmWidget->setState(m_bpm, player->position(), m_beatPosition, m_isStarted, m_bpmAnalysed);
+        bpmWidget->setState(m_bpm, QTime(0, 0).addMSecs(visPosMs), m_beatPosition, m_isStarted, m_bpmAnalysed);
     } else {
         vuMeter->setValueLeft(inLeft);
         vuMeter->setValueRight(inRight);
@@ -707,11 +1100,15 @@ void PlayerWidget::loadTrack(Track* track)
     m_bpm = 0;
     m_tempoRate = 1.0;
     m_syncAdopting = false;
+    m_visualLatencyMs = 0;
+    m_pendingEnvelope.clear();
+    m_liveEnvelopeStarted = false;
+    m_liveEnvelopeSmoothed = 0.0f;
     m_beatPosition = QTime();
-    updateSyncButtonState(false);
     bpmWidget->setState(m_bpm, QTime(0, 0), m_beatPosition, false, track == nullptr);
     bpmWidget->setTempoInfo(m_tempoRate, m_syncAdopting);
     bpmWidget->clearEnvelope();
+    m_envelopeScrubbing = false;
 
     if (track != nullptr) {
 
@@ -725,6 +1122,15 @@ void PlayerWidget::loadTrack(Track* track)
 
         trackanalyser->setMode(TrackAnalyser::STANDARD);
         trackanalyser->open(url);
+
+        const CachedEnvelope cachedEnvelope = loadCachedEnvelope(url);
+        if (cachedEnvelope.valid)
+            bpmWidget->setPreloadedEnvelope(cachedEnvelope.samples);
+
+        // Always refresh the full-track envelope in background so scrubbing
+        // has stable waveform data across the complete timeline.
+        envelopeAnalyser->setMode(TrackAnalyser::ENVELOPE);
+        envelopeAnalyser->open(url);
 
         if (m_beatSyncEnabled) {
             QSettings settings;
@@ -766,6 +1172,7 @@ void PlayerWidget::loadTrack(Track* track)
     ui->sliPosition->setValue(0);
     ui->txtCue->setText("-");
     ui->butCue->setChecked(false);
+    refreshHotCueButtons();
 }
 
 void PlayerWidget::resizeEvent(QResizeEvent* e)
@@ -873,6 +1280,29 @@ void PlayerWidget::updateTimeAndPositionDisplay(bool isPassive)
     } else
         p->isEndAnnounced = false;
 
+    QString highlight;
+    if (m_bpm > 0)
+        highlight = QString("BPM %1").arg(m_bpm);
+    if (qAbs(m_tempoRate - 1.0) > 0.01) {
+        if (!highlight.isEmpty())
+            highlight += " | ";
+        highlight += QString("x%1").arg(QString::number(m_tempoRate, 'f', 2));
+    }
+    if (remainMs > 0 && (remainMs - remainCueTime <= qMax(10000, mTrackFinishEmitTime + 2000))) {
+        if (!highlight.isEmpty())
+            highlight += " | ";
+        highlight += tr("MIX OUT");
+    }
+
+    if (!highlight.isEmpty()) {
+        if (!m_infoBaseText.isEmpty())
+            ui->lblInfo->setText(m_infoBaseText + "   [ " + highlight + " ]");
+        else
+            ui->lblInfo->setText(highlight);
+    } else if (!m_infoBaseText.isEmpty()) {
+        ui->lblInfo->setText(m_infoBaseText);
+    }
+
     //update position slider only if triggerd by timer
     if (isPassive) {
         if (length != QTime(0, 0, 0))
@@ -895,6 +1325,15 @@ void PlayerWidget::playerFinished()
 void PlayerWidget::playerLoaded()
 {
     updateTimeAndPositionDisplay();
+
+    // Analysis can finish before the async player load completes.
+    // Re-apply markers here so auto-cue is reliably set on both decks.
+    setPositionMarkers();
+
+    qDebug() << Q_FUNC_INFO << ":" << objectName()
+             << " player load finished"
+             << " analyserFinished=" << trackanalyser->finished()
+             << " cueChecked=" << ui->butCue->isChecked();
 
     if (m_pendingPlay) {
         m_pendingPlay = false;
@@ -927,7 +1366,7 @@ void PlayerWidget::on_sliPosition_sliderMoved(int value)
     if (length != 0 && value > 0) {
         QTime pos = QTime(0, 0, 0);
         pos = pos.addMSecs(length * (value / 1000.0));
-        qDebug() << "pos:" << pos;
+        qDebug() << Q_FUNC_INFO << ":" << objectName() << "pos=" << pos;
         player->setPosition(pos);
     }
     updateTimeAndPositionDisplay(false);

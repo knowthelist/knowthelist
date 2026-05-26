@@ -19,11 +19,33 @@
 
 #include <QWidget>
 #include <QMutexLocker>
+#include <QThread>
 #include <QtConcurrent/QtConcurrent>
 
 namespace {
 constexpr gdouble kMeterMinDb = -80.0;
 constexpr bool kLogStateChanges = false;
+constexpr bool kLogSeekDebug = true;
+
+const char* gstStateName(GstState state)
+{
+    return gst_state_get_name(state);
+}
+
+void logPipelineStateSnapshot(const char* where, const QString& deckName, GstElement* pipeline)
+{
+    if (!kLogSeekDebug || pipeline == nullptr)
+        return;
+
+    GstState state = GST_STATE_NULL;
+    GstState pending = GST_STATE_VOID_PENDING;
+    const GstStateChangeReturn res = gst_element_get_state(GST_ELEMENT(pipeline), &state, &pending, 0);
+    qDebug() << where << ":" << deckName
+             << "state=" << gstStateName(state)
+             << "pending=" << gstStateName(pending)
+             << "get_state_res=" << static_cast<int>(res)
+             << "thread=" << QThread::currentThreadId();
+}
 
 #if defined(__GNUC__)
 #pragma GCC diagnostic push
@@ -557,11 +579,18 @@ void Player::play()
 {
     p->isStarted = true;
     qDebug() << Q_FUNC_INFO << ":" << parentWidget()->objectName();
+    logPipelineStateSnapshot("Player::play(before set_state)", parentWidget()->objectName(), pipeline);
     if (p->isLoaded) {
         qDebug() << Q_FUNC_INFO << ":" << parentWidget()->objectName() << " call GST_STATE_PLAYING";
-        gst_element_set_state(GST_ELEMENT(pipeline), GST_STATE_PLAYING);
+        const GstStateChangeReturn setRes = gst_element_set_state(GST_ELEMENT(pipeline), GST_STATE_PLAYING);
+        if (kLogSeekDebug) {
+            qDebug() << "Player::play:" << parentWidget()->objectName()
+                     << "set_state PLAYING res=" << static_cast<int>(setRes)
+                     << "thread=" << QThread::currentThreadId();
+        }
         p->playBasePosition = p->position;
         p->playTimer.restart();
+        logPipelineStateSnapshot("Player::play(after set_state)", parentWidget()->objectName(), pipeline);
     } else {
         qDebug() << Q_FUNC_INFO << ":" << parentWidget()->objectName() << " is not loaded";
     }
@@ -596,13 +625,37 @@ bool Player::close()
 
 void Player::setPosition(QTime position)
 {
-    int time_milliseconds = QTime(0, 0).msecsTo(position);
-    gint64 time_nanoseconds = (time_milliseconds * GST_MSECOND);
+    const int time_milliseconds = QTime(0, 0).msecsTo(position);
+    const gint64 time_nanoseconds = (static_cast<gint64>(time_milliseconds) * GST_MSECOND);
     const gdouble seekRate = pipelineSupportsSmoothTempo(pipeline) ? 1.0 : p->rate;
-    gst_element_seek(pipeline, seekRate, GST_FORMAT_TIME, GST_SEEK_FLAG_FLUSH,
+    if (kLogSeekDebug) {
+        qDebug() << "Player::setPosition(req):" << parentWidget()->objectName()
+                 << "targetMs=" << time_milliseconds
+                 << "seekRate=" << seekRate
+                 << "isStarted=" << p->isStarted
+                 << "isLoaded=" << p->isLoaded
+                 << "thread=" << QThread::currentThreadId();
+    }
+    logPipelineStateSnapshot("Player::setPosition(before seek)", parentWidget()->objectName(), pipeline);
+    const gboolean seekOk = gst_element_seek(pipeline, seekRate, GST_FORMAT_TIME, GST_SEEK_FLAG_FLUSH,
         GST_SEEK_TYPE_SET, time_nanoseconds,
         GST_SEEK_TYPE_NONE, GST_CLOCK_TIME_NONE);
+    if (kLogSeekDebug) {
+        qDebug() << "Player::setPosition(seek result):" << parentWidget()->objectName()
+                 << "targetMs=" << time_milliseconds
+                 << "seekOk=" << static_cast<bool>(seekOk);
+    }
     p->position = time_milliseconds;
+
+    if (kLogSeekDebug && pipeline) {
+        gint64 queried = 0;
+        const gboolean queriedOk = gst_element_query_position(pipeline, GST_FORMAT_TIME, &queried);
+        qDebug() << "Player::setPosition(post query):" << parentWidget()->objectName()
+                 << "queriedOk=" << static_cast<bool>(queriedOk)
+                 << "queriedMs=" << static_cast<int>(queried / GST_MSECOND);
+    }
+    logPipelineStateSnapshot("Player::setPosition(after seek)", parentWidget()->objectName(), pipeline);
+
     emit positionChanged();
 }
 
@@ -782,6 +835,11 @@ void Player::messageReceived(GstMessage* message)
                      << gst_element_state_get_name(old_state) << "->" << gst_element_state_get_name(new_state);
         }
         if (source == GST_OBJECT(pipeline)) {
+            if (kLogSeekDebug) {
+                qDebug() << "Player::messageReceived(STATE_CHANGED):" << parentWidget()->objectName()
+                         << gstStateName(old_state) << "->" << gstStateName(new_state)
+                         << "thread=" << QThread::currentThreadId();
+            }
             switch (new_state) {
             case GST_STATE_PAUSED:
             case GST_STATE_NULL:
@@ -790,6 +848,15 @@ void Player::messageReceived(GstMessage* message)
             default:
                 break;
             }
+        }
+        break;
+    }
+
+    case GST_MESSAGE_ASYNC_DONE: {
+        if (GST_MESSAGE_SRC(message) == GST_OBJECT(pipeline)) {
+            if (kLogSeekDebug)
+                qDebug() << "Player::messageReceived(ASYNC_DONE):" << parentWidget()->objectName();
+            logPipelineStateSnapshot("Player::messageReceived(ASYNC_DONE)", parentWidget()->objectName(), pipeline);
         }
         break;
     }

@@ -201,6 +201,45 @@ int TrackAnalyser::bpm()
     return  p->bpm;
 }
 
+QVector<float> TrackAnalyser::amplitudeEnvelope() const
+{
+    QList<float> source;
+    int fftRes = 120;
+    {
+        QMutexLocker locker(&p->mutex);
+        source = p->spectralFluxLow.isEmpty() ? p->spectralFlux : p->spectralFluxLow;
+        fftRes = p->fft_res;
+    }
+
+    QVector<float> result;
+    if (source.isEmpty())
+        return result;
+
+    // Align analyser output to the widget's ~50ms sample cadence.
+    const int targetHz = 20;
+    const int chunkSize = qMax(1, qRound(static_cast<double>(fftRes) / static_cast<double>(targetHz)));
+
+    result.reserve((source.size() + chunkSize - 1) / chunkSize);
+    float peak = 0.0f;
+    for (int i = 0; i < source.size(); i += chunkSize) {
+        const int end = qMin(source.size(), i + chunkSize);
+        float sum = 0.0f;
+        for (int j = i; j < end; ++j)
+            sum += qMax(0.0f, source.at(j));
+        const float avg = sum / static_cast<float>(qMax(1, end - i));
+        result.append(avg);
+        if (avg > peak)
+            peak = avg;
+    }
+
+    if (peak > 0.0f) {
+        for (int i = 0; i < result.size(); ++i)
+            result[i] = qBound(0.0f, result.at(i) / peak, 1.0f);
+    }
+
+    return result;
+}
+
 QTime TrackAnalyser::beatPosition()
 {
     return m_BeatPosition;
@@ -255,6 +294,7 @@ void TrackAnalyser::setMode(modeType mode)
     switch (p->analysisMode)
     {
         case TEMPO:
+        case ENVELOPE:
         gst_element_unlink (p->conv, p->analysis);
         gst_element_unlink (p->analysis, p->cutter);
         gst_element_unlink (p->cutter, p->sink);
@@ -585,6 +625,8 @@ void TrackAnalyser::finalizeAnalysis()
 
         detectTempo();
         Q_EMIT finishTempo();
+    } else if (mode == ENVELOPE) {
+        Q_EMIT finishEnvelope();
     } else {
         Q_EMIT finishGain();
     }

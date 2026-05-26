@@ -20,10 +20,13 @@
 
 #include <QLabel>
 #include <QAbstractButton>
+#include <QPushButton>
 #include <QStyle>
 #include <QToolButton>
 #include <QVBoxLayout>
 #include <QWidget>
+#include <QMap>
+#include <QVector>
 #include <QtCore/QTimer>
 
 #include "player.h"
@@ -93,6 +96,7 @@ public Q_SLOTS:
     void loadTrack(Track*);
     void analyseGainFinished();
     void analyseTempoFinished();
+    void analyseEnvelopeFinished();
     void onTrackPropertyChanged(Track* track);
     void setEqualizer(EqBand, int);
     void setInfo(QPair<int, int> info);
@@ -122,6 +126,11 @@ private Q_SLOTS:
     void timerLevel_timeOut();
     void timerPosition_timeOut();
     void on_sliPosition_sliderMoved(int);
+    void onBeatJumpButtonClicked();
+    void onHotCueButtonClicked();
+    void onEnvelopeScrubStarted();
+    void onEnvelopeScrubPositionChanged(double normalizedPosition, bool finished);
+    void applyPendingEnvelopeScrubSeek();
 
     void on_butPlay_clicked();
     void on_butRew_clicked();
@@ -147,19 +156,24 @@ private:
     void applyBeatVisualLayout(bool enabled);
     void updateSyncButtonState(bool active);
     void updateResponsiveLayout();
+    void createPerformanceControls();
+    void jumpByBeats(int beatCount);
+    void refreshHotCueButtons();
+    QString currentTrackKey() const;
 
     Player* player;
     TrackAnalyser* trackanalyser;
     TrackAnalyser* tempoAnalyser;
+    TrackAnalyser* envelopeAnalyser;
     float m_level;
     QLabel* m_positionLabel;
     QLabel* m_volumeLabel;
 
     QTimer* timerLevel;
     QTimer* timerPosition;
-    void dropEvent(QDropEvent*);
-    void dragEnterEvent(QDragEnterEvent*);
-    void dragMoveEvent(QDragMoveEvent*);
+    void dropEvent(QDropEvent*) override;
+    void dragEnterEvent(QDragEnterEvent*) override;
+    void dragMoveEvent(QDragMoveEvent*) override;
     void setPositionMarkers();
     int mTrackFinishEmitTime;
     Track* m_CurrentTrack;
@@ -174,9 +188,22 @@ private:
     bool m_beatVisualMode;
     double m_tempoRate;
     bool m_syncAdopting;
+    int m_visualLatencyMs;
+    QQueue<float> m_pendingEnvelope;
+    bool m_liveEnvelopeStarted;
+    float m_liveEnvelopeSmoothed;
     bool m_bpmAnalysed;
     int m_bpm;
     QTime m_beatPosition;
+    QString m_infoBaseText;
+    bool m_envelopeScrubbing;
+    int m_envelopeScrubAnchorMs;
+    QTimer* m_envelopeScrubSeekTimer;
+    int m_pendingEnvelopeScrubTargetMs;
+    int m_lastEnvelopeScrubAppliedMs;
+    QPushButton* m_beatJumpButtons[4];
+    QPushButton* m_hotCueButtons[3];
+    QMap<QString, QVector<int> > m_hotCuesByTrack;
 
     struct PlayerWidgetPrivate* p;
 };

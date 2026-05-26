@@ -43,8 +43,7 @@ Knowthelist::Knowthelist(QWidget* parent)
     , m_rateRestorePlayer(nullptr)
     , m_toggleAutoSyncButton(nullptr)
     , m_toggleBeatVisualButton(nullptr)
-    , m_syncLed1(nullptr)
-    , m_syncLed2(nullptr)
+    , m_autoSyncLed(nullptr)
     , m_autoSyncEnabled(true)
     , m_fadeSyncPhase(FadeSyncIdle)
     , m_fadeSyncOutgoingPlayer(nullptr)
@@ -134,13 +133,23 @@ void Knowthelist::createUI()
 
     m_toggleAutoSyncButton = new QPushButton(ui->frameMixer);
     m_toggleAutoSyncButton->setObjectName("toggleAutoSync");
-    m_toggleAutoSyncButton->setGeometry(QRect(32, 336, 56, 18));
+    m_toggleAutoSyncButton->setGeometry(QRect(124, 314, 40, 18));
     m_toggleAutoSyncButton->setMinimumSize(QSize(0, 16));
     m_toggleAutoSyncButton->setPalette(ui->toggleAutoFade->palette());
     m_toggleAutoSyncButton->setFont(ui->toggleAutoFade->font());
     m_toggleAutoSyncButton->setCheckable(true);
     m_toggleAutoSyncButton->setText(tr("Sync"));
+    m_toggleAutoSyncButton->setToolTip(tr("Enable BPM sync for the next auto fade"));
     connect(m_toggleAutoSyncButton, &QPushButton::toggled, this, &Knowthelist::on_toggleAutoSync_toggled);
+
+    m_autoSyncLed = new QLed(ui->frameMixer);
+    m_autoSyncLed->setObjectName("ledSync");
+    m_autoSyncLed->setGeometry(QRect(138, 307, 12, 7));
+    m_autoSyncLed->setLook(QLed::Flat);
+    m_autoSyncLed->setShape(QLed::Rectangular);
+    m_autoSyncLed->setColor(QColor(35, 119, 246));
+    m_autoSyncLed->setToolTip(tr("Sync LED: ON = next fade will be BPM synced"));
+    m_autoSyncLed->off();
 
     m_toggleBeatVisualButton = new QPushButton(ui->frameMixer);
     m_toggleBeatVisualButton->setObjectName("toggleBeatVisual");
@@ -239,12 +248,6 @@ void Knowthelist::createUI()
     connect(player2, SIGNAL(tempoChanged(int, QTime)), SLOT(player2_tempoChanged(int, QTime)));
     connect(player1, &PlayerWidget::syncRequested, this, &Knowthelist::player1_syncRequested);
     connect(player2, &PlayerWidget::syncRequested, this, &Knowthelist::player2_syncRequested);
-    connect(player1, &PlayerWidget::syncStateChanged, this, [this](bool active) {
-        if (m_syncLed1) m_syncLed1->setState(active ? QLed::On : QLed::Off);
-    });
-    connect(player2, &PlayerWidget::syncStateChanged, this, [this](bool active) {
-        if (m_syncLed2) m_syncLed2->setState(active ? QLed::On : QLed::Off);
-    });
 
     connect(player1, SIGNAL(statusChanged(bool)), playList1, SLOT(setPlaying(bool)));
     connect(player2, SIGNAL(statusChanged(bool)), playList2, SLOT(setPlaying(bool)));
@@ -855,6 +858,8 @@ void Knowthelist::applyBeatVisualMode(bool enabled)
 void Knowthelist::applyAutoSyncEnabled(bool enabled)
 {
     m_autoSyncEnabled = enabled;
+    if (m_autoSyncLed)
+        m_autoSyncLed->setState(enabled ? QLed::On : QLed::Off);
     if (!enabled) {
         clearAutoFadeSyncState();
         resetWaitingDeckTempoPreviews();
@@ -1004,6 +1009,7 @@ void Knowthelist::timerAutoFader_timerOut()
                 if (m_fadeSyncIncomingPlayer)
                     m_fadeSyncIncomingPlayer->setTempoRate(1.0);
                 timerAutoFader->stop();
+                resetWaitingDeckTempoPreviews();
                 clearAutoFadeSyncState();
                 isFading = false;
             }
@@ -1020,6 +1026,7 @@ void Knowthelist::timerAutoFader_timerOut()
             if (m_fadeSyncIncomingPlayer)
                 m_fadeSyncIncomingPlayer->setTempoRate(1.0);
             timerAutoFader->stop();
+            resetWaitingDeckTempoPreviews();
             clearAutoFadeSyncState();
             isFading = false;
         }
@@ -1047,6 +1054,8 @@ void Knowthelist::timerAutoFader_timerOut()
         }
         if (ui->toggleAutoDJ->isChecked())
             djSession->updatePlaylists();
+
+        resetWaitingDeckTempoPreviews();
     }
     if (ui->sliFader->value() >= ui->sliFader->maximum()) {
         timerAutoFader->stop();
@@ -1059,6 +1068,8 @@ void Knowthelist::timerAutoFader_timerOut()
         }
         if (ui->toggleAutoDJ->isChecked())
             djSession->updatePlaylists();
+
+        resetWaitingDeckTempoPreviews();
     }
     changeVolumes();
 }
