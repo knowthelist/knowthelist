@@ -602,12 +602,16 @@ void PlayerWidget::createPerformanceControls()
     beatLayout->setContentsMargins(0, 0, 0, 0);
     beatLayout->setSpacing(2);
 
-    const int beatSteps[4] = { -1, 1, -4, 4 };
-    const char* beatLabels[4] = { "-1", "+1", "-4", "+4" };
-    for (int i = 0; i < 4; ++i) {
+    const int beatSteps[2] = { -4, 4 };
+    const char* beatLabels[2] = { "-4", "+4" };
+    for (int i = 0; i < 4; ++i)
+        m_beatJumpButtons[i] = nullptr;
+
+    for (int i = 0; i < 2; ++i) {
         m_beatJumpButtons[i] = new QPushButton(QString::fromLatin1(beatLabels[i]), beatJumpFrame);
         m_beatJumpButtons[i]->setProperty("beats", beatSteps[i]);
-        m_beatJumpButtons[i]->setToolTip(tr("Jump by %1 beat(s)").arg(beatSteps[i]));
+        const QString dir = (beatSteps[i] < 0) ? tr("back") : tr("forward");
+        m_beatJumpButtons[i]->setToolTip(tr("Jump %1 by 4 beats").arg(dir));
         connect(m_beatJumpButtons[i], SIGNAL(clicked()), this, SLOT(onBeatJumpButtonClicked()));
         beatLayout->addWidget(m_beatJumpButtons[i]);
     }
@@ -1466,6 +1470,7 @@ void PlayerWidget::on_butCue_clicked()
 
     suppressAboutFinishForMs(1000);
     player->setPosition(cuePosition);
+    bpmWidget->setState(m_bpm, cuePosition, m_beatPosition, m_isStarted, m_bpmAnalysed);
     updateTimeAndPositionDisplay();
 }
 

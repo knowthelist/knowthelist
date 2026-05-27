@@ -20,6 +20,7 @@
 #include <QWidget>
 #include <QMutexLocker>
 #include <QThread>
+#include <QTimer>
 #include <QtConcurrent/QtConcurrent>
 
 namespace {
@@ -625,9 +626,19 @@ bool Player::close()
 
 void Player::setPosition(QTime position)
 {
+    if (pipeline == nullptr)
+        return;
+
     const int time_milliseconds = QTime(0, 0).msecsTo(position);
     const gint64 time_nanoseconds = (static_cast<gint64>(time_milliseconds) * GST_MSECOND);
     const gdouble seekRate = pipelineSupportsSmoothTempo(pipeline) ? 1.0 : p->rate;
+    const bool playingSeek = p->isStarted;
+    const double seekGuardVolume = 0.001;
+    const double originalVolume = playingSeek ? volume() : 0.0;
+
+    if (playingSeek)
+        setVolume(qMin(originalVolume, seekGuardVolume));
+
     if (kLogSeekDebug) {
         qDebug() << "Player::setPosition(req):" << parentWidget()->objectName()
                  << "targetMs=" << time_milliseconds
@@ -637,7 +648,9 @@ void Player::setPosition(QTime position)
                  << "thread=" << QThread::currentThreadId();
     }
     logPipelineStateSnapshot("Player::setPosition(before seek)", parentWidget()->objectName(), pipeline);
-    const gboolean seekOk = gst_element_seek(pipeline, seekRate, GST_FORMAT_TIME, GST_SEEK_FLAG_FLUSH,
+    GstSeekFlags flags = static_cast<GstSeekFlags>(GST_SEEK_FLAG_FLUSH | GST_SEEK_FLAG_ACCURATE);
+
+    const gboolean seekOk = gst_element_seek(pipeline, seekRate, GST_FORMAT_TIME, flags,
         GST_SEEK_TYPE_SET, time_nanoseconds,
         GST_SEEK_TYPE_NONE, GST_CLOCK_TIME_NONE);
     if (kLogSeekDebug) {
@@ -655,6 +668,13 @@ void Player::setPosition(QTime position)
                  << "queriedMs=" << static_cast<int>(queried / GST_MSECOND);
     }
     logPipelineStateSnapshot("Player::setPosition(after seek)", parentWidget()->objectName(), pipeline);
+
+    if (playingSeek) {
+        QTimer::singleShot(18, this, [this, originalVolume]() {
+            if (pipeline != nullptr && p != nullptr)
+                setVolume(originalVolume);
+        });
+    }
 
     emit positionChanged();
 }
