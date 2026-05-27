@@ -1,5 +1,5 @@
 /*
-    Copyright (C) 2005-2017 Mario Stephan <mstephan@shared-files.de>
+    Copyright (C) 2005-2026 Mario Stephan <mstephan@shared-files.de>
 
     This library is free software; you can redistribute it and/or modify
     it under the terms of the GNU Lesser General Public License as published
@@ -199,6 +199,8 @@ private:
     int m_fadeSyncCrossfadeSteps;
     int m_fadeSyncRestoreSteps;
     int m_fadeSyncTotalSteps;
+    bool m_fadeSyncWaitingBeatStart;
+    int m_fadeSyncBeatWaitSteps;
 
 protected:
     virtual void closeEvent(QCloseEvent*);

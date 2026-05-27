@@ -1101,8 +1101,8 @@ p, li { white-space: pre-wrap; }
         <translation>À Propos de Knowthelist</translation>
     </message>
     <message>
-        <source>&lt;h3&gt;Knowthelist&lt;/h3&gt;&lt;br /&gt;Copyright (C) 2005-2014 Mario Stephan &lt;br /&gt;&lt;a href=&apos;mailto:mstephan@shared-files.de&apos;&gt;mstephan@shared-files.de&lt;/a&gt;&lt;br /&gt;&lt;br /&gt;&lt;a href=&apos;http://knowthelist.github.io/knowthelist&apos;&gt;http://knowthelist.github.io/knowthelist&lt;/a&gt;</source>
-        <translation type="obsolete">&lt;h3&gt;Knowthelist&lt;/h3&gt;&lt;br /&gt;Copyright (C) 2005-2014 Mario Stephan &lt;br /&gt;&lt;a href=&apos;mailto:mstephan@shared-files.de&apos;&gt;mstephan@shared-files.de&lt;/a&gt;&lt;br /&gt;&lt;br /&gt;&lt;a href=&apos;http://knowthelist.github.io/knowthelist&apos;&gt;http://knowthelist.github.io/knowthelist&lt;/a&gt;</translation>
+        <source>&lt;h3&gt;Knowthelist&lt;/h3&gt;&lt;br /&gt;Copyright (C) 2005-2026 Mario Stephan &lt;br /&gt;&lt;a href=&apos;mailto:mstephan@shared-files.de&apos;&gt;mstephan@shared-files.de&lt;/a&gt;&lt;br /&gt;&lt;br /&gt;&lt;a href=&apos;http://knowthelist.github.io/knowthelist&apos;&gt;http://knowthelist.github.io/knowthelist&lt;/a&gt;</source>
+        <translation type="obsolete">&lt;h3&gt;Knowthelist&lt;/h3&gt;&lt;br /&gt;Copyright (C) 2005-2026 Mario Stephan &lt;br /&gt;&lt;a href=&apos;mailto:mstephan@shared-files.de&apos;&gt;mstephan@shared-files.de&lt;/a&gt;&lt;br /&gt;&lt;br /&gt;&lt;a href=&apos;http://knowthelist.github.io/knowthelist&apos;&gt;http://knowthelist.github.io/knowthelist&lt;/a&gt;</translation>
     </message>
 </context>
 </TS>

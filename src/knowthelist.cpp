@@ -30,6 +30,26 @@
 #include <QMetaType>
 #include <cmath>
 
+namespace {
+bool nearBeatBoundary(const QTime& position, const QTime& beatReference, int bpm, double toleranceMs)
+{
+    if (bpm <= 0)
+        return true;
+
+    const double beatMs = 60000.0 / static_cast<double>(bpm);
+    if (beatMs <= 0.0)
+        return true;
+
+    const qint64 posMs = QTime(0, 0).msecsTo(position);
+    const qint64 beatRefMs = beatReference.isValid() ? QTime(0, 0).msecsTo(beatReference) : 0;
+    double phaseMs = std::fmod(static_cast<double>(posMs - beatRefMs), beatMs);
+    if (phaseMs < 0.0)
+        phaseMs += beatMs;
+    const double distanceToBeat = qMin(phaseMs, beatMs - phaseMs);
+    return distanceToBeat <= toleranceMs;
+}
+}
+
 Knowthelist::Knowthelist(QWidget* parent)
     : QMainWindow(parent)
     , ui(new Ui::Knowthelist)
@@ -57,6 +77,8 @@ Knowthelist::Knowthelist(QWidget* parent)
     , m_fadeSyncCrossfadeSteps(0)
     , m_fadeSyncRestoreSteps(0)
     , m_fadeSyncTotalSteps(0)
+    , m_fadeSyncWaitingBeatStart(false)
+    , m_fadeSyncBeatWaitSteps(0)
 {
     ui->setupUi(this);
 
@@ -776,6 +798,8 @@ void Knowthelist::beginAutoFadeSync(PlayerWidget* outgoing, PlayerWidget* incomi
     m_fadeSyncRestoreSteps = qMax(12, m_fadeSyncCrossfadeSteps / 4);
     m_fadeSyncTotalSteps = m_fadeSyncPreRollSteps + m_fadeSyncCrossfadeSteps + m_fadeSyncRestoreSteps;
     m_fadeSyncStep = 0;
+    m_fadeSyncWaitingBeatStart = true;
+    m_fadeSyncBeatWaitSteps = 0;
 
     outgoing->setSyncAdopting(true);
     incoming->setSyncAdopting(false);
@@ -833,6 +857,8 @@ void Knowthelist::clearAutoFadeSyncState()
     m_fadeSyncCrossfadeSteps = 0;
     m_fadeSyncRestoreSteps = 0;
     m_fadeSyncTotalSteps = 0;
+    m_fadeSyncWaitingBeatStart = false;
+    m_fadeSyncBeatWaitSteps = 0;
 }
 
 void Knowthelist::resetWaitingDeckTempoPreviews()
@@ -965,9 +991,26 @@ void Knowthelist::timerAutoFader_timerOut()
                                                               m_fadeSyncOutgoingPlayer->currentPosition(),
                                                               m_fadeSyncOutgoingBeatPosition);
             m_fadeSyncIncomingPlayer->setTempoRate(sharedTempoBpm / static_cast<double>(m_fadeSyncIncomingBpm));
-            if (!m_fadeSyncIncomingPlayer->isStarted())
-                m_fadeSyncIncomingPlayer->play();
-            m_fadeSyncPhase = FadeSyncCrossfade;
+
+            const double beatMs = 60000.0 / static_cast<double>(sharedTempoBpm);
+            const double toleranceMs = qMin(60.0, beatMs * 0.12);
+            const bool onBeat = nearBeatBoundary(m_fadeSyncOutgoingPlayer->currentPosition(),
+                                                 m_fadeSyncOutgoingBeatPosition,
+                                                 sharedTempoBpm,
+                                                 toleranceMs);
+
+            ++m_fadeSyncBeatWaitSteps;
+            const int timerStepMs = qMax(1, mAutofadeLength * 5);
+            const int maxWaitSteps = qMax(5, qRound((beatMs * 2.0) / static_cast<double>(timerStepMs)));
+            const bool waitTimedOut = m_fadeSyncBeatWaitSteps >= maxWaitSteps;
+
+            if (onBeat || !m_fadeSyncWaitingBeatStart || waitTimedOut) {
+                if (!m_fadeSyncIncomingPlayer->isStarted())
+                    m_fadeSyncIncomingPlayer->play();
+                m_fadeSyncPhase = FadeSyncCrossfade;
+                m_fadeSyncWaitingBeatStart = false;
+                m_fadeSyncBeatWaitSteps = 0;
+            }
         }
         return;
     }

@@ -127,8 +127,9 @@ void PlayerBpmWidget::setPreloadedEnvelope(const QVector<float>& samples)
         m_timelineKnown.append(1);
     m_envelopeDirty = true;
     m_envelopePreloaded = true;
-    if (!m_updateTimer.isActive())
-        m_updateTimer.start();
+    if (m_updateTimer.isActive())
+        m_updateTimer.stop();
+    update();
 }
 
 void PlayerBpmWidget::setWindowMilliseconds(int windowMs)
@@ -145,8 +146,11 @@ void PlayerBpmWidget::rebuildVisibleEnvelope()
     m_envelope.resize(targetSamples);
 
     const int posMs = QTime(0, 0).msecsTo(m_position);
-    // Playhead is at 20% from the left edge.
-    const int leftMs = posMs - qRound(0.20 * m_windowMs);
+    // Keep the visible window inside available preloaded data so startup shows a full waveform.
+    const int desiredLeftMs = posMs - qRound(0.20 * m_windowMs);
+    const int timelineSpanMs = qMax(0, (m_timelineEnvelope.size() - 1) * intervalMs);
+    const int maxLeftMs = qMax(0, timelineSpanMs - m_windowMs);
+    const int leftMs = qBound(0, desiredLeftMs, maxLeftMs);
     const double stepMs = (targetSamples > 1)
         ? static_cast<double>(m_windowMs) / static_cast<double>(targetSamples - 1)
         : 0.0;
@@ -436,6 +440,12 @@ void PlayerBpmWidget::paintEvent(QPaintEvent* event)
         const double flashWindowMs = qMin(120.0, beatMs * 0.28);
         const bool beatAtMarker = (qAbs(deltaMs) <= flashWindowMs);
         const bool flashOn = m_running && !beatAtMarker;
+
+        if (!m_running) {
+            painter.setPen(QPen(QColor(132, 195, 255, 190), 1));
+            painter.drawLine(x, phaseBand.top() + 1, x, phaseBand.bottom() - 1);
+            return;
+        }
 
         if (flashOn) {
             painter.setPen(QPen(QColor(28, 214, 116), 1.0));

@@ -1,6 +1,6 @@
 #
 # Knowthelist
-# Copyright (C) 2011-2024 Mario Stephan <mstephan@shared-files.de>
+# Copyright (C) 2011-2026 Mario Stephan <mstephan@shared-files.de>
 # License: LGPL-3.0+
 #
 

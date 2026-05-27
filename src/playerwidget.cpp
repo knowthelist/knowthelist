@@ -254,6 +254,8 @@ PlayerWidget::PlayerWidget(QWidget* parent)
     , m_envelopeScrubSeekTimer(nullptr)
     , m_pendingEnvelopeScrubTargetMs(-1)
     , m_lastEnvelopeScrubAppliedMs(-1)
+    , m_aboutFinishSuppressUntilMs(0)
+    , m_aboutFinishStableTicks(0)
     , p(new PlayerWidgetPrivate)
 {
     ui->setupUi(this);
@@ -272,6 +274,7 @@ PlayerWidget::PlayerWidget(QWidget* parent)
     }
 
     p->isEndAnnounced = false;
+    m_sessionTimer.start();
 
     //create the player
     player = new Player(this);
@@ -719,6 +722,7 @@ void PlayerWidget::onEnvelopeScrubStarted()
     m_lastEnvelopeScrubAppliedMs = -1;
     if (m_envelopeScrubSeekTimer->isActive())
         m_envelopeScrubSeekTimer->stop();
+    suppressAboutFinishForMs(800);
     qDebug() << "SCRUB start:" << objectName()
              << "anchorMs=" << m_envelopeScrubAnchorMs
              << "playing=" << player->isPlaying();
@@ -799,11 +803,46 @@ void PlayerWidget::applyPendingEnvelopeScrubSeek()
     m_pendingEnvelopeScrubTargetMs = -1;
     m_lastEnvelopeScrubAppliedMs = targetMs;
 
+    const bool overshotFadePoint = seekOvershootsFadePoint(QTime(0, 0).addMSecs(targetMs));
+    if (overshotFadePoint)
+        armImmediateAboutFinish();
+    else
+        suppressAboutFinishForMs(800);
     player->setPosition(QTime(0, 0).addMSecs(targetMs));
     updateTimeAndPositionDisplay(false);
     
     // Refresh waveform window view when scrubbing while paused
     bpmWidget->setState(m_bpm, player->position(), m_beatPosition, m_isStarted, m_bpmAnalysed);
+}
+
+void PlayerWidget::suppressAboutFinishForMs(int ms)
+{
+    const qint64 nowMs = m_sessionTimer.isValid() ? m_sessionTimer.elapsed() : 0;
+    m_aboutFinishSuppressUntilMs = nowMs + qMax(0, ms);
+    m_aboutFinishStableTicks = 0;
+    p->isEndAnnounced = false;
+}
+
+bool PlayerWidget::seekOvershootsFadePoint(const QTime& targetPos) const
+{
+    if (!m_isStarted)
+        return false;
+
+    const QTime length = player->length();
+    const int lengthMs = QTime(0, 0).msecsTo(length);
+    if (lengthMs <= 0)
+        return false;
+
+    const int targetMs = qMax(0, QTime(0, 0).msecsTo(targetPos));
+    const int triggerPosMs = qMax(0, lengthMs - static_cast<int>(remainCueTime) - mTrackFinishEmitTime);
+    return targetMs >= triggerPosMs;
+}
+
+void PlayerWidget::armImmediateAboutFinish()
+{
+    m_aboutFinishSuppressUntilMs = 0;
+    m_aboutFinishStableTicks = 2;
+    p->isEndAnnounced = false;
 }
 
 void PlayerWidget::setInfo(QPair<int, int> info)
@@ -1261,9 +1300,18 @@ void PlayerWidget::updateTimeAndPositionDisplay(bool isPassive)
     //Signal end of track or media error
     //ToDo: better recognition of media error (play pressed but player is not running)
 
-    if ((remainMs - remainCueTime - mTrackFinishEmitTime <= 0
-            && 0 < remainMs)
-        || m_isHanging) {
+    const bool nearEndByTime = (remainMs - remainCueTime - mTrackFinishEmitTime <= 0
+                                && 0 < remainMs);
+    const bool aboutFinishCandidate = (nearEndByTime || m_isHanging) && m_isStarted;
+    const qint64 nowMs = m_sessionTimer.isValid() ? m_sessionTimer.elapsed() : 0;
+    const bool suppressionActive = nowMs < m_aboutFinishSuppressUntilMs;
+
+    if (aboutFinishCandidate && !suppressionActive)
+        ++m_aboutFinishStableTicks;
+    else
+        m_aboutFinishStableTicks = 0;
+
+    if (m_aboutFinishStableTicks >= 3) {
         if (!p->isEndAnnounced) {
             qDebug() << Q_FUNC_INFO << ":" << objectName() << " EMIT aboutFinished";
             qDebug() << Q_FUNC_INFO << ": curpos:" << curpos;
@@ -1271,6 +1319,7 @@ void PlayerWidget::updateTimeAndPositionDisplay(bool isPassive)
             qDebug() << Q_FUNC_INFO << ": remainCueTime:" << remainCueTime;
             qDebug() << Q_FUNC_INFO << ": mTrackFinishEmitTime:" << mTrackFinishEmitTime;
             qDebug() << Q_FUNC_INFO << ": m_isHanging:" << m_isHanging;
+            qDebug() << Q_FUNC_INFO << ": stableTicks:" << m_aboutFinishStableTicks;
 
             //send signals only once
             p->isEndAnnounced = true;
@@ -1345,8 +1394,10 @@ void PlayerWidget::on_butRew_clicked()
 {
     if (player->position() < QTime(0, 0, 3))
         Q_EMIT rewindPressed();
-    else
+    else {
+        suppressAboutFinishForMs(1000);
         player->setPosition(QTime(0, 0, 0));
+    }
 }
 
 void PlayerWidget::on_butFwd_clicked()
@@ -1367,6 +1418,10 @@ void PlayerWidget::on_sliPosition_sliderMoved(int value)
         QTime pos = QTime(0, 0, 0);
         pos = pos.addMSecs(length * (value / 1000.0));
         qDebug() << Q_FUNC_INFO << ":" << objectName() << "pos=" << pos;
+        if (seekOvershootsFadePoint(pos))
+            armImmediateAboutFinish();
+        else
+            suppressAboutFinishForMs(1200);
         player->setPosition(pos);
     }
     updateTimeAndPositionDisplay(false);
@@ -1409,6 +1464,7 @@ void PlayerWidget::on_butCue_clicked()
     if (m_beatCueEnabled && m_bpm > 0 && m_beatPosition.isValid())
         cuePosition = m_beatPosition;
 
+    suppressAboutFinishForMs(1000);
     player->setPosition(cuePosition);
     updateTimeAndPositionDisplay();
 }

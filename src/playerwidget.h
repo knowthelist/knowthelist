@@ -1,5 +1,5 @@
 /*
-    Copyright (C) 2005-2014 Mario Stephan <mstephan@shared-files.de>
+    Copyright (C) 2005-2026 Mario Stephan <mstephan@shared-files.de>
 
     This library is free software; you can redistribute it and/or modify
     it under the terms of the GNU Lesser General Public License as published
@@ -28,6 +28,7 @@
 #include <QMap>
 #include <QVector>
 #include <QtCore/QTimer>
+#include <QtCore/QElapsedTimer>
 
 #include "player.h"
 #include "playerbpmwidget.h"
@@ -160,6 +161,9 @@ private:
     void jumpByBeats(int beatCount);
     void refreshHotCueButtons();
     QString currentTrackKey() const;
+    void suppressAboutFinishForMs(int ms);
+    bool seekOvershootsFadePoint(const QTime& targetPos) const;
+    void armImmediateAboutFinish();
 
     Player* player;
     TrackAnalyser* trackanalyser;
@@ -201,6 +205,9 @@ private:
     QTimer* m_envelopeScrubSeekTimer;
     int m_pendingEnvelopeScrubTargetMs;
     int m_lastEnvelopeScrubAppliedMs;
+    QElapsedTimer m_sessionTimer;
+    qint64 m_aboutFinishSuppressUntilMs;
+    int m_aboutFinishStableTicks;
     QPushButton* m_beatJumpButtons[4];
     QPushButton* m_hotCueButtons[3];
     QMap<QString, QVector<int> > m_hotCuesByTrack;
