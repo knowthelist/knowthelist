@@ -33,7 +33,7 @@ PlayerBpmWidget::PlayerBpmWidget(QWidget* parent)
     , m_tempoRate(1.0)
     , m_syncAdjusting(false)
     , m_windowMs(6000)
-    , m_sampleIntervalMs(50)
+    , m_sampleIntervalMs(50)  // Keep 50ms: dense enough, rebuilds less often = stable display
     , m_envelopeDirty(false)
     , m_envelopePreloaded(false)
     , m_scrubbing(false)
@@ -138,11 +138,13 @@ void PlayerBpmWidget::setWindowMilliseconds(int windowMs)
     m_envelopeDirty = true;
 }
 
-void PlayerBpmWidget::rebuildVisibleEnvelope()
+void PlayerBpmWidget::rebuildVisibleEnvelope(int bandWidth)
 {
     const int intervalMs = qMax(1, m_sampleIntervalMs);
-    const int minVisibleSamples = 40;
-    const int targetSamples = qMax(minVisibleSamples, m_windowMs / intervalMs);
+    // Use at least 1 display slot per pixel so each 50ms timeline sample spans
+    // multiple slots. Boundary transitions are then ≤1 pixel wide, eliminating
+    // the left/right jitter caused by coarse slot-to-sample mapping.
+    const int targetSamples = qMax(120, bandWidth);
     m_envelope.resize(targetSamples);
 
     const int posMs = QTime(0, 0).msecsTo(m_position);
@@ -156,19 +158,51 @@ void PlayerBpmWidget::rebuildVisibleEnvelope()
         : 0.0;
 
     for (int i = 0; i < targetSamples; ++i) {
-        const int sampleTimeMs = leftMs + qRound(static_cast<double>(i) * stepMs);
-        if (sampleTimeMs < 0) {
-            m_envelope[i] = 0.0f;
-            continue;
-        }
+        const double tStartMs = leftMs + static_cast<double>(i) * stepMs;
+        const double tEndMs   = tStartMs + stepMs;
 
-        const int timelineIndex = sampleTimeMs / intervalMs;
-        if (timelineIndex >= 0 && timelineIndex < m_timelineEnvelope.size()
-            && timelineIndex < m_timelineKnown.size() && m_timelineKnown.at(timelineIndex)) {
-            m_envelope[i] = m_timelineEnvelope.at(timelineIndex);
-        } else {
-            m_envelope[i] = 0.0f;
+        if (tEndMs < 0.0) { m_envelope[i] = 0.0f; continue; }
+
+        // Max-pool over the time range this display slot covers.
+        // Linear interpolation (the previous approach) causes all peak amplitudes to
+        // vary continuously as the fractional alignment shifts with every position
+        // update — this is the source of the "jitter". With max-pooling the value
+        // only changes when the playhead moves far enough to pull a different
+        // timeline sample into the slot's range, giving a clean 1-slot discrete hop.
+        const int rawFirst = static_cast<int>(tStartMs / intervalMs);
+        const int rawLast  = static_cast<int>(tEndMs   / intervalMs);
+        if (rawFirst >= m_timelineEnvelope.size()) { m_envelope[i] = 0.0f; continue; }
+        const int idxFirst = qMax(0, rawFirst);
+        const int idxLast  = qMin(m_timelineEnvelope.size() - 1, rawLast);
+
+        float maxVal  = 0.0f;
+        bool anyKnown = false;
+        for (int j = idxFirst; j <= idxLast; ++j) {
+            if (j < m_timelineKnown.size() && m_timelineKnown.at(j)) {
+                const float v = m_timelineEnvelope.at(j);
+                if (v > maxVal) maxVal = v;
+                anyKnown = true;
+            }
         }
+        m_envelope[i] = anyKnown ? maxVal : 0.0f;
+    }
+
+    // Forward-fill: replace zeros with the last known value to
+    // avoid artificial zero dips that cause flickering at the playhead.
+    float lastKnown = 0.0f;
+    for (int i = 0; i < m_envelope.size(); ++i) {
+        if (m_envelope[i] > 0.0f)
+            lastKnown = m_envelope[i];
+        else if (lastKnown > 0.0f)
+            m_envelope[i] = lastKnown;
+    }
+    // Backward-fill: fill any remaining zeros at the start.
+    lastKnown = 0.0f;
+    for (int i = m_envelope.size() - 1; i >= 0; --i) {
+        if (m_envelope[i] > 0.0f)
+            lastKnown = m_envelope[i];
+        else if (lastKnown > 0.0f)
+            m_envelope[i] = lastKnown;
     }
 }
 
@@ -390,7 +424,7 @@ void PlayerBpmWidget::paintEvent(QPaintEvent* event)
     // ── Envelope waveform (cached paths) ──────────────────────────────────────
     if (!m_timelineEnvelope.isEmpty()) {
         if (m_envelopeDirty)
-            rebuildVisibleEnvelope();
+            rebuildVisibleEnvelope(phaseBand.width());
 
         const double halfH = qMax(4.0, (phaseBand.height() / 2.0) - 2.0);
 

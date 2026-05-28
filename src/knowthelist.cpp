@@ -26,6 +26,8 @@
 
 #include <QBoxLayout>
 #include <QSettings>
+#include <QResizeEvent>
+#include <QToolButton>
 #include <QtConcurrent/QtConcurrent>
 #include <QMetaType>
 #include <cmath>
@@ -64,6 +66,7 @@ Knowthelist::Knowthelist(QWidget* parent)
     , m_toggleAutoSyncButton(nullptr)
     , m_toggleBeatVisualButton(nullptr)
     , m_autoSyncLed(nullptr)
+    , m_monitorSettingsButton(nullptr)
     , m_autoSyncEnabled(true)
     , m_fadeSyncPhase(FadeSyncIdle)
     , m_fadeSyncOutgoingPlayer(nullptr)
@@ -155,8 +158,8 @@ void Knowthelist::createUI()
 
     m_toggleAutoSyncButton = new QPushButton(ui->frameMixer);
     m_toggleAutoSyncButton->setObjectName("toggleAutoSync");
-    m_toggleAutoSyncButton->setGeometry(QRect(124, 314, 40, 18));
-    m_toggleAutoSyncButton->setMinimumSize(QSize(0, 16));
+    m_toggleAutoSyncButton->setGeometry(QRect(123, 314, 40, 18));
+    m_toggleAutoSyncButton->setMinimumSize(QSize(16, 16));
     m_toggleAutoSyncButton->setPalette(ui->toggleAutoFade->palette());
     m_toggleAutoSyncButton->setFont(ui->toggleAutoFade->font());
     m_toggleAutoSyncButton->setCheckable(true);
@@ -175,13 +178,17 @@ void Knowthelist::createUI()
 
     m_toggleBeatVisualButton = new QPushButton(ui->frameMixer);
     m_toggleBeatVisualButton->setObjectName("toggleBeatVisual");
-    m_toggleBeatVisualButton->setGeometry(QRect(90, 336, 40, 18));
-    m_toggleBeatVisualButton->setMinimumSize(QSize(0, 16));
+    m_toggleBeatVisualButton->setGeometry(QRect(125, 335, 40, 18));
+    m_toggleBeatVisualButton->setMinimumSize(QSize(16, 16));
     m_toggleBeatVisualButton->setPalette(ui->toggleAutoFade->palette());
     m_toggleBeatVisualButton->setFont(ui->toggleAutoFade->font());
     m_toggleBeatVisualButton->setCheckable(true);
     m_toggleBeatVisualButton->setText(tr("VU"));
     connect(m_toggleBeatVisualButton, &QPushButton::toggled, this, &Knowthelist::on_toggleBeatVisual_toggled);
+
+    ui->cmdOptions->setGeometry(QRect(32, 335, 40, 18));
+    ui->cmdOptions->setIcon(QIcon(":settings.png"));
+    ui->cmdOptions->setIconSize(QSize(14, 14));
 
     vuMeter2 = new VUMeter(ui->frameMixer);
     vuMeter2->setLinesPerSegment(2);
@@ -207,6 +214,14 @@ void Knowthelist::createUI()
     vuMeter1->setGeometry(ui->phVU1->geometry());
     vuMeter2->setGeometry(ui->phVU2->geometry());
     monitorMeter->setGeometry(ui->phVUMeter->geometry());
+
+    m_monitorSettingsButton = new QToolButton(ui->fraMonitorTop);
+    m_monitorSettingsButton->setObjectName("cmdMonitorSettings");
+    m_monitorSettingsButton->setGeometry(QRect(150, 0, 23, 20)); // repositioned in showEvent
+    m_monitorSettingsButton->setIcon(QIcon(":settings.png"));
+    m_monitorSettingsButton->setToolTip(tr("Monitor output settings"));
+    m_monitorSettingsButton->setAutoRaise(true);
+    connect(m_monitorSettingsButton, &QToolButton::clicked, this, &Knowthelist::on_cmdMonitorSettings_clicked);
 
     // Dedicated mixer beat-sync visualizer (switchable from settings).
     beatSyncWidget = new BeatSyncWidget(ui->frameMixer);
@@ -270,6 +285,8 @@ void Knowthelist::createUI()
     connect(player2, SIGNAL(tempoChanged(int, QTime)), SLOT(player2_tempoChanged(int, QTime)));
     connect(player1, &PlayerWidget::syncRequested, this, &Knowthelist::player1_syncRequested);
     connect(player2, &PlayerWidget::syncRequested, this, &Knowthelist::player2_syncRequested);
+    connect(player1, &PlayerWidget::monitorRouteToggled, this, &Knowthelist::player1_monitorRouteToggled);
+    connect(player2, &PlayerWidget::monitorRouteToggled, this, &Knowthelist::player2_monitorRouteToggled);
 
     connect(player1, SIGNAL(statusChanged(bool)), playList1, SLOT(setPlaying(bool)));
     connect(player2, SIGNAL(statusChanged(bool)), playList2, SLOT(setPlaying(bool)));
@@ -500,6 +517,8 @@ void Knowthelist::loadCurrentSettings()
         }
     }
 
+    updatePlayerMonitorRouting();
+
     //Auto DJ Settings
     djSession->setMinCount(settings.value("minTracks", "6").toInt());
     djSession->setIsEnabledAutoDJCount(settings.value("isEnabledAutoDJCount", false).toBool());
@@ -550,6 +569,41 @@ void Knowthelist::loadCurrentSettings()
 
     //File Browser Settings
     filetree->setRootPath(settings.value("editBrowerRoot", "").toString());
+}
+
+void Knowthelist::resizeEvent(QResizeEvent* event)
+{
+    QMainWindow::resizeEvent(event);
+    // Keep the DJ name label pinned to the bottom of the mixer frame
+    const int mixerH = ui->frameMixer->height();
+    const int labelMargin = 4;
+    ui->lblDjName->setGeometry(4, mixerH - ui->lblDjName->height() - labelMargin,
+                               186, ui->lblDjName->height());
+    // Reposition monitor settings button to bottom-right of fraMonitorTop
+    if (m_monitorSettingsButton) {
+        const QRect fra = ui->fraMonitorTop->rect();
+        m_monitorSettingsButton->setGeometry(
+            fra.width() - 27, fra.height() + 24, 23, 20);
+    }
+}
+
+void Knowthelist::showEvent(QShowEvent* event)
+{
+    QMainWindow::showEvent(event);
+    // Defer until the layout has settled so geometry() values are correct.
+    QTimer::singleShot(0, this, [this]() {
+        const int mixerH = ui->frameMixer->height();
+        if (mixerH > 0) {
+            constexpr int labelMargin = 4;
+            ui->lblDjName->setGeometry(4, mixerH - ui->lblDjName->height() - labelMargin,
+                                       186, ui->lblDjName->height());
+        }
+        if (m_monitorSettingsButton) {
+            const QRect fra = ui->fraMonitorTop->rect();
+            m_monitorSettingsButton->setGeometry(
+                fra.width() - 27, fra.height() - 24, 23, 20);
+        }
+    });
 }
 
 void Knowthelist::closeEvent(QCloseEvent* event)
@@ -792,7 +846,7 @@ void Knowthelist::beginAutoFadeSync(PlayerWidget* outgoing, PlayerWidget* incomi
     m_fadeSyncIncomingBpm = incomingBpm;
     m_fadeSyncOutgoingBeatPosition = outgoingBeatPosition;
     m_fadeSyncStartTempoBpm = qMax(1.0, static_cast<double>(outgoingBpm) * outgoing->tempoRate());
-    m_fadeSyncTargetTempoBpm = qMax(1.0, static_cast<double>(incomingBpm));
+    m_fadeSyncTargetTempoBpm = selectAutoFadeTargetTempo(m_fadeSyncStartTempoBpm, outgoingBpm, incomingBpm);
     m_fadeSyncCrossfadeSteps = qMax(1, qAbs((m_xfadeDir < 0 ? ui->sliFader->minimum() : ui->sliFader->maximum()) - ui->sliFader->value()));
     m_fadeSyncPreRollSteps = qMax(12, m_fadeSyncCrossfadeSteps / 4);
     m_fadeSyncRestoreSteps = qMax(12, m_fadeSyncCrossfadeSteps / 4);
@@ -804,6 +858,45 @@ void Knowthelist::beginAutoFadeSync(PlayerWidget* outgoing, PlayerWidget* incomi
     outgoing->setSyncAdopting(true);
     incoming->setSyncAdopting(false);
     timerAutoFader->start(mAutofadeLength * 5);
+}
+
+double Knowthelist::selectAutoFadeTargetTempo(double startTempoBpm, int outgoingBpm, int incomingBpm) const
+{
+    const double baseTarget = qMax(1.0, static_cast<double>(incomingBpm));
+
+    if (outgoingBpm <= 0 || incomingBpm <= 0)
+        return baseTarget;
+
+    // Evaluate three candidate meeting tempos:
+    //   (1) direct – incoming at its native BPM
+    //   (2) half   – incoming at 0.5× (2:1 half-tempo relationship)
+    //   (3) double – incoming at 2×  (1:2 relationship)
+    // For each candidate check that both decks stay within hardware rate limits [0.5, 2.0].
+    // Among the feasible candidates pick the one with the smallest TOTAL log-rate deviation
+    // across both decks. This avoids "fixing" the outgoing deck by forcing the incoming deck
+    // to an extreme playback rate (which was the 104←160 → target=208 bug).
+    const double candidates[3] = { baseTarget, baseTarget * 0.5, baseTarget * 2.0 };
+
+    double bestTempo = -1.0;
+    double bestDeviation = std::numeric_limits<double>::max();
+
+    for (int i = 0; i < 3; ++i) {
+        const double candidate = candidates[i];
+        if (candidate < 10.0)
+            continue;
+        const double outRate = candidate / static_cast<double>(outgoingBpm);
+        const double inRate  = candidate / static_cast<double>(incomingBpm);
+        if (outRate < 0.5 || outRate > 2.0 || inRate < 0.5 || inRate > 2.0)
+            continue;
+
+        const double deviation = qAbs(std::log(outRate)) + qAbs(std::log(inRate));
+        if (deviation < bestDeviation - 0.01) {
+            bestDeviation = deviation;
+            bestTempo = candidate;
+        }
+    }
+
+    return qMax(1.0, bestTempo > 0.0 ? bestTempo : baseTarget);
 }
 
 double Knowthelist::autoFadeSharedTempoForStep(int step) const
@@ -1255,6 +1348,11 @@ bool Knowthelist::initMonitorPlayer()
     ui->cmdMonitorStop->setIcon(QIcon(":stop.png"));
     ui->cmdMonitorPlay->setIcon(QIcon(":play.png"));
     connect(monitorPlayer, SIGNAL(loadFinished()), this, SLOT(timerMonitor_loadFinished()));
+    // Update VU meter directly from the GStreamer level signal (cross-thread safe via queued).
+    connect(monitorPlayer, &MonitorPlayer::levelChanged, this, [this]() {
+        monitorMeter->setValueLeft(monitorPlayer->levelLeft());
+        monitorMeter->setValueRight(monitorPlayer->levelRight());
+    }, Qt::QueuedConnection);
 
     qDebug() << Q_FUNC_INFO << "END ";
     return true;
@@ -1299,6 +1397,12 @@ void Knowthelist::on_cmdMonitorPlay_clicked()
         monitorPlayer->play();
         timerMonitor->start();
     }
+}
+
+void Knowthelist::on_cmdMonitorSettings_clicked()
+{
+    preferences->setCurrentTab(SettingsDialog::TabMonitor);
+    editSettings();
 }
 
 void Knowthelist::monitorPlayer_trackTimeChanged(qint64 time, qint64 totalTime)
@@ -1448,6 +1552,41 @@ void Knowthelist::on_toggleBeatVisual_toggled(bool checked)
     applyBeatVisualMode(checked);
     if (!checked && m_toggleAutoSyncButton && m_toggleAutoSyncButton->isChecked())
         m_toggleAutoSyncButton->setChecked(false);
+}
+
+void Knowthelist::player1_monitorRouteToggled(bool enabled)
+{
+    QSettings settings;
+    settings.setValue("player1MonitorRoute", enabled);
+}
+
+void Knowthelist::player2_monitorRouteToggled(bool enabled)
+{
+    QSettings settings;
+    settings.setValue("player2MonitorRoute", enabled);
+}
+
+void Knowthelist::updatePlayerMonitorRouting()
+{
+    if (!player1 || !player2)
+        return;
+
+    QSettings settings;
+    QString monitorDeviceId;
+    bool monitorAvailable = false;
+
+    if (monitorPlayer && !monitorPlayer->isDisabled()) {
+        monitorDeviceId = monitorPlayer->outputDeviceID();
+        monitorAvailable = !monitorDeviceId.isEmpty();
+    }
+
+    player1->setMonitorOutputDeviceId(monitorDeviceId);
+    player2->setMonitorOutputDeviceId(monitorDeviceId);
+    player1->setMonitorRouteAvailable(monitorAvailable);
+    player2->setMonitorRouteAvailable(monitorAvailable);
+
+    player1->setMonitorRouteEnabled(settings.value("player1MonitorRoute", false).toBool());
+    player2->setMonitorRouteEnabled(settings.value("player2MonitorRoute", false).toBool());
 }
 
 void Knowthelist::playlist1_currentTrackChanged(Track* track)

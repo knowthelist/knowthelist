@@ -4,13 +4,14 @@ knowthelist
 Knowthelist - the awesome party music player
 
 - Easy to use for all party guests
-- Quick search for tracks in collection
+- Fast collection search while tracks are playing
 - Two players with separate playlists
-- Mixer with fader, 3 channel EQ and gain
-- Auto fader and auto gain
-- Trackanalyser search for song start/end and gain setting
-- Auto DJ function with multiple filters  for random play 
-- Monitor player for pre listen tracks (via 2nd sound card e.g. USB)
+- Mixer with crossfader, 3-band EQ and gain per deck
+- Auto fade and auto gain control (AGC)
+- Track analysis for cue points, loudness and BPM
+- Beat-synced transitions with visual sync support
+- Auto DJ with multiple filters and smart random play
+- Monitor player for pre-listening on a second sound device
 - ... more details can be found on the [Wiki](https://github.com/knowthelist/knowthelist/wiki)
 
 Runs under Linux, MacOS and Windows
@@ -103,7 +104,7 @@ Prebuilt packages for Linux can be found on the [releases page](https://github.c
 
 Versions:
 ----------
-- 2.4 (2026)   :  Qt6 compatibility
+- 2.4 (2026)   :  Qt6 compatibility and BPM mode
 - 2.3 (2014-09):	Qt5 compatibility and usage of GStreamer 1.x
 - 2.2 (2014-08):	Support for stored lists
 - 2.1 (2014-05):	First public version; removed qt3support

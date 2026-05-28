@@ -256,6 +256,9 @@ PlayerWidget::PlayerWidget(QWidget* parent)
     , m_lastEnvelopeScrubAppliedMs(-1)
     , m_aboutFinishSuppressUntilMs(0)
     , m_aboutFinishStableTicks(0)
+    , m_monitorRouteButton(nullptr)
+    , m_monitorRouteAvailable(false)
+    , m_monitorRouteEnabled(false)
     , p(new PlayerWidgetPrivate)
 {
     ui->setupUi(this);
@@ -350,6 +353,10 @@ PlayerWidget::PlayerWidget(QWidget* parent)
 
     timerPosition = new QTimer(this);
     connect(timerPosition, SIGNAL(timeout()), SLOT(timerPosition_timeOut()));
+
+    timerVisual = new QTimer(this);
+    timerVisual->setInterval(16);  // ~60fps refresh rate (16.67ms ≈ 16ms)
+    connect(timerVisual, SIGNAL(timeout()), SLOT(timerVisual_timeOut()));
 
     m_envelopeScrubSeekTimer = new QTimer(this);
     m_envelopeScrubSeekTimer->setSingleShot(true);
@@ -485,6 +492,38 @@ void PlayerWidget::setBeatVisualMode(bool enabled)
     }
 }
 
+void PlayerWidget::setMonitorOutputDeviceId(const QString& deviceId)
+{
+    m_monitorOutputDeviceId = deviceId.trimmed();
+    player->setMonitorDeviceId(m_monitorOutputDeviceId);
+    player->setUseMonitorOutput(m_monitorRouteEnabled && m_monitorRouteAvailable);
+}
+
+void PlayerWidget::setMonitorRouteAvailable(bool available)
+{
+    m_monitorRouteAvailable = available;
+    if (m_monitorRouteButton)
+        m_monitorRouteButton->setEnabled(available);
+
+    if (!available && m_monitorRouteEnabled)
+        setMonitorRouteEnabled(false);
+    else
+        player->setUseMonitorOutput(m_monitorRouteEnabled && m_monitorRouteAvailable);
+}
+
+void PlayerWidget::setMonitorRouteEnabled(bool enabled)
+{
+    const bool clamped = enabled && m_monitorRouteAvailable;
+    m_monitorRouteEnabled = clamped;
+
+    if (m_monitorRouteButton && m_monitorRouteButton->isChecked() != clamped) {
+        const QSignalBlocker blocker(m_monitorRouteButton);
+        m_monitorRouteButton->setChecked(clamped);
+    }
+
+    player->setUseMonitorOutput(clamped);
+}
+
 void PlayerWidget::applyBeatVisualLayout(bool enabled)
 {
     // Keep the same outer dimensions in both modes so the player never resizes on toggle
@@ -552,12 +591,6 @@ void PlayerWidget::updateResponsiveLayout()
     const int cueButtonWidth = veryCompact ? 40 : (compact ? 48 : 59);
     const int smallButtonWidth = veryCompact ? 18 : (compact ? 24 : 36);
     const int iconSize = veryCompact ? 18 : (compact ? 22 : 26);
-
-    //ui->frame_5->setMinimumHeight(playButtonHeight);
-    //ui->frame_6->setMinimumHeight(smallButtonHeight + 6);
-    //ui->frame_4->setMinimumHeight(smallButtonHeight + 2);
-    //if (QFrame* syncFrame = findChild<QFrame*>("frame_7"))
-     //   syncFrame->setMinimumHeight(smallButtonHeight + 4);
 
     ui->butPlay->setMinimumSize(QSize(playButtonWidth, playButtonHeight));
     ui->butPlay->setMaximumHeight(playButtonHeight);
@@ -632,6 +665,20 @@ void PlayerWidget::createPerformanceControls()
         hotLayout->addWidget(m_hotCueButtons[i]);
     }
     controls->addWidget(hotCueFrame);
+
+    QFrame* monitorFrame = new QFrame(ui->frame_2);
+    monitorFrame->setObjectName("frameMonitorRoute");
+    QHBoxLayout* monitorLayout = new QHBoxLayout(monitorFrame);
+    monitorLayout->setContentsMargins(0, 0, 0, 0);
+    monitorLayout->setSpacing(2);
+
+    m_monitorRouteButton = new QPushButton(tr("MON"), monitorFrame);
+    m_monitorRouteButton->setCheckable(true);
+    m_monitorRouteButton->setToolTip(tr("Route this deck to monitor output"));
+    m_monitorRouteButton->setEnabled(false);
+    connect(m_monitorRouteButton, SIGNAL(toggled(bool)), this, SLOT(on_monitorRoute_toggled(bool)));
+    monitorLayout->addWidget(m_monitorRouteButton);
+    controls->addWidget(monitorFrame);
 
     refreshHotCueButtons();
 }
@@ -899,8 +946,11 @@ void PlayerWidget::play()
             m_liveEnvelopeSmoothed = 0.0f;
             m_pendingEnvelope.clear();
         }
-        timerLevel->start(50);
+        timerLevel->start(50);  // Sample audio levels every 50ms
         timerPosition->start(100);
+        timerVisual->start();  // High-frequency waveform updates for smooth display
+        m_visualFrameTimer.restart();
+        m_lastWaveformRebuildPosMs = -1;  // Reset for fresh rebuild on play
         Q_EMIT statusChanged(m_isStarted);
     } else
         m_isHanging = true;
@@ -916,6 +966,7 @@ void PlayerWidget::pause()
     m_syncAdopting = false;
     timerLevel->stop();
     timerPosition->stop();
+    timerVisual->stop();
     vuMeter->reset();
     bpmWidget->setTempoInfo(m_tempoRate, m_syncAdopting);
     Q_EMIT statusChanged(m_isStarted);
@@ -934,12 +985,14 @@ void PlayerWidget::stop()
     player->stop();
     timerLevel->stop();
     timerPosition->stop();
+    timerVisual->stop();
     vuMeter->reset();
     bpmWidget->clearEnvelope();
     m_liveEnvelopeStarted = false;
     m_liveEnvelopeSmoothed = 0.0f;
     m_pendingEnvelope.clear();
     m_visualLatencyMs = 0;
+    m_lastWaveformRebuildPosMs = -1;
     bpmWidget->setTempoInfo(m_tempoRate, m_syncAdopting);
     Q_EMIT statusChanged(m_isStarted);
     Q_EMIT levelChanged(0, 0);
@@ -1060,7 +1113,8 @@ void PlayerWidget::timerLevel_timeOut()
         bpmWidget->appendEnvelopeSampleAt(visPosMs, m_pendingEnvelope.dequeue());
 
     if (m_beatVisualMode) {
-        bpmWidget->setState(m_bpm, QTime(0, 0).addMSecs(visPosMs), m_beatPosition, m_isStarted, m_bpmAnalysed);
+        // Visual waveform display is updated by timerVisual_timeOut() at high frequency (~60fps).
+        // This keeps visual smooth while timerLevel_timeOut() still appends audio samples.
     } else {
         vuMeter->setValueLeft(inLeft);
         vuMeter->setValueRight(inRight);
@@ -1071,6 +1125,25 @@ void PlayerWidget::timerLevel_timeOut()
 void PlayerWidget::timerPosition_timeOut()
 {
     updateTimeAndPositionDisplay();
+}
+
+void PlayerWidget::timerVisual_timeOut()
+{
+    // High-frequency visual update, but only rebuild waveform when position has moved enough.
+    // This keeps the display smooth without jittering amplitude from constant recalculation.
+    if (!m_isStarted || !bpmWidget || !m_beatVisualMode)
+        return;
+
+    const QTime currentPos = player->position();
+    const int visPosMs = qMax(0, QTime(0, 0).msecsTo(currentPos) - m_visualLatencyMs);
+
+    // Only rebuild waveform display if we've moved more than ~8ms to avoid jittering
+    // while still maintaining responsive scrolling.
+    constexpr int kRebuildThresholdMs = 8;
+    if (m_lastWaveformRebuildPosMs < 0 || qAbs(visPosMs - m_lastWaveformRebuildPosMs) >= kRebuildThresholdMs) {
+        m_lastWaveformRebuildPosMs = visPosMs;
+        bpmWidget->setState(m_bpm, QTime(0, 0).addMSecs(visPosMs), m_beatPosition, m_isStarted, m_bpmAnalysed);
+    }
 }
 
 void PlayerWidget::dragEnterEvent(QDragEnterEvent* event)
@@ -1571,5 +1644,18 @@ void PlayerWidget::on_butSync_toggled(bool checked)
     } else if (!m_syncAdopting && std::fabs(m_tempoRate - 1.0) >= 0.001) {
         setTempoRate(1.0);
     }
+}
+
+void PlayerWidget::on_monitorRoute_toggled(bool checked)
+{
+    const bool enabled = checked && m_monitorRouteAvailable;
+    m_monitorRouteEnabled = enabled;
+    if (m_monitorRouteButton && m_monitorRouteButton->isChecked() != enabled) {
+        const QSignalBlocker blocker(m_monitorRouteButton);
+        m_monitorRouteButton->setChecked(enabled);
+    }
+
+    player->setUseMonitorOutput(enabled);
+    Q_EMIT monitorRouteToggled(enabled);
 }
 

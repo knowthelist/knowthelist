@@ -445,7 +445,7 @@ background-color: #444444;
           <property name="minimumSize">
            <size>
             <width>194</width>
-            <height>380</height>
+            <height>400</height>
            </size>
           </property>
           <property name="sizeIncrement">
@@ -1888,15 +1888,15 @@ background-color: #444444;
           <widget class="QPushButton" name="cmdOptions">
            <property name="geometry">
             <rect>
-             <x>123</x>
-             <y>314</y>
-             <width>41</width>
-             <height>18</height>
+               <x>25</x>
+               <y>336</y>
+               <width>184</width>
+               <height>18</height>
             </rect>
            </property>
            <property name="minimumSize">
             <size>
-             <width>41</width>
+               <width>184</width>
              <height>16</height>
             </size>
            </property>
@@ -2510,7 +2510,7 @@ background-color: #444444;
             </font>
            </property>
            <property name="text">
-            <string>Set</string>
+            <string>Settings</string>
            </property>
            <property name="shortcut">
             <string/>
@@ -5512,9 +5512,6 @@ min-height: 16px;
            </property>
            <property name="shortcut">
             <string>Alt+J</string>
-           </property>
-           <property name="checkable">
-            <bool>true</bool>
            </property>
            <property name="flat">
             <bool>false</bool>

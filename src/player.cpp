@@ -245,6 +245,45 @@ void setTempoEffectRate(GstElement* pipeline, double rate)
 
     gst_object_unref(tempoEffect);
 }
+
+QString defaultAudioDeviceId()
+{
+#if defined(Q_OS_WIN32)
+    return QString();
+#elif defined(Q_OS_DARWIN)
+    return QString("0");
+#else
+    return QString("default");
+#endif
+}
+
+void applyAudioSinkDevice(GstElement* sink, const QString& deviceId)
+{
+    if (sink == nullptr)
+        return;
+
+    GObjectClass* sinkClass = G_OBJECT_GET_CLASS(sink);
+    if (sinkClass == nullptr || g_object_class_find_property(sinkClass, "device") == nullptr)
+        return;
+
+#if defined(Q_OS_WIN32)
+    const QByteArray encoded = deviceId.toLatin1();
+    g_object_set(sink, "device", encoded.isEmpty() ? nullptr : encoded.constData(), NULL);
+#elif defined(Q_OS_DARWIN)
+    bool ok = false;
+    int target = deviceId.toInt(&ok);
+    if (!ok)
+        target = 0;
+    g_object_set(sink, "device", target, NULL);
+#else
+    QByteArray encoded;
+    if (deviceId.isEmpty() || deviceId == QLatin1String("0") || deviceId == QLatin1String("default"))
+        encoded = QByteArray("default");
+    else
+        encoded = QString("hw:%1").arg(deviceId).toLatin1();
+    g_object_set(sink, "device", encoded.constData(), NULL);
+#endif
+}
 }
 
 void Player::sync_set_state(GstElement* element, GstState state)
@@ -323,6 +362,9 @@ struct PlayerPrivate {
     double rms_r;
     double rmsout_l;
     double rmsout_r;
+    QString monitorDeviceId;
+    QString masterDeviceId;
+    bool useMonitorOutput;
 };
 
 Player::Player(QWidget* parent)
@@ -341,6 +383,9 @@ Player::Player(QWidget* parent)
     p->rmsout_l = 0;
     p->rmsout_r = 0;
     p->playBasePosition = 0;
+    p->monitorDeviceId = QString();
+    p->masterDeviceId = defaultAudioDeviceId();
+    p->useMonitorOutput = false;
 
     connect(&p->watcher, SIGNAL(finished()), this, SLOT(loadThreadFinished()));
 }
@@ -444,11 +489,8 @@ bool Player::prepare()
     if (sink == nullptr)
         sink = gst_element_factory_make("autoaudiosink", "sink");
 
-    if (sink != nullptr) {
-        GObjectClass* sinkClass = G_OBJECT_GET_CLASS(sink);
-        if (sinkClass != nullptr && g_object_class_find_property(sinkClass, "device") != nullptr)
-            g_object_set(sink, "device", "default", NULL);
-    }
+    if (sink != nullptr)
+        applyAudioSinkDevice(sink, p->masterDeviceId);
 #else
     sink = gst_element_factory_make("autoaudiosink", "sink");
 #endif
@@ -739,6 +781,39 @@ bool Player::supportsSmoothTempo() const
     return pipelineSupportsSmoothTempo(pipeline);
 }
 
+void Player::setMonitorDeviceId(const QString& deviceId)
+{
+    p->monitorDeviceId = deviceId.trimmed();
+    applyOutputRouting();
+}
+
+void Player::setUseMonitorOutput(bool enabled)
+{
+    p->useMonitorOutput = enabled;
+    applyOutputRouting();
+}
+
+bool Player::useMonitorOutput() const
+{
+    return p->useMonitorOutput;
+}
+
+void Player::applyOutputRouting()
+{
+    if (pipeline == nullptr)
+        return;
+
+    GstElement* sink = gst_bin_get_by_name(GST_BIN(pipeline), "sink");
+    if (sink == nullptr)
+        return;
+
+    const QString targetDevice = (p->useMonitorOutput && !p->monitorDeviceId.isEmpty())
+        ? p->monitorDeviceId
+        : p->masterDeviceId;
+    applyAudioSinkDevice(sink, targetDevice);
+    gst_object_unref(sink);
+}
+
 QTime Player::position()
 {
     if (pipeline) {
@@ -852,7 +927,7 @@ void Player::messageReceived(GstMessage* message)
         const GstObject* source = GST_MESSAGE_SRC(message);
         if (kLogStateChanges) {
             qDebug() << Q_FUNC_INFO << "state-changed from" << GST_OBJECT_NAME(source)
-                     << gst_element_state_get_name(old_state) << "->" << gst_element_state_get_name(new_state);
+                     << gstStateName(old_state) << "->" << gstStateName(new_state);
         }
         if (source == GST_OBJECT(pipeline)) {
             if (kLogSeekDebug) {

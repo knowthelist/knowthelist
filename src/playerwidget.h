@@ -82,6 +82,10 @@ public:
     void setBeatSyncEnabled(bool enabled) { m_beatSyncEnabled = enabled; }
     void setBeatCueEnabled(bool enabled) { m_beatCueEnabled = enabled; }
     void setBeatVisualMode(bool enabled);
+    void setMonitorOutputDeviceId(const QString& deviceId);
+    void setMonitorRouteAvailable(bool available);
+    void setMonitorRouteEnabled(bool enabled);
+    bool isMonitorRouteEnabled() const { return m_monitorRouteEnabled; }
     void setSkipSilentEnd(bool checked)
     {
         m_skipSilentEnd = checked;
@@ -115,6 +119,7 @@ Q_SIGNALS:
     void levelChanged(double, double);
     void syncRequested();
     void syncStateChanged(bool active);
+    void monitorRouteToggled(bool enabled);
 
 private Q_SLOTS:
 
@@ -126,6 +131,7 @@ private Q_SLOTS:
     void playerLoaded();
     void timerLevel_timeOut();
     void timerPosition_timeOut();
+    void timerVisual_timeOut();
     void on_sliPosition_sliderMoved(int);
     void onBeatJumpButtonClicked();
     void onHotCueButtonClicked();
@@ -137,6 +143,7 @@ private Q_SLOTS:
     void on_butRew_clicked();
     void on_butFwd_clicked();
     void on_butSync_toggled(bool checked);
+    void on_monitorRoute_toggled(bool checked);
 
 protected:
     VUMeter* vuMeter;
@@ -175,6 +182,7 @@ private:
 
     QTimer* timerLevel;
     QTimer* timerPosition;
+    QTimer* timerVisual;
     void dropEvent(QDropEvent*) override;
     void dragEnterEvent(QDragEnterEvent*) override;
     void dragMoveEvent(QDragMoveEvent*) override;
@@ -193,6 +201,7 @@ private:
     double m_tempoRate;
     bool m_syncAdopting;
     int m_visualLatencyMs;
+    int m_lastWaveformRebuildPosMs = -1;  // Track last position where waveform was rebuilt
     QQueue<float> m_pendingEnvelope;
     bool m_liveEnvelopeStarted;
     float m_liveEnvelopeSmoothed;
@@ -206,11 +215,16 @@ private:
     int m_pendingEnvelopeScrubTargetMs;
     int m_lastEnvelopeScrubAppliedMs;
     QElapsedTimer m_sessionTimer;
+    QElapsedTimer m_visualFrameTimer;  // For interpolating position in timerVisual_timeOut
     qint64 m_aboutFinishSuppressUntilMs;
     int m_aboutFinishStableTicks;
     QPushButton* m_beatJumpButtons[4];
     QPushButton* m_hotCueButtons[3];
+    QPushButton* m_monitorRouteButton;
     QMap<QString, QVector<int> > m_hotCuesByTrack;
+    QString m_monitorOutputDeviceId;
+    bool m_monitorRouteAvailable;
+    bool m_monitorRouteEnabled;
 
     struct PlayerWidgetPrivate* p;
 };

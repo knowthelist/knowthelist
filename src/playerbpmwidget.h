@@ -73,7 +73,7 @@ private:
     int m_scrubStartX;
 
     void rebuildEnvelopePaths(const QRect& band, int centerY, double halfH);
-    void rebuildVisibleEnvelope();
+    void rebuildVisibleEnvelope(int bandWidth);
     QRect phaseBandRect() const;
     double normalizedX(const QPoint& pos) const;
     double phase() const;

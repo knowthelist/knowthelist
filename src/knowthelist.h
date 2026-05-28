@@ -35,6 +35,7 @@
 #include <QPushButton>
 #include <QSplitter>
 #include <QTime>
+#include <QToolButton>
 
 namespace Ui {
 class Knowthelist;
@@ -63,6 +64,7 @@ private Q_SLOTS:
     void on_sliMonitor_sliderMoved(int position);
     void on_cmdMonitorPlay_clicked();
     void on_cmdMonitorStop_clicked();
+    void on_cmdMonitorSettings_clicked();
     void on_cmdFade_clicked();
 
     void timerMonitor_timeOut();
@@ -79,6 +81,8 @@ private Q_SLOTS:
     void player2_tempoChanged(int bpm, QTime beatPosition);
     void player1_syncRequested();
     void player2_syncRequested();
+    void player1_monitorRouteToggled(bool enabled);
+    void player2_monitorRouteToggled(bool enabled);
     void playlist1_currentTrackChanged(Track* track);
     void playlist2_currentTrackChanged(Track* track);
     void on_toggleAutoSync_toggled(bool checked);
@@ -133,6 +137,8 @@ private:
     void resetWaitingDeckTempoPreviews();
     void applyBeatVisualMode(bool enabled);
     void applyAutoSyncEnabled(bool enabled);
+    void updatePlayerMonitorRouting();
+    double selectAutoFadeTargetTempo(double startTempoBpm, int outgoingBpm, int incomingBpm) const;
     void setFaderModeToPlayer();
     QTimer* timerAutoFader;
     int m_xfadeDir;
@@ -163,6 +169,7 @@ private:
 
     PlayerWidget* player1;
     PlayerWidget* player2;
+    QToolButton* m_monitorSettingsButton;
     QPushButton* m_toggleAutoSyncButton;
     QPushButton* m_toggleBeatVisualButton;
     QLed* m_autoSyncLed;
@@ -204,6 +211,8 @@ private:
 
 protected:
     virtual void closeEvent(QCloseEvent*);
+    void resizeEvent(QResizeEvent* event) override;
+    void showEvent(QShowEvent* event) override;
 
     void changeVolumes();
     void loadStartSettings();

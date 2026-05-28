@@ -15,6 +15,7 @@
 #include <QWidget>
 #include <QMutexLocker>
 #include <QtConcurrent/QtConcurrent>
+#include <cstring>
 
 #if defined(Q_OS_DARWIN)
 #include <CoreAudio/AudioHardware.h>
@@ -345,6 +346,8 @@ void MonitorPlayer::play()
 
     p->isStarted = true;
     qDebug() << Q_FUNC_INFO << ":" << parentWidget()->objectName();
+    if (!p->deviceName.isEmpty())
+        setOutputDevice(p->deviceName);
     if (p->isLoaded) {
         gst_element_set_state(GST_ELEMENT(pipeline), GST_STATE_PLAYING);
     }
@@ -492,14 +495,25 @@ QString MonitorPlayer::outputDeviceID()
 
 void MonitorPlayer::setOutputDevice(QString deviceName)
 {
+    if (pipeline == nullptr)
+        return;
+
     // for Mac device is DeviceID
+    bool found = false;
     QMapIterator<QString, QString> i(p->devices);
     while (i.hasNext()) {
         i.next();
         if (i.value() == deviceName) {
             p->deviceID = i.key();
             p->deviceName = i.value();
+            found = true;
+            break;
         }
+    }
+
+    if (!found) {
+        qDebug() << "Monitor setDevice failed, unknown device name:" << deviceName;
+        return;
     }
 
     qDebug() << "Monitor setDevice to DeviceID:" << p->deviceID << " DevicenName:" << p->deviceName;
@@ -508,6 +522,7 @@ void MonitorPlayer::setOutputDevice(QString deviceName)
 #if defined(Q_OS_WIN32)
     g_object_set(sink, "device", p->deviceID.toLatin1().data(), NULL);
 #elif defined(Q_OS_DARWIN)
+qDebug() << "Setting output device to" << p->deviceID;
     g_object_set(sink, "device", p->deviceID.toInt(), NULL);
 #elif defined(Q_OS_UNIX)
     g_object_set(sink, "device", QString("hw:%1").arg(p->deviceID).toLatin1().data(), NULL);
@@ -583,17 +598,24 @@ void MonitorPlayer::readDevices()
     p->devices.clear();
 
     for (UInt32 i = 0; i < deviceCount; i++) {
-        CFStringRef deviceName = NULL;
-        propertyAddress.mSelector = kAudioDevicePropertyStreamConfiguration; // probe for Inputstream
-        if (AudioObjectGetPropertyData(audioDevices[i], &propertyAddress, 0, NULL, &dataSize, &deviceName) != noErr) {
-            dataSize = sizeof(deviceName);
-            propertyAddress.mSelector = kAudioDevicePropertyDeviceNameCFString;
-            propertyAddress.mScope = kAudioDevicePropertyScopeOutput;
+        CFStringRef deviceNameRef = NULL;
+        UInt32 nameSize = sizeof(deviceNameRef);
 
-            status = AudioObjectGetPropertyData(audioDevices[i], &propertyAddress, 0, NULL, &dataSize, &deviceName);
-            QString devName = CFStringGetCStringPtr(deviceName, CFStringGetSystemEncoding());
-            p->devices.insert(QString::number(audioDevices[i]), devName.trimmed());
+        propertyAddress.mSelector = kAudioDevicePropertyDeviceNameCFString;
+        propertyAddress.mScope = kAudioDevicePropertyScopeOutput;
+        status = AudioObjectGetPropertyData(audioDevices[i], &propertyAddress, 0, NULL, &nameSize, &deviceNameRef);
+        if (status != noErr || deviceNameRef == NULL)
+            continue;
+
+        char deviceNameCstr[512];
+        memset(deviceNameCstr, 0, sizeof(deviceNameCstr));
+        if (CFStringGetCString(deviceNameRef, deviceNameCstr, sizeof(deviceNameCstr), kCFStringEncodingUTF8)) {
+            const QString devName = QString::fromUtf8(deviceNameCstr).trimmed();
+            if (!devName.isEmpty())
+                p->devices.insert(QString::number(audioDevices[i]), devName);
         }
+
+        CFRelease(deviceNameRef);
     }
 
     free(audioDevices);
@@ -648,26 +670,31 @@ void MonitorPlayer::messageReceived(GstMessage* message)
 
     case GST_MESSAGE_ELEMENT: {
         const GstStructure* s = gst_message_get_structure(message);
-        const gchar* src_name = GST_MESSAGE_SRC_NAME(message);
+        if (s == nullptr)
+            break;
 
-        if (strcmp(src_name, "level") == 0) {
-            const GValue* peakValues = levelDbValues(s, nullptr);
-            const guint channels = peakValueCount(peakValues);
+        const GValue* peakValues = levelDbValues(s, nullptr);
+        const guint channels = peakValueCount(peakValues);
 
-            for (guint i = 0; i < channels; ++i) {
-                const GValue* peakValue = peakValueAt(peakValues, i);
-                gdouble peak_dB = 0.0;
-                if (!gValueToDouble(peakValue, &peak_dB))
-                    continue;
+        for (guint i = 0; i < channels; ++i) {
+            const GValue* peakValue = peakValueAt(peakValues, i);
+            gdouble peak_dB = 0.0;
+            if (!gValueToDouble(peakValue, &peak_dB))
+                continue;
 
-                /* cube-root power law: maps [-60..0] dBFS to ~[0..1] so loud music reaches the red zone */
-                const gdouble rms = pow(10.0, peak_dB / 60.0);
-                if (i == 0)
-                    p->rms_l = rms;
-                else
-                    p->rms_r = rms;
-            }
+            /* cube-root power law: maps [-60..0] dBFS to ~[0..1] so loud music reaches the red zone */
+            const gdouble rms = pow(10.0, peak_dB / 60.0);
+            qDebug() << Q_FUNC_INFO << "level message channel" << i << "peak_dB" << peak_dB << "rms" << rms;
+            if (i == 0)
+                p->rms_l = rms;
+            else
+                p->rms_r = rms;
         }
+
+        if (channels == 1)
+            p->rms_r = p->rms_l;
+
+        Q_EMIT levelChanged();
 
     } break;
     default:

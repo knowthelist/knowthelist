@@ -49,6 +49,9 @@ public:
     void setRate(double rate);
     double rate() const;
     bool supportsSmoothTempo() const;
+    void setMonitorDeviceId(const QString& deviceId);
+    void setUseMonitorOutput(bool enabled);
+    bool useMonitorOutput() const;
 
     QTime length();
     bool isPlaying();
@@ -84,6 +87,7 @@ private:
     void asyncOpen(QUrl url);
     void cleanup();
     void sync_set_state(GstElement*, GstState);
+    void applyOutputRouting();
 };
 
 #endif
