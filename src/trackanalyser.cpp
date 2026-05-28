@@ -245,6 +245,11 @@ QTime TrackAnalyser::beatPosition()
     return m_BeatPosition;
 }
 
+QTime TrackAnalyser::beatActivityEndPosition()
+{
+    return m_BeatActivityEndPosition;
+}
+
 int TrackAnalyser::tempoScanDurationSeconds() const
 {
     return p->tempoScanDurationSeconds;
@@ -626,6 +631,38 @@ void TrackAnalyser::finalizeAnalysis()
         detectTempo();
         Q_EMIT finishTempo();
     } else if (mode == ENVELOPE) {
+        // Find last frame with significant low-band energy to detect where beats stop
+        QList<float> spectralFluxLow;
+        QList<GstClockTime> spectralFluxTimes;
+        float fftRes = p->fft_res;
+        {
+            QMutexLocker locker(&p->mutex);
+            spectralFluxLow = p->spectralFluxLow;
+            spectralFluxTimes = p->spectralFluxTimes;
+        }
+        m_BeatActivityEndPosition = QTime();
+        float peakLow = 0.0f;
+        for (const float f : spectralFluxLow)
+            peakLow = qMax(peakLow, f);
+        if (peakLow > 0.0f && !spectralFluxLow.isEmpty()) {
+            const float beatThreshold = peakLow * 0.10f;
+            // Require at least 3 seconds of no significant beat energy at the tail
+            const int minSilentFrames = static_cast<int>(fftRes * 3.0f);
+            int lastBeatFrame = -1;
+            for (int i = spectralFluxLow.size() - 1; i >= 0; --i) {
+                if (spectralFluxLow.at(i) >= beatThreshold) {
+                    lastBeatFrame = i;
+                    break;
+                }
+            }
+            if (lastBeatFrame >= 0
+                && (spectralFluxLow.size() - lastBeatFrame) >= minSilentFrames
+                && lastBeatFrame < spectralFluxTimes.size()) {
+                const GstClockTime ts = spectralFluxTimes.at(lastBeatFrame);
+                m_BeatActivityEndPosition = QTime(0, 0).addMSecs(
+                    static_cast<int>(ts / GST_MSECOND));
+            }
+        }
         Q_EMIT finishEnvelope();
     } else {
         Q_EMIT finishGain();
@@ -638,10 +675,12 @@ void TrackAnalyser::detectTempo()
     static const int kMaxBpm = 200;
     QList<float> spectralFlux;
     QList<float> spectralFluxLow;
+    QList<GstClockTime> spectralFluxTimes;
     {
         QMutexLocker locker(&p->mutex);
         spectralFlux = p->spectralFlux;
         spectralFluxLow = p->spectralFluxLow;
+        spectralFluxTimes = p->spectralFluxTimes;
     }
 
     if (spectralFlux.isEmpty()) {
@@ -1208,8 +1247,18 @@ void TrackAnalyser::detectTempo()
     }
 
     if (beatAnchorIdx >= 0) {
-        const qint64 offsetMs = static_cast<qint64>((1000.0 * beatAnchorIdx) / p->fft_res);
-        m_BeatPosition = m_StartPosition.addMSecs(static_cast<int>(offsetMs));
+        if (p->bpm > 0 && beatAnchorIdx < spectralFluxTimes.size()
+            && spectralFluxTimes.at(beatAnchorIdx) > 0) {
+            // Use the actual track timestamp of this beat anchor to derive
+            // the phase of the first beat from track start.
+            const qint64 anchorMs = static_cast<qint64>(spectralFluxTimes.at(beatAnchorIdx) / GST_MSECOND);
+            const qint64 beatMs   = qMax<qint64>(1LL, 60000LL / static_cast<qint64>(p->bpm));
+            const qint64 phaseMs  = anchorMs % beatMs;
+            m_BeatPosition = QTime(0, 0).addMSecs(static_cast<int>(phaseMs));
+        } else {
+            const qint64 offsetMs = static_cast<qint64>((1000.0 * beatAnchorIdx) / p->fft_res);
+            m_BeatPosition = m_StartPosition.addMSecs(static_cast<int>(offsetMs));
+        }
     } else {
         m_BeatPosition = m_StartPosition;
     }

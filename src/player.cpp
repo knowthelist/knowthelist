@@ -365,6 +365,7 @@ struct PlayerPrivate {
     QString monitorDeviceId;
     QString masterDeviceId;
     bool useMonitorOutput;
+    double monitorVolume;  // desired monitor branch volume (0 = muted)
 };
 
 Player::Player(QWidget* parent)
@@ -386,6 +387,7 @@ Player::Player(QWidget* parent)
     p->monitorDeviceId = QString();
     p->masterDeviceId = defaultAudioDeviceId();
     p->useMonitorOutput = false;
+    p->monitorVolume = 1.0;
 
     connect(&p->watcher, SIGNAL(finished()), this, SLOT(loadThreadFinished()));
 }
@@ -482,7 +484,13 @@ bool Player::prepare()
     vol = gst_element_factory_make("volume", "volume");
     levelout = gst_element_factory_make("level", "levelout");
     equalizer = gst_element_factory_make("equalizer-3bands", "equalizer");
-#if defined(Q_OS_UNIX) && !defined(Q_OS_DARWIN)
+#if defined(Q_OS_DARWIN)
+    sink = gst_element_factory_make("osxaudiosink", "sink");
+    if (sink != nullptr)
+        applyAudioSinkDevice(sink, p->masterDeviceId);
+#elif defined(Q_OS_WIN32)
+    sink = gst_element_factory_make("autoaudiosink", "sink");
+#else
     sink = gst_element_factory_make("alsasink", "sink");
     if (sink == nullptr)
         sink = gst_element_factory_make("pulsesink", "sink");
@@ -491,8 +499,6 @@ bool Player::prepare()
 
     if (sink != nullptr)
         applyAudioSinkDevice(sink, p->masterDeviceId);
-#else
-    sink = gst_element_factory_make("autoaudiosink", "sink");
 #endif
 
     configureAudioSink(sink);
@@ -502,6 +508,75 @@ bool Player::prepare()
     configureLevelMessaging(level);
     configureLevelMessaging(levelout);
     g_object_set(level, "peak-ttl", 300000000000, NULL);
+
+    // PFL (pre-fader listen) monitor branch: tee after equalizer so the
+    // crossfader/volume control does not affect what the DJ hears on headphones.
+    // Note: no valve element — data always flows so seeks never block waiting
+    // for a downstream sink that never receives a post-seek buffer.
+    // vol_mon starts at 0 (muted) and is raised to the desired level when MON is pressed.
+    GstElement* teeElem = gst_element_factory_make("tee",    "tee");
+    GstElement* qMain   = gst_element_factory_make("queue",  "q_main");
+    GstElement* qMon    = gst_element_factory_make("queue",  "q_mon");
+    GstElement* volMon  = gst_element_factory_make("volume", "vol_mon");
+
+    // Keep queues small so seek flushes take effect immediately (no 1-second
+    // audio lag after a FLUSH seek).  The monitor queue must be leaky=downstream
+    // so that if sink_mon ever runs behind the tee's push thread, it drops the
+    // oldest buffered packet instead of blocking the tee — and thereby blocking
+    // the entire pipeline (including gst_element_seek() calls from the UI thread).
+    if (qMain != nullptr)
+        g_object_set(G_OBJECT(qMain),
+            "max-size-time",    (guint64)0,
+            "max-size-bytes",   (guint)0,
+            "max-size-buffers", (guint)3,
+            nullptr);
+    if (qMon != nullptr)
+        g_object_set(G_OBJECT(qMon),
+            "max-size-time",    (guint64)0,
+            "max-size-bytes",   (guint)0,
+            "max-size-buffers", (guint)3,
+            "leaky",            (gint)2,   // GST_QUEUE_LEAK_DOWNSTREAM
+            nullptr);
+#if defined(Q_OS_DARWIN)
+    GstElement* sinkMon = gst_element_factory_make("osxaudiosink", "sink_mon");
+    if (sinkMon != nullptr)
+        g_object_set(sinkMon, "device", 0, NULL);   // placeholder; overwritten by setMonitorDeviceId()
+#elif defined(Q_OS_WIN32)
+    GstElement* sinkMon = gst_element_factory_make("autoaudiosink", "sink_mon");
+#else
+    GstElement* sinkMon = gst_element_factory_make("alsasink",      "sink_mon");
+    if (sinkMon == nullptr) sinkMon = gst_element_factory_make("pulsesink",     "sink_mon");
+    if (sinkMon == nullptr) sinkMon = gst_element_factory_make("autoaudiosink", "sink_mon");
+#endif
+    if (volMon  != nullptr) g_object_set(G_OBJECT(volMon), "volume", 0.0, NULL);  // starts muted
+    configureAudioSink(sinkMon);
+
+    // The monitor sink runs on a separate audio device with its own independent
+    // hardware clock.  If sync=true (the GStreamer default), GStreamer tries to
+    // align monitor output to the pipeline clock that is driven by the main sink.
+    // Because the two CoreAudio devices run at slightly different rates they drift
+    // apart, which produces:
+    //   • audible delay between main and monitor outputs
+    //   • periodic dropouts as GStreamer catches up after each drift cycle
+    //   • broken main output after a seek, because sinkMon waits for the
+    //     post-flush pipeline-clock timestamp before emitting any audio and this
+    //     stalls the downstream half of the tee
+    // Setting sync=false makes the monitor branch play audio immediately at the
+    // hardware device's native rate, completely independent of the pipeline clock.
+    // provide-clock=false prevents sinkMon from competing with the main sink as
+    // the pipeline's clock source.  qos=false suppresses Quality-of-Service
+    // upstream notifications that would otherwise cause the decoder to drop frames.
+    if (sinkMon != nullptr) {
+        GObjectClass* monKlass = G_OBJECT_GET_CLASS(sinkMon);
+        if (monKlass != nullptr) {
+            if (g_object_class_find_property(monKlass, "sync") != nullptr)
+                g_object_set(G_OBJECT(sinkMon), "sync", FALSE, NULL);
+            if (g_object_class_find_property(monKlass, "qos") != nullptr)
+                g_object_set(G_OBJECT(sinkMon), "qos", FALSE, NULL);
+            if (g_object_class_find_property(monKlass, "provide-clock") != nullptr)
+                g_object_set(G_OBJECT(sinkMon), "provide-clock", FALSE, NULL);
+        }
+    }
 
     // Prefer a writable tempo effect so runtime tempo changes do not require seeks.
     GstElement* tempoEffect = gst_element_factory_make("pitch", "tempoeffect");
@@ -535,11 +610,23 @@ bool Player::prepare()
         }
     }
 
+    // Add monitor branch elements (common to all tempo variants)
+    gst_bin_add_many(GST_BIN(pipeline), teeElem, qMain, qMon, volMon, sinkMon, NULL);
+
     gst_element_link(level, gain);
     gst_element_link(gain, equalizer);
-    gst_element_link(equalizer, vol);
+    // Tap after equalizer so the crossfader/volume does not affect monitor (PFL)
+    gst_element_link(equalizer, teeElem);
+    // Main branch: tee → q_main → vol → levelout → sink
+    gst_element_link(teeElem, qMain);
+    gst_element_link(qMain, vol);
     gst_element_link_filtered(vol, levelout, caps);
     gst_element_link(levelout, sink);
+    // Monitor branch: tee → q_mon → vol_mon → sink_mon
+    // vol_mon=0 means muted (MON off); raised to monitorVolume when MON is pressed.
+    gst_element_link(teeElem, qMon);
+    gst_element_link(qMon, volMon);
+    gst_element_link(volMon, sinkMon);
 
     gst_bus_set_sync_handler(bus, bus_cb, this, nullptr);
 
@@ -593,6 +680,15 @@ void Player::asyncOpen(QUrl url)
     setTempoEffectRate(pipeline, 1.0);
 
     sync_set_state(GST_ELEMENT(pipeline), GST_STATE_NULL);
+
+    // Re-apply monitor device — osxaudiosink may reset it after NULL transition
+    if (!p->monitorDeviceId.isEmpty()) {
+        GstElement* sinkMon = gst_bin_get_by_name(GST_BIN(pipeline), "sink_mon");
+        if (sinkMon != nullptr) {
+            applyAudioSinkDevice(sinkMon, p->monitorDeviceId);
+            gst_object_unref(sinkMon);
+        }
+    }
 
     GstElement* src = gst_bin_get_by_name(GST_BIN(pipeline), "source");
     g_object_set(G_OBJECT(src), "uri", (const char*)url.toString().toUtf8(), NULL);
@@ -700,7 +796,17 @@ void Player::setPosition(QTime position)
                  << "targetMs=" << time_milliseconds
                  << "seekOk=" << static_cast<bool>(seekOk);
     }
-    p->position = time_milliseconds;
+
+    // Immediately anchor both the position cache and the timer-based fallback to
+    // the seek target.  gst_element_query_position() returns false for a short
+    // window after a FLUSH seek (pipeline is transitioning).  Without this,
+    // position() falls back to  playBasePosition + elapsed  which still points
+    // to wherever the pipeline was BEFORE the seek, producing a completely wrong
+    // value that corrupts the scrub anchor on the very next call.
+    p->position         = time_milliseconds;
+    p->playBasePosition = time_milliseconds;
+    if (p->playTimer.isValid())
+        p->playTimer.restart();
 
     if (kLogSeekDebug && pipeline) {
         gint64 queried = 0;
@@ -784,7 +890,40 @@ bool Player::supportsSmoothTempo() const
 void Player::setMonitorDeviceId(const QString& deviceId)
 {
     p->monitorDeviceId = deviceId.trimmed();
-    applyOutputRouting();
+    if (pipeline == nullptr)
+        return;
+
+    GstElement* sinkMon = gst_bin_get_by_name(GST_BIN(pipeline), "sink_mon");
+    if (sinkMon == nullptr)
+        return;
+
+    GstState cur_state = GST_STATE_NULL;
+    gst_element_get_state(GST_ELEMENT(pipeline), &cur_state, nullptr, 0);
+
+    if (cur_state == GST_STATE_NULL) {
+        applyAudioSinkDevice(sinkMon, p->monitorDeviceId);
+    } else {
+        // Mute the monitor branch so there are no audio artefacts while we
+        // cycle sink_mon through NULL to apply the new device.
+        GstElement* volMonElem = gst_bin_get_by_name(GST_BIN(pipeline), "vol_mon");
+        if (volMonElem != nullptr)
+            g_object_set(G_OBJECT(volMonElem), "volume", 0.0, NULL);
+
+        gst_element_set_locked_state(sinkMon, TRUE);
+        gst_element_set_state(sinkMon, GST_STATE_NULL);
+        gst_element_get_state(sinkMon, nullptr, nullptr, 1 * GST_SECOND);
+        applyAudioSinkDevice(sinkMon, p->monitorDeviceId);
+        gst_element_set_state(sinkMon, cur_state);
+        gst_element_get_state(sinkMon, nullptr, nullptr, 1 * GST_SECOND);
+        gst_element_set_locked_state(sinkMon, FALSE);
+
+        // Restore volume
+        if (volMonElem != nullptr) {
+            applyOutputRouting();
+            gst_object_unref(volMonElem);
+        }
+    }
+    gst_object_unref(sinkMon);
 }
 
 void Player::setUseMonitorOutput(bool enabled)
@@ -803,15 +942,24 @@ void Player::applyOutputRouting()
     if (pipeline == nullptr)
         return;
 
-    GstElement* sink = gst_bin_get_by_name(GST_BIN(pipeline), "sink");
-    if (sink == nullptr)
+    GstElement* volMon = gst_bin_get_by_name(GST_BIN(pipeline), "vol_mon");
+    if (volMon == nullptr)
         return;
 
-    const QString targetDevice = (p->useMonitorOutput && !p->monitorDeviceId.isEmpty())
-        ? p->monitorDeviceId
-        : p->masterDeviceId;
-    applyAudioSinkDevice(sink, targetDevice);
-    gst_object_unref(sink);
+    // Mute or unmute the monitor branch — no pipeline state change needed.
+    // Using volume=0 rather than a valve element avoids seek hangs that occur
+    // when a downstream sink never receives the post-flush buffer.
+    const gdouble v = (p->useMonitorOutput && !p->monitorDeviceId.isEmpty())
+        ? p->monitorVolume
+        : 0.0;
+    g_object_set(G_OBJECT(volMon), "volume", v, NULL);
+    gst_object_unref(volMon);
+}
+
+void Player::setMonitorVolume(double v)
+{
+    p->monitorVolume = v;
+    applyOutputRouting();  // re-applies v if monitor is currently active
 }
 
 QTime Player::position()

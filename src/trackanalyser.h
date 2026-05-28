@@ -44,6 +44,7 @@ public:
     QTime startPosition();
     QTime endPosition();
     QTime beatPosition();
+    QTime beatActivityEndPosition();
     int bpm();
     QVector<float> amplitudeEnvelope() const;
     bool finished() {return m_finished;}
@@ -78,6 +79,7 @@ public:
         QTime m_StartPosition;
         QTime m_EndPosition;
         QTime m_BeatPosition;
+        QTime m_BeatActivityEndPosition;
         QTime m_MaxPosition;
         bool m_finished;
 

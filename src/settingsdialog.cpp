@@ -124,7 +124,7 @@ SettingsDialog::SettingsDialog(QWidget* parent)
 
     // Beat sync options are shown in the Fader page to keep transition settings in one place.
     p->beatSyncGroup = new QGroupBox(tr("Beat Sync"), p->ui.page);
-    p->beatSyncGroup->setGeometry(QRect(10, 210, 380, 120));
+    p->beatSyncGroup->setGeometry(QRect(10, 210, 380, 145));
 
     p->checkBeatSyncEnabled = new QCheckBox(tr("Enable BPM analysis and beat sync cue"), p->beatSyncGroup);
     p->checkBeatSyncEnabled->setGeometry(QRect(10, 20, 360, 20));
@@ -138,11 +138,11 @@ SettingsDialog::SettingsDialog(QWidget* parent)
     p->checkBeatVisualMode = new QCheckBox(tr("Show beat pulse instead of VU in player meters"), p->beatSyncGroup);
     p->checkBeatVisualMode->setGeometry(QRect(10, 86, 360, 20));
 
-    p->labelBeatScanSeconds = new QLabel(tr("BPM scan duration (seconds):"), p->ui.page);
-    p->labelBeatScanSeconds->setGeometry(QRect(410, 232, 150, 20));
+    p->labelBeatScanSeconds = new QLabel(tr("BPM scan duration (seconds):"), p->beatSyncGroup);
+    p->labelBeatScanSeconds->setGeometry(QRect(10, 112, 210, 20));
 
-    p->spinBeatScanSeconds = new QSpinBox(p->ui.page);
-    p->spinBeatScanSeconds->setGeometry(QRect(565, 230, 70, 24));
+    p->spinBeatScanSeconds = new QSpinBox(p->beatSyncGroup);
+    p->spinBeatScanSeconds->setGeometry(QRect(225, 110, 70, 24));
     p->spinBeatScanSeconds->setRange(5, 60);
 }
 

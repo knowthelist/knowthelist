@@ -52,6 +52,7 @@ public:
     void setMonitorDeviceId(const QString& deviceId);
     void setUseMonitorOutput(bool enabled);
     bool useMonitorOutput() const;
+    void setMonitorVolume(double v);
 
     QTime length();
     bool isPlaying();

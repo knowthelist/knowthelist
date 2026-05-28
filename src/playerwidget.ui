@@ -153,6 +153,26 @@ QFrame#fraDisplay{
 QLabel{
 
  color: #dddddd;
+}
+QPushButton#butMon {
+ color: #888888;
+ font-weight: bold;
+}
+QPushButton#butMon:checked {
+ color: #84c3ff;
+ font-weight: bold;
+ background: qlineargradient(
+   x1:0, y1:0, x2:0, y2:1,
+   stop:0.1 #1c2431,
+   stop:1 #0e131c
+ );
+}
+QPushButton#butMon:pressed {
+ background: qlineargradient(
+   x1:0, y1:0, x2:0, y2:1,
+   stop:0.1 #273449,
+   stop:1 #141e2e
+ );
 }</string>
   </property>
   <layout class="QGridLayout" name="gridLayout">

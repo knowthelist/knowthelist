@@ -25,7 +25,6 @@
 #include <QToolButton>
 #include <QVBoxLayout>
 #include <QWidget>
-#include <QMap>
 #include <QVector>
 #include <QtCore/QTimer>
 #include <QtCore/QElapsedTimer>
@@ -86,6 +85,7 @@ public:
     void setMonitorRouteAvailable(bool available);
     void setMonitorRouteEnabled(bool enabled);
     bool isMonitorRouteEnabled() const { return m_monitorRouteEnabled; }
+    void setMonitorVolume(double v);
     void setSkipSilentEnd(bool checked)
     {
         m_skipSilentEnd = checked;
@@ -133,8 +133,8 @@ private Q_SLOTS:
     void timerPosition_timeOut();
     void timerVisual_timeOut();
     void on_sliPosition_sliderMoved(int);
+    void applyPendingSliderSeek();
     void onBeatJumpButtonClicked();
-    void onHotCueButtonClicked();
     void onEnvelopeScrubStarted();
     void onEnvelopeScrubPositionChanged(double normalizedPosition, bool finished);
     void applyPendingEnvelopeScrubSeek();
@@ -144,6 +144,7 @@ private Q_SLOTS:
     void on_butFwd_clicked();
     void on_butSync_toggled(bool checked);
     void on_monitorRoute_toggled(bool checked);
+    void on_pitchSlider_valueChanged(int value);
 
 protected:
     VUMeter* vuMeter;
@@ -166,7 +167,6 @@ private:
     void updateResponsiveLayout();
     void createPerformanceControls();
     void jumpByBeats(int beatCount);
-    void refreshHotCueButtons();
     QString currentTrackKey() const;
     void suppressAboutFinishForMs(int ms);
     bool seekOvershootsFadePoint(const QTime& targetPos) const;
@@ -214,14 +214,16 @@ private:
     QTimer* m_envelopeScrubSeekTimer;
     int m_pendingEnvelopeScrubTargetMs;
     int m_lastEnvelopeScrubAppliedMs;
+    QTimer* m_sliderSeekTimer;
+    int m_pendingSliderSeekMs;
     QElapsedTimer m_sessionTimer;
     QElapsedTimer m_visualFrameTimer;  // For interpolating position in timerVisual_timeOut
     qint64 m_aboutFinishSuppressUntilMs;
     int m_aboutFinishStableTicks;
     QPushButton* m_beatJumpButtons[4];
-    QPushButton* m_hotCueButtons[3];
     QPushButton* m_monitorRouteButton;
-    QMap<QString, QVector<int> > m_hotCuesByTrack;
+    QSlider*     m_pitchSlider;
+    QPushButton* m_pitchResetButton;
     QString m_monitorOutputDeviceId;
     bool m_monitorRouteAvailable;
     bool m_monitorRouteEnabled;

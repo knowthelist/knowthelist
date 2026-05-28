@@ -187,6 +187,8 @@ void Knowthelist::createUI()
     connect(m_toggleBeatVisualButton, &QPushButton::toggled, this, &Knowthelist::on_toggleBeatVisual_toggled);
 
     ui->cmdOptions->setGeometry(QRect(32, 335, 40, 18));
+    ui->cmdOptions->setMinimumWidth(16);
+    ui->cmdOptions->setMaximumWidth(48);
     ui->cmdOptions->setIcon(QIcon(":settings.png"));
     ui->cmdOptions->setIconSize(QSize(14, 14));
 
@@ -583,7 +585,7 @@ void Knowthelist::resizeEvent(QResizeEvent* event)
     if (m_monitorSettingsButton) {
         const QRect fra = ui->fraMonitorTop->rect();
         m_monitorSettingsButton->setGeometry(
-            fra.width() - 27, fra.height() + 24, 23, 20);
+            fra.width() - 27, fra.height() - 24, 23, 20);
     }
 }
 
@@ -1486,7 +1488,10 @@ void Knowthelist::on_potGain_2_valueChanged(int value)
 
 void Knowthelist::on_toggleAGC_toggled(bool checked)
 {
-    ui->ledAGC->toggle();
+    if (checked)
+        ui->ledAGC->on();
+    else
+        ui->ledAGC->off();
     if (checked) {
         timerGain1->start();
         timerGain2->start();
@@ -1662,5 +1667,9 @@ void Knowthelist::on_sliMonitor_actionTriggered(int action)
 
 void Knowthelist::on_sliMonitorVolume_valueChanged(int value)
 {
-    monitorPlayer->setVolume(value / 100.0);
+    const double v = value / 100.0;
+    monitorPlayer->setVolume(v);
+    // Mirror the same volume to each deck's pre-fader monitor branch
+    if (player1) player1->setMonitorVolume(v);
+    if (player2) player2->setMonitorVolume(v);
 }

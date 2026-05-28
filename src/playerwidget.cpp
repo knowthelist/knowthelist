@@ -28,6 +28,7 @@
 #include <QHBoxLayout>
 #include <QPushButton>
 #include <QSignalBlocker>
+#include <QSlider>
 #include <QSettings>
 #include <QApplication>
 #include <QtSql/QSqlDatabase>
@@ -40,9 +41,9 @@ struct PlayerWidgetPrivate {
 };
 
 namespace {
-constexpr int kTempoCacheVersion = 9;
+constexpr int kTempoCacheVersion = 10;
 constexpr int kEnvelopeCacheVersion = 1;
-constexpr double kScrubSeekGain = 3.0;
+constexpr double kScrubSeekGain = 1.5;
 constexpr int kScrubSeekMinDeltaMs = 10;
 constexpr int kScrubSeekCoalesceMs = 20;
 
@@ -254,9 +255,13 @@ PlayerWidget::PlayerWidget(QWidget* parent)
     , m_envelopeScrubSeekTimer(nullptr)
     , m_pendingEnvelopeScrubTargetMs(-1)
     , m_lastEnvelopeScrubAppliedMs(-1)
+    , m_sliderSeekTimer(nullptr)
+    , m_pendingSliderSeekMs(-1)
     , m_aboutFinishSuppressUntilMs(0)
     , m_aboutFinishStableTicks(0)
     , m_monitorRouteButton(nullptr)
+    , m_pitchSlider(nullptr)
+    , m_pitchResetButton(nullptr)
     , m_monitorRouteAvailable(false)
     , m_monitorRouteEnabled(false)
     , p(new PlayerWidgetPrivate)
@@ -341,8 +346,6 @@ PlayerWidget::PlayerWidget(QWidget* parent)
 
     for (int i = 0; i < 4; ++i)
         m_beatJumpButtons[i] = nullptr;
-    for (int i = 0; i < 3; ++i)
-        m_hotCueButtons[i] = nullptr;
     createPerformanceControls();
 
     QSettings settings;
@@ -362,6 +365,12 @@ PlayerWidget::PlayerWidget(QWidget* parent)
     m_envelopeScrubSeekTimer->setSingleShot(true);
     m_envelopeScrubSeekTimer->setInterval(kScrubSeekCoalesceMs);
     connect(m_envelopeScrubSeekTimer, SIGNAL(timeout()), SLOT(applyPendingEnvelopeScrubSeek()));
+
+    m_sliderSeekTimer = new QTimer(this);
+    m_sliderSeekTimer->setSingleShot(true);
+    m_sliderSeekTimer->setInterval(120);  // coalesce rapid slider drags into one seek
+    connect(m_sliderSeekTimer, SIGNAL(timeout()), SLOT(applyPendingSliderSeek()));
+    connect(ui->sliPosition, &QSlider::sliderReleased, this, &PlayerWidget::applyPendingSliderSeek);
 
     connect(player, SIGNAL(finish()), this, SLOT(playerFinished()));
     connect(player, SIGNAL(error()), this, SLOT(playerError()));
@@ -445,6 +454,20 @@ void PlayerWidget::setTempoRate(double rate)
     m_tempoRate = rate;
     player->setRate(rate);
     bpmWidget->setTempoInfo(m_tempoRate, m_syncAdopting);
+
+    // Keep the pitch slider in sync when the rate is set externally (e.g. beat-sync).
+    if (m_pitchSlider) {
+        const QSignalBlocker blocker(m_pitchSlider);
+        m_pitchSlider->setValue(qBound(-80, qRound((rate - 1.0) * 1000.0), 80));
+        if (m_pitchResetButton) {
+            const int v = m_pitchSlider->value();
+            m_pitchResetButton->setText(
+                v == 0 ? QStringLiteral("0.0%")
+                       : QString("%1%2%").arg(v > 0 ? "+" : "")
+                                        .arg(v / 10.0, 0, 'f', 1));
+        }
+    }
+
     if (std::fabs(m_tempoRate - 1.0) < 0.001 && !m_syncAdopting)
         updateSyncButtonState(false);
 }
@@ -497,6 +520,11 @@ void PlayerWidget::setMonitorOutputDeviceId(const QString& deviceId)
     m_monitorOutputDeviceId = deviceId.trimmed();
     player->setMonitorDeviceId(m_monitorOutputDeviceId);
     player->setUseMonitorOutput(m_monitorRouteEnabled && m_monitorRouteAvailable);
+}
+
+void PlayerWidget::setMonitorVolume(double v)
+{
+    player->setMonitorVolume(v);
 }
 
 void PlayerWidget::setMonitorRouteAvailable(bool available)
@@ -615,11 +643,13 @@ void PlayerWidget::updateResponsiveLayout()
             m_beatJumpButtons[i]->setMaximumHeight(smallButtonHeight);
         }
     }
-    for (int i = 0; i < 3; ++i) {
-        if (m_hotCueButtons[i]) {
-            m_hotCueButtons[i]->setMinimumSize(QSize(smallButtonWidth + 8, smallButtonHeight));
-            m_hotCueButtons[i]->setMaximumHeight(smallButtonHeight);
-        }
+    // Pitch slider row — keep slider and reset button compact
+    if (m_pitchSlider) {
+        m_pitchSlider->setMaximumHeight(smallButtonHeight);
+    }
+    if (m_pitchResetButton) {
+        m_pitchResetButton->setMinimumSize(QSize(30, smallButtonHeight));
+        m_pitchResetButton->setMaximumHeight(smallButtonHeight);
     }
 }
 
@@ -650,22 +680,6 @@ void PlayerWidget::createPerformanceControls()
     }
     controls->addWidget(beatJumpFrame);
 
-    QFrame* hotCueFrame = new QFrame(ui->frame_2);
-    hotCueFrame->setObjectName("frameHotCue");
-    QHBoxLayout* hotLayout = new QHBoxLayout(hotCueFrame);
-    hotLayout->setContentsMargins(0, 0, 0, 0);
-    hotLayout->setSpacing(2);
-
-    const char* cueLabels[3] = { "A", "B", "C" };
-    for (int i = 0; i < 3; ++i) {
-        m_hotCueButtons[i] = new QPushButton(QString::fromLatin1(cueLabels[i]), hotCueFrame);
-        m_hotCueButtons[i]->setProperty("hotCueIndex", i);
-        m_hotCueButtons[i]->setToolTip(tr("Hot cue %1: click to jump, Shift+click to set").arg(QString::fromLatin1(cueLabels[i])));
-        connect(m_hotCueButtons[i], SIGNAL(clicked()), this, SLOT(onHotCueButtonClicked()));
-        hotLayout->addWidget(m_hotCueButtons[i]);
-    }
-    controls->addWidget(hotCueFrame);
-
     QFrame* monitorFrame = new QFrame(ui->frame_2);
     monitorFrame->setObjectName("frameMonitorRoute");
     QHBoxLayout* monitorLayout = new QHBoxLayout(monitorFrame);
@@ -673,6 +687,7 @@ void PlayerWidget::createPerformanceControls()
     monitorLayout->setSpacing(2);
 
     m_monitorRouteButton = new QPushButton(tr("MON"), monitorFrame);
+    m_monitorRouteButton->setObjectName("butMon");
     m_monitorRouteButton->setCheckable(true);
     m_monitorRouteButton->setToolTip(tr("Route this deck to monitor output"));
     m_monitorRouteButton->setEnabled(false);
@@ -680,7 +695,39 @@ void PlayerWidget::createPerformanceControls()
     monitorLayout->addWidget(m_monitorRouteButton);
     controls->addWidget(monitorFrame);
 
-    refreshHotCueButtons();
+    // ── Pitch / tempo fader ──────────────────────────────────────────────────
+    // Range ±8 % in steps of 0.1 % (slider unit = 0.1 %, so range −80 … +80).
+    // The reset button shows the current offset and snaps back to 0 % on click.
+    QFrame* pitchFrame = new QFrame(ui->frame_2);
+    pitchFrame->setObjectName("framePitch");
+    QHBoxLayout* pitchLayout = new QHBoxLayout(pitchFrame);
+    pitchLayout->setContentsMargins(0, 0, 0, 0);
+    pitchLayout->setSpacing(2);
+
+    m_pitchSlider = new QSlider(Qt::Horizontal, pitchFrame);
+    m_pitchSlider->setObjectName("sliPitch");
+    m_pitchSlider->setRange(-80, 80);
+    m_pitchSlider->setValue(0);
+    m_pitchSlider->setTickPosition(QSlider::TicksBelow);
+    m_pitchSlider->setTickInterval(40);   // marks at −4 %, 0 %, +4 %
+    m_pitchSlider->setToolTip(tr("Tempo fader ±8 % (0.1 % per step) — click the % button to reset"));
+    connect(m_pitchSlider, SIGNAL(valueChanged(int)), this, SLOT(on_pitchSlider_valueChanged(int)));
+
+    m_pitchResetButton = new QPushButton("0.0%", pitchFrame);
+    m_pitchResetButton->setObjectName("butPitchReset");
+    m_pitchResetButton->setMaximumWidth(38);
+    m_pitchResetButton->setToolTip(tr("Current tempo offset — click to reset to 0 %"));
+    QFont smallFont = m_pitchResetButton->font();
+    smallFont.setPointSizeF(smallFont.pointSizeF() * 0.82);
+    m_pitchResetButton->setFont(smallFont);
+    connect(m_pitchResetButton, &QPushButton::clicked, this, [this]() {
+        if (m_pitchSlider)
+            m_pitchSlider->setValue(0);
+    });
+
+    pitchLayout->addWidget(m_pitchSlider, 1);
+    pitchLayout->addWidget(m_pitchResetButton);
+    controls->addWidget(pitchFrame);
 }
 
 QString PlayerWidget::currentTrackKey() const
@@ -688,24 +735,6 @@ QString PlayerWidget::currentTrackKey() const
     if (!m_CurrentTrack)
         return QString();
     return m_CurrentTrack->url().toLocalFile();
-}
-
-void PlayerWidget::refreshHotCueButtons()
-{
-    const QString key = currentTrackKey();
-    QVector<int> cues = m_hotCuesByTrack.value(key);
-    while (cues.size() < 3)
-        cues.append(-1);
-
-    const char* labels[3] = { "A", "B", "C" };
-    for (int i = 0; i < 3; ++i) {
-        if (!m_hotCueButtons[i])
-            continue;
-        QString txt = QString::fromLatin1(labels[i]);
-        if (cues.at(i) >= 0)
-            txt.append("*");
-        m_hotCueButtons[i]->setText(txt);
-    }
 }
 
 void PlayerWidget::jumpByBeats(int beatCount)
@@ -736,35 +765,6 @@ void PlayerWidget::onBeatJumpButtonClicked()
     jumpByBeats(src->property("beats").toInt());
 }
 
-void PlayerWidget::onHotCueButtonClicked()
-{
-    QObject* src = sender();
-    if (!src || !m_CurrentTrack)
-        return;
-
-    const int index = src->property("hotCueIndex").toInt();
-    if (index < 0 || index > 2)
-        return;
-
-    const QString key = currentTrackKey();
-    if (key.isEmpty())
-        return;
-
-    QVector<int>& cues = m_hotCuesByTrack[key];
-    while (cues.size() < 3)
-        cues.append(-1);
-
-    const bool setRequested = (QApplication::keyboardModifiers() & Qt::ShiftModifier);
-    if (setRequested || cues[index] < 0) {
-        cues[index] = QTime(0, 0).msecsTo(player->position());
-    } else {
-        player->setPosition(QTime(0, 0).addMSecs(cues[index]));
-        updateTimeAndPositionDisplay(false);
-    }
-
-    refreshHotCueButtons();
-}
-
 void PlayerWidget::onEnvelopeScrubStarted()
 {
     m_envelopeScrubbing = true;
@@ -791,7 +791,7 @@ void PlayerWidget::onEnvelopeScrubPositionChanged(double normalizedPosition, boo
 
     const int windowMs = bpmWidget->windowMilliseconds();
     const double deltaNorm = qBound(-1.0, normalizedPosition, 1.0);
-    int targetMs = m_envelopeScrubAnchorMs - qRound(deltaNorm * static_cast<double>(windowMs) * kScrubSeekGain);
+    int targetMs = m_envelopeScrubAnchorMs + qRound(deltaNorm * static_cast<double>(windowMs) * kScrubSeekGain);
 
     const int lenMs = QTime(0, 0).msecsTo(player->length());
     if (targetMs < 0)
@@ -864,6 +864,24 @@ void PlayerWidget::applyPendingEnvelopeScrubSeek()
     
     // Refresh waveform window view when scrubbing while paused
     bpmWidget->setState(m_bpm, player->position(), m_beatPosition, m_isStarted, m_bpmAnalysed);
+}
+
+void PlayerWidget::applyPendingSliderSeek()
+{
+    m_sliderSeekTimer->stop();
+    if (m_pendingSliderSeekMs < 0)
+        return;
+
+    const int targetMs = m_pendingSliderSeekMs;
+    m_pendingSliderSeekMs = -1;
+
+    const QTime pos = QTime(0, 0).addMSecs(targetMs);
+    if (seekOvershootsFadePoint(pos))
+        armImmediateAboutFinish();
+    else
+        suppressAboutFinishForMs(1200);
+    player->setPosition(pos);
+    updateTimeAndPositionDisplay(false);
 }
 
 void PlayerWidget::suppressAboutFinishForMs(int ms)
@@ -1062,6 +1080,22 @@ void PlayerWidget::analyseEnvelopeFinished()
     qDebug() << "ENVELOPE analysis finished:" << objectName() << "samples=" << env.size();
     storeCachedEnvelope(m_CurrentTrack->url(), env);
     bpmWidget->setPreloadedEnvelope(env);
+
+    // If beat-sync mode is active and we found a meaningful beat-activity end,
+    // override the cue time so voice/instrument-free tail passages are skipped.
+    if (m_beatSyncEnabled && m_skipSilentEnd) {
+        const QTime beatEnd = envelopeAnalyser->beatActivityEndPosition();
+        if (beatEnd.isValid() && beatEnd > QTime(0, 0)) {
+            const QTime trackLen = envelopeAnalyser->length();
+            const int newRemainMs = beatEnd.msecsTo(trackLen);
+            if (newRemainMs > 0 && newRemainMs > static_cast<int>(remainCueTime)) {
+                remainCueTime = newRemainMs;
+                ui->txtCue->setText("-" + QString::number(remainCueTime / 1000));
+                qDebug() << Q_FUNC_INFO << "beat activity end overrides cue time:"
+                         << beatEnd << "remainCue=" << remainCueTime;
+            }
+        }
+    }
 }
 
 void PlayerWidget::onTrackPropertyChanged(Track* track)
@@ -1288,7 +1322,6 @@ void PlayerWidget::loadTrack(Track* track)
     ui->sliPosition->setValue(0);
     ui->txtCue->setText("-");
     ui->butCue->setChecked(false);
-    refreshHotCueButtons();
 }
 
 void PlayerWidget::resizeEvent(QResizeEvent* e)
@@ -1495,13 +1528,19 @@ void PlayerWidget::on_sliPosition_sliderMoved(int value)
         QTime pos = QTime(0, 0, 0);
         pos = pos.addMSecs(length * (value / 1000.0));
         qDebug() << Q_FUNC_INFO << ":" << objectName() << "pos=" << pos;
-        if (seekOvershootsFadePoint(pos))
-            armImmediateAboutFinish();
-        else
-            suppressAboutFinishForMs(1200);
-        player->setPosition(pos);
+
+        // Store target and debounce: avoid flooding the pipeline with rapid FLUSH seeks
+        m_pendingSliderSeekMs = QTime(0, 0).msecsTo(pos);
+        m_sliderSeekTimer->start();
+
+        // Update labels immediately with the target position for visual feedback
+        const QTime len = player->length();
+        const int remainMs = qMax(0, pos.msecsTo(len));
+        ui->lblTime->setText(pos.toString("mm:ss"));
+        ui->lblTimeMs->setText("." + pos.toString("zzz").left(1));
+        ui->lblTimeRemain->setText("-" + QTime(0, 0).addMSecs(remainMs).toString("mm:ss"));
+        ui->lblTimeRemainMs->setText("." + QTime(0, 0).addMSecs(remainMs).toString("zzz").left(1));
     }
-    updateTimeAndPositionDisplay(false);
 }
 
 void PlayerWidget::on_sliPosition_actionTriggered(int action)
@@ -1657,5 +1696,24 @@ void PlayerWidget::on_monitorRoute_toggled(bool checked)
 
     player->setUseMonitorOutput(enabled);
     Q_EMIT monitorRouteToggled(enabled);
+}
+
+void PlayerWidget::on_pitchSlider_valueChanged(int value)
+{
+    // Each slider unit = 0.1 %, so divide by 1000 to get a rate multiplier.
+    const double rate = 1.0 + value / 1000.0;
+    m_tempoRate = rate;
+    player->setRate(rate);
+    bpmWidget->setTempoInfo(m_tempoRate, m_syncAdopting);
+
+    if (m_pitchResetButton) {
+        m_pitchResetButton->setText(
+            value == 0 ? QStringLiteral("0.0%")
+                       : QString("%1%2%").arg(value > 0 ? "+" : "")
+                                        .arg(value / 10.0, 0, 'f', 1));
+    }
+
+    if (std::fabs(m_tempoRate - 1.0) < 0.001 && !m_syncAdopting)
+        updateSyncButtonState(false);
 }
 

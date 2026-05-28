@@ -16,6 +16,7 @@
 #include <QMutexLocker>
 #include <QtConcurrent/QtConcurrent>
 #include <cstring>
+#include <cmath>
 
 #if defined(Q_OS_DARWIN)
 #include <CoreAudio/AudioHardware.h>
@@ -29,6 +30,48 @@
 #include "monitorplayer.h"
 
 namespace {
+#if defined(__GNUC__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#endif
+
+bool holdsLegacyValueArray(const GValue* value)
+{
+#ifdef G_TYPE_VALUE_ARRAY
+    return value != nullptr && G_VALUE_HOLDS(value, G_TYPE_VALUE_ARRAY);
+#else
+    Q_UNUSED(value);
+    return false;
+#endif
+}
+
+guint legacyValueArrayCount(const GValue* value)
+{
+#ifdef G_TYPE_VALUE_ARRAY
+    const GValueArray* values = static_cast<const GValueArray*>(g_value_get_boxed(value));
+    return values != nullptr ? values->n_values : 0;
+#else
+    Q_UNUSED(value);
+    return 0;
+#endif
+}
+
+const GValue* legacyValueArrayAt(const GValue* value, guint index)
+{
+#ifdef G_TYPE_VALUE_ARRAY
+    GValueArray* values = static_cast<GValueArray*>(g_value_get_boxed(value));
+    return values != nullptr ? g_value_array_get_nth(values, index) : nullptr;
+#else
+    Q_UNUSED(value);
+    Q_UNUSED(index);
+    return nullptr;
+#endif
+}
+
+#if defined(__GNUC__)
+#pragma GCC diagnostic pop
+#endif
+
 void configureLevelMessaging(GstElement* levelElement)
 {
     if (levelElement == nullptr)
@@ -54,6 +97,8 @@ guint peakValueCount(const GValue* value)
         return gst_value_list_get_size(value);
     if (GST_VALUE_HOLDS_ARRAY(value))
         return gst_value_array_get_size(value);
+    if (holdsLegacyValueArray(value))
+        return legacyValueArrayCount(value);
     return 1;
 }
 
@@ -65,6 +110,8 @@ const GValue* peakValueAt(const GValue* value, guint index)
         return gst_value_list_get_value(value, index);
     if (GST_VALUE_HOLDS_ARRAY(value))
         return gst_value_array_get_value(value, index);
+    if (holdsLegacyValueArray(value))
+        return legacyValueArrayAt(value, index);
     return index == 0 ? value : nullptr;
 }
 
@@ -97,6 +144,32 @@ bool gValueToDouble(const GValue* value, gdouble* out)
         *out = static_cast<gdouble>(g_value_get_uint64(value));
         return true;
     }
+    if (G_VALUE_HOLDS_STRING(value)) {
+        const gchar* str = g_value_get_string(value);
+        if (str == nullptr)
+            return false;
+
+        if (g_ascii_strcasecmp(str, "-inf") == 0 || g_ascii_strcasecmp(str, "-infinity") == 0) {
+            *out = -INFINITY;
+            return true;
+        }
+        if (g_ascii_strcasecmp(str, "+inf") == 0 || g_ascii_strcasecmp(str, "inf") == 0 || g_ascii_strcasecmp(str, "infinity") == 0) {
+            *out = INFINITY;
+            return true;
+        }
+
+        gchar* end = nullptr;
+        const gdouble v = g_ascii_strtod(str, &end);
+        if (end != str) {
+            *out = v;
+            return true;
+        }
+    }
+
+    if (GST_VALUE_HOLDS_LIST(value) || GST_VALUE_HOLDS_ARRAY(value) || holdsLegacyValueArray(value)) {
+        const GValue* nested = peakValueAt(value, 0);
+        return nested != nullptr && nested != value ? gValueToDouble(nested, out) : false;
+    }
 
     return false;
 }
@@ -113,6 +186,19 @@ const GValue* levelDbValues(const GstStructure* s, const char** fieldName)
     if (fieldName != nullptr)
         *fieldName = "peak";
     return gst_structure_get_value(s, "peak");
+}
+
+double dbToMeter(gdouble db)
+{
+    if (!std::isfinite(db))
+        return 0.0;
+
+    // Clamp to a useful meter range and convert dBFS to linear amplitude.
+    if (db < -60.0)
+        db = -60.0;
+    if (db > 0.0)
+        db = 0.0;
+    return std::pow(10.0, db / 20.0);
 }
 }
 
@@ -186,6 +272,7 @@ struct MonitorPlayerPrivate {
     dsDevice dev;
     double rms_l;
     double rms_r;
+    bool fallbackTried;
 };
 
 MonitorPlayer::MonitorPlayer(QWidget* parent)
@@ -201,6 +288,7 @@ MonitorPlayer::MonitorPlayer(QWidget* parent)
     p->isDisabled = false;
     p->rms_l = 0;
     p->rms_r = 0;
+    p->fallbackTried = false;
     readDevices();
     p->deviceID = defaultDeviceID();
 
@@ -265,6 +353,7 @@ bool MonitorPlayer::prepare()
 #if defined(Q_OS_DARWIN)
     sink = gst_element_factory_make("osxaudiosink", "sink");
     g_object_set(sink, "device", 0, NULL);
+    qInfo() << Q_FUNC_INFO << "macOS: osxaudiosink created, initial device=0 (system default)";
     //g_object_set (sink, "volume", 9.5, NULL);
 #elif defined(Q_OS_WIN32)
     sink = gst_element_factory_make("directsoundsink", "sink");
@@ -317,12 +406,34 @@ void MonitorPlayer::asyncOpen(QUrl url)
     QMutexLocker locker(&p->mutex);
     p->length = 0;
     p->isLoaded = false;
+    p->fallbackTried = false;
     p->error = "";
 
     sync_set_state(GST_ELEMENT(pipeline), GST_STATE_NULL);
 
     GstElement* src = gst_bin_get_by_name(GST_BIN(pipeline), "source");
     g_object_set(G_OBJECT(src), "uri", (const char*)url.toString().toUtf8(), NULL);
+
+#if defined(Q_OS_DARWIN)
+    // osxaudiosink routing is most reliable when device is applied in NULL state,
+    // before prerolling to PAUSED.
+    if (!p->deviceID.isEmpty()) {
+        GstElement* sink = gst_bin_get_by_name(GST_BIN(pipeline), "sink");
+        if (sink != nullptr) {
+            bool ok = false;
+            const gint devInt = p->deviceID.toInt(&ok);
+            if (ok) {
+                g_object_set(sink, "device", devInt, NULL);
+                gint readback = 0;
+                g_object_get(sink, "device", &readback, NULL);
+                qInfo() << Q_FUNC_INFO << "apply device before preroll:" << devInt << "readback:" << readback;
+            } else {
+                qWarning() << Q_FUNC_INFO << "invalid deviceID, cannot convert to int:" << p->deviceID;
+            }
+            gst_object_unref(sink);
+        }
+    }
+#endif
 
     sync_set_state(GST_ELEMENT(pipeline), GST_STATE_PAUSED);
     setPosition(QTime(0, 0));
@@ -343,9 +454,13 @@ void MonitorPlayer::loadThreadFinished()
 
 void MonitorPlayer::play()
 {
-
     p->isStarted = true;
-    qDebug() << Q_FUNC_INFO << ":" << parentWidget()->objectName();
+    GstState cur_state = GST_STATE_NULL;
+    gst_element_get_state(GST_ELEMENT(pipeline), &cur_state, nullptr, 0);
+    qInfo() << Q_FUNC_INFO << ":" << parentWidget()->objectName()
+             << "deviceName=" << (p->deviceName.isEmpty() ? "(none)" : p->deviceName)
+             << "isLoaded=" << p->isLoaded
+             << "pipelineState=" << gst_state_get_name(cur_state);
     if (!p->deviceName.isEmpty())
         setOutputDevice(p->deviceName);
     if (p->isLoaded) {
@@ -460,7 +575,7 @@ bool MonitorPlayer::mediaPlayable()
 {
     GstState st;
     gst_element_get_state(GST_ELEMENT(pipeline), &st, 0, 0);
-    //qDebug()<<gst_element_state_get_name(st);
+    //qDebug()<<gst_state_get_name(st);
     return (st != GST_STATE_NULL);
 }
 
@@ -512,22 +627,63 @@ void MonitorPlayer::setOutputDevice(QString deviceName)
     }
 
     if (!found) {
-        qDebug() << "Monitor setDevice failed, unknown device name:" << deviceName;
+        qWarning() << Q_FUNC_INFO << "setDevice failed, unknown device name:" << deviceName
+                   << "- available:" << p->devices.values();
         return;
     }
 
-    qDebug() << "Monitor setDevice to DeviceID:" << p->deviceID << " DevicenName:" << p->deviceName;
+    qInfo() << Q_FUNC_INFO << "deviceName=" << p->deviceName << "deviceID=" << p->deviceID;
+
+    GstState cur_state = GST_STATE_NULL;
+    gst_element_get_state(GST_ELEMENT(pipeline), &cur_state, nullptr, 0);
+    qInfo() << Q_FUNC_INFO << "pipelineState before set:" << gst_state_get_name(cur_state);
+
+    GstState restore_state = cur_state;
+
+#if defined(Q_OS_DARWIN)
+    // For macOS, force NULL before setting "device" to ensure CoreAudio unit is
+    // recreated on the selected endpoint and not silently kept on default output.
+    if (cur_state != GST_STATE_NULL) {
+        qInfo() << Q_FUNC_INFO << "transitioning pipeline to NULL to apply macOS device change";
+        gst_element_set_state(GST_ELEMENT(pipeline), GST_STATE_NULL);
+        GstStateChangeReturn ret = gst_element_get_state(GST_ELEMENT(pipeline), nullptr, nullptr, 2 * GST_SECOND);
+        qInfo() << Q_FUNC_INFO << "state change to NULL result:" << ret;
+    }
+#else
+    // For other sinks, READY is enough for changing the output device.
+    if (cur_state > GST_STATE_READY) {
+        qInfo() << Q_FUNC_INFO << "transitioning pipeline to READY to apply device change";
+        gst_element_set_state(GST_ELEMENT(pipeline), GST_STATE_READY);
+        GstStateChangeReturn ret = gst_element_get_state(GST_ELEMENT(pipeline), nullptr, nullptr, 2 * GST_SECOND);
+        qInfo() << Q_FUNC_INFO << "state change to READY result:" << ret;
+    }
+#endif
 
     GstElement* sink = gst_bin_get_by_name(GST_BIN(pipeline), "sink");
 #if defined(Q_OS_WIN32)
     g_object_set(sink, "device", p->deviceID.toLatin1().data(), NULL);
 #elif defined(Q_OS_DARWIN)
-qDebug() << "Setting output device to" << p->deviceID;
-    g_object_set(sink, "device", p->deviceID.toInt(), NULL);
+    {
+        gint devInt = p->deviceID.toInt();
+        g_object_set(sink, "device", devInt, NULL);
+        gint readback = 0;
+        g_object_get(sink, "device", &readback, NULL);
+        qInfo() << Q_FUNC_INFO << "osxaudiosink: set device" << devInt << "-> readback:" << readback;
+    }
 #elif defined(Q_OS_UNIX)
-    g_object_set(sink, "device", QString("hw:%1").arg(p->deviceID).toLatin1().data(), NULL);
+    {
+        const QString alsaDev = QString("hw:%1").arg(p->deviceID);
+        g_object_set(sink, "device", alsaDev.toLatin1().data(), NULL);
+        qInfo() << Q_FUNC_INFO << "alsasink: set device" << alsaDev;
+    }
 #endif
     gst_object_unref(sink);
+
+    // Restore the original state after device update.
+    if (restore_state != GST_STATE_NULL) {
+        qInfo() << Q_FUNC_INFO << "restoring pipeline to" << gst_state_get_name(restore_state);
+        gst_element_set_state(GST_ELEMENT(pipeline), restore_state);
+    }
 }
 
 #if defined(Q_OS_WIN32)
@@ -554,6 +710,25 @@ QString MonitorPlayer::defaultDeviceID()
     } else
         return QString();
 #elif defined(Q_OS_DARWIN)
+    AudioDeviceID defaultDevice = 0;
+    UInt32 dataSize = sizeof(defaultDevice);
+    AudioObjectPropertyAddress propertyAddress;
+    propertyAddress.mSelector = kAudioHardwarePropertyDefaultOutputDevice;
+    propertyAddress.mScope = kAudioObjectPropertyScopeGlobal;
+    propertyAddress.mElement = kAudioObjectPropertyElementMain;
+
+    const OSStatus status = AudioObjectGetPropertyData(
+        kAudioObjectSystemObject,
+        &propertyAddress,
+        0,
+        NULL,
+        &dataSize,
+        &defaultDevice);
+
+    if (status == noErr && defaultDevice != 0)
+        return QString::number(defaultDevice);
+
+    qWarning() << Q_FUNC_INFO << "failed to query default output device, fallback to 0, status=" << status;
     return QString("0");
 #elif defined(Q_OS_UNIX)
     return QString("0");
@@ -573,6 +748,35 @@ void MonitorPlayer::readDevices()
     }
 
 #elif defined(Q_OS_DARWIN)
+    auto hasOutputChannels = [](AudioDeviceID devId) -> bool {
+        AudioObjectPropertyAddress channelsAddress;
+        channelsAddress.mSelector = kAudioDevicePropertyStreamConfiguration;
+        channelsAddress.mScope = kAudioDevicePropertyScopeOutput;
+        channelsAddress.mElement = kAudioObjectPropertyElementMain;
+
+        UInt32 listSize = 0;
+        OSStatus s = AudioObjectGetPropertyDataSize(devId, &channelsAddress, 0, NULL, &listSize);
+        if (s != noErr || listSize == 0)
+            return false;
+
+        AudioBufferList* bufferList = (AudioBufferList*)malloc(listSize);
+        if (bufferList == NULL)
+            return false;
+
+        s = AudioObjectGetPropertyData(devId, &channelsAddress, 0, NULL, &listSize, bufferList);
+        if (s != noErr) {
+            free(bufferList);
+            return false;
+        }
+
+        UInt32 totalChannels = 0;
+        for (UInt32 bi = 0; bi < bufferList->mNumberBuffers; ++bi)
+            totalChannels += bufferList->mBuffers[bi].mNumberChannels;
+
+        free(bufferList);
+        return totalChannels > 0;
+    };
+
     UInt32 dataSize = 0;
     AudioObjectPropertyAddress propertyAddress;
     propertyAddress.mSelector = kAudioHardwarePropertyDevices;
@@ -598,6 +802,11 @@ void MonitorPlayer::readDevices()
     p->devices.clear();
 
     for (UInt32 i = 0; i < deviceCount; i++) {
+        if (!hasOutputChannels(audioDevices[i])) {
+            qInfo() << Q_FUNC_INFO << "skip non-output CoreAudio device id" << audioDevices[i];
+            continue;
+        }
+
         CFStringRef deviceNameRef = NULL;
         UInt32 nameSize = sizeof(deviceNameRef);
 
@@ -611,8 +820,10 @@ void MonitorPlayer::readDevices()
         memset(deviceNameCstr, 0, sizeof(deviceNameCstr));
         if (CFStringGetCString(deviceNameRef, deviceNameCstr, sizeof(deviceNameCstr), kCFStringEncodingUTF8)) {
             const QString devName = QString::fromUtf8(deviceNameCstr).trimmed();
-            if (!devName.isEmpty())
+            if (!devName.isEmpty()) {
                 p->devices.insert(QString::number(audioDevices[i]), devName);
+                qInfo() << Q_FUNC_INFO << "found output device" << devName << "id" << audioDevices[i];
+            }
         }
 
         CFRelease(deviceNameRef);
@@ -635,19 +846,70 @@ void MonitorPlayer::messageReceived(GstMessage* message)
 
     switch (GST_MESSAGE_TYPE(message)) {
     case GST_MESSAGE_ERROR: {
+        GError* err = nullptr;
+        gchar* debug = nullptr;
+        gst_message_parse_error(message, &err, &debug);
+
+        const QString errMsg = err != nullptr ? QString::fromUtf8(err->message) : QString();
+        const QString debugMsg = debug != nullptr ? QString::fromUtf8(debug) : QString();
+        const bool coreAudioOpenFailed = errMsg.contains("CoreAudio device could not be opened", Qt::CaseInsensitive);
+
+#if defined(Q_OS_DARWIN)
+        if (coreAudioOpenFailed && !p->fallbackTried) {
+            const QString fallbackId = defaultDeviceID();
+            if (!fallbackId.isEmpty() && fallbackId != p->deviceID) {
+                p->fallbackTried = true;
+                qWarning() << Q_FUNC_INFO
+                           << "CoreAudio open failed for device" << p->deviceID << p->deviceName
+                           << "- retry with default output device id" << fallbackId;
+
+                GstElement* sink = gst_bin_get_by_name(GST_BIN(pipeline), "sink");
+                if (sink != nullptr) {
+                    bool ok = false;
+                    const gint devInt = fallbackId.toInt(&ok);
+                    if (ok) {
+                        g_object_set(sink, "device", devInt, NULL);
+                        gint readback = 0;
+                        g_object_get(sink, "device", &readback, NULL);
+                        qWarning() << Q_FUNC_INFO << "fallback set device" << devInt << "readback" << readback;
+                        p->deviceID = fallbackId;
+                        p->deviceName = p->devices.value(fallbackId, QStringLiteral("System Default"));
+
+                        // Re-preroll pipeline on the fallback device.
+                        sync_set_state(GST_ELEMENT(pipeline), GST_STATE_READY);
+                        sync_set_state(GST_ELEMENT(pipeline), GST_STATE_PAUSED);
+                        if (p->isStarted && p->isLoaded)
+                            sync_set_state(GST_ELEMENT(pipeline), GST_STATE_PLAYING);
+                    }
+                    gst_object_unref(sink);
+                }
+
+                if (err != nullptr)
+                    g_error_free(err);
+                if (debug != nullptr)
+                    g_free(debug);
+                return;
+            }
+        }
+#endif
+
         if (p->error == "") {
-            GError* err;
-            gchar* debug;
-            gst_message_parse_error(message, &err, &debug);
-            p->error = "Error #" + QString::number(err->code) + " in module " + QString::number(err->domain) + "\n" + QString::fromUtf8(err->message);
-            if (err->code == 6 && err->domain == 851) {
+            p->error = "Error #" + QString::number(err != nullptr ? err->code : 0)
+                + " in module " + QString::number(err != nullptr ? err->domain : 0)
+                + "\n" + errMsg;
+            if (err != nullptr && err->code == 6 && err->domain == 851) {
                 p->error += "\nMay be you should to install gstreamerX.XX-plugins-ugly or gstreamerX.XX-plugins-bad";
             }
-            qDebug() << "Gstreamer error:" << p->error;
-            g_error_free(err);
-            g_free(debug);
+            qWarning() << "Gstreamer error:" << p->error;
+            if (!debugMsg.isEmpty())
+                qWarning() << "Gstreamer debug:" << debugMsg;
             Q_EMIT error();
         }
+
+        if (err != nullptr)
+            g_error_free(err);
+        if (debug != nullptr)
+            g_free(debug);
         break;
     }
     case GST_MESSAGE_EOS: {
@@ -673,27 +935,58 @@ void MonitorPlayer::messageReceived(GstMessage* message)
         if (s == nullptr)
             break;
 
-        const GValue* peakValues = levelDbValues(s, nullptr);
-        const guint channels = peakValueCount(peakValues);
+        const gchar* structName = gst_structure_get_name(s);
+        if (g_strcmp0(structName, "level") != 0)
+            break;
+
+        const char* dbFieldName = nullptr;
+        const GValue* dbValues = levelDbValues(s, &dbFieldName);
+        if (dbValues == nullptr) {
+            qInfo() << Q_FUNC_INFO << "level message without rms/peak values";
+            break;
+        }
+
+        const guint channels = peakValueCount(dbValues);
+        if (channels == 0)
+            break;
+
+        gdouble db_l = -INFINITY;
+        gdouble db_r = -INFINITY;
+        bool updated = false;
 
         for (guint i = 0; i < channels; ++i) {
-            const GValue* peakValue = peakValueAt(peakValues, i);
-            gdouble peak_dB = 0.0;
-            if (!gValueToDouble(peakValue, &peak_dB))
+            const GValue* dbValue = peakValueAt(dbValues, i);
+            gdouble levelDb = 0.0;
+            if (!gValueToDouble(dbValue, &levelDb)) {
+                qInfo() << Q_FUNC_INFO << "unable to parse" << dbFieldName << "value for channel" << i
+                        << "gtype=" << (dbValue != nullptr ? G_VALUE_TYPE_NAME(dbValue) : "(null)");
                 continue;
+            }
 
-            /* cube-root power law: maps [-60..0] dBFS to ~[0..1] so loud music reaches the red zone */
-            const gdouble rms = pow(10.0, peak_dB / 60.0);
-            qDebug() << Q_FUNC_INFO << "level message channel" << i << "peak_dB" << peak_dB << "rms" << rms;
-            if (i == 0)
-                p->rms_l = rms;
-            else
-                p->rms_r = rms;
+            const gdouble meter = dbToMeter(levelDb);
+            updated = true;
+
+            if (i == 0) {
+                db_l = levelDb;
+                p->rms_l = meter;
+            } else if (i == 1) {
+                db_r = levelDb;
+                p->rms_r = meter;
+            }
         }
+
+        if (!updated)
+            break;
 
         if (channels == 1)
             p->rms_r = p->rms_l;
 
+        if (!std::isfinite(db_r) && std::isfinite(db_l))
+            db_r = db_l;
+
+        qInfo() << "MonitorPlayer level:" << dbFieldName
+                << "dB(L/R)=" << db_l << db_r
+                << "meter(L/R)=" << p->rms_l << p->rms_r;
         Q_EMIT levelChanged();
 
     } break;

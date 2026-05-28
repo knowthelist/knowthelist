@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>1280</width>
-    <height>695</height>
+    <height>760</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -387,12 +387,12 @@ background-color: #444444;
          <number>0</number>
         </property>
         <property name="sizeConstraint">
-         <enum>QLayout::SetMaximumSize</enum>
+         <enum>QLayout::SizeConstraint::SetMaximumSize</enum>
         </property>
         <item>
          <layout class="QVBoxLayout" name="verticalLayout">
           <property name="sizeConstraint">
-           <enum>QLayout::SetMaximumSize</enum>
+           <enum>QLayout::SizeConstraint::SetMaximumSize</enum>
           </property>
           <item>
            <widget class="PlayerWidget" name="player_L" native="true">
@@ -464,10 +464,10 @@ background-color: #444444;
            <string notr="true"/>
           </property>
           <property name="frameShape">
-           <enum>QFrame::StyledPanel</enum>
+           <enum>QFrame::Shape::StyledPanel</enum>
           </property>
           <property name="frameShadow">
-           <enum>QFrame::Raised</enum>
+           <enum>QFrame::Shadow::Raised</enum>
           </property>
           <widget class="QFrame" name="phVU1">
            <property name="geometry">
@@ -479,10 +479,10 @@ background-color: #444444;
             </rect>
            </property>
            <property name="frameShape">
-            <enum>QFrame::StyledPanel</enum>
+            <enum>QFrame::Shape::StyledPanel</enum>
            </property>
            <property name="frameShadow">
-            <enum>QFrame::Raised</enum>
+            <enum>QFrame::Shadow::Raised</enum>
            </property>
           </widget>
           <widget class="QFrame" name="phVU2">
@@ -495,10 +495,10 @@ background-color: #444444;
             </rect>
            </property>
            <property name="frameShape">
-            <enum>QFrame::StyledPanel</enum>
+            <enum>QFrame::Shape::StyledPanel</enum>
            </property>
            <property name="frameShadow">
-            <enum>QFrame::Raised</enum>
+            <enum>QFrame::Shadow::Raised</enum>
            </property>
           </widget>
           <widget class="QLed" name="ledFadeLeft" native="true">
@@ -743,6 +743,15 @@ background-color: #444444;
                 </color>
                </brush>
               </colorrole>
+              <colorrole role="PlaceholderText">
+               <brush brushstyle="SolidPattern">
+                <color alpha="128">
+                 <red>255</red>
+                 <green>255</green>
+                 <blue>255</blue>
+                </color>
+               </brush>
+              </colorrole>
              </active>
              <inactive>
               <colorrole role="WindowText">
@@ -943,6 +952,15 @@ background-color: #444444;
                 </color>
                </brush>
               </colorrole>
+              <colorrole role="PlaceholderText">
+               <brush brushstyle="SolidPattern">
+                <color alpha="128">
+                 <red>255</red>
+                 <green>255</green>
+                 <blue>255</blue>
+                </color>
+               </brush>
+              </colorrole>
              </inactive>
              <disabled>
               <colorrole role="WindowText">
@@ -1140,6 +1158,15 @@ background-color: #444444;
                  <red>0</red>
                  <green>0</green>
                  <blue>0</blue>
+                </color>
+               </brush>
+              </colorrole>
+              <colorrole role="PlaceholderText">
+               <brush brushstyle="SolidPattern">
+                <color alpha="128">
+                 <red>255</red>
+                 <green>255</green>
+                 <blue>255</blue>
                 </color>
                </brush>
               </colorrole>
@@ -1438,6 +1465,15 @@ background-color: #444444;
                 </color>
                </brush>
               </colorrole>
+              <colorrole role="PlaceholderText">
+               <brush brushstyle="SolidPattern">
+                <color alpha="128">
+                 <red>255</red>
+                 <green>255</green>
+                 <blue>255</blue>
+                </color>
+               </brush>
+              </colorrole>
              </active>
              <inactive>
               <colorrole role="WindowText">
@@ -1635,6 +1671,15 @@ background-color: #444444;
                  <red>0</red>
                  <green>0</green>
                  <blue>0</blue>
+                </color>
+               </brush>
+              </colorrole>
+              <colorrole role="PlaceholderText">
+               <brush brushstyle="SolidPattern">
+                <color alpha="128">
+                 <red>255</red>
+                 <green>255</green>
+                 <blue>255</blue>
                 </color>
                </brush>
               </colorrole>
@@ -1838,6 +1883,15 @@ background-color: #444444;
                 </color>
                </brush>
               </colorrole>
+              <colorrole role="PlaceholderText">
+               <brush brushstyle="SolidPattern">
+                <color alpha="128">
+                 <red>255</red>
+                 <green>255</green>
+                 <blue>255</blue>
+                </color>
+               </brush>
+              </colorrole>
              </disabled>
             </palette>
            </property>
@@ -1888,15 +1942,15 @@ background-color: #444444;
           <widget class="QPushButton" name="cmdOptions">
            <property name="geometry">
             <rect>
-               <x>25</x>
-               <y>336</y>
-               <width>184</width>
-               <height>18</height>
+             <x>25</x>
+             <y>336</y>
+             <width>184</width>
+             <height>18</height>
             </rect>
            </property>
            <property name="minimumSize">
             <size>
-               <width>184</width>
+             <width>184</width>
              <height>16</height>
             </size>
            </property>
@@ -2101,6 +2155,15 @@ background-color: #444444;
                 </color>
                </brush>
               </colorrole>
+              <colorrole role="PlaceholderText">
+               <brush brushstyle="SolidPattern">
+                <color alpha="128">
+                 <red>255</red>
+                 <green>255</green>
+                 <blue>255</blue>
+                </color>
+               </brush>
+              </colorrole>
              </active>
              <inactive>
               <colorrole role="WindowText">
@@ -2301,6 +2364,15 @@ background-color: #444444;
                 </color>
                </brush>
               </colorrole>
+              <colorrole role="PlaceholderText">
+               <brush brushstyle="SolidPattern">
+                <color alpha="128">
+                 <red>255</red>
+                 <green>255</green>
+                 <blue>255</blue>
+                </color>
+               </brush>
+              </colorrole>
              </inactive>
              <disabled>
               <colorrole role="WindowText">
@@ -2498,6 +2570,15 @@ background-color: #444444;
                  <red>0</red>
                  <green>0</green>
                  <blue>0</blue>
+                </color>
+               </brush>
+              </colorrole>
+              <colorrole role="PlaceholderText">
+               <brush brushstyle="SolidPattern">
+                <color alpha="128">
+                 <red>255</red>
+                 <green>255</green>
+                 <blue>255</blue>
                 </color>
                </brush>
               </colorrole>
@@ -3076,10 +3157,10 @@ background-color: #444444;
             <number>57</number>
            </property>
            <property name="orientation">
-            <enum>Qt::Vertical</enum>
+            <enum>Qt::Orientation::Vertical</enum>
            </property>
            <property name="tickPosition">
-            <enum>QSlider::TicksBothSides</enum>
+            <enum>QSlider::TickPosition::TicksBothSides</enum>
            </property>
           </widget>
           <widget class="QSlider" name="sliFader">
@@ -3639,10 +3720,10 @@ background-color: #444444;
             <number>21</number>
            </property>
            <property name="orientation">
-            <enum>Qt::Horizontal</enum>
+            <enum>Qt::Orientation::Horizontal</enum>
            </property>
            <property name="tickPosition">
-            <enum>QSlider::TicksBothSides</enum>
+            <enum>QSlider::TickPosition::TicksBothSides</enum>
            </property>
           </widget>
           <widget class="QSlider" name="slider2">
@@ -4202,10 +4283,10 @@ background-color: #444444;
             <number>11</number>
            </property>
            <property name="orientation">
-            <enum>Qt::Vertical</enum>
+            <enum>Qt::Orientation::Vertical</enum>
            </property>
            <property name="tickPosition">
-            <enum>QSlider::TicksBothSides</enum>
+            <enum>QSlider::TickPosition::TicksBothSides</enum>
            </property>
           </widget>
           <widget class="QToolButton" name="cmdFade">
@@ -4430,6 +4511,15 @@ background-color: #444444;
                 </color>
                </brush>
               </colorrole>
+              <colorrole role="PlaceholderText">
+               <brush brushstyle="SolidPattern">
+                <color alpha="128">
+                 <red>255</red>
+                 <green>255</green>
+                 <blue>255</blue>
+                </color>
+               </brush>
+              </colorrole>
              </active>
              <inactive>
               <colorrole role="WindowText">
@@ -4627,6 +4717,15 @@ background-color: #444444;
                  <red>0</red>
                  <green>0</green>
                  <blue>0</blue>
+                </color>
+               </brush>
+              </colorrole>
+              <colorrole role="PlaceholderText">
+               <brush brushstyle="SolidPattern">
+                <color alpha="128">
+                 <red>255</red>
+                 <green>255</green>
+                 <blue>255</blue>
                 </color>
                </brush>
               </colorrole>
@@ -4830,6 +4929,15 @@ background-color: #444444;
                 </color>
                </brush>
               </colorrole>
+              <colorrole role="PlaceholderText">
+               <brush brushstyle="SolidPattern">
+                <color alpha="128">
+                 <red>255</red>
+                 <green>255</green>
+                 <blue>255</blue>
+                </color>
+               </brush>
+              </colorrole>
              </disabled>
             </palette>
            </property>
@@ -4886,7 +4994,7 @@ min-height: 16px;
             <string>Gain</string>
            </property>
            <property name="alignment">
-            <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+            <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
            </property>
           </widget>
           <widget class="QPushButton" name="toggleAGC">
@@ -5099,6 +5207,15 @@ min-height: 16px;
                 </color>
                </brush>
               </colorrole>
+              <colorrole role="PlaceholderText">
+               <brush brushstyle="SolidPattern">
+                <color alpha="128">
+                 <red>255</red>
+                 <green>255</green>
+                 <blue>255</blue>
+                </color>
+               </brush>
+              </colorrole>
              </active>
              <inactive>
               <colorrole role="WindowText">
@@ -5296,6 +5413,15 @@ min-height: 16px;
                  <red>0</red>
                  <green>0</green>
                  <blue>0</blue>
+                </color>
+               </brush>
+              </colorrole>
+              <colorrole role="PlaceholderText">
+               <brush brushstyle="SolidPattern">
+                <color alpha="128">
+                 <red>255</red>
+                 <green>255</green>
+                 <blue>255</blue>
                 </color>
                </brush>
               </colorrole>
@@ -5499,6 +5625,15 @@ min-height: 16px;
                 </color>
                </brush>
               </colorrole>
+              <colorrole role="PlaceholderText">
+               <brush brushstyle="SolidPattern">
+                <color alpha="128">
+                 <red>255</red>
+                 <green>255</green>
+                 <blue>255</blue>
+                </color>
+               </brush>
+              </colorrole>
              </disabled>
             </palette>
            </property>
@@ -5509,6 +5644,9 @@ min-height: 16px;
            </property>
            <property name="text">
             <string>AGC</string>
+           </property>
+           <property name="checkable">
+            <bool>true</bool>
            </property>
            <property name="shortcut">
             <string>Alt+J</string>
@@ -5585,7 +5723,7 @@ min-height: 16px;
             <string>Low</string>
            </property>
            <property name="alignment">
-            <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+            <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
            </property>
           </widget>
           <widget class="QLabel" name="label_3">
@@ -5630,7 +5768,7 @@ min-height: 16px;
             <string>Mid</string>
            </property>
            <property name="alignment">
-            <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+            <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
            </property>
           </widget>
           <widget class="QLabel" name="label_6">
@@ -5669,7 +5807,7 @@ min-height: 16px;
             </font>
            </property>
            <property name="layoutDirection">
-            <enum>Qt::LeftToRight</enum>
+            <enum>Qt::LayoutDirection::LeftToRight</enum>
            </property>
            <property name="styleSheet">
             <string notr="true"/>
@@ -5678,7 +5816,7 @@ min-height: 16px;
             <string>High</string>
            </property>
            <property name="alignment">
-            <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+            <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
            </property>
           </widget>
           <widget class="QLabel" name="label_8">
@@ -5879,7 +6017,7 @@ min-height: 16px;
             <string>Knowthelist</string>
            </property>
            <property name="alignment">
-            <set>Qt::AlignCenter</set>
+            <set>Qt::AlignmentFlag::AlignCenter</set>
            </property>
           </widget>
           <zorder>phVU2</zorder>
@@ -5919,7 +6057,7 @@ min-height: 16px;
         <item>
          <layout class="QVBoxLayout" name="verticalLayout_R">
           <property name="sizeConstraint">
-           <enum>QLayout::SetMaximumSize</enum>
+           <enum>QLayout::SizeConstraint::SetMaximumSize</enum>
           </property>
           <item>
            <widget class="PlayerWidget" name="player_R" native="true">
@@ -6015,7 +6153,7 @@ min-height: 16px;
              <property name="minimumSize">
               <size>
                <width>0</width>
-               <height>126</height>
+               <height>160</height>
               </size>
              </property>
              <property name="maximumSize">
@@ -6025,10 +6163,10 @@ min-height: 16px;
               </size>
              </property>
              <property name="frameShape">
-              <enum>QFrame::NoFrame</enum>
+              <enum>QFrame::Shape::NoFrame</enum>
              </property>
              <property name="frameShadow">
-              <enum>QFrame::Raised</enum>
+              <enum>QFrame::Shadow::Raised</enum>
              </property>
              <widget class="QFrame" name="phVUMeter">
               <property name="geometry">
@@ -6040,10 +6178,10 @@ min-height: 16px;
                </rect>
               </property>
               <property name="frameShape">
-               <enum>QFrame::StyledPanel</enum>
+               <enum>QFrame::Shape::StyledPanel</enum>
               </property>
               <property name="frameShadow">
-               <enum>QFrame::Raised</enum>
+               <enum>QFrame::Shadow::Raised</enum>
               </property>
              </widget>
              <widget class="QSlider" name="sliMonitorVolume">
@@ -6600,10 +6738,10 @@ min-height: 16px;
                <number>100</number>
               </property>
               <property name="orientation">
-               <enum>Qt::Vertical</enum>
+               <enum>Qt::Orientation::Vertical</enum>
               </property>
               <property name="tickPosition">
-               <enum>QSlider::TicksBothSides</enum>
+               <enum>QSlider::TickPosition::TicksBothSides</enum>
               </property>
              </widget>
              <widget class="QLabel" name="lblMonitorPosition">
@@ -6705,6 +6843,15 @@ min-height: 16px;
                    </gradient>
                   </brush>
                  </colorrole>
+                 <colorrole role="PlaceholderText">
+                  <brush brushstyle="SolidPattern">
+                   <color alpha="128">
+                    <red>225</red>
+                    <green>225</green>
+                    <blue>225</blue>
+                   </color>
+                  </brush>
+                 </colorrole>
                 </active>
                 <inactive>
                  <colorrole role="WindowText">
@@ -6794,6 +6941,15 @@ min-height: 16px;
                    </gradient>
                   </brush>
                  </colorrole>
+                 <colorrole role="PlaceholderText">
+                  <brush brushstyle="SolidPattern">
+                   <color alpha="128">
+                    <red>225</red>
+                    <green>225</green>
+                    <blue>225</blue>
+                   </color>
+                  </brush>
+                 </colorrole>
                 </inactive>
                 <disabled>
                  <colorrole role="WindowText">
@@ -6881,6 +7037,15 @@ min-height: 16px;
                      </color>
                     </gradientstop>
                    </gradient>
+                  </brush>
+                 </colorrole>
+                 <colorrole role="PlaceholderText">
+                  <brush brushstyle="SolidPattern">
+                   <color alpha="128">
+                    <red>225</red>
+                    <green>225</green>
+                    <blue>225</blue>
+                   </color>
                   </brush>
                  </colorrole>
                 </disabled>
@@ -7007,6 +7172,15 @@ min-height: 16px;
                    </gradient>
                   </brush>
                  </colorrole>
+                 <colorrole role="PlaceholderText">
+                  <brush brushstyle="SolidPattern">
+                   <color alpha="128">
+                    <red>225</red>
+                    <green>225</green>
+                    <blue>225</blue>
+                   </color>
+                  </brush>
+                 </colorrole>
                 </active>
                 <inactive>
                  <colorrole role="WindowText">
@@ -7094,6 +7268,15 @@ min-height: 16px;
                      </color>
                     </gradientstop>
                    </gradient>
+                  </brush>
+                 </colorrole>
+                 <colorrole role="PlaceholderText">
+                  <brush brushstyle="SolidPattern">
+                   <color alpha="128">
+                    <red>225</red>
+                    <green>225</green>
+                    <blue>225</blue>
+                   </color>
                   </brush>
                  </colorrole>
                 </inactive>
@@ -7185,6 +7368,15 @@ min-height: 16px;
                    </gradient>
                   </brush>
                  </colorrole>
+                 <colorrole role="PlaceholderText">
+                  <brush brushstyle="SolidPattern">
+                   <color alpha="128">
+                    <red>225</red>
+                    <green>225</green>
+                    <blue>225</blue>
+                   </color>
+                  </brush>
+                 </colorrole>
                 </disabled>
                </palette>
               </property>
@@ -7197,7 +7389,7 @@ min-height: 16px;
                <string>-0:00.0</string>
               </property>
               <property name="alignment">
-               <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+               <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
               </property>
              </widget>
              <widget class="QScrollBar" name="sliMonitor">
@@ -7230,7 +7422,7 @@ min-height: 16px;
                <number>100</number>
               </property>
               <property name="orientation">
-               <enum>Qt::Horizontal</enum>
+               <enum>Qt::Orientation::Horizontal</enum>
               </property>
               <property name="invertedControls">
                <bool>true</bool>
@@ -7254,10 +7446,10 @@ min-height: 16px;
            <item>
             <widget class="QFrame" name="fraMonitorDown">
              <property name="frameShape">
-              <enum>QFrame::NoFrame</enum>
+              <enum>QFrame::Shape::NoFrame</enum>
              </property>
              <property name="frameShadow">
-              <enum>QFrame::Raised</enum>
+              <enum>QFrame::Shadow::Raised</enum>
              </property>
              <layout class="QVBoxLayout" name="verticalLayout_4">
               <property name="spacing">
@@ -7279,7 +7471,6 @@ min-height: 16px;
                <widget class="QLabel" name="lblMonitorArtist">
                 <property name="font">
                  <font>
-                  <weight>700</weight>
                   <bold>true</bold>
                  </font>
                 </property>
@@ -7380,6 +7571,15 @@ min-height: 16px;
                      </gradient>
                     </brush>
                    </colorrole>
+                   <colorrole role="PlaceholderText">
+                    <brush brushstyle="SolidPattern">
+                     <color alpha="128">
+                      <red>225</red>
+                      <green>225</green>
+                      <blue>225</blue>
+                     </color>
+                    </brush>
+                   </colorrole>
                   </active>
                   <inactive>
                    <colorrole role="WindowText">
@@ -7467,6 +7667,15 @@ min-height: 16px;
                        </color>
                       </gradientstop>
                      </gradient>
+                    </brush>
+                   </colorrole>
+                   <colorrole role="PlaceholderText">
+                    <brush brushstyle="SolidPattern">
+                     <color alpha="128">
+                      <red>225</red>
+                      <green>225</green>
+                      <blue>225</blue>
+                     </color>
                     </brush>
                    </colorrole>
                   </inactive>
@@ -7558,6 +7767,15 @@ min-height: 16px;
                      </gradient>
                     </brush>
                    </colorrole>
+                   <colorrole role="PlaceholderText">
+                    <brush brushstyle="SolidPattern">
+                     <color alpha="128">
+                      <red>225</red>
+                      <green>225</green>
+                      <blue>225</blue>
+                     </color>
+                    </brush>
+                   </colorrole>
                   </disabled>
                  </palette>
                 </property>
@@ -7573,7 +7791,7 @@ min-height: 16px;
                  <string>MonitorPlayer</string>
                 </property>
                 <property name="alignment">
-                 <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
+                 <set>Qt::AlignmentFlag::AlignLeading|Qt::AlignmentFlag::AlignLeft|Qt::AlignmentFlag::AlignTop</set>
                 </property>
                 <property name="wordWrap">
                  <bool>true</bool>

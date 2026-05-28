@@ -48,6 +48,31 @@ cmake build:
     $ cmake --build build -j
     $ ./build/knowthelist
 
+Recreate ui_*.h after .ui changes:
+----------------------------------
+`ui_*.h` files are generated from Qt Designer `.ui` files. Do not edit generated headers manually.
+
+For CMake builds (recommended):
+
+    $ cmake -S . -B build
+    $ cmake --build build --target knowthelist_autogen
+
+If needed, force a full regenerate:
+
+    $ rm -rf build
+    $ cmake -S . -B build
+    $ cmake --build build -j
+
+Generated headers are placed under:
+
+    build/knowthelist_autogen/include/ui_*.h
+
+For qmake builds:
+
+    $ qmake6 knowthelist.pro
+    $ make clean
+    $ make -j
+
 macOS:
 ----------
 Knowthelist works well on macOS.
