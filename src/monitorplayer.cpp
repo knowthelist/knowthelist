@@ -30,47 +30,24 @@
 #include "monitorplayer.h"
 
 namespace {
-#if defined(__GNUC__)
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-#endif
-
 bool holdsLegacyValueArray(const GValue* value)
 {
-#ifdef G_TYPE_VALUE_ARRAY
-    return value != nullptr && G_VALUE_HOLDS(value, G_TYPE_VALUE_ARRAY);
-#else
     Q_UNUSED(value);
     return false;
-#endif
 }
 
 guint legacyValueArrayCount(const GValue* value)
 {
-#ifdef G_TYPE_VALUE_ARRAY
-    const GValueArray* values = static_cast<const GValueArray*>(g_value_get_boxed(value));
-    return values != nullptr ? values->n_values : 0;
-#else
     Q_UNUSED(value);
     return 0;
-#endif
 }
 
 const GValue* legacyValueArrayAt(const GValue* value, guint index)
 {
-#ifdef G_TYPE_VALUE_ARRAY
-    GValueArray* values = static_cast<GValueArray*>(g_value_get_boxed(value));
-    return values != nullptr ? g_value_array_get_nth(values, index) : nullptr;
-#else
     Q_UNUSED(value);
     Q_UNUSED(index);
     return nullptr;
-#endif
 }
-
-#if defined(__GNUC__)
-#pragma GCC diagnostic pop
-#endif
 
 void configureLevelMessaging(GstElement* levelElement)
 {

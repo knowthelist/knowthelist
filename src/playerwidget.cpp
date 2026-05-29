@@ -791,7 +791,7 @@ void PlayerWidget::onEnvelopeScrubPositionChanged(double normalizedPosition, boo
 
     const int windowMs = bpmWidget->windowMilliseconds();
     const double deltaNorm = qBound(-1.0, normalizedPosition, 1.0);
-    int targetMs = m_envelopeScrubAnchorMs + qRound(deltaNorm * static_cast<double>(windowMs) * kScrubSeekGain);
+    int targetMs = m_envelopeScrubAnchorMs - qRound(deltaNorm * static_cast<double>(windowMs) * kScrubSeekGain);
 
     const int lenMs = QTime(0, 0).msecsTo(player->length());
     if (targetMs < 0)
@@ -868,6 +868,10 @@ void PlayerWidget::applyPendingEnvelopeScrubSeek()
 
 void PlayerWidget::applyPendingSliderSeek()
 {
+    // While dragging, keep the latest target pending and apply on release.
+    if (ui->sliPosition->isSliderDown())
+        return;
+
     m_sliderSeekTimer->stop();
     if (m_pendingSliderSeekMs < 0)
         return;
@@ -876,6 +880,11 @@ void PlayerWidget::applyPendingSliderSeek()
     m_pendingSliderSeekMs = -1;
 
     const QTime pos = QTime(0, 0).addMSecs(targetMs);
+    
+    qDebug() << "applyPendingSliderSeek:" << objectName()
+             << "targetMs=" << targetMs
+             << "targetTime=" << pos;
+    
     if (seekOvershootsFadePoint(pos))
         armImmediateAboutFinish();
     else
@@ -1393,6 +1402,11 @@ void PlayerWidget::updateTimeAndPositionDisplay(bool isPassive)
     QTime remain(0, 0, 0);
     long remainMs;
 
+    qDebug() << "updateTimeAndPositionDisplay:" << objectName()
+             << "isPassive=" << isPassive
+             << "curpos=" << curpos
+             << "isSliderDown=" << ui->sliPosition->isSliderDown();
+
     //Some tracks deliver no length in state pause
     if (length == QTime(0, 0) && m_CurrentTrack)
         length = QTime(0, 0, 0).addSecs(m_CurrentTrack->length());
@@ -1464,10 +1478,21 @@ void PlayerWidget::updateTimeAndPositionDisplay(bool isPassive)
 
     //update position slider only if triggerd by timer
     if (isPassive) {
-        if (length != QTime(0, 0, 0))
-            ui->sliPosition->setValue(curpos.msecsTo(QTime(0, 0, 0)) * 1000 / length.msecsTo(QTime(0, 0, 0)));
-        else
-            ui->sliPosition->setValue(0);
+        // Do not fight user input while dragging the seek slider.
+        if (!ui->sliPosition->isSliderDown()) {
+            const int lengthMs = QTime(0, 0).msecsTo(length);
+            const int curMs = QTime(0, 0).msecsTo(curpos);
+            const int minValue = ui->sliPosition->minimum();
+            const int maxValue = ui->sliPosition->maximum();
+            if (lengthMs > 0 && maxValue > minValue) {
+                const int mapped = minValue
+                    + qRound((static_cast<double>(qBound(0, curMs, lengthMs)) / static_cast<double>(lengthMs))
+                             * static_cast<double>(maxValue - minValue));
+                ui->sliPosition->setValue(mapped);
+            } else {
+                ui->sliPosition->setValue(minValue);
+            }
+        }
     }
 }
 
@@ -1523,51 +1548,74 @@ void PlayerWidget::setTrackFinishEmitTime(const int sec)
 
 void PlayerWidget::on_sliPosition_sliderMoved(int value)
 {
-    uint length = -player->length().msecsTo(QTime(0, 0, 0));
-    if (length != 0 && value > 0) {
-        QTime pos = QTime(0, 0, 0);
-        pos = pos.addMSecs(length * (value / 1000.0));
-        qDebug() << Q_FUNC_INFO << ":" << objectName() << "pos=" << pos;
+    QTime len = player->length();
+    if (len == QTime(0, 0) && m_CurrentTrack)
+        len = QTime(0, 0, 0).addSecs(m_CurrentTrack->length());
 
-        // Store target and debounce: avoid flooding the pipeline with rapid FLUSH seeks
-        m_pendingSliderSeekMs = QTime(0, 0).msecsTo(pos);
+    const int lengthMs = QTime(0, 0).msecsTo(len);
+    const int minValue = ui->sliPosition->minimum();
+    const int maxValue = ui->sliPosition->maximum();
+    if (lengthMs <= 0 || maxValue <= minValue)
+        return;
+
+    const int clampedValue = qBound(minValue, value, maxValue);
+    const double norm = static_cast<double>(clampedValue - minValue) / static_cast<double>(maxValue - minValue);
+    const int targetMs = qBound(0, qRound(norm * static_cast<double>(lengthMs)), lengthMs);
+    const QTime pos = QTime(0, 0).addMSecs(targetMs);
+
+    qDebug() << "on_sliPosition_sliderMoved:" << objectName()
+             << "sliderValue=" << value
+             << "min=" << minValue << "max=" << maxValue
+             << "lengthMs=" << lengthMs
+             << "norm=" << norm
+             << "targetMs=" << targetMs
+             << "targetTime=" << pos;
+
+    // Keep the latest target and avoid flooding the pipeline with rapid FLUSH seeks.
+    m_pendingSliderSeekMs = targetMs;
+    if (ui->sliPosition->isSliderDown()) {
+        m_sliderSeekTimer->stop();
+    } else {
         m_sliderSeekTimer->start();
-
-        // Update labels immediately with the target position for visual feedback
-        const QTime len = player->length();
-        const int remainMs = qMax(0, pos.msecsTo(len));
-        ui->lblTime->setText(pos.toString("mm:ss"));
-        ui->lblTimeMs->setText("." + pos.toString("zzz").left(1));
-        ui->lblTimeRemain->setText("-" + QTime(0, 0).addMSecs(remainMs).toString("mm:ss"));
-        ui->lblTimeRemainMs->setText("." + QTime(0, 0).addMSecs(remainMs).toString("zzz").left(1));
     }
+
+    // Update labels immediately with the target position for visual feedback
+    const int remainMs = qMax(0, targetMs <= lengthMs ? (lengthMs - targetMs) : 0);
+    ui->lblTime->setText(pos.toString("mm:ss"));
+    ui->lblTimeMs->setText("." + pos.toString("zzz").left(1));
+    ui->lblTimeRemain->setText("-" + QTime(0, 0).addMSecs(remainMs).toString("mm:ss"));
+    ui->lblTimeRemainMs->setText("." + QTime(0, 0).addMSecs(remainMs).toString("zzz").left(1));
 }
 
 void PlayerWidget::on_sliPosition_actionTriggered(int action)
 {
-    //a workaround for page moving
-    int posi;
-    switch (action) {
-    case 3:
-        posi = ui->sliPosition->value() + 100;
-        break;
-    case 4:
-        posi = ui->sliPosition->value() - 100;
-        if (posi < 100)
-            posi = 1;
-        break;
-    case 1:
-        posi = ui->sliPosition->value() + 10;
-        break;
-    case 2:
-        posi = ui->sliPosition->value() - 10;
-        break;
-    default:
+    qDebug() << "on_sliPosition_actionTriggered:" << objectName() << "action=" << action;
+    
+    if (action == QAbstractSlider::SliderNoAction || action == QAbstractSlider::SliderMove)
         return;
-        break;
-    }
 
-    this->on_sliPosition_sliderMoved(posi);
+    // Map the actual slider value after Qt handled the action.
+    this->on_sliPosition_sliderMoved(ui->sliPosition->value());
+    // Non-drag actions are discrete jumps (click-on-groove, key/page step):
+    // commit directly here to avoid timer latency and any transient sliderDown state.
+    m_sliderSeekTimer->stop();
+    if (m_pendingSliderSeekMs >= 0) {
+        const int targetMs = m_pendingSliderSeekMs;
+        m_pendingSliderSeekMs = -1;
+        const QTime pos = QTime(0, 0).addMSecs(targetMs);
+
+        qDebug() << "applyPendingSliderSeek(immediate):" << objectName()
+                 << "targetMs=" << targetMs
+                 << "targetTime=" << pos
+                 << "action=" << action;
+
+        if (seekOvershootsFadePoint(pos))
+            armImmediateAboutFinish();
+        else
+            suppressAboutFinishForMs(1200);
+        player->setPosition(pos);
+        updateTimeAndPositionDisplay(false);
+    }
     ui->butCue->setChecked(false);
 }
 
