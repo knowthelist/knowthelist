@@ -268,6 +268,8 @@ void Knowthelist::createUI()
     connect(playList2, SIGNAL(currentTrackChanged(Track*)), SLOT(playlist2_currentTrackChanged(Track*)));
     connect(playList1, SIGNAL(trackPropertyChanged(Track*)), player1, SLOT(onTrackPropertyChanged(Track*)));
     connect(playList2, SIGNAL(trackPropertyChanged(Track*)), player2, SLOT(onTrackPropertyChanged(Track*)));
+    connect(playList1, SIGNAL(trackPropertyChanged(Track*)), djSession, SLOT(onTrackPropertyChanged(Track*)));
+    connect(playList2, SIGNAL(trackPropertyChanged(Track*)), djSession, SLOT(onTrackPropertyChanged(Track*)));
 
     connect(player1, SIGNAL(forwardPressed()), playList1, SLOT(skipForward()));
     connect(player2, SIGNAL(forwardPressed()), playList2, SLOT(skipForward()));

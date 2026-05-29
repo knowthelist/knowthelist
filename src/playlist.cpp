@@ -347,13 +347,19 @@ void Playlist::setPlaylistMode(Mode newMode)
     }
 
     QSettings settings;
-    if (settings.contains("playlist_" + objectName()))
+    if (m_PlaylistMode == Playlist::Tracklist
+        && settings.contains("playlist_" + objectName())) {
         header()->restoreState(
             settings.value("playlist_" + objectName()).toByteArray());
+    }
 
     // Re-apply mode constraints after restoring user state so required columns
     // stay visible and widths adapt to current widget width.
     applyModeColumnLayout();
+
+    // Defer once to run after layouts settle. This avoids tiny initial widths
+    // from startup geometry causing collapsed columns.
+    QTimer::singleShot(0, this, [this]() { applyModeColumnLayout(); });
 
     handleChanges();
 }

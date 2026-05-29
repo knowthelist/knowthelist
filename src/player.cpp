@@ -30,7 +30,7 @@ constexpr bool kLogSeekDebug = true;
 
 const char* gstStateName(GstState state)
 {
-    return gst_state_get_name(state);
+    return gst_element_state_get_name(state);
 }
 
 void logPipelineStateSnapshot(const char* where, const QString& deckName, GstElement* pipeline)
@@ -51,6 +51,7 @@ void logPipelineStateSnapshot(const char* where, const QString& deckName, GstEle
 #if defined(__GNUC__)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#pragma GCC diagnostic ignored "-Wcpp"
 #endif
 
 bool holdsLegacyValueArray(const GValue* value)

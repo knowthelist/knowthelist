@@ -165,6 +165,7 @@ private:
     void applyBeatVisualLayout(bool enabled);
     void updateSyncButtonState(bool active);
     void updateResponsiveLayout();
+    void enforcePanelSplit();
     void createPerformanceControls();
     void jumpByBeats(int beatCount);
     QString currentTrackKey() const;
@@ -224,6 +225,7 @@ private:
     QPushButton* m_monitorRouteButton;
     QSlider*     m_pitchSlider;
     QPushButton* m_pitchResetButton;
+    int m_lastControlsPanelWidth;
     QString m_monitorOutputDeviceId;
     bool m_monitorRouteAvailable;
     bool m_monitorRouteEnabled;
