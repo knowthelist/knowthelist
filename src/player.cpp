@@ -707,8 +707,6 @@ void Player::asyncOpen(QUrl url)
     qDebug() << Q_FUNC_INFO << ":" << parentWidget()->objectName();
 
     sync_set_state(GST_ELEMENT(pipeline), GST_STATE_PAUSED);
-    setPosition(QTime(0, 0));
-
     gst_object_unref(src);
 }
 
@@ -725,6 +723,66 @@ void Player::loadThreadFinished()
     }
 }
 
+bool Player::forceRollRecovery(const char* reason)
+{
+    if (pipeline == nullptr)
+        return false;
+
+    const int anchorMs = qMax(0, p->position);
+    const gint64 anchorNs = static_cast<gint64>(anchorMs) * GST_MSECOND;
+    const gdouble seekRate = pipelineSupportsSmoothTempo(pipeline) ? 1.0 : p->rate;
+
+    qDebug() << "Player::forceRollRecovery:" << parentWidget()->objectName()
+             << "reason=" << reason
+             << "anchorMs=" << anchorMs
+             << "rate=" << p->rate;
+    logPipelineStateSnapshot("Player::forceRollRecovery(before)", parentWidget()->objectName(), pipeline);
+
+    gst_element_set_state(GST_ELEMENT(pipeline), GST_STATE_READY);
+    gst_element_get_state(GST_ELEMENT(pipeline), nullptr, nullptr, 500 * GST_MSECOND);
+
+    gst_element_set_state(GST_ELEMENT(pipeline), GST_STATE_PAUSED);
+    gst_element_get_state(GST_ELEMENT(pipeline), nullptr, nullptr, 1000 * GST_MSECOND);
+
+    if (p->isLoaded) {
+        const gboolean seekOk = gst_element_seek(
+            pipeline,
+            seekRate,
+            GST_FORMAT_TIME,
+            static_cast<GstSeekFlags>(GST_SEEK_FLAG_FLUSH | GST_SEEK_FLAG_ACCURATE),
+            GST_SEEK_TYPE_SET,
+            anchorNs,
+            GST_SEEK_TYPE_NONE,
+            GST_CLOCK_TIME_NONE);
+        qDebug() << "Player::forceRollRecovery(seek):" << parentWidget()->objectName()
+                 << "seekOk=" << static_cast<bool>(seekOk)
+                 << "targetMs=" << anchorMs;
+    }
+
+    setTempoEffectRate(pipeline, p->rate);
+
+    const GstStateChangeReturn playRes = gst_element_set_state(GST_ELEMENT(pipeline), GST_STATE_PLAYING);
+    GstState state = GST_STATE_NULL;
+    GstState pending = GST_STATE_VOID_PENDING;
+    const GstStateChangeReturn waitRes = gst_element_get_state(GST_ELEMENT(pipeline), &state, &pending, 1200 * GST_MSECOND);
+
+    logPipelineStateSnapshot("Player::forceRollRecovery(after)", parentWidget()->objectName(), pipeline);
+    qDebug() << "Player::forceRollRecovery(result):" << parentWidget()->objectName()
+             << "setRes=" << static_cast<int>(playRes)
+             << "waitRes=" << static_cast<int>(waitRes)
+             << "state=" << gstStateName(state)
+             << "pending=" << gstStateName(pending);
+
+    const bool playing = (state == GST_STATE_PLAYING);
+    if (playing) {
+        p->playBasePosition = anchorMs;
+        p->playTimer.restart();
+        p->lastQueriedPosition = -1;
+        p->stagnantQueryCount = 0;
+    }
+    return playing;
+}
+
 void Player::play()
 {
     p->isStarted = true;
@@ -736,6 +794,15 @@ void Player::play()
         qDebug() << "Player::play:" << parentWidget()->objectName()
                  << "set_state PLAYING res=" << static_cast<int>(setRes)
                  << "thread=" << QThread::currentThreadId();
+
+        GstState state = GST_STATE_NULL;
+        GstState pending = GST_STATE_VOID_PENDING;
+        gst_element_get_state(GST_ELEMENT(pipeline), &state, &pending, 250 * GST_MSECOND);
+        if (state != GST_STATE_PLAYING && pending == GST_STATE_PLAYING) {
+            qDebug() << "Player::play: pending PLAYING did not settle quickly, forcing hard recovery";
+            forceRollRecovery("play-pending-playing-stuck");
+        }
+
         p->playBasePosition = p->position;
         p->playTimer.restart();
         p->lastQueriedPosition = -1;
@@ -997,36 +1064,28 @@ QTime Player::position()
             if (p->isStarted && !p->playTimer.isValid())
                 p->playTimer.start();
 
-            if (p->isStarted && isPlaying()) {
+            if (p->isStarted) {
                 if (queriedMs == p->lastQueriedPosition)
                     ++p->stagnantQueryCount;
                 else
                     p->stagnantQueryCount = 0;
 
-                const bool shouldRecoverRoll = (queriedMs == 0
-                                                && p->stagnantQueryCount >= 8
+                const bool shouldRecoverRoll = (p->stagnantQueryCount >= 80
                                                 && p->playTimer.isValid()
-                                                && p->playTimer.elapsed() > 500
+                                                && p->playTimer.elapsed() > 800
                                                 && (!p->rollRecoveryCooldown.isValid()
-                                                    || p->rollRecoveryCooldown.elapsed() > 1500));
+                                                    || p->rollRecoveryCooldown.elapsed() > 3000));
                 if (shouldRecoverRoll) {
                     p->rollRecoveryCooldown.restart();
                     qDebug() << "Player::position() ROLL RECOVERY:" << parentWidget()->objectName()
                              << "stagnantQueryCount=" << p->stagnantQueryCount
-                             << "elapsedSincePlayMs=" << p->playTimer.elapsed();
+                             << "elapsedSincePlayMs=" << p->playTimer.elapsed()
+                             << "queriedMs=" << queriedMs;
 
-                    const gboolean recoverOk = gst_element_seek(
-                        pipeline,
-                        1.0,
-                        GST_FORMAT_TIME,
-                        static_cast<GstSeekFlags>(GST_SEEK_FLAG_FLUSH | GST_SEEK_FLAG_ACCURATE),
-                        GST_SEEK_TYPE_SET,
-                        0,
-                        GST_SEEK_TYPE_NONE,
-                        GST_CLOCK_TIME_NONE);
-
+                    const bool recovered = forceRollRecovery("position-stagnant");
                     qDebug() << "Player::position() ROLL RECOVERY RESULT:" << parentWidget()->objectName()
-                             << "recoverOk=" << static_cast<bool>(recoverOk);
+                             << "recovered=" << recovered;
+                    p->stagnantQueryCount = 0;
                 }
             }
             p->lastQueriedPosition = queriedMs;

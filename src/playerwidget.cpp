@@ -306,7 +306,7 @@ PlayerWidget::PlayerWidget(QWidget* parent)
     // enforcePanelSplit() so panel sizes stay stable while interacting.
     ui->horizontalLayout->setStretch(0, 4);
     ui->horizontalLayout->setStretch(1, 1);
-    ui->frame_3->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+    //ui->frame_3->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
 
     // Track fraVuMeter's own resize so bpmWidget geometry stays in sync
     ui->fraVuMeter->installEventFilter(this);
@@ -402,7 +402,7 @@ PlayerWidget::PlayerWidget(QWidget* parent)
     // Keep these labels width-elastic so changing text never expands layouts.
     ui->lblTitle->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Preferred);
     ui->lblTitle->setMinimumWidth(0);
-    ui->lblInfo->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Preferred);
+    ui->lblInfo->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
     ui->lblInfo->setMinimumWidth(0);
 
     // Keep time labels fixed-width/height to avoid jitter and clipping on macOS.
@@ -425,7 +425,10 @@ PlayerWidget::PlayerWidget(QWidget* parent)
     setAcceptDrops(true);
     updateResponsiveLayout();
     enforcePanelSplit();
-    QTimer::singleShot(0, this, [this]() { enforcePanelSplit(); });
+    QTimer::singleShot(0, this, [this]() {
+        enforcePanelSplit();
+        //syncDisplayHeightToControls();
+    });
     this->stop();
 
     trackanalyser = new TrackAnalyser(this);
@@ -567,16 +570,27 @@ void PlayerWidget::setMonitorRouteEnabled(bool enabled)
 
 void PlayerWidget::applyBeatVisualLayout(bool enabled)
 {
-    // BPM/VU toggle must not alter widget size constraints; keep it visual-only.
-    ui->vuMeter->setFixedHeight(42);
-    if (QHBoxLayout* meterLayout = qobject_cast<QHBoxLayout*>(ui->fraVuMeter->layout()))
-        meterLayout->setAlignment(ui->vuMeter, Qt::AlignVCenter);
+    // Keep the same outer dimensions in both modes so the player never resizes on toggle
+    setMinimumHeight(182);
 
-    Q_UNUSED(enabled);
+    ui->fraDisplay->setMaximumWidth(QWIDGETSIZE_MAX);
+    ui->fraVuMeter->setMaximumWidth(QWIDGETSIZE_MAX);
+    ui->fraVuMeter->setMinimumHeight(100);
+    ui->fraDigits->setMaximumWidth(QWIDGETSIZE_MAX);
+    ui->vuMeter->setMaximumWidth(QWIDGETSIZE_MAX);
+    if (enabled) {
+        // BPM mode: vuMeter is hidden behind bpmWidget — no height restriction needed
+        ui->vuMeter->setMinimumHeight(31);
+        ui->vuMeter->setMaximumHeight(QWIDGETSIZE_MAX);
+    } else {
+        // VU mode: keep bars at a compact natural height, centred with padding top+bottom
+        ui->vuMeter->setFixedHeight(42);
+        if (QHBoxLayout* meterLayout = qobject_cast<QHBoxLayout*>(ui->fraVuMeter->layout()))
+            meterLayout->setAlignment(ui->vuMeter, Qt::AlignVCenter);
+    }
 
     drawTitle();
     updateResponsiveLayout();
-    enforcePanelSplit();
 }
 
 void PlayerWidget::updateResponsiveLayout()
@@ -646,6 +660,24 @@ void PlayerWidget::updateResponsiveLayout()
         m_pitchResetButton->setMinimumHeight(smallButtonHeight);
         m_pitchResetButton->setMaximumHeight(smallButtonHeight);
     }
+
+    //syncDisplayHeightToControls();
+}
+
+void PlayerWidget::syncDisplayHeightToControls()
+{
+    if (!ui || !ui->frame_2 || !ui->frame_3)
+        return;
+
+    const int controlsHeight = qMax(ui->frame_2->sizeHint().height(), ui->frame_2->minimumSizeHint().height());
+    if (controlsHeight <= 0)
+        return;
+
+    if (ui->frame_3->minimumHeight() == controlsHeight && ui->frame_3->maximumHeight() == controlsHeight)
+        return;
+
+    ui->frame_3->setMinimumHeight(controlsHeight);
+    ui->frame_3->setMaximumHeight(controlsHeight);
 }
 
 void PlayerWidget::enforcePanelSplit()
@@ -888,7 +920,7 @@ void PlayerWidget::applyPendingEnvelopeScrubSeek()
     else
         suppressAboutFinishForMs(800);
     player->setPosition(QTime(0, 0).addMSecs(targetMs));
-    updateTimeAndPositionDisplay(false);
+    updateTimeAndPositionDisplay();
     
     // Refresh waveform window view when scrubbing while paused
     bpmWidget->setState(m_bpm, player->position(), m_beatPosition, m_isStarted, m_bpmAnalysed);
@@ -982,7 +1014,12 @@ void PlayerWidget::setPositionMarkers()
     }
 
     if (!m_isStarted && m_skipSilentBegin && trackanalyser->finished()) {
-        player->setPosition(trackanalyser->startPosition());
+        // Only seek if the start position is non-zero; the pipeline is already
+        // at 0 after a fresh load, and a redundant FLUSH seek to 0 fails on
+        // macOS and corrupts the pipeline segment state.
+        if (trackanalyser->startPosition() > QTime(0, 0)) {
+            player->setPosition(trackanalyser->startPosition());
+        }
         ui->butCue->setChecked(true);
     }
 }
@@ -1397,11 +1434,11 @@ void PlayerWidget::drawTitle()
             ui->lblTitle->setStyleSheet("* { font-size: 16pt; }");
     } else {
         if (width < 300)
-            ui->lblTitle->setStyleSheet("* { font-size: 15pt; }");
-        else if (width < 400)
             ui->lblTitle->setStyleSheet("* { font-size: 16pt; }");
+        else if (width < 400)
+            ui->lblTitle->setStyleSheet("* { font-size: 17pt; }");
         else
-            ui->lblTitle->setStyleSheet("* { font-size: 18pt; }");
+            ui->lblTitle->setStyleSheet("* { font-size: 19pt; }");
     }
 
     QFontMetrics metrix(ui->lblTitle->font());
@@ -1449,9 +1486,6 @@ void PlayerWidget::updateTimeAndPositionDisplay(bool isPassive)
     ui->lblTimeMs->setText("." + curpos.toString("zzz").left(1));
     ui->lblTimeRemain->setText("-" + remain.toString("mm:ss"));
     ui->lblTimeRemainMs->setText("." + remain.toString("zzz").left(1));
-
-    //Signal end of track or media error
-    //ToDo: better recognition of media error (play pressed but player is not running)
 
     const bool nearEndByTime = (remainMs - remainCueTime - mTrackFinishEmitTime <= 0
                                 && 0 < remainMs);
@@ -1505,7 +1539,7 @@ void PlayerWidget::updateTimeAndPositionDisplay(bool isPassive)
         ui->lblInfo->setText(m_infoBaseText);
     }
 
-    //update position slider only if triggerd by timer
+    //update position slider only if triggered by timer
     if (isPassive) {
         // Do not fight user input while dragging the seek slider.
         if (!ui->sliPosition->isSliderDown()) {

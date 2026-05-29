@@ -166,6 +166,7 @@ private:
     void updateSyncButtonState(bool active);
     void updateResponsiveLayout();
     void enforcePanelSplit();
+    void syncDisplayHeightToControls();
     void createPerformanceControls();
     void jumpByBeats(int beatCount);
     QString currentTrackKey() const;

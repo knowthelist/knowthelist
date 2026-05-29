@@ -86,6 +86,7 @@ private:
     gint64 Gstart, Glength;
     void setLink(int, QUrl&);
     void asyncOpen(QUrl url);
+    bool forceRollRecovery(const char* reason);
     void cleanup();
     void sync_set_state(GstElement*, GstState);
     void applyOutputRouting();

@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>699</width>
-    <height>148</height>
+    <width>1033</width>
+    <height>359</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -194,7 +194,7 @@ QPushButton#butMon:pressed {
    <item row="0" column="0">
     <widget class="QFrame" name="frame">
      <property name="sizePolicy">
-      <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+      <sizepolicy hsizetype="Preferred" vsizetype="Expanding">
        <horstretch>0</horstretch>
        <verstretch>0</verstretch>
       </sizepolicy>
@@ -233,7 +233,7 @@ QPushButton#butMon:pressed {
       <item>
        <widget class="QFrame" name="frame_3">
         <property name="sizePolicy">
-         <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+         <sizepolicy hsizetype="Preferred" vsizetype="Expanding">
           <horstretch>4</horstretch>
           <verstretch>0</verstretch>
          </sizepolicy>
@@ -247,7 +247,7 @@ QPushButton#butMon:pressed {
         <property name="maximumSize">
          <size>
           <width>16777215</width>
-          <height>150</height>
+          <height>16777215</height>
          </size>
         </property>
         <property name="frameShape">
@@ -308,7 +308,7 @@ QPushButton#butMon:pressed {
          <item row="0" column="0">
           <widget class="QFrame" name="fraDisplay">
            <property name="sizePolicy">
-            <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+            <sizepolicy hsizetype="Preferred" vsizetype="Expanding">
              <horstretch>0</horstretch>
              <verstretch>0</verstretch>
             </sizepolicy>
@@ -316,7 +316,7 @@ QPushButton#butMon:pressed {
            <property name="maximumSize">
             <size>
              <width>16777215</width>
-             <height>124</height>
+             <height>16777215</height>
             </size>
            </property>
            <property name="frameShape">
@@ -837,7 +837,7 @@ QPushButton#butMon:pressed {
               </property>
               <property name="maximumSize">
                <size>
-                 <width>16777215</width>
+                <width>16777215</width>
                 <height>16777215</height>
                </size>
               </property>
@@ -1887,7 +1887,7 @@ QPushButton#butMon:pressed {
                   </font>
                  </property>
                  <property name="text">
-                  <string>.00</string>
+                  <string>.0</string>
                  </property>
                  <property name="scaledContents">
                   <bool>false</bool>
@@ -2911,7 +2911,7 @@ QPushButton#butMon:pressed {
                   <string notr="true">color: rgb(255, 61, 42);</string>
                  </property>
                  <property name="text">
-                  <string>.00</string>
+                  <string>.0</string>
                  </property>
                  <property name="alignment">
                   <set>Qt::AlignmentFlag::AlignBottom|Qt::AlignmentFlag::AlignLeading|Qt::AlignmentFlag::AlignLeft</set>
@@ -3231,22 +3231,6 @@ QPushButton#butMon:pressed {
             </item>
            </layout>
           </widget>
-         </item>
-         <item>
-          <spacer name="verticalSpacer_controls">
-           <property name="orientation">
-            <enum>Qt::Orientation::Vertical</enum>
-           </property>
-           <property name="sizeType">
-            <enum>QSizePolicy::Policy::Expanding</enum>
-           </property>
-           <property name="sizeHint" stdset="0">
-            <size>
-             <width>20</width>
-             <height>10</height>
-            </size>
-           </property>
-          </spacer>
          </item>
         </layout>
        </widget>
