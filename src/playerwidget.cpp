@@ -31,6 +31,7 @@
 #include <QSlider>
 #include <QSettings>
 #include <QApplication>
+#include <QMargins>
 #include <QtSql/QSqlDatabase>
 #include <QtSql/QSqlQuery>
 #include <QtSql/QSqlError>
@@ -155,9 +156,12 @@ CachedTempo loadCachedTempo(const QUrl& url)
 
     if (q.next()) {
         const int analysisVersion = q.value(2).toInt();
-        if (analysisVersion == kTempoCacheVersion) {
+        const int cachedBpm = q.value(0).toInt();
+        // Backward-compatible read: older rows may not have analysis_version
+        // set but still carry a useful BPM from playlist analysis.
+        if (analysisVersion == kTempoCacheVersion || (analysisVersion <= 0 && cachedBpm > 0)) {
             cached.valid = true;
-            cached.bpm = q.value(0).toInt();
+            cached.bpm = cachedBpm;
             cached.beatOffsetMs = q.value(1).toInt();
         }
     }
@@ -262,6 +266,7 @@ PlayerWidget::PlayerWidget(QWidget* parent)
     , m_monitorRouteButton(nullptr)
     , m_pitchSlider(nullptr)
     , m_pitchResetButton(nullptr)
+    , m_lastControlsPanelWidth(-1)
     , m_monitorRouteAvailable(false)
     , m_monitorRouteEnabled(false)
     , p(new PlayerWidgetPrivate)
@@ -297,10 +302,10 @@ PlayerWidget::PlayerWidget(QWidget* parent)
     ui->butPlay->setIconSize(QSize(26, 26));
     ui->butCue->setChecked(false);
 
-    // Display panel takes the bulk; button panel capped to a narrow stripe
+    // Display panel takes the bulk; exact 80:20 split is enforced in
+    // enforcePanelSplit() so panel sizes stay stable while interacting.
     ui->horizontalLayout->setStretch(0, 4);
     ui->horizontalLayout->setStretch(1, 1);
-    ui->frame_2->setMaximumWidth(150);
     ui->frame_3->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
 
     // Track fraVuMeter's own resize so bpmWidget geometry stays in sync
@@ -394,6 +399,12 @@ PlayerWidget::PlayerWidget(QWidget* parent)
     ui->lblTimeMs->setFont(fonttime);
     ui->lblTimeRemainMs->setFont(fonttime);
 
+    // Keep these labels width-elastic so changing text never expands layouts.
+    ui->lblTitle->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Preferred);
+    ui->lblTitle->setMinimumWidth(0);
+    ui->lblInfo->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Preferred);
+    ui->lblInfo->setMinimumWidth(0);
+
     // Keep time labels fixed-width/height to avoid jitter and clipping on macOS.
     auto fixTimeLabelGeometry = [](QLabel* label, const QString& sampleText) {
         if (!label)
@@ -413,6 +424,8 @@ PlayerWidget::PlayerWidget(QWidget* parent)
     m_pendingPlay = false;
     setAcceptDrops(true);
     updateResponsiveLayout();
+    enforcePanelSplit();
+    QTimer::singleShot(0, this, [this]() { enforcePanelSplit(); });
     this->stop();
 
     trackanalyser = new TrackAnalyser(this);
@@ -554,34 +567,16 @@ void PlayerWidget::setMonitorRouteEnabled(bool enabled)
 
 void PlayerWidget::applyBeatVisualLayout(bool enabled)
 {
-    // Keep the same outer dimensions in both modes so the player never resizes on toggle
-    setMinimumHeight(182);
-    ui->frame_2->setMaximumHeight(195);
-    ui->frame_3->setMaximumHeight(195);
-    ui->fraDisplay->setMaximumHeight(195);
-    ui->fraDisplay->setMaximumWidth(QWIDGETSIZE_MAX);
-    ui->fraVuMeter->setMaximumWidth(QWIDGETSIZE_MAX);
-    ui->fraVuMeter->setMinimumHeight(110);
-    ui->fraDigits->setMaximumWidth(QWIDGETSIZE_MAX);
-    ui->vuMeter->setMaximumWidth(QWIDGETSIZE_MAX);
-    if (enabled) {
-        // BPM mode: vuMeter is hidden behind bpmWidget — no height restriction needed
-        ui->vuMeter->setMinimumHeight(31);
-        ui->vuMeter->setMaximumHeight(QWIDGETSIZE_MAX);
-    } else {
-        // VU mode: keep bars at a compact natural height, centred with padding top+bottom
-        ui->vuMeter->setFixedHeight(42);
-        if (QHBoxLayout* meterLayout = qobject_cast<QHBoxLayout*>(ui->fraVuMeter->layout()))
-            meterLayout->setAlignment(ui->vuMeter, Qt::AlignVCenter);
-    }
+    // BPM/VU toggle must not alter widget size constraints; keep it visual-only.
+    ui->vuMeter->setFixedHeight(42);
+    if (QHBoxLayout* meterLayout = qobject_cast<QHBoxLayout*>(ui->fraVuMeter->layout()))
+        meterLayout->setAlignment(ui->vuMeter, Qt::AlignVCenter);
 
-    if (enabled)
-        ui->lblInfo->setStyleSheet("font-size: 9pt;");
-    else
-        ui->lblInfo->setStyleSheet("font-size: 11pt;");
+    Q_UNUSED(enabled);
 
     drawTitle();
     updateResponsiveLayout();
+    enforcePanelSplit();
 }
 
 void PlayerWidget::updateResponsiveLayout()
@@ -648,9 +643,39 @@ void PlayerWidget::updateResponsiveLayout()
         m_pitchSlider->setMaximumHeight(smallButtonHeight);
     }
     if (m_pitchResetButton) {
-        m_pitchResetButton->setMinimumSize(QSize(30, smallButtonHeight));
+        m_pitchResetButton->setMinimumHeight(smallButtonHeight);
         m_pitchResetButton->setMaximumHeight(smallButtonHeight);
     }
+}
+
+void PlayerWidget::enforcePanelSplit()
+{
+    if (!ui || !ui->horizontalLayout)
+        return;
+
+    const QMargins margins = ui->horizontalLayout->contentsMargins();
+    const int spacing = ui->horizontalLayout->spacing();
+    const int available = qMax(0, ui->frame->width() - margins.left() - margins.right() - spacing);
+
+    if (available <= 0)
+        return;
+
+    const int minControls = qMax(95, ui->frame_2->minimumSizeHint().width());
+    const int maxControls = qMax(minControls, available - 80);
+    int controlsWidth = qRound(static_cast<double>(available) * 0.20);
+    controlsWidth = qBound(minControls, controlsWidth, maxControls);
+
+    if (controlsWidth == m_lastControlsPanelWidth)
+        return;
+
+    m_lastControlsPanelWidth = controlsWidth;
+
+    // Keep controls fixed at ~20%; leave display unconstrained so text/interaction
+    // cannot force the top-level window to grow by constraint feedback.
+    ui->frame_2->setMinimumWidth(controlsWidth);
+    ui->frame_2->setMaximumWidth(controlsWidth);
+    ui->frame_3->setMinimumWidth(0);
+    ui->frame_3->setMaximumWidth(QWIDGETSIZE_MAX);
 }
 
 void PlayerWidget::createPerformanceControls()
@@ -715,11 +740,14 @@ void PlayerWidget::createPerformanceControls()
 
     m_pitchResetButton = new QPushButton("0.0%", pitchFrame);
     m_pitchResetButton->setObjectName("butPitchReset");
-    m_pitchResetButton->setMaximumWidth(38);
     m_pitchResetButton->setToolTip(tr("Current tempo offset — click to reset to 0 %"));
     QFont smallFont = m_pitchResetButton->font();
     smallFont.setPointSizeF(smallFont.pointSizeF() * 0.82);
     m_pitchResetButton->setFont(smallFont);
+    m_pitchResetButton->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
+    const QFontMetrics pitchResetMetrics(m_pitchResetButton->font());
+    const int pitchResetWidth = pitchResetMetrics.horizontalAdvance(QStringLiteral("+8.0%")) + 14;
+    m_pitchResetButton->setFixedWidth(pitchResetWidth);
     connect(m_pitchResetButton, &QPushButton::clicked, this, [this]() {
         if (m_pitchSlider)
             m_pitchSlider->setValue(0);
@@ -1328,6 +1356,7 @@ void PlayerWidget::resizeEvent(QResizeEvent* e)
 {
     QWidget::resizeEvent(e);
     updateResponsiveLayout();
+    enforcePanelSplit();
     drawTitle();
     // bpmWidget geometry is updated via eventFilter on fraVuMeter
 }

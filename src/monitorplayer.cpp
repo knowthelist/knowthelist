@@ -33,6 +33,7 @@ namespace {
 #if defined(__GNUC__)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#pragma GCC diagnostic ignored "-Wcpp"
 #endif
 
 bool holdsLegacyValueArray(const GValue* value)
@@ -460,7 +461,7 @@ void MonitorPlayer::play()
     qInfo() << Q_FUNC_INFO << ":" << parentWidget()->objectName()
              << "deviceName=" << (p->deviceName.isEmpty() ? "(none)" : p->deviceName)
              << "isLoaded=" << p->isLoaded
-             << "pipelineState=" << gst_state_get_name(cur_state);
+             << "pipelineState=" << gst_element_state_get_name(cur_state);
     if (!p->deviceName.isEmpty())
         setOutputDevice(p->deviceName);
     if (p->isLoaded) {
@@ -636,7 +637,7 @@ void MonitorPlayer::setOutputDevice(QString deviceName)
 
     GstState cur_state = GST_STATE_NULL;
     gst_element_get_state(GST_ELEMENT(pipeline), &cur_state, nullptr, 0);
-    qInfo() << Q_FUNC_INFO << "pipelineState before set:" << gst_state_get_name(cur_state);
+    qInfo() << Q_FUNC_INFO << "pipelineState before set:" << gst_element_state_get_name(cur_state);
 
     GstState restore_state = cur_state;
 
@@ -681,7 +682,7 @@ void MonitorPlayer::setOutputDevice(QString deviceName)
 
     // Restore the original state after device update.
     if (restore_state != GST_STATE_NULL) {
-        qInfo() << Q_FUNC_INFO << "restoring pipeline to" << gst_state_get_name(restore_state);
+        qInfo() << Q_FUNC_INFO << "restoring pipeline to" << gst_element_state_get_name(restore_state);
         gst_element_set_state(GST_ELEMENT(pipeline), restore_state);
     }
 }
