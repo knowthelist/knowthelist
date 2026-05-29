@@ -794,7 +794,13 @@ void Player::setPosition(QTime position)
                  << "thread=" << QThread::currentThreadId();
     }
     logPipelineStateSnapshot("Player::setPosition(before seek)", parentWidget()->objectName(), pipeline);
+    const bool livePlayingSeek = p->isStarted && isPlaying();
     GstSeekFlags flags = static_cast<GstSeekFlags>(GST_SEEK_FLAG_FLUSH | GST_SEEK_FLAG_ACCURATE);
+    if (livePlayingSeek) {
+        // While rolling, avoid FLUSH to reduce PAUSED transitions and audible/UI hiccups.
+        // KEY_UNIT gives a fast seek to the nearest decodable point.
+        flags = static_cast<GstSeekFlags>(GST_SEEK_FLAG_KEY_UNIT);
+    }
 
     const gboolean seekOk = gst_element_seek(pipeline, seekRate, GST_FORMAT_TIME, flags,
         GST_SEEK_TYPE_SET, time_nanoseconds,
@@ -802,7 +808,9 @@ void Player::setPosition(QTime position)
     if (kLogSeekDebug) {
         qDebug() << "Player::setPosition(seek result):" << parentWidget()->objectName()
                  << "targetMs=" << time_milliseconds
-                 << "seekOk=" << static_cast<bool>(seekOk);
+                 << "seekOk=" << static_cast<bool>(seekOk)
+                 << "livePlayingSeek=" << livePlayingSeek
+                 << "flags=" << static_cast<int>(flags);
     }
 
     // Immediately anchor both the position cache and the timer-based fallback to
@@ -823,6 +831,18 @@ void Player::setPosition(QTime position)
                  << "queriedOk=" << static_cast<bool>(queriedOk)
                  << "queriedMs=" << static_cast<int>(queried / GST_MSECOND);
     }
+
+    // Some backends briefly fall back to PAUSED after a FLUSH seek even when
+    // the deck is marked started. Re-assert PLAYING to keep click seeks snappy.
+    if (p->isStarted) {
+        const GstStateChangeReturn playRes = gst_element_set_state(GST_ELEMENT(pipeline), GST_STATE_PLAYING);
+        if (kLogSeekDebug) {
+            qDebug() << "Player::setPosition(reassert PLAYING):" << parentWidget()->objectName()
+                     << "res=" << static_cast<int>(playRes)
+                     << "thread=" << QThread::currentThreadId();
+        }
+    }
+
     logPipelineStateSnapshot("Player::setPosition(after seek)", parentWidget()->objectName(), pipeline);
 
     emit positionChanged();
