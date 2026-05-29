@@ -301,7 +301,7 @@ QPushButton#butMon:pressed {
             <enum>Qt::Orientation::Horizontal</enum>
            </property>
            <property name="invertedControls">
-            <bool>true</bool>
+            <bool>false</bool>
            </property>
           </widget>
          </item>

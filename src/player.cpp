@@ -196,8 +196,13 @@ void configureAudioSink(GstElement* sink)
         return;
 
     // Starting without async preroll avoids startup stalls on some Linux setups.
+    // Keep platform default behavior elsewhere (notably macOS dual-sink pipelines).
+#if defined(Q_OS_LINUX)
     if (g_object_class_find_property(klass, "async") != nullptr)
         g_object_set(sink, "async", FALSE, NULL);
+#else
+    Q_UNUSED(klass);
+#endif
 }
 
 bool hasWritableProperty(GstElement* element, const char* propertyName)
@@ -367,6 +372,9 @@ struct PlayerPrivate {
     QString masterDeviceId;
     bool useMonitorOutput;
     double monitorVolume;  // desired monitor branch volume (0 = muted)
+    int lastQueriedPosition;
+    int stagnantQueryCount;
+    QElapsedTimer rollRecoveryCooldown;
 };
 
 Player::Player(QWidget* parent)
@@ -389,6 +397,8 @@ Player::Player(QWidget* parent)
     p->masterDeviceId = defaultAudioDeviceId();
     p->useMonitorOutput = false;
     p->monitorVolume = 1.0;
+    p->lastQueriedPosition = -1;
+    p->stagnantQueryCount = 0;
 
     connect(&p->watcher, SIGNAL(finished()), this, SLOT(loadThreadFinished()));
 }
@@ -718,21 +728,21 @@ void Player::loadThreadFinished()
 void Player::play()
 {
     p->isStarted = true;
-    qDebug() << Q_FUNC_INFO << ":" << parentWidget()->objectName();
+    qDebug() << Q_FUNC_INFO << ":" << parentWidget()->objectName() << "isLoaded=" << p->isLoaded;
     logPipelineStateSnapshot("Player::play(before set_state)", parentWidget()->objectName(), pipeline);
     if (p->isLoaded) {
         qDebug() << Q_FUNC_INFO << ":" << parentWidget()->objectName() << " call GST_STATE_PLAYING";
         const GstStateChangeReturn setRes = gst_element_set_state(GST_ELEMENT(pipeline), GST_STATE_PLAYING);
-        if (kLogSeekDebug) {
-            qDebug() << "Player::play:" << parentWidget()->objectName()
-                     << "set_state PLAYING res=" << static_cast<int>(setRes)
-                     << "thread=" << QThread::currentThreadId();
-        }
+        qDebug() << "Player::play:" << parentWidget()->objectName()
+                 << "set_state PLAYING res=" << static_cast<int>(setRes)
+                 << "thread=" << QThread::currentThreadId();
         p->playBasePosition = p->position;
         p->playTimer.restart();
+        p->lastQueriedPosition = -1;
+        p->stagnantQueryCount = 0;
         logPipelineStateSnapshot("Player::play(after set_state)", parentWidget()->objectName(), pipeline);
     } else {
-        qDebug() << Q_FUNC_INFO << ":" << parentWidget()->objectName() << " is not loaded";
+        qDebug() << Q_FUNC_INFO << ":" << parentWidget()->objectName() << " is not loaded, deferring play until load completes";
     }
 }
 void Player::stop()
@@ -741,6 +751,8 @@ void Player::stop()
     p->rate = 1.0;
     p->playBasePosition = 0;
     p->playTimer.invalidate();
+    p->lastQueriedPosition = -1;
+    p->stagnantQueryCount = 0;
     setTempoEffectRate(pipeline, 1.0);
     gst_element_set_state(GST_ELEMENT(pipeline), GST_STATE_READY);
 }
@@ -753,6 +765,8 @@ void Player::pause()
         p->position = QTime(0, 0).msecsTo(now);
         p->playBasePosition = p->position;
         p->playTimer.invalidate();
+        p->lastQueriedPosition = -1;
+        p->stagnantQueryCount = 0;
         gst_element_set_state(GST_ELEMENT(pipeline), GST_STATE_PAUSED);
     }
 }
@@ -771,12 +785,6 @@ void Player::setPosition(QTime position)
     const int time_milliseconds = QTime(0, 0).msecsTo(position);
     const gint64 time_nanoseconds = (static_cast<gint64>(time_milliseconds) * GST_MSECOND);
     const gdouble seekRate = pipelineSupportsSmoothTempo(pipeline) ? 1.0 : p->rate;
-    const bool playingSeek = p->isStarted;
-    const double seekGuardVolume = 0.001;
-    const double originalVolume = playingSeek ? volume() : 0.0;
-
-    if (playingSeek)
-        setVolume(qMin(originalVolume, seekGuardVolume));
 
     if (kLogSeekDebug) {
         qDebug() << "Player::setPosition(req):" << parentWidget()->objectName()
@@ -817,13 +825,6 @@ void Player::setPosition(QTime position)
                  << "queriedMs=" << static_cast<int>(queried / GST_MSECOND);
     }
     logPipelineStateSnapshot("Player::setPosition(after seek)", parentWidget()->objectName(), pipeline);
-
-    if (playingSeek) {
-        QTimer::singleShot(18, this, [this, originalVolume]() {
-            if (pipeline != nullptr && p != nullptr)
-                setVolume(originalVolume);
-        });
-    }
 
     emit positionChanged();
 }
@@ -970,18 +971,64 @@ QTime Player::position()
         gint64 value = 0;
 
         if (gst_element_query_position(pipeline, GST_FORMAT_TIME, &value)) {
-            p->position = static_cast<int>((value / GST_MSECOND));
+            const int queriedMs = static_cast<int>(value / GST_MSECOND);
+            p->position = queriedMs;
             p->playBasePosition = p->position;
             if (p->isStarted && !p->playTimer.isValid())
                 p->playTimer.start();
+
+            if (p->isStarted && isPlaying()) {
+                if (queriedMs == p->lastQueriedPosition)
+                    ++p->stagnantQueryCount;
+                else
+                    p->stagnantQueryCount = 0;
+
+                const bool shouldRecoverRoll = (queriedMs == 0
+                                                && p->stagnantQueryCount >= 8
+                                                && p->playTimer.isValid()
+                                                && p->playTimer.elapsed() > 500
+                                                && (!p->rollRecoveryCooldown.isValid()
+                                                    || p->rollRecoveryCooldown.elapsed() > 1500));
+                if (shouldRecoverRoll) {
+                    p->rollRecoveryCooldown.restart();
+                    qDebug() << "Player::position() ROLL RECOVERY:" << parentWidget()->objectName()
+                             << "stagnantQueryCount=" << p->stagnantQueryCount
+                             << "elapsedSincePlayMs=" << p->playTimer.elapsed();
+
+                    const gboolean recoverOk = gst_element_seek(
+                        pipeline,
+                        1.0,
+                        GST_FORMAT_TIME,
+                        static_cast<GstSeekFlags>(GST_SEEK_FLAG_FLUSH | GST_SEEK_FLAG_ACCURATE),
+                        GST_SEEK_TYPE_SET,
+                        0,
+                        GST_SEEK_TYPE_NONE,
+                        GST_CLOCK_TIME_NONE);
+
+                    qDebug() << "Player::position() ROLL RECOVERY RESULT:" << parentWidget()->objectName()
+                             << "recoverOk=" << static_cast<bool>(recoverOk);
+                }
+            }
+            p->lastQueriedPosition = queriedMs;
+
+            qDebug() << "Player::position() QUERY SUCCESS:" << parentWidget()->objectName()
+                     << "queriedMs=" << p->position
+                     << "stagnantCount=" << p->stagnantQueryCount;
             return QTime(0, 0).addMSecs(p->position); // nanosec -> msec
         }
 
         if (p->isStarted && p->playTimer.isValid()) {
             p->position = p->playBasePosition + static_cast<int>(p->playTimer.elapsed() * p->rate);
+            qDebug() << "Player::position() FALLBACK (timer):" << parentWidget()->objectName()
+                     << "playBasePosition=" << p->playBasePosition
+                     << "elapsed=" << p->playTimer.elapsed()
+                     << "rate=" << p->rate
+                     << "resultMs=" << p->position;
             return QTime(0, 0).addMSecs(p->position);
         }
 
+        qDebug() << "Player::position() FALLBACK (cached):" << parentWidget()->objectName()
+                 << "cachedMs=" << p->position;
         return QTime(0, 0).addMSecs(p->position); // nanosec -> msec
     }
     return QTime(0, 0);
