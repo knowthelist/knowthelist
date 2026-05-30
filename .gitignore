@@ -23,5 +23,6 @@ Build/*
 build-*/
 dist-*/
 *.pro.user
-
+.docs/*
+.vscode/*
 */.github/*

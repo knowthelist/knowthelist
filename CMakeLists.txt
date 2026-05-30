@@ -65,6 +65,45 @@ if(COMMAND qt_standard_project_setup)
     qt_standard_project_setup()
 endif()
 
+# JUCE: fetch from GitHub if not found locally
+include(FetchContent)
+
+# Keep FetchContent downloads outside the build directory so `rm -rf build`
+# does not force re-downloading large dependencies like JUCE.
+if(DEFINED ENV{XDG_CACHE_HOME})
+    set(_KTL_CACHE_ROOT "$ENV{XDG_CACHE_HOME}")
+elseif(DEFINED ENV{LOCALAPPDATA})
+    set(_KTL_CACHE_ROOT "$ENV{LOCALAPPDATA}")
+elseif(DEFINED ENV{HOME})
+    set(_KTL_CACHE_ROOT "$ENV{HOME}/.cache")
+else()
+    set(_KTL_CACHE_ROOT "${CMAKE_SOURCE_DIR}/.cache")
+endif()
+set(KNOWTHELIST_FETCHCONTENT_DIR
+    "${_KTL_CACHE_ROOT}/knowthelist/fetchcontent"
+    CACHE PATH "Persistent cache directory for FetchContent dependencies")
+set(FETCHCONTENT_BASE_DIR "${KNOWTHELIST_FETCHCONTENT_DIR}")
+unset(_KTL_CACHE_ROOT)
+
+# Avoid large re-downloads on reconfigure and reduce clone size.
+set(FETCHCONTENT_UPDATES_DISCONNECTED ON)
+
+# Try to find JUCE installed system-wide first
+find_package(JUCE QUIET CONFIG)
+
+if(NOT JUCE_FOUND)
+    # Fetch JUCE from GitHub (version 7.0.x)
+    message(STATUS "JUCE not found locally; fetching from GitHub...")
+    FetchContent_Declare(
+        JUCE
+        GIT_REPOSITORY https://github.com/juce-framework/JUCE.git
+        GIT_TAG 7.0.11
+        GIT_SHALLOW TRUE
+        GIT_PROGRESS ON
+    )
+    FetchContent_MakeAvailable(JUCE)
+endif()
+
 # Flatpak-specific setup: the Qt6 host tools and pkg-config cannot run
 # without their host libraries. Pin the Flatpak's own pkg-config and point
 # it at the host .pc files. Qt tool wrappers are set after qt_add_executable.
@@ -78,49 +117,6 @@ if(DEFINED ENV{FLATPAK_ID} AND IS_DIRECTORY /run/host/usr)
     set_target_properties(Qt6::rcc PROPERTIES IMPORTED_LOCATION "${CMAKE_SOURCE_DIR}/cmake/flatpak-wrappers/rcc")
 endif()
 find_package(PkgConfig REQUIRED)
-
-# GStreamer: on macOS prefer the official framework (no pkgconfig there),
-# fall back to pkg-config (Homebrew) on other platforms.
-if(APPLE)
-    set(_GST_FRAMEWORK "/Library/Frameworks/GStreamer.framework/Versions/1.0")
-    if(EXISTS "${_GST_FRAMEWORK}/include/gstreamer-1.0/gst/gst.h")
-        set(_GST_PREFIX "${_GST_FRAMEWORK}")
-    else()
-        # fall back to Homebrew GStreamer
-        execute_process(COMMAND brew --prefix gstreamer
-            OUTPUT_VARIABLE _GST_BREW OUTPUT_STRIP_TRAILING_WHITESPACE)
-        if(NOT _GST_BREW)
-            set(_GST_BREW "/usr/local/opt/gstreamer")
-        endif()
-        set(_GST_PREFIX "${_GST_BREW}")
-    endif()
-
-    find_library(GSTREAMER_LIB gstreamer-1.0 PATHS "${_GST_PREFIX}/lib" NO_DEFAULT_PATH REQUIRED)
-    find_library(GLIB_LIB     glib-2.0       PATHS "${_GST_PREFIX}/lib" NO_DEFAULT_PATH REQUIRED)
-    find_library(GOBJECT_LIB  gobject-2.0    PATHS "${_GST_PREFIX}/lib" NO_DEFAULT_PATH REQUIRED)
-
-    set(GSTREAMER_INCLUDE_DIRS
-        "${_GST_PREFIX}/include/gstreamer-1.0"
-        "${_GST_PREFIX}/include/glib-2.0"
-        "${_GST_PREFIX}/lib/glib-2.0/include"
-    )
-    # Brew glib puts glibconfig.h under lib/glib-2.0/include too; add brew fallback
-    execute_process(COMMAND brew --prefix OUTPUT_VARIABLE _BREW_PREFIX OUTPUT_STRIP_TRAILING_WHITESPACE)
-    if(_BREW_PREFIX AND EXISTS "${_BREW_PREFIX}/lib/glib-2.0/include/glibconfig.h")
-        list(APPEND GSTREAMER_INCLUDE_DIRS "${_BREW_PREFIX}/lib/glib-2.0/include")
-    endif()
-
-    set(GSTREAMER_LIBRARIES "${GSTREAMER_LIB}" "${GLIB_LIB}" "${GOBJECT_LIB}")
-    set(GSTREAMER_LDFLAGS_OTHER "-Wl,-rpath,${_GST_PREFIX}/lib")
-
-    message(STATUS "Using GStreamer from ${_GST_PREFIX}")
-    unset(_GST_FRAMEWORK)
-    unset(_GST_PREFIX)
-    unset(_GST_BREW)
-    unset(_BREW_PREFIX)
-else()
-    pkg_check_modules(GSTREAMER REQUIRED gstreamer-1.0)
-endif()
 
 # TagLib: on macOS use explicit brew opt path to avoid GStreamer framework's
 # bundled TagLib 1.x taking precedence. On other platforms try native CMake
@@ -156,6 +152,10 @@ set(SOURCES
     src/beatsyncwidget.cpp
     src/playerbpmwidget.cpp
     src/player.cpp
+    src/audio_backend.h
+    src/juce_audio_backend.cpp
+    src/monitorplayer.cpp
+    src/monitor_audio_backend.cpp
     src/vumeter.cpp
     src/playerwidget.cpp
     src/qled.cpp
@@ -165,7 +165,7 @@ set(SOURCES
     src/collectiondb.cpp
     src/settingsdialog.cpp
     src/track.cpp
-    src/trackanalyser.cpp
+    src/trackanalyzer.cpp
     src/djsession.cpp
     src/dj.cpp
     src/filter.cpp
@@ -178,7 +178,6 @@ set(SOURCES
     src/collectiontree.cpp
     src/collectionupdater.cpp
     src/collectiontreeitem.cpp
-    src/monitorplayer.cpp
     src/collectionsetupmodel.cpp
     src/stackdisplay.cpp
     src/djsettings.cpp
@@ -204,7 +203,7 @@ set(HEADERS
     src/collectiondb.h
     src/settingsdialog.h
     src/track.h
-    src/trackanalyser.h
+    src/trackanalyzer.h
     src/djsession.h
     src/dj.h
     src/filter.h
@@ -264,12 +263,10 @@ endif()
 
 target_compile_definitions(knowthelist PRIVATE
     APP_VERSION="${PROJECT_VERSION}"
-    GST_API_VERSION_1
 )
 
 target_include_directories(knowthelist PRIVATE
     src
-    ${GSTREAMER_INCLUDE_DIRS}
     ${TAGLIB_INCLUDE_DIRS}
 )
 
@@ -280,12 +277,14 @@ target_link_libraries(knowthelist PRIVATE
     Qt6::Xml
     Qt6::Sql
     Qt6::Concurrent
-    ${GSTREAMER_LIBRARIES}
     ${TAGLIB_LIBRARIES}
+    juce::juce_core
+    juce::juce_audio_basics
+    juce::juce_audio_devices
+    juce::juce_audio_formats
 )
 
 target_link_options(knowthelist PRIVATE
-    ${GSTREAMER_LDFLAGS_OTHER}
     ${TAGLIB_LDFLAGS_OTHER}
 )
 

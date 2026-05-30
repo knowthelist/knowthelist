@@ -28,8 +28,11 @@
 #include <QSettings>
 #include <QResizeEvent>
 #include <QToolButton>
+#include <QMessageBox>
 #include <QtConcurrent/QtConcurrent>
 #include <QMetaType>
+#include <QtSql/QSqlDatabase>
+#include <QtSql/QSqlQuery>
 #include <cmath>
 
 namespace {
@@ -447,6 +450,7 @@ void Knowthelist::createUI()
     preferences = new SettingsDialog(this);
     connect(preferences, SIGNAL(scanNowPressed()), collectionBrowser, SLOT(scan()));
     connect(preferences, SIGNAL(resetStatsPressed()), djSession, SLOT(onResetStats()));
+    connect(preferences, SIGNAL(resetAnalysisCachePressed()), this, SLOT(on_resetAnalysisCachePressed()));
 
     loadStartSettings();
 
@@ -499,7 +503,7 @@ void Knowthelist::loadStartSettings()
     loadCurrentSettings();
 
     //now monitorplayer is initialized, restore monitor volume with effect
-    ui->sliMonitorVolume->setValue(settings.value("VolumeMonitor").toDouble());
+    ui->sliMonitorVolume->setValue(settings.value("VolumeMonitor", 70).toInt());
 }
 
 void Knowthelist::loadCurrentSettings()
@@ -573,6 +577,27 @@ void Knowthelist::loadCurrentSettings()
 
     //File Browser Settings
     filetree->setRootPath(settings.value("editBrowerRoot", "").toString());
+}
+
+void Knowthelist::on_resetAnalysisCachePressed()
+{
+    QSqlDatabase db = QSqlDatabase::database();
+    if (!db.isValid() || !db.isOpen()) {
+        QMessageBox::warning(this, tr("Reset analysis cache"), tr("The collection database is not open."));
+        return;
+    }
+
+    QSqlQuery query(db);
+    if (!query.exec("DELETE FROM analysis_cache;")) {
+        QMessageBox::warning(this,
+                             tr("Reset analysis cache"),
+                             tr("Failed to clear analysis cache: %1").arg(query.lastError().text()));
+        return;
+    }
+
+    QMessageBox::information(this,
+                             tr("Reset analysis cache"),
+                             tr("All analysis cache data has been cleared."));
 }
 
 void Knowthelist::resizeEvent(QResizeEvent* event)

@@ -32,7 +32,7 @@ SOURCES += main.cpp \
     collectiondb.cpp \
     settingsdialog.cpp \
     track.cpp \
-    trackanalyser.cpp \
+    trackanalyzer.cpp \
     djsession.cpp \
     dj.cpp \
     filter.cpp \
@@ -68,7 +68,7 @@ HEADERS += knowthelist.h \
     collectiondb.h \
     settingsdialog.h \
     track.h \
-    trackanalyser.h \
+    trackanalyzer.h \
     djsession.h \
     dj.h \
     filter.h \

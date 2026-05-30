@@ -43,7 +43,7 @@
     <message>
         <location filename="../src/collectiontree.cpp" line="340"/>
         <source>Re-scan collection</source>
-        <translation>Réanalyser la bibliothèque</translation>
+        <translation>Réanalyzer la bibliothèque</translation>
     </message>
     <message>
         <location filename="../src/collectiontree.cpp" line="371"/>
@@ -979,7 +979,7 @@ p, li { white-space: pre-wrap; }
     <message>
         <location filename="../src/settingsdialog.ui" line="374"/>
         <source>Scan for new files and update the music collection</source>
-        <translation>Analyser les nouveaux fichiers et mettre à jour la bibliothèque de musique</translation>
+        <translation>Analyzer les nouveaux fichiers et mettre à jour la bibliothèque de musique</translation>
     </message>
     <message>
         <location filename="../src/settingsdialog.ui" line="377"/>
@@ -989,12 +989,12 @@ p, li { white-space: pre-wrap; }
     <message>
         <location filename="../src/settingsdialog.ui" line="399"/>
         <source>Scan Now</source>
-        <translation>Analyser</translation>
+        <translation>Analyzer</translation>
     </message>
     <message>
         <location filename="../src/settingsdialog.ui" line="406"/>
         <source>Scan folders for songs</source>
-        <translation>Analyser les dossiers pour les chansons</translation>
+        <translation>Analyzer les dossiers pour les chansons</translation>
     </message>
     <message>
         <location filename="../src/settingsdialog.ui" line="413"/>

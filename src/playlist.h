@@ -24,7 +24,7 @@
 #include <QSet>
 #include <QTreeWidget>
 
-class TrackAnalyser;
+class TrackAnalyzer;
 
 class Playlist : public QTreeWidget {
     Q_OBJECT
@@ -178,14 +178,14 @@ private Q_SLOTS:
     void handleChanges();
     void slotItemChanged(QTreeWidgetItem* current, QTreeWidgetItem* previous);
     void dummySlot();
-    void analyseTempoFinished();
+    void analyzeTempoFinished();
 
 private:
     void queueTempoScan(Track* track);
     bool queueIdleTempoRescanCandidate();
     void startTempoScan();
 
-    TrackAnalyser* m_tempoAnalyser;
+    TrackAnalyzer* m_tempoAnalyzer;
     QQueue<QString> m_tempoScanQueue;
     QSet<QString> m_tempoRescanDone;
     QString m_tempoScanUrl;

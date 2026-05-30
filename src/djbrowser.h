@@ -29,7 +29,6 @@ public:
     explicit DjBrowser(QWidget* parent = nullptr);
     ~DjBrowser();
     void updateList();
-    void saveSettings();
 
 signals:
     void selectionChanged(Dj*);
@@ -42,6 +41,7 @@ public slots:
     void startDj();
     void addFilter();
     void removeFilter();
+    void saveSettings();
 
 private:
     class DjBrowserPrivate* p;

@@ -34,7 +34,7 @@
 #include "vumeter.h"
 
 #include "playlistitem.h"
-#include "trackanalyser.h"
+#include "trackanalyzer.h"
 
 class QLed;
 
@@ -99,9 +99,9 @@ public:
 
 public Q_SLOTS:
     void loadTrack(Track*);
-    void analyseGainFinished();
-    void analyseTempoFinished();
-    void analyseEnvelopeFinished();
+    void analyzeGainFinished();
+    void analyzeTempoFinished();
+    void analyzeEnvelopeFinished();
     void onTrackPropertyChanged(Track* track);
     void setEqualizer(EqBand, int);
     void setInfo(QPair<int, int> info);
@@ -133,7 +133,6 @@ private Q_SLOTS:
     void timerPosition_timeOut();
     void timerVisual_timeOut();
     void on_sliPosition_sliderMoved(int);
-    void applyPendingSliderSeek();
     void onBeatJumpButtonClicked();
     void onEnvelopeScrubStarted();
     void onEnvelopeScrubPositionChanged(double normalizedPosition, bool finished);
@@ -170,14 +169,15 @@ private:
     void createPerformanceControls();
     void jumpByBeats(int beatCount);
     QString currentTrackKey() const;
+    void applyAutoCueAfterAnalysis(bool preferBeatCue);
     void suppressAboutFinishForMs(int ms);
     bool seekOvershootsFadePoint(const QTime& targetPos) const;
     void armImmediateAboutFinish();
 
     Player* player;
-    TrackAnalyser* trackanalyser;
-    TrackAnalyser* tempoAnalyser;
-    TrackAnalyser* envelopeAnalyser;
+    TrackAnalyzer* trackanalyzer;
+    TrackAnalyzer* tempoAnalyzer;
+    TrackAnalyzer* envelopeAnalyzer;
     float m_level;
     QLabel* m_positionLabel;
     QLabel* m_volumeLabel;
@@ -207,7 +207,7 @@ private:
     QQueue<float> m_pendingEnvelope;
     bool m_liveEnvelopeStarted;
     float m_liveEnvelopeSmoothed;
-    bool m_bpmAnalysed;
+    bool m_bpmAnalyzed;
     int m_bpm;
     QTime m_beatPosition;
     QString m_infoBaseText;
@@ -216,8 +216,6 @@ private:
     QTimer* m_envelopeScrubSeekTimer;
     int m_pendingEnvelopeScrubTargetMs;
     int m_lastEnvelopeScrubAppliedMs;
-    QTimer* m_sliderSeekTimer;
-    int m_pendingSliderSeekMs;
     QElapsedTimer m_sessionTimer;
     QElapsedTimer m_visualFrameTimer;  // For interpolating position in timerVisual_timeOut
     qint64 m_aboutFinishSuppressUntilMs;

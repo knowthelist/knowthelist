@@ -19,12 +19,9 @@
 
 #include <QWidget>
 #include <QtCore>
+#include <memory>
 
-#define GST_DISABLE_LOADSAVE 1
-#define GST_DISABLE_REGISTRY 1
-#define GST_DISABLE_DEPRECATED 1
-
-#include <gst/gst.h>
+class JuceAudioBackend;
 
 class Player : public QWidget {
     Q_OBJECT
@@ -65,8 +62,6 @@ public:
     double levelOutLeft();
     double levelOutRight();
 
-    void newpad(GstElement* decodebin, GstPad* pad, gpointer data);
-    static GstBusSyncReply bus_cb(GstBus* bus, GstMessage* msg, gpointer data);
 Q_SIGNALS:
     void finish();
     void error();
@@ -76,19 +71,13 @@ Q_SIGNALS:
 
 private slots:
     void loadThreadFinished();
-    void messageReceived(GstMessage* message);
 
 private:
     struct PlayerPrivate* p;
+    std::unique_ptr<JuceAudioBackend> audioBackend;
 
-    GstElement* pipeline;
-    GstBus* bus;
-    gint64 Gstart, Glength;
-    void setLink(int, QUrl&);
     void asyncOpen(QUrl url);
-    bool forceRollRecovery(const char* reason);
     void cleanup();
-    void sync_set_state(GstElement*, GstState);
     void applyOutputRouting();
 };
 

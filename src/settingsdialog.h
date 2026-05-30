@@ -38,6 +38,7 @@ public slots:
 signals:
     void scanNowPressed();
     void resetStatsPressed();
+    void resetAnalysisCachePressed();
 
 protected:
     bool loadSettings();
@@ -47,6 +48,7 @@ private slots:
     void on_faderTimeSlider_sliderMoved(int position);
     void on_pushButton_clicked();
     void onScanNow();
+    void on_pushResetAnalysisCache_clicked();
     void loadDjList(int count);
     void on_pushAbout_clicked();
 

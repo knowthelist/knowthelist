@@ -22,12 +22,12 @@ class PlayerBpmWidget : public QWidget {
 public:
     explicit PlayerBpmWidget(QWidget* parent = nullptr);
 
-    void setState(int bpm, const QTime& position, const QTime& beatReference, bool running, bool analysed = true);
+    void setState(int bpm, const QTime& position, const QTime& beatReference, bool running, bool analyzed = true);
     void setTempoInfo(double tempoRate, bool syncAdjusting);
     void appendEnvelopeSample(float value);
     void appendEnvelopeSampleAt(int positionMs, float value);
     void clearEnvelope();
-    void setPreloadedEnvelope(const QVector<float>& samples);
+    void setPreloadedEnvelope(const QVector<float>& samples, int sourceIntervalMs = 0);
     void setWindowMilliseconds(int windowMs);
     int windowMilliseconds() const { return m_windowMs; }
     bool isEnvelopePreloaded() const { return m_envelopePreloaded; }
@@ -51,7 +51,7 @@ private:
     QTime m_position;
     QTime m_beatReference;
     bool m_running;
-    bool m_analysed;
+    bool m_analyzed;
     double m_tempoRate;
     bool m_syncAdjusting;
     QVector<float> m_timelineEnvelope;
@@ -74,6 +74,8 @@ private:
 
     void rebuildEnvelopePaths(const QRect& band, int centerY, double halfH);
     void rebuildVisibleEnvelope(int bandWidth);
+    int visibleWindowLeftMs() const;
+    QTime visualBeatReference() const;
     QRect phaseBandRect() const;
     double normalizedX(const QPoint& pos) const;
     double phase() const;

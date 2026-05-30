@@ -1391,7 +1391,7 @@ QPushButton#butMon:pressed {
                  </property>
                  <property name="font">
                   <font>
-                   <family>DejaVu Sans Mono</family>
+                   <family>Monospace</family>
                    <pointsize>15</pointsize>
                    <bold>false</bold>
                    <kerning>false</kerning>
@@ -1881,7 +1881,7 @@ QPushButton#butMon:pressed {
                  </property>
                  <property name="font">
                   <font>
-                   <family>DejaVu Sans Mono</family>
+                   <family>Monospace</family>
                    <pointsize>10</pointsize>
                    <bold>false</bold>
                   </font>
@@ -1928,7 +1928,7 @@ QPushButton#butMon:pressed {
                  </property>
                  <property name="font">
                   <font>
-                   <family>DejaVu Sans Mono</family>
+                   <family>Monospace</family>
                   </font>
                  </property>
                  <property name="text">
@@ -2409,7 +2409,7 @@ QPushButton#butMon:pressed {
                  </property>
                  <property name="font">
                   <font>
-                   <family>DejaVu Sans Mono</family>
+                   <family>Monospace</family>
                    <pointsize>15</pointsize>
                   </font>
                  </property>
@@ -2903,7 +2903,7 @@ QPushButton#butMon:pressed {
                  </property>
                  <property name="font">
                   <font>
-                   <family>DejaVu Sans Mono</family>
+                   <family>Monospace</family>
                    <pointsize>10</pointsize>
                   </font>
                  </property>
@@ -2937,7 +2937,7 @@ QPushButton#butMon:pressed {
                  </property>
                  <property name="font">
                   <font>
-                   <family>DejaVu Sans Mono</family>
+                   <family>Monospace</family>
                    <pointsize>11</pointsize>
                    <bold>false</bold>
                   </font>

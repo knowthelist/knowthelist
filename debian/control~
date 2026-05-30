@@ -22,6 +22,6 @@ Description: awesome party music player
   - Two players with separate playlists.
   - Mixer with fader, 3 channel EQ and gain.
   - Auto fader and auto gain.
-  - Track analyser search for song start/end and gain setting.
+  - Track analyzer search for song start/end and gain setting.
   - Auto DJ function with multiple filters for random play.
   - Monitor player for pre listen tracks (via 2nd sound card e.g. USB).

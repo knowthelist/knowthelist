@@ -29,7 +29,7 @@ PlayerBpmWidget::PlayerBpmWidget(QWidget* parent)
     , m_position(QTime(0, 0))
     , m_beatReference(QTime())
     , m_running(false)
-    , m_analysed(false)
+    , m_analyzed(false)
     , m_tempoRate(1.0)
     , m_syncAdjusting(false)
     , m_windowMs(6000)
@@ -53,13 +53,13 @@ void PlayerBpmWidget::onUpdateTimer()
     update();
 }
 
-void PlayerBpmWidget::setState(int bpm, const QTime& position, const QTime& beatReference, bool running, bool analysed)
+void PlayerBpmWidget::setState(int bpm, const QTime& position, const QTime& beatReference, bool running, bool analyzed)
 {
     m_bpm = bpm;
     m_position = position;
     m_beatReference = beatReference;
     m_running = running;
-    m_analysed = analysed;
+    m_analyzed = analyzed;
     // The envelope is position-anchored: moving playback position must move the visible waveform window.
     m_envelopeDirty = true;
     update();
@@ -113,18 +113,39 @@ void PlayerBpmWidget::clearEnvelope()
     update();
 }
 
-void PlayerBpmWidget::setPreloadedEnvelope(const QVector<float>& samples)
+void PlayerBpmWidget::setPreloadedEnvelope(const QVector<float>& samples, int sourceIntervalMs)
 {
     if (samples.isEmpty())
         return;
+
+    const int srcInterval = qMax(1, sourceIntervalMs > 0 ? sourceIntervalMs : m_sampleIntervalMs);
+    const int dstInterval = qMax(1, m_sampleIntervalMs);
+
     m_timelineEnvelope.clear();
     m_timelineKnown.clear();
-    m_timelineEnvelope.reserve(samples.size());
-    m_timelineKnown.reserve(samples.size());
-    for (float v : samples)
-        m_timelineEnvelope.append(qBound(0.0f, v, 1.0f));
-    for (int i = 0; i < samples.size(); ++i)
-        m_timelineKnown.append(1);
+
+    const qint64 totalMs = static_cast<qint64>(samples.size() - 1) * static_cast<qint64>(srcInterval);
+    const int targetSize = qMax(1, static_cast<int>(totalMs / dstInterval) + 1);
+    m_timelineEnvelope.resize(targetSize);
+    m_timelineKnown.resize(targetSize);
+    for (int i = 0; i < targetSize; ++i) {
+        m_timelineEnvelope[i] = 0.0f;
+        m_timelineKnown[i] = 0;
+    }
+
+    // Map analyzer samples into the live timeline grid using max pooling so
+    // transient peaks remain clearly visible after resampling.
+    for (int i = 0; i < samples.size(); ++i) {
+        const qint64 tMs = static_cast<qint64>(i) * static_cast<qint64>(srcInterval);
+        const int dstIndex = static_cast<int>(tMs / dstInterval);
+        if (dstIndex < 0 || dstIndex >= m_timelineEnvelope.size())
+            continue;
+        const float v = qBound(0.0f, samples.at(i), 1.0f);
+        if (!m_timelineKnown[dstIndex] || v > m_timelineEnvelope[dstIndex])
+            m_timelineEnvelope[dstIndex] = v;
+        m_timelineKnown[dstIndex] = 1;
+    }
+
     m_envelopeDirty = true;
     m_envelopePreloaded = true;
     if (m_updateTimer.isActive())
@@ -138,6 +159,21 @@ void PlayerBpmWidget::setWindowMilliseconds(int windowMs)
     m_envelopeDirty = true;
 }
 
+int PlayerBpmWidget::visibleWindowLeftMs() const
+{
+    const int posMs = QTime(0, 0).msecsTo(m_position);
+    const int desiredLeftMs = posMs - qRound(0.20 * m_windowMs);
+    return qMax(0, desiredLeftMs);
+}
+
+QTime PlayerBpmWidget::visualBeatReference() const
+{
+    if (!m_beatReference.isValid() || m_bpm <= 0)
+        return m_beatReference;
+
+    return m_beatReference;
+}
+
 void PlayerBpmWidget::rebuildVisibleEnvelope(int bandWidth)
 {
     const int intervalMs = qMax(1, m_sampleIntervalMs);
@@ -146,16 +182,15 @@ void PlayerBpmWidget::rebuildVisibleEnvelope(int bandWidth)
     // the left/right jitter caused by coarse slot-to-sample mapping.
     const int targetSamples = qMax(120, bandWidth);
     m_envelope.resize(targetSamples);
+    QVector<quint8> slotKnown(targetSamples, 0);
 
-    const int posMs = QTime(0, 0).msecsTo(m_position);
-    // Keep the visible window inside available preloaded data so startup shows a full waveform.
-    const int desiredLeftMs = posMs - qRound(0.20 * m_windowMs);
-    const int timelineSpanMs = qMax(0, (m_timelineEnvelope.size() - 1) * intervalMs);
-    const int maxLeftMs = qMax(0, timelineSpanMs - m_windowMs);
-    const int leftMs = qBound(0, desiredLeftMs, maxLeftMs);
-    const double stepMs = (targetSamples > 1)
-        ? static_cast<double>(m_windowMs) / static_cast<double>(targetSamples - 1)
-        : 0.0;
+    const int leftMs = visibleWindowLeftMs();
+    // Divide by targetSamples (not targetSamples-1) so each bin has width windowMs/count.
+    // The beat grid maps time T with T/windowMs * bandWidth; a waveform bin centered at
+    // leftMs + (i+0.5)*stepMs must land at pixel (i+0.5)*bandWidth/count — that only
+    // holds when stepMs = windowMs/count.  Using count-1 compresses the waveform by
+    // count/(count-1) relative to the ruler, producing a 1-beat drift every ~count beats.
+    const double stepMs = static_cast<double>(m_windowMs) / static_cast<double>(targetSamples);
 
     for (int i = 0; i < targetSamples; ++i) {
         const double tStartMs = leftMs + static_cast<double>(i) * stepMs;
@@ -185,25 +220,11 @@ void PlayerBpmWidget::rebuildVisibleEnvelope(int bandWidth)
             }
         }
         m_envelope[i] = anyKnown ? maxVal : 0.0f;
+        slotKnown[i] = anyKnown ? 1 : 0;
     }
 
-    // Forward-fill: replace zeros with the last known value to
-    // avoid artificial zero dips that cause flickering at the playhead.
-    float lastKnown = 0.0f;
-    for (int i = 0; i < m_envelope.size(); ++i) {
-        if (m_envelope[i] > 0.0f)
-            lastKnown = m_envelope[i];
-        else if (lastKnown > 0.0f)
-            m_envelope[i] = lastKnown;
-    }
-    // Backward-fill: fill any remaining zeros at the start.
-    lastKnown = 0.0f;
-    for (int i = m_envelope.size() - 1; i >= 0; --i) {
-        if (m_envelope[i] > 0.0f)
-            lastKnown = m_envelope[i];
-        else if (lastKnown > 0.0f)
-            m_envelope[i] = lastKnown;
-    }
+    // Keep the raw time bins only. Stretching unknown slots forward/backward
+    // makes sparse peaks appear wider than the beat grid and breaks scale.
 }
 
 QRect PlayerBpmWidget::phaseBandRect() const
@@ -296,17 +317,19 @@ void PlayerBpmWidget::rebuildEnvelopePaths(const QRect& band, int centerY, doubl
     const double invCount = 1.0 / (count - 1);
     const double bandLeft = band.left();
     const double bandW    = band.width();
+    const double binWidth  = bandW / static_cast<double>(count);
 
-    // Fill polygon: older samples at left, newest samples at right (right-to-left motion)
+    // Fill polygon: each value represents a time bin, so draw it at the bin center
+    // instead of the bin edge. This keeps waveform peaks phase-aligned with beat ticks.
     m_envFillPath = QPainterPath();
     m_envFillPath.moveTo(bandLeft, centerY);
     for (int i = 0; i < count; ++i) {
-        const double x = bandLeft + i * invCount * bandW;
+        const double x = bandLeft + (static_cast<double>(i) + 0.5) * binWidth;
         m_envFillPath.lineTo(x, centerY - m_envelope.at(i) * halfH);
     }
     m_envFillPath.lineTo(bandLeft + bandW, centerY);
     for (int i = count - 1; i >= 0; --i) {
-        const double x = bandLeft + i * invCount * bandW;
+        const double x = bandLeft + (static_cast<double>(i) + 0.5) * binWidth;
         m_envFillPath.lineTo(x, centerY + m_envelope.at(i) * halfH);
     }
     m_envFillPath.closeSubpath();
@@ -315,7 +338,7 @@ void PlayerBpmWidget::rebuildEnvelopePaths(const QRect& band, int centerY, doubl
     m_topEdgePath    = QPainterPath();
     m_bottomEdgePath = QPainterPath();
     for (int i = 0; i < count; ++i) {
-        const double x  = bandLeft + i * invCount * bandW;
+        const double x  = bandLeft + (static_cast<double>(i) + 0.5) * binWidth;
         const double yt = centerY - m_envelope.at(i) * halfH;
         const double yb = centerY + m_envelope.at(i) * halfH;
         if (i == 0) { m_topEdgePath.moveTo(x, yt); m_bottomEdgePath.moveTo(x, yb); }
@@ -361,7 +384,7 @@ void PlayerBpmWidget::paintEvent(QPaintEvent* event)
     // ── BPM label ────────────────────────────────────────────────────────────
     painter.setRenderHint(QPainter::Antialiasing, true);  // on for text
     QString bpmText;
-    if (!m_analysed)
+    if (!m_analyzed)
         bpmText = "Analysing BPM...";
     else if (m_bpm > 0) {
         bpmText = QString::number(m_bpm) + " BPM";
@@ -400,9 +423,9 @@ void PlayerBpmWidget::paintEvent(QPaintEvent* event)
     if (m_bpm > 0 && m_windowMs > 0) {
         const double beatMs    = 60000.0 / static_cast<double>(m_bpm);
         const qint64 posMs     = QTime(0, 0).msecsTo(m_position);
-        const qint64 beatRefMs = m_beatReference.isValid() ? QTime(0, 0).msecsTo(m_beatReference) : 0;
-        // Playhead is at 20% from the left edge.
-        const qint64 leftMs    = posMs - static_cast<qint64>(qRound(0.20 * m_windowMs));
+        const QTime visualBeatRef = visualBeatReference();
+        const qint64 beatRefMs = visualBeatRef.isValid() ? QTime(0, 0).msecsTo(visualBeatRef) : 0;
+        const qint64 leftMs    = visibleWindowLeftMs();
         const qint64 rightMs   = leftMs + m_windowMs;
 
         // Collect all beat lines into one vector, then draw in one call
@@ -456,7 +479,8 @@ void PlayerBpmWidget::paintEvent(QPaintEvent* event)
     if (m_bpm > 0 && m_windowMs > 0) {
         const double beatMs = 60000.0 / static_cast<double>(m_bpm);
         const qint64 posMs = QTime(0, 0).msecsTo(m_position);
-        const qint64 beatRefMs = m_beatReference.isValid() ? QTime(0, 0).msecsTo(m_beatReference) : 0;
+        const QTime visualBeatRef = visualBeatReference();
+        const qint64 beatRefMs = visualBeatRef.isValid() ? QTime(0, 0).msecsTo(visualBeatRef) : 0;
         // Playhead is at 20% from the left edge — beat cursor is pinned there.
         static constexpr double kPlayheadNorm = 0.20;
         const double anchorTimeMs = static_cast<double>(posMs);
@@ -473,7 +497,7 @@ void PlayerBpmWidget::paintEvent(QPaintEvent* event)
         // Window is wide enough to survive UI/frame jitter, but still beat-tight.
         const double flashWindowMs = qMin(120.0, beatMs * 0.28);
         const bool beatAtMarker = (qAbs(deltaMs) <= flashWindowMs);
-        const bool flashOn = m_running && !beatAtMarker;
+        const bool flashOn = m_running && beatAtMarker;
 
         if (!m_running) {
             painter.setPen(QPen(QColor(132, 195, 255, 190), 1));

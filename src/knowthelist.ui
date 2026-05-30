@@ -6009,7 +6009,7 @@ min-height: 16px;
            </property>
            <property name="font">
             <font>
-             <family>DejaVu Sans Mono</family>
+             <family>Monospace</family>
              <pointsize>11</pointsize>
             </font>
            </property>

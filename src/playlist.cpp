@@ -17,7 +17,7 @@
 
 #include "playlist.h"
 #include "playlistitem.h"
-#include "trackanalyser.h"
+#include "trackanalyzer.h"
 
 #include <QMenu>
 #include <Qt>
@@ -57,7 +57,7 @@ Playlist::Playlist(QWidget* parent)
     , m_isInternDrop(false)
     , m_dragLocked(false)
     , isChangeSignalEnabled(true)
-    , m_tempoAnalyser(new TrackAnalyser(this))
+    , m_tempoAnalyzer(new TrackAnalyzer(this))
     , m_tempoRescanCursor(0)
     , m_tempoScanActive(false)
 {
@@ -105,7 +105,7 @@ Playlist::Playlist(QWidget* parent)
         SIGNAL(currentItemChanged(QTreeWidgetItem*, QTreeWidgetItem*)),
         this, SLOT(slotItemChanged(QTreeWidgetItem*, QTreeWidgetItem*)));
 
-    connect(m_tempoAnalyser, SIGNAL(finishTempo()), this, SLOT(analyseTempoFinished()));
+    connect(m_tempoAnalyzer, SIGNAL(finishTempo()), this, SLOT(analyzeTempoFinished()));
 }
 
 Playlist::~Playlist()
@@ -434,14 +434,14 @@ void Playlist::startTempoScan()
     QSettings settings;
     // Playlist background scan gets a slightly longer window than live deck scan
     // for more stable BPM estimation.
-    m_tempoAnalyser->setTempoScanDurationSeconds(qMax(18, settings.value("beatSyncScanSeconds", 16).toInt()));
-    m_tempoAnalyser->setMode(TrackAnalyser::TEMPO);
-    m_tempoAnalyser->open(QUrl(m_tempoScanUrl));
+    m_tempoAnalyzer->setTempoScanDurationSeconds(qMax(18, settings.value("beatSyncScanSeconds", 16).toInt()));
+    m_tempoAnalyzer->setMode(TrackAnalyzer::TEMPO);
+    m_tempoAnalyzer->open(QUrl(m_tempoScanUrl));
 }
 
-void Playlist::analyseTempoFinished()
+void Playlist::analyzeTempoFinished()
 {
-    const int bpm = m_tempoAnalyser->bpm();
+    const int bpm = m_tempoAnalyzer->bpm();
     if (!m_tempoScanUrl.isEmpty() && bpm > 0) {
         QList<QTreeWidgetItem*> matches = findItems(m_tempoScanUrl, Qt::MatchExactly, PlaylistItem::Column_Url);
         for (QTreeWidgetItem* match : matches) {

@@ -48,6 +48,12 @@ cmake build:
     $ cmake --build build -j
     $ ./build/knowthelist
 
+Note: JUCE is cached outside `build/` (default: `~/.cache/knowthelist/fetchcontent` on macOS/Linux),
+so `rm -rf build` will not re-download JUCE every time.
+You can override this path with:
+
+    $ cmake -S . -B build -DKNOWTHELIST_FETCHCONTENT_DIR=/path/to/cache
+
 Recreate ui_*.h after .ui changes:
 ----------------------------------
 `ui_*.h` files are generated from Qt Designer `.ui` files. Do not edit generated headers manually.
@@ -80,22 +86,26 @@ Knowthelist works well on macOS.
 It can be compiled to a .app bundle, suitable for placing in /Applications.
 Install the required dependencies using [Homebrew](https://brew.sh):
 
-    $ brew install qt gstreamer gst-plugins-base gst-plugins-good gst-plugins-bad taglib
-    $ qmake6
-    $ make
+```
+brew install qt gstreamer gst-plugins-base gst-plugins-good gst-plugins-bad taglib
+qmake6
+make
 
-or with CMake:
+# or with CMake:
 
-    $ cmake -S . -B build
-    $ cmake --build build -j
+cmake -S . -B build
+cmake --build build -j
 
-clean before
+# clean before
 cmake --build build --target clean
 cmake --build build -j
 
-OR
+# or
 
 rm -rf build && cmake -B build && cmake --build build -j
+
+```
+JUCE download is reused from the persistent fetch cache, so clean builds stay fast.
 
 An icon for "knowthelist" should now be in your main macOS Applications list, ready to launch.
 

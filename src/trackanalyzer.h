@@ -19,18 +19,16 @@
 
 #include <QtCore>
 #include <QWidget>
+#include <memory>
 
-#define GST_DISABLE_LOADSAVE 1
-#define GST_DISABLE_REGISTRY 1
-#define GST_DISABLE_DEPRECATED 1
-#include <gst/gst.h>
+class JuceAudioBackend;
 
-class TrackAnalyser : public QWidget
+class TrackAnalyzer : public QWidget
 {
     Q_OBJECT
 public:
-    TrackAnalyser(QWidget *parent = 0);
-    ~TrackAnalyser();
+    TrackAnalyzer(QWidget* parent = nullptr);
+    ~TrackAnalyzer();
 
     enum modeType { STANDARD, TEMPO, ENVELOPE };
 
@@ -47,48 +45,44 @@ public:
     QTime beatActivityEndPosition();
     int bpm();
     QVector<float> amplitudeEnvelope() const;
-    bool finished() {return m_finished;}
+    bool finished() { return m_finished; }
     void setMode(modeType mode);
     void setPosition(QTime position);
     int tempoScanDurationSeconds() const;
     void setTempoScanDurationSeconds(int seconds);
 
     QTime length();
-    static const int GAIN_INVALID=-99;
+    static const int GAIN_INVALID = -99;
 
     void need_finish();
-    void newpad (GstElement *decodebin, GstPad *pad, gpointer data);
-    static GstBusSyncReply  bus_cb (GstBus *bus, GstMessage *msg, gpointer data);
 
- Q_SIGNALS:
-        void finishGain();
-        void finishTempo();
-        void finishEnvelope();
+Q_SIGNALS:
+    void finishGain();
+    void finishTempo();
+    void finishEnvelope();
 
- private slots:
-    void messageReceived(GstMessage* message);
+private slots:
     void loadThreadFinished();
-     void finalizeAnalysis();
+    void finalizeAnalysis();
 
- private:
-    struct TrackAnalyser_Private *p;
-        GstElement *pipeline;
-        GstBus *bus;
+private:
+    struct TrackAnalyzer_Private* p;
+    std::unique_ptr<JuceAudioBackend> audioBackend;
 
-        double m_GainDB;
-        QTime m_StartPosition;
-        QTime m_EndPosition;
-        QTime m_BeatPosition;
-        QTime m_BeatActivityEndPosition;
-        QTime m_MaxPosition;
-        bool m_finished;
+    double m_GainDB = GAIN_INVALID;
+    QTime m_StartPosition = QTime(0, 0);
+    QTime m_EndPosition = QTime(0, 0);
+    QTime m_BeatPosition = QTime(0, 0);
+    QTime m_BeatActivityEndPosition = QTime(0, 0);
+    QTime m_MaxPosition = QTime(0, 0);
+    bool m_finished = false;
+    QVector<float> m_envelope;
 
-        void detectTempo();
-        float AutoCorrelation( QList<float> buffer, int frames, int minBpm, int maxBpm, int sampleRate);
+    void detectTempo();
+    float AutoCorrelation(QList<float> buffer, int frames, int minBpm, int maxBpm, int sampleRate);
 
-        void cleanup();
-        void asyncOpen(QUrl url);
-        void sync_set_state(GstElement*, GstState);
-   };
+    void cleanup();
+    void asyncOpen(QUrl url);
+};
 
 #endif // TRACKANALYSER_H

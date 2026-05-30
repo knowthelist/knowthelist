@@ -18,7 +18,7 @@
 #include "playerwidget.h"
 #include "player.h"
 #include "playerbpmwidget.h"
-#include "trackanalyser.h"
+#include "trackanalyzer.h"
 #include "ui_playerwidget.h"
 #include "vumeter.h"
 
@@ -44,6 +44,7 @@ struct PlayerWidgetPrivate {
 namespace {
 constexpr int kTempoCacheVersion = 10;
 constexpr int kEnvelopeCacheVersion = 1;
+constexpr int kEnvelopeAnalysisIntervalMs = 8; // TrackAnalyzer uses 120 fps for envelope analysis.
 constexpr double kScrubSeekGain = 1.5;
 constexpr int kScrubSeekMinDeltaMs = 10;
 constexpr int kScrubSeekCoalesceMs = 20;
@@ -251,7 +252,7 @@ PlayerWidget::PlayerWidget(QWidget* parent)
     , m_visualLatencyMs(0)
     , m_liveEnvelopeStarted(false)
     , m_liveEnvelopeSmoothed(0.0f)
-    , m_bpmAnalysed(false)
+    , m_bpmAnalyzed(false)
     , m_bpm(0)
     , m_infoBaseText("")
     , m_envelopeScrubbing(false)
@@ -259,8 +260,6 @@ PlayerWidget::PlayerWidget(QWidget* parent)
     , m_envelopeScrubSeekTimer(nullptr)
     , m_pendingEnvelopeScrubTargetMs(-1)
     , m_lastEnvelopeScrubAppliedMs(-1)
-    , m_sliderSeekTimer(nullptr)
-    , m_pendingSliderSeekMs(-1)
     , m_aboutFinishSuppressUntilMs(0)
     , m_aboutFinishStableTicks(0)
     , m_monitorRouteButton(nullptr)
@@ -371,12 +370,6 @@ PlayerWidget::PlayerWidget(QWidget* parent)
     m_envelopeScrubSeekTimer->setInterval(kScrubSeekCoalesceMs);
     connect(m_envelopeScrubSeekTimer, SIGNAL(timeout()), SLOT(applyPendingEnvelopeScrubSeek()));
 
-    m_sliderSeekTimer = new QTimer(this);
-    m_sliderSeekTimer->setSingleShot(true);
-    m_sliderSeekTimer->setInterval(120);  // coalesce rapid slider drags into one seek
-    connect(m_sliderSeekTimer, SIGNAL(timeout()), SLOT(applyPendingSliderSeek()));
-    connect(ui->sliPosition, &QSlider::sliderReleased, this, &PlayerWidget::applyPendingSliderSeek);
-
     connect(player, SIGNAL(finish()), this, SLOT(playerFinished()));
     connect(player, SIGNAL(error()), this, SLOT(playerError()));
     connect(player, SIGNAL(loadFinished()), this, SLOT(playerLoaded()));
@@ -431,14 +424,14 @@ PlayerWidget::PlayerWidget(QWidget* parent)
     });
     this->stop();
 
-    trackanalyser = new TrackAnalyser(this);
-    connect(trackanalyser, SIGNAL(finishGain()), this, SLOT(analyseGainFinished()));
+    trackanalyzer = new TrackAnalyzer(this);
+    connect(trackanalyzer, SIGNAL(finishGain()), this, SLOT(analyzeGainFinished()));
 
-    tempoAnalyser = new TrackAnalyser(this);
-    connect(tempoAnalyser, SIGNAL(finishTempo()), this, SLOT(analyseTempoFinished()));
+    tempoAnalyzer = new TrackAnalyzer(this);
+    connect(tempoAnalyzer, SIGNAL(finishTempo()), this, SLOT(analyzeTempoFinished()));
 
-    envelopeAnalyser = new TrackAnalyser(this);
-    connect(envelopeAnalyser, SIGNAL(finishEnvelope()), this, SLOT(analyseEnvelopeFinished()));
+    envelopeAnalyzer = new TrackAnalyzer(this);
+    connect(envelopeAnalyzer, SIGNAL(finishEnvelope()), this, SLOT(analyzeEnvelopeFinished()));
 }
 
 PlayerWidget::~PlayerWidget()
@@ -446,12 +439,12 @@ PlayerWidget::~PlayerWidget()
     delete player;
     delete timerPosition;
     delete timerLevel;
-    delete trackanalyser;
-    trackanalyser = nullptr;
-    delete tempoAnalyser;
-    tempoAnalyser = nullptr;
-    delete envelopeAnalyser;
-    envelopeAnalyser = nullptr;
+    delete trackanalyzer;
+    trackanalyzer = nullptr;
+    delete tempoAnalyzer;
+    tempoAnalyzer = nullptr;
+    delete envelopeAnalyzer;
+    envelopeAnalyzer = nullptr;
     delete p;
 }
 
@@ -474,13 +467,13 @@ void PlayerWidget::setTempoRate(double rate)
     // Keep the pitch slider in sync when the rate is set externally (e.g. beat-sync).
     if (m_pitchSlider) {
         const QSignalBlocker blocker(m_pitchSlider);
-        m_pitchSlider->setValue(qBound(-80, qRound((rate - 1.0) * 1000.0), 80));
+        m_pitchSlider->setValue(qBound(-240, qRound((rate - 1.0) * 2000.0), 240));
         if (m_pitchResetButton) {
             const int v = m_pitchSlider->value();
             m_pitchResetButton->setText(
-                v == 0 ? QStringLiteral("0.0%")
+                  v == 0 ? QStringLiteral("0.00%")
                        : QString("%1%2%").arg(v > 0 ? "+" : "")
-                                        .arg(v / 10.0, 0, 'f', 1));
+                                 .arg(v / 20.0, 0, 'f', 2));
         }
     }
 
@@ -525,9 +518,16 @@ void PlayerWidget::setBeatVisualMode(bool enabled)
         vuMeter->hide();
         bpmWidget->show();
         bpmWidget->raise();
+
+        if (m_CurrentTrack && !bpmWidget->isEnvelopePreloaded()) {
+            envelopeAnalyzer->setMode(TrackAnalyzer::ENVELOPE);
+            envelopeAnalyzer->open(m_CurrentTrack->url());
+        }
+        applyAutoCueAfterAnalysis(true);
     } else {
         bpmWidget->hide();
         vuMeter->show();
+        applyAutoCueAfterAnalysis(false);
     }
 }
 
@@ -753,7 +753,7 @@ void PlayerWidget::createPerformanceControls()
     controls->addWidget(monitorFrame);
 
     // ── Pitch / tempo fader ──────────────────────────────────────────────────
-    // Range ±8 % in steps of 0.1 % (slider unit = 0.1 %, so range −80 … +80).
+    // Range +/-12 % in steps of 0.05 % (slider unit = 0.05 %, so range -240..+240).
     // The reset button shows the current offset and snaps back to 0 % on click.
     QFrame* pitchFrame = new QFrame(ui->frame_2);
     pitchFrame->setObjectName("framePitch");
@@ -763,14 +763,17 @@ void PlayerWidget::createPerformanceControls()
 
     m_pitchSlider = new QSlider(Qt::Horizontal, pitchFrame);
     m_pitchSlider->setObjectName("sliPitch");
-    m_pitchSlider->setRange(-80, 80);
+    m_pitchSlider->setRange(-240, 240);
+    m_pitchSlider->setSingleStep(1);
+    m_pitchSlider->setPageStep(10);
     m_pitchSlider->setValue(0);
+    m_pitchSlider->setFocusPolicy(Qt::StrongFocus);
     m_pitchSlider->setTickPosition(QSlider::TicksBelow);
-    m_pitchSlider->setTickInterval(40);   // marks at −4 %, 0 %, +4 %
-    m_pitchSlider->setToolTip(tr("Tempo fader ±8 % (0.1 % per step) — click the % button to reset"));
+    m_pitchSlider->setTickInterval(120);   // marks at -6 %, 0 %, +6 %
+    m_pitchSlider->setToolTip(tr("Tempo fader +/-12 % (0.05 % per step). Arrow keys: fine adjust; click % to reset"));
     connect(m_pitchSlider, SIGNAL(valueChanged(int)), this, SLOT(on_pitchSlider_valueChanged(int)));
 
-    m_pitchResetButton = new QPushButton("0.0%", pitchFrame);
+    m_pitchResetButton = new QPushButton("0.00%", pitchFrame);
     m_pitchResetButton->setObjectName("butPitchReset");
     m_pitchResetButton->setToolTip(tr("Current tempo offset — click to reset to 0 %"));
     QFont smallFont = m_pitchResetButton->font();
@@ -778,7 +781,7 @@ void PlayerWidget::createPerformanceControls()
     m_pitchResetButton->setFont(smallFont);
     m_pitchResetButton->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
     const QFontMetrics pitchResetMetrics(m_pitchResetButton->font());
-    const int pitchResetWidth = pitchResetMetrics.horizontalAdvance(QStringLiteral("+8.0%")) + 14;
+    const int pitchResetWidth = pitchResetMetrics.horizontalAdvance(QStringLiteral("+12.00%")) + 14;
     m_pitchResetButton->setFixedWidth(pitchResetWidth);
     connect(m_pitchResetButton, &QPushButton::clicked, this, [this]() {
         if (m_pitchSlider)
@@ -812,8 +815,10 @@ void PlayerWidget::jumpByBeats(int beatCount)
     if (lenMs > 0)
         targetMs = qMin(targetMs, lenMs);
 
-    player->setPosition(QTime(0, 0).addMSecs(targetMs));
+    const QTime targetPos = QTime(0, 0).addMSecs(targetMs);
+    player->setPosition(targetPos);
     ui->butCue->setChecked(false);
+    bpmWidget->setState(m_bpm, targetPos, m_beatPosition, m_isStarted, m_bpmAnalyzed);
     updateTimeAndPositionDisplay(false);
 }
 
@@ -901,7 +906,7 @@ void PlayerWidget::onEnvelopeScrubPositionChanged(double normalizedPosition, boo
     
     // Update waveform window position during scrub so it scrolls in real-time
     if (!finished || !player->isPlaying()) {
-        bpmWidget->setState(m_bpm, QTime(0, 0).addMSecs(targetMs), m_beatPosition, m_isStarted, m_bpmAnalysed);
+        bpmWidget->setState(m_bpm, QTime(0, 0).addMSecs(targetMs), m_beatPosition, m_isStarted, m_bpmAnalyzed);
     }
 }
 
@@ -923,34 +928,7 @@ void PlayerWidget::applyPendingEnvelopeScrubSeek()
     updateTimeAndPositionDisplay();
     
     // Refresh waveform window view when scrubbing while paused
-    bpmWidget->setState(m_bpm, player->position(), m_beatPosition, m_isStarted, m_bpmAnalysed);
-}
-
-void PlayerWidget::applyPendingSliderSeek()
-{
-    // While dragging, keep the latest target pending and apply on release.
-    if (ui->sliPosition->isSliderDown())
-        return;
-
-    m_sliderSeekTimer->stop();
-    if (m_pendingSliderSeekMs < 0)
-        return;
-
-    const int targetMs = m_pendingSliderSeekMs;
-    m_pendingSliderSeekMs = -1;
-
-    const QTime pos = QTime(0, 0).addMSecs(targetMs);
-    
-    qDebug() << "applyPendingSliderSeek:" << objectName()
-             << "targetMs=" << targetMs
-             << "targetTime=" << pos;
-    
-    if (seekOvershootsFadePoint(pos))
-        armImmediateAboutFinish();
-    else
-        suppressAboutFinishForMs(1200);
-    player->setPosition(pos);
-    updateTimeAndPositionDisplay(false);
+    bpmWidget->setState(m_bpm, player->position(), m_beatPosition, m_isStarted, m_bpmAnalyzed);
 }
 
 void PlayerWidget::suppressAboutFinishForMs(int ms)
@@ -1002,26 +980,35 @@ void PlayerWidget::setEqualizer(EqBand band, int value)
 
 void PlayerWidget::setPositionMarkers()
 {
-    if (trackanalyser->finished()) {
-        if (m_skipSilentEnd && trackanalyser->endPosition() > QTime(0, 0)) {
-            qDebug() << Q_FUNC_INFO << "endPosition:" << trackanalyser->endPosition();
-            qDebug() << Q_FUNC_INFO << "length:" << trackanalyser->length();
-            remainCueTime = trackanalyser->endPosition().msecsTo(trackanalyser->length());
+    if (trackanalyzer->finished()) {
+        if (m_skipSilentEnd && trackanalyzer->endPosition() > QTime(0, 0)) {
+            qDebug() << Q_FUNC_INFO << "endPosition:" << trackanalyzer->endPosition();
+            qDebug() << Q_FUNC_INFO << "length:" << trackanalyzer->length();
+            remainCueTime = trackanalyzer->endPosition().msecsTo(trackanalyzer->length());
         } else
             remainCueTime = 0;
 
         ui->txtCue->setText("-" + QString::number(remainCueTime / 1000));
     }
 
-    if (!m_isStarted && m_skipSilentBegin && trackanalyser->finished()) {
-        // Only seek if the start position is non-zero; the pipeline is already
-        // at 0 after a fresh load, and a redundant FLUSH seek to 0 fails on
-        // macOS and corrupts the pipeline segment state.
-        if (trackanalyser->startPosition() > QTime(0, 0)) {
-            player->setPosition(trackanalyser->startPosition());
-        }
-        ui->butCue->setChecked(true);
-    }
+    applyAutoCueAfterAnalysis(m_beatVisualMode);
+}
+
+void PlayerWidget::applyAutoCueAfterAnalysis(bool preferBeatCue)
+{
+    if (m_isStarted || !trackanalyzer->finished())
+        return;
+
+    QTime cuePosition = trackanalyzer->startPosition();
+    if (preferBeatCue && m_beatCueEnabled && m_bpm > 0 && m_beatPosition.isValid())
+        cuePosition = m_beatPosition;
+
+    if (cuePosition > QTime(0, 0))
+        player->setPosition(cuePosition);
+
+    ui->butCue->setChecked(true);
+    bpmWidget->setState(m_bpm, cuePosition, m_beatPosition, m_isStarted, m_bpmAnalyzed);
+    updateTimeAndPositionDisplay(false);
 }
 
 void PlayerWidget::play()
@@ -1099,12 +1086,12 @@ void PlayerWidget::on_butPlay_clicked()
     }
 }
 
-void PlayerWidget::analyseGainFinished()
+void PlayerWidget::analyzeGainFinished()
 {
     qDebug() << Q_FUNC_INFO << ":" << objectName();
     // got gain factor -> emit
-    if (trackanalyser->gainDB() != TrackAnalyser::GAIN_INVALID) {
-        Q_EMIT gainChanged(trackanalyser->gainFactor());
+    if (trackanalyzer->gainDB() != TrackAnalyzer::GAIN_INVALID) {
+        Q_EMIT gainChanged(trackanalyzer->gainFactor());
     }
     if (m_CurrentTrack) {
         setPositionMarkers();
@@ -1112,26 +1099,26 @@ void PlayerWidget::analyseGainFinished()
 
         qDebug() << Q_FUNC_INFO << ":" << objectName()
              << " prep marker update done"
-             << " analyserFinished=" << trackanalyser->finished()
+             << " analyzerFinished=" << trackanalyzer->finished()
              << " cueChecked=" << ui->butCue->isChecked();
 
         if (m_beatSyncEnabled) {
             QSettings settings;
-            const bool analyseTempo = settings.value("beatSyncAnalyzeTempo", true).toBool();
-            if (analyseTempo && !m_bpmAnalysed)
+            const bool analyzeTempo = settings.value("beatSyncAnalyzeTempo", true).toBool();
+            if (analyzeTempo && !m_bpmAnalyzed)
                 bpmWidget->setState(0, player->position(), m_beatPosition, m_isStarted, false);
         }
     }
 }
 
-void PlayerWidget::analyseTempoFinished()
+void PlayerWidget::analyzeTempoFinished()
 {
     if (!m_CurrentTrack)
         return;
 
-    m_bpmAnalysed = true;
-    m_bpm = tempoAnalyser->bpm();
-    m_beatPosition = tempoAnalyser->beatPosition();
+    m_bpmAnalyzed = true;
+    m_bpm = tempoAnalyzer->bpm();
+    m_beatPosition = tempoAnalyzer->beatPosition();
 
     if (m_bpm > 0)
         Q_EMIT tempoChanged(m_bpm, m_beatPosition);
@@ -1139,28 +1126,29 @@ void PlayerWidget::analyseTempoFinished()
     if (m_CurrentTrack)
         storeCachedTempo(m_CurrentTrack->url(), m_bpm, m_beatPosition);
 
+    applyAutoCueAfterAnalysis(m_beatVisualMode);
     bpmWidget->setState(m_bpm, player->position(), m_beatPosition, m_isStarted, true);
 }
 
-void PlayerWidget::analyseEnvelopeFinished()
+void PlayerWidget::analyzeEnvelopeFinished()
 {
     if (!m_CurrentTrack)
         return;
 
-    const QVector<float> env = envelopeAnalyser->amplitudeEnvelope();
+    const QVector<float> env = envelopeAnalyzer->amplitudeEnvelope();
     if (env.isEmpty())
         return;
 
     qDebug() << "ENVELOPE analysis finished:" << objectName() << "samples=" << env.size();
     storeCachedEnvelope(m_CurrentTrack->url(), env);
-    bpmWidget->setPreloadedEnvelope(env);
+    bpmWidget->setPreloadedEnvelope(env, kEnvelopeAnalysisIntervalMs);
 
     // If beat-sync mode is active and we found a meaningful beat-activity end,
     // override the cue time so voice/instrument-free tail passages are skipped.
     if (m_beatSyncEnabled && m_skipSilentEnd) {
-        const QTime beatEnd = envelopeAnalyser->beatActivityEndPosition();
+        const QTime beatEnd = envelopeAnalyzer->beatActivityEndPosition();
         if (beatEnd.isValid() && beatEnd > QTime(0, 0)) {
-            const QTime trackLen = envelopeAnalyser->length();
+            const QTime trackLen = envelopeAnalyzer->length();
             const int newRemainMs = beatEnd.msecsTo(trackLen);
             if (newRemainMs > 0 && newRemainMs > static_cast<int>(remainCueTime)) {
                 remainCueTime = newRemainMs;
@@ -1184,12 +1172,12 @@ void PlayerWidget::onTrackPropertyChanged(Track* track)
     if (trackBpm <= 0)
         return;
 
-    if (m_bpm == trackBpm && m_bpmAnalysed)
+    if (m_bpm == trackBpm && m_bpmAnalyzed)
         return;
 
-    if (m_bpm <= 0 || !m_bpmAnalysed) {
+    if (m_bpm <= 0 || !m_bpmAnalyzed) {
         m_bpm = trackBpm;
-        m_bpmAnalysed = true;
+        m_bpmAnalyzed = true;
         bpmWidget->setState(m_bpm, player->position(), m_beatPosition, m_isStarted, true);
     }
 }
@@ -1250,7 +1238,7 @@ void PlayerWidget::timerVisual_timeOut()
     constexpr int kRebuildThresholdMs = 8;
     if (m_lastWaveformRebuildPosMs < 0 || qAbs(visPosMs - m_lastWaveformRebuildPosMs) >= kRebuildThresholdMs) {
         m_lastWaveformRebuildPosMs = visPosMs;
-        bpmWidget->setState(m_bpm, QTime(0, 0).addMSecs(visPosMs), m_beatPosition, m_isStarted, m_bpmAnalysed);
+        bpmWidget->setState(m_bpm, QTime(0, 0).addMSecs(visPosMs), m_beatPosition, m_isStarted, m_bpmAnalyzed);
     }
 }
 
@@ -1320,7 +1308,7 @@ void PlayerWidget::loadTrack(Track* track)
 
     m_CurrentTrack = track;
     m_pendingPlay = false;
-    m_bpmAnalysed = false;
+    m_bpmAnalyzed = false;
     m_bpm = 0;
     m_tempoRate = 1.0;
     m_syncAdopting = false;
@@ -1344,24 +1332,26 @@ void PlayerWidget::loadTrack(Track* track)
         QUrl url = track->url();
         player->open(url);
 
-        trackanalyser->setMode(TrackAnalyser::STANDARD);
-        trackanalyser->open(url);
+        trackanalyzer->setMode(TrackAnalyzer::STANDARD);
+        trackanalyzer->open(url);
 
         const CachedEnvelope cachedEnvelope = loadCachedEnvelope(url);
-        if (cachedEnvelope.valid)
-            bpmWidget->setPreloadedEnvelope(cachedEnvelope.samples);
+        if (cachedEnvelope.valid) {
+            bpmWidget->setPreloadedEnvelope(cachedEnvelope.samples, kEnvelopeAnalysisIntervalMs);
+        }
 
-        // Always refresh the full-track envelope in background so scrubbing
-        // has stable waveform data across the complete timeline.
-        envelopeAnalyser->setMode(TrackAnalyser::ENVELOPE);
-        envelopeAnalyser->open(url);
+        // Defer full envelope extraction until BPM view is active.
+        if (m_beatVisualMode && !cachedEnvelope.valid) {
+            envelopeAnalyzer->setMode(TrackAnalyzer::ENVELOPE);
+            envelopeAnalyzer->open(url);
+        }
 
         if (m_beatSyncEnabled) {
             QSettings settings;
-            const bool analyseTempo = settings.value("beatSyncAnalyzeTempo", true).toBool();
+            const bool analyzeTempo = settings.value("beatSyncAnalyzeTempo", true).toBool();
             const CachedTempo cached = loadCachedTempo(url);
             if (cached.valid && cached.bpm > 0) {
-                m_bpmAnalysed = true;
+                m_bpmAnalyzed = true;
                 m_bpm = cached.bpm;
                 m_beatPosition = QTime(0, 0).addMSecs(cached.beatOffsetMs);
                 bpmWidget->setState(m_bpm, player->position(), m_beatPosition, m_isStarted, true);
@@ -1370,10 +1360,10 @@ void PlayerWidget::loadTrack(Track* track)
 
             // Cached BPM can be stale after detector improvements, so re-check
             // in the background whenever auto analysis is enabled.
-            if (analyseTempo) {
-                tempoAnalyser->setTempoScanDurationSeconds(qMax(16, settings.value("beatSyncScanSeconds", 16).toInt()));
-                tempoAnalyser->setMode(TrackAnalyser::TEMPO);
-                tempoAnalyser->open(url);
+            if (analyzeTempo) {
+                tempoAnalyzer->setTempoScanDurationSeconds(qMax(16, settings.value("beatSyncScanSeconds", 16).toInt()));
+                tempoAnalyzer->setMode(TrackAnalyzer::TEMPO);
+                tempoAnalyzer->open(url);
             }
         }
 
@@ -1467,11 +1457,6 @@ void PlayerWidget::updateTimeAndPositionDisplay(bool isPassive)
     QTime curpos = player->position();
     QTime remain(0, 0, 0);
     long remainMs;
-
-    qDebug() << "updateTimeAndPositionDisplay:" << objectName()
-             << "isPassive=" << isPassive
-             << "curpos=" << curpos
-             << "isSliderDown=" << ui->sliPosition->isSliderDown();
 
     //Some tracks deliver no length in state pause
     if (length == QTime(0, 0) && m_CurrentTrack)
@@ -1579,7 +1564,7 @@ void PlayerWidget::playerLoaded()
 
     qDebug() << Q_FUNC_INFO << ":" << objectName()
              << " player load finished"
-             << " analyserFinished=" << trackanalyser->finished()
+             << " analyzerFinished=" << trackanalyzer->finished()
              << " cueChecked=" << ui->butCue->isChecked();
 
     if (m_pendingPlay) {
@@ -1626,21 +1611,13 @@ void PlayerWidget::on_sliPosition_sliderMoved(int value)
     const int targetMs = qBound(0, qRound(norm * static_cast<double>(lengthMs)), lengthMs);
     const QTime pos = QTime(0, 0).addMSecs(targetMs);
 
-    qDebug() << "on_sliPosition_sliderMoved:" << objectName()
-             << "sliderValue=" << value
-             << "min=" << minValue << "max=" << maxValue
-             << "lengthMs=" << lengthMs
-             << "norm=" << norm
-             << "targetMs=" << targetMs
-             << "targetTime=" << pos;
+    if (seekOvershootsFadePoint(pos))
+        armImmediateAboutFinish();
+    else
+        suppressAboutFinishForMs(1200);
 
-    // Keep the latest target and avoid flooding the pipeline with rapid FLUSH seeks.
-    m_pendingSliderSeekMs = targetMs;
-    if (ui->sliPosition->isSliderDown()) {
-        m_sliderSeekTimer->stop();
-    } else {
-        m_sliderSeekTimer->start();
-    }
+    player->setPosition(pos);
+    bpmWidget->setState(m_bpm, pos, m_beatPosition, m_isStarted, m_bpmAnalyzed);
 
     // Update labels immediately with the target position for visual feedback
     const int remainMs = qMax(0, targetMs <= lengthMs ? (lengthMs - targetMs) : 0);
@@ -1648,37 +1625,34 @@ void PlayerWidget::on_sliPosition_sliderMoved(int value)
     ui->lblTimeMs->setText("." + pos.toString("zzz").left(1));
     ui->lblTimeRemain->setText("-" + QTime(0, 0).addMSecs(remainMs).toString("mm:ss"));
     ui->lblTimeRemainMs->setText("." + QTime(0, 0).addMSecs(remainMs).toString("zzz").left(1));
+    ui->butCue->setChecked(false);
 }
 
 void PlayerWidget::on_sliPosition_actionTriggered(int action)
 {
-    qDebug() << "on_sliPosition_actionTriggered:" << objectName() << "action=" << action;
-    
-    if (action == QAbstractSlider::SliderNoAction || action == QAbstractSlider::SliderMove)
+    //a workaround for page moving
+    int posi;
+    switch (action) {
+    case 3:
+        posi = ui->sliPosition->value() + 100;
+        break;
+    case 4:
+        posi = ui->sliPosition->value() - 100;
+        if (posi < 100)
+            posi = 1;
+        break;
+    case 1:
+        posi = ui->sliPosition->value() + 10;
+        break;
+    case 2:
+        posi = ui->sliPosition->value() - 10;
+        break;
+    default:
         return;
-
-    // Map the actual slider value after Qt handled the action.
-    this->on_sliPosition_sliderMoved(ui->sliPosition->value());
-    // Non-drag actions are discrete jumps (click-on-groove, key/page step):
-    // commit directly here to avoid timer latency and any transient sliderDown state.
-    m_sliderSeekTimer->stop();
-    if (m_pendingSliderSeekMs >= 0) {
-        const int targetMs = m_pendingSliderSeekMs;
-        m_pendingSliderSeekMs = -1;
-        const QTime pos = QTime(0, 0).addMSecs(targetMs);
-
-        qDebug() << "applyPendingSliderSeek(immediate):" << objectName()
-                 << "targetMs=" << targetMs
-                 << "targetTime=" << pos
-                 << "action=" << action;
-
-        if (seekOvershootsFadePoint(pos))
-            armImmediateAboutFinish();
-        else
-            suppressAboutFinishForMs(1200);
-        player->setPosition(pos);
-        updateTimeAndPositionDisplay(false);
+        break;
     }
+
+    this->on_sliPosition_sliderMoved(posi);
     ui->butCue->setChecked(false);
 }
 
@@ -1687,13 +1661,13 @@ void PlayerWidget::on_butCue_clicked()
     //ToDo: Visualize skipped silent at start and at the end (color bar)
     this->pause();
 
-    QTime cuePosition = trackanalyser->startPosition();
+    QTime cuePosition = trackanalyzer->startPosition();
     if (m_beatCueEnabled && m_bpm > 0 && m_beatPosition.isValid())
         cuePosition = m_beatPosition;
 
     suppressAboutFinishForMs(1000);
     player->setPosition(cuePosition);
-    bpmWidget->setState(m_bpm, cuePosition, m_beatPosition, m_isStarted, m_bpmAnalysed);
+    bpmWidget->setState(m_bpm, cuePosition, m_beatPosition, m_isStarted, m_bpmAnalyzed);
     updateTimeAndPositionDisplay();
 }
 
@@ -1727,7 +1701,7 @@ void PlayerWidget::alignCueToReferenceBeat(int referenceBpm, const QTime& refere
 
     // Base cue: the waiting track's beat anchor (first detected strong beat).
     // Best cue position = baseCueMs + targetBarPhase
-    const QTime baseCue = m_beatPosition.isValid() ? m_beatPosition : trackanalyser->startPosition();
+    const QTime baseCue = m_beatPosition.isValid() ? m_beatPosition : trackanalyzer->startPosition();
     const qint64 baseCueMs = QTime(0, 0).msecsTo(baseCue);
 
     const qint64 bestMs = baseCueMs + static_cast<qint64>(targetBarPhase + 0.5);
@@ -1764,7 +1738,7 @@ void PlayerWidget::syncNowToReferenceBeat(int referenceBpm, const QTime& referen
     const double targetBarPhase = refBarPhase * (ownBeatMs / refBeatMs);
 
     // This track's beat anchor
-    const QTime baseCue   = m_beatPosition.isValid() ? m_beatPosition : trackanalyser->startPosition();
+    const QTime baseCue   = m_beatPosition.isValid() ? m_beatPosition : trackanalyzer->startPosition();
     const qint64 anchorMs = QTime(0, 0).msecsTo(baseCue);
     const qint64 currentMs = QTime(0, 0).msecsTo(player->position());
 
@@ -1811,17 +1785,17 @@ void PlayerWidget::on_monitorRoute_toggled(bool checked)
 
 void PlayerWidget::on_pitchSlider_valueChanged(int value)
 {
-    // Each slider unit = 0.1 %, so divide by 1000 to get a rate multiplier.
-    const double rate = 1.0 + value / 1000.0;
+    // Each slider unit = 0.05 %, so divide by 2000 to get a rate multiplier.
+    const double rate = 1.0 + value / 2000.0;
     m_tempoRate = rate;
     player->setRate(rate);
     bpmWidget->setTempoInfo(m_tempoRate, m_syncAdopting);
 
     if (m_pitchResetButton) {
         m_pitchResetButton->setText(
-            value == 0 ? QStringLiteral("0.0%")
+            value == 0 ? QStringLiteral("0.00%")
                        : QString("%1%2%").arg(value > 0 ? "+" : "")
-                                        .arg(value / 10.0, 0, 'f', 1));
+                                        .arg(value / 20.0, 0, 'f', 2));
     }
 
     if (std::fabs(m_tempoRate - 1.0) < 0.001 && !m_syncAdopting)

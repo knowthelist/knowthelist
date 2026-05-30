@@ -65,6 +65,7 @@ private Q_SLOTS:
     void on_cmdMonitorPlay_clicked();
     void on_cmdMonitorStop_clicked();
     void on_cmdMonitorSettings_clicked();
+    void on_resetAnalysisCachePressed();
     void on_cmdFade_clicked();
 
     void timerMonitor_timeOut();
