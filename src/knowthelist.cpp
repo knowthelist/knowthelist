@@ -1138,7 +1138,10 @@ void Knowthelist::timerAutoFader_timerOut()
     }
 
     if (m_fadeSyncPhase == FadeSyncCrossfade) {
-        ui->sliFader->setValue(ui->sliFader->value() + m_xfadeDir);
+        {
+            QSignalBlocker blocker(ui->sliFader);
+            ui->sliFader->setValue(ui->sliFader->value() + m_xfadeDir);
+        }
         m_fadeSyncStep = qMin(m_fadeSyncTotalSteps, m_fadeSyncStep + 1);
         applyAutoFadeSharedTempo(autoFadeSharedTempoForStep(m_fadeSyncStep));
 
@@ -1158,11 +1161,13 @@ void Knowthelist::timerAutoFader_timerOut()
                 ui->ledFadeRight->off();
 
             PlayerWidget* finishedPlayer = m_fadeSyncOutgoingPlayer;
-            if (finishedPlayer == player1 && player1->isStarted()) {
-                player1->stop();
+            if (finishedPlayer == player1) {
+                if (player1->isStarted())
+                    player1->stop();
                 playList1->skipForward();
-            } else if (finishedPlayer == player2 && player2->isStarted()) {
-                player2->stop();
+            } else if (finishedPlayer == player2) {
+                if (player2->isStarted())
+                    player2->stop();
                 playList2->skipForward();
             }
 
@@ -1199,7 +1204,10 @@ void Knowthelist::timerAutoFader_timerOut()
     }
 
     // Plain crossfade without auto-sync.
-    ui->sliFader->setValue(ui->sliFader->value() + m_xfadeDir);
+    {
+        QSignalBlocker blocker(ui->sliFader);
+        ui->sliFader->setValue(ui->sliFader->value() + m_xfadeDir);
+    }
 
     if (ui->sliFader->value() % 3 == 0) {
         if (m_xfadeDir < 0)
@@ -1213,10 +1221,9 @@ void Knowthelist::timerAutoFader_timerOut()
         ui->ledFadeLeft->off();
         isFading = false;
 
-        if (player2->isStarted()) {
+        if (player2->isStarted())
             player2->stop();
-            playList2->skipForward();
-        }
+        playList2->skipForward();
         if (ui->toggleAutoDJ->isChecked())
             djSession->updatePlaylists();
 
@@ -1227,10 +1234,9 @@ void Knowthelist::timerAutoFader_timerOut()
         isFading = false;
         ui->ledFadeRight->off();
 
-        if (player1->isStarted()) {
+        if (player1->isStarted())
             player1->stop();
-            playList1->skipForward();
-        }
+        playList1->skipForward();
         if (ui->toggleAutoDJ->isChecked())
             djSession->updatePlaylists();
 

@@ -16,13 +16,24 @@
 #include <QWidget>
 #include <QPainterPath>
 #include <QRect>
+#include <QFutureWatcher>
 
 class PlayerBpmWidget : public QWidget {
     Q_OBJECT
 public:
     explicit PlayerBpmWidget(QWidget* parent = nullptr);
 
+    struct RebuildResult {
+        QVector<float> envelope;
+        QPainterPath envFillPath;
+        QPainterPath topEdgePath;
+        QPainterPath bottomEdgePath;
+        QRect band;
+    };
+
     void setState(int bpm, const QTime& position, const QTime& beatReference, bool running, bool analyzed = true);
+    void setState(int bpm, double exactBpm, const QTime& position, const QTime& beatReference, bool running, bool analyzed = true);
+    void setExactBpm(double exactBpm);
     void setTempoInfo(double tempoRate, bool syncAdjusting);
     void appendEnvelopeSample(float value);
     void appendEnvelopeSampleAt(int positionMs, float value);
@@ -61,6 +72,13 @@ private:
     QVector<float> m_envelope;
     int m_windowMs;
     int m_sampleIntervalMs;
+    double m_exactBpm;
+
+    QFutureWatcher<RebuildResult> m_rebuildWatcher;
+    QRect    m_requestedBand;
+    int      m_requestedCenterY;
+    double   m_requestedHalfH;
+    bool     m_rebuildRequested;
 
     // CPU optimisation: throttled repaints + cached envelope geometry
     QTimer   m_updateTimer;
@@ -81,6 +99,8 @@ private:
     QRect phaseBandRect() const;
     double normalizedX(const QPoint& pos) const;
     double phase() const;
+    void requestEnvelopeRebuild(const QRect& band, int centerY, double halfH);
+    void onRebuildFinished();
 };
 
 #endif // PLAYERBPMWIDGET_H

@@ -53,11 +53,13 @@ struct CachedTempo {
     bool valid;
     int bpm;
     int beatOffsetMs;
+    double exactBpm;
 
     CachedTempo()
         : valid(false)
         , bpm(0)
         , beatOffsetMs(0)
+        , exactBpm(0.0)
     {
     }
 };
@@ -136,6 +138,10 @@ bool ensureTempoCacheTable()
                             QLatin1String("ALTER TABLE analysis_cache ADD COLUMN envelope_version INTEGER DEFAULT 0")))
         return false;
 
+    if (!addColumnIfMissing(db, QLatin1String("exact_bpm"),
+                            QLatin1String("ALTER TABLE analysis_cache ADD COLUMN exact_bpm REAL DEFAULT 0.0")))
+        return false;
+
     if (!addColumnIfMissing(db, QLatin1String("envelope_data"),
                             QLatin1String("ALTER TABLE analysis_cache ADD COLUMN envelope_data BLOB")))
         return false;
@@ -150,20 +156,38 @@ CachedTempo loadCachedTempo(const QUrl& url)
         return cached;
 
     QSqlQuery q(QSqlDatabase::database());
-    q.prepare("SELECT bpm, beat_offset_ms, analysis_version FROM analysis_cache WHERE url = :url");
+    q.prepare("SELECT bpm, beat_offset_ms, exact_bpm, analysis_version FROM analysis_cache WHERE url = :url");
     q.bindValue(":url", url.toLocalFile());
-    if (!q.exec())
+    if (!q.exec()) {
+        // Older schema without exact_bpm
+        q.prepare("SELECT bpm, beat_offset_ms, analysis_version FROM analysis_cache WHERE url = :url");
+        q.bindValue(":url", url.toLocalFile());
+        if (!q.exec())
+            return cached;
+
+        if (q.next()) {
+            const int analysisVersion = q.value(2).toInt();
+            const int cachedBpm = q.value(0).toInt();
+            if (analysisVersion == kTempoCacheVersion || (analysisVersion <= 0 && cachedBpm > 0)) {
+                cached.valid = true;
+                cached.bpm = cachedBpm;
+                cached.beatOffsetMs = q.value(1).toInt();
+                cached.exactBpm = static_cast<double>(cachedBpm);
+            }
+        }
         return cached;
+    }
 
     if (q.next()) {
-        const int analysisVersion = q.value(2).toInt();
         const int cachedBpm = q.value(0).toInt();
-        // Backward-compatible read: older rows may not have analysis_version
-        // set but still carry a useful BPM from playlist analysis.
+        const int beatOffsetMs = q.value(1).toInt();
+        const double cachedExactBpm = q.value(2).toDouble();
+        const int analysisVersion = q.value(3).toInt();
         if (analysisVersion == kTempoCacheVersion || (analysisVersion <= 0 && cachedBpm > 0)) {
             cached.valid = true;
             cached.bpm = cachedBpm;
-            cached.beatOffsetMs = q.value(1).toInt();
+            cached.beatOffsetMs = beatOffsetMs;
+            cached.exactBpm = (cachedExactBpm > 0.0) ? cachedExactBpm : static_cast<double>(cachedBpm);
         }
     }
 
@@ -193,7 +217,7 @@ CachedEnvelope loadCachedEnvelope(const QUrl& url)
     return cached;
 }
 
-void storeCachedTempo(const QUrl& url, int bpm, const QTime& beatPosition)
+void storeCachedTempo(const QUrl& url, int bpm, double exactBpm, const QTime& beatPosition)
 {
     if (bpm <= 0)
         return;
@@ -202,13 +226,14 @@ void storeCachedTempo(const QUrl& url, int bpm, const QTime& beatPosition)
 
     const int beatOffsetMs = QTime(0, 0).msecsTo(beatPosition);
     QSqlQuery q(QSqlDatabase::database());
-    q.prepare("INSERT OR REPLACE INTO analysis_cache (url, bpm, beat_offset_ms, changedate, analysis_version, envelope_version, envelope_data) "
-              "VALUES (:url, :bpm, :beat_offset_ms, strftime('%s','now'), :analysis_version, "
+    q.prepare("INSERT OR REPLACE INTO analysis_cache (url, bpm, beat_offset_ms, exact_bpm, changedate, analysis_version, envelope_version, envelope_data) "
+              "VALUES (:url, :bpm, :beat_offset_ms, :exact_bpm, strftime('%s','now'), :analysis_version, "
               "COALESCE((SELECT envelope_version FROM analysis_cache WHERE url = :url), 0), "
               "(SELECT envelope_data FROM analysis_cache WHERE url = :url))");
     q.bindValue(":url", url.toLocalFile());
     q.bindValue(":bpm", bpm);
     q.bindValue(":beat_offset_ms", beatOffsetMs);
+    q.bindValue(":exact_bpm", exactBpm);
     q.bindValue(":analysis_version", kTempoCacheVersion);
     q.exec();
 }
@@ -268,6 +293,8 @@ PlayerWidget::PlayerWidget(QWidget* parent)
     , m_lastControlsPanelWidth(-1)
     , m_monitorRouteAvailable(false)
     , m_monitorRouteEnabled(false)
+    , m_simulatedPositionMs(-1)
+    , m_isSimulating(false)
     , p(new PlayerWidgetPrivate)
 {
     ui->setupUi(this);
@@ -940,12 +967,30 @@ bool PlayerWidget::seekOvershootsFadePoint(const QTime& targetPos) const
     if (!m_isStarted)
         return false;
 
+    const int targetMs = qMax(0, QTime(0, 0).msecsTo(targetPos));
+
+    if (trackanalyzer->finished() && m_skipSilentEnd) {
+        QTime fadePoint;
+        QTime beatEnd = trackanalyzer->beatActivityEndPosition();
+        QTime trackEnd = trackanalyzer->endPosition();
+        if (beatEnd.isValid() && beatEnd > QTime(0, 0))
+            fadePoint = beatEnd;
+        if (trackEnd.isValid() && trackEnd > QTime(0, 0)) {
+            if (!fadePoint.isValid() || trackEnd < fadePoint)
+                fadePoint = trackEnd;
+        }
+
+        if (fadePoint.isValid() && fadePoint > QTime(0, 0)) {
+            const int triggerPosMs = qMax(0, QTime(0, 0).msecsTo(fadePoint) - mTrackFinishEmitTime);
+            return targetMs >= triggerPosMs;
+        }
+    }
+
     const QTime length = player->length();
     const int lengthMs = QTime(0, 0).msecsTo(length);
     if (lengthMs <= 0)
         return false;
 
-    const int targetMs = qMax(0, QTime(0, 0).msecsTo(targetPos));
     const int triggerPosMs = qMax(0, lengthMs - static_cast<int>(remainCueTime) - mTrackFinishEmitTime);
     return targetMs >= triggerPosMs;
 }
@@ -977,12 +1022,27 @@ void PlayerWidget::setEqualizer(EqBand band, int value)
 void PlayerWidget::setPositionMarkers()
 {
     if (trackanalyzer->finished()) {
-        if (m_skipSilentEnd && trackanalyzer->endPosition() > QTime(0, 0)) {
-            qDebug() << Q_FUNC_INFO << "endPosition:" << trackanalyzer->endPosition();
-            qDebug() << Q_FUNC_INFO << "length:" << trackanalyzer->length();
-            remainCueTime = trackanalyzer->endPosition().msecsTo(trackanalyzer->length());
-        } else
+        if (m_skipSilentEnd) {
+            QTime fadePoint;
+            QTime beatEnd = trackanalyzer->beatActivityEndPosition();
+            QTime trackEnd = trackanalyzer->endPosition();
+            if (beatEnd.isValid() && beatEnd > QTime(0, 0))
+                fadePoint = beatEnd;
+            if (trackEnd.isValid() && trackEnd > QTime(0, 0)) {
+                if (!fadePoint.isValid() || trackEnd < fadePoint)
+                    fadePoint = trackEnd;
+            }
+
+            if (fadePoint.isValid() && fadePoint > QTime(0, 0)) {
+                qDebug() << Q_FUNC_INFO << "fadeStartPoint:" << fadePoint;
+                qDebug() << Q_FUNC_INFO << "length:" << trackanalyzer->length();
+                remainCueTime = fadePoint.msecsTo(trackanalyzer->length());
+            } else {
+                remainCueTime = 0;
+            }
+        } else {
             remainCueTime = 0;
+        }
 
         ui->txtCue->setText("-" + QString::number(remainCueTime / 1000));
     }
@@ -1033,6 +1093,7 @@ void PlayerWidget::play()
         timerVisual->start();  // High-frequency waveform updates for smooth display
         m_visualFrameTimer.restart();
         m_lastWaveformRebuildPosMs = -1;  // Reset for fresh rebuild on play
+        m_isSimulating = false;  // Not simulating when playing
         Q_EMIT statusChanged(m_isStarted);
     } else
         m_isHanging = true;
@@ -1048,7 +1109,7 @@ void PlayerWidget::pause()
     m_syncAdopting = false;
     timerLevel->stop();
     timerPosition->stop();
-    timerVisual->stop();
+    m_isSimulating = false;
     vuMeter->reset();
     bpmWidget->setTempoInfo(m_tempoRate, m_syncAdopting);
     Q_EMIT statusChanged(m_isStarted);
@@ -1067,7 +1128,7 @@ void PlayerWidget::stop()
     player->stop();
     timerLevel->stop();
     timerPosition->stop();
-    timerVisual->stop();
+    m_isSimulating = false;
     vuMeter->reset();
     bpmWidget->clearEnvelope();
     m_liveEnvelopeStarted = false;
@@ -1129,12 +1190,14 @@ void PlayerWidget::analyzeTempoFinished()
     if (m_bpm > 0)
         Q_EMIT tempoChanged(m_bpm, m_beatPosition);
 
-    if (m_CurrentTrack)
-        storeCachedTempo(m_CurrentTrack->url(), m_bpm, m_beatPosition);
+    if (m_CurrentTrack) {
+        qDebug() << Q_FUNC_INFO << "Storing tempo cache: bpm=" << m_bpm << "exactBpm=" << trackanalyzer->exactBpm();
+        storeCachedTempo(m_CurrentTrack->url(), m_bpm, trackanalyzer->exactBpm(), m_beatPosition);
+    }
 
     applyAutoCueAfterAnalysis(m_beatVisualMode);
     bpmWidget->setTrackLength(player->length());
-    bpmWidget->setState(m_bpm, player->position(), m_beatPosition, m_isStarted, true);
+    bpmWidget->setState(m_bpm, trackanalyzer->exactBpm(), player->position(), m_beatPosition, m_isStarted, true);
 }
 
 void PlayerWidget::analyzeEnvelopeFinished()
@@ -1148,21 +1211,33 @@ void PlayerWidget::analyzeEnvelopeFinished()
 
     qDebug() << "ENVELOPE analysis finished:" << objectName() << "samples=" << env.size();
     storeCachedEnvelope(m_CurrentTrack->url(), env);
-    bpmWidget->setPreloadedEnvelope(env, kEnvelopeAnalysisIntervalMs);
     bpmWidget->setTrackLength(trackanalyzer->length());
+    bpmWidget->setPreloadedEnvelope(env, kEnvelopeAnalysisIntervalMs);
 
     // If beat-sync mode is active and we found a meaningful beat-activity end,
     // override the cue time so voice/instrument-free tail passages are skipped.
+    // Use the earliest valid cue point between beat activity end and the detected
+    // track end so fade timing does not wait past the actual song end.
     if (m_beatSyncEnabled && m_skipSilentEnd) {
         const QTime beatEnd = trackanalyzer->beatActivityEndPosition();
-        if (beatEnd.isValid() && beatEnd > QTime(0, 0)) {
+        const QTime trackEnd = trackanalyzer->endPosition();
+        QTime fadePoint;
+
+        if (beatEnd.isValid() && beatEnd > QTime(0, 0))
+            fadePoint = beatEnd;
+        if (trackEnd.isValid() && trackEnd > QTime(0, 0)) {
+            if (!fadePoint.isValid() || trackEnd < fadePoint)
+                fadePoint = trackEnd;
+        }
+
+        if (fadePoint.isValid() && fadePoint > QTime(0, 0)) {
             const QTime trackLen = trackanalyzer->length();
-            const int newRemainMs = beatEnd.msecsTo(trackLen);
+            const int newRemainMs = fadePoint.msecsTo(trackLen);
             if (newRemainMs > 0 && newRemainMs > static_cast<int>(remainCueTime)) {
                 remainCueTime = newRemainMs;
                 ui->txtCue->setText("-" + QString::number(remainCueTime / 1000));
-                qDebug() << Q_FUNC_INFO << "beat activity end overrides cue time:"
-                         << beatEnd << "remainCue=" << remainCueTime;
+                qDebug() << Q_FUNC_INFO << "fade point overrides cue time:"
+                         << fadePoint << "remainCue=" << remainCueTime;
             }
         }
     }
@@ -1228,18 +1303,49 @@ void PlayerWidget::timerLevel_timeOut()
 
 void PlayerWidget::timerPosition_timeOut()
 {
-    updateTimeAndPositionDisplay();
+    if (m_isStarted) {
+        const QTime length = player->length();
+        const QTime currentPos = player->position();
+        if (length > QTime(0, 0) && currentPos >= length) {
+            qDebug() << Q_FUNC_INFO << ": reached end of track, pausing";
+            pause();
+        }
+    }
+
+    updateTimeAndPositionDisplay(true);
 }
 
 void PlayerWidget::timerVisual_timeOut()
 {
     // High-frequency visual update, but only rebuild waveform when position has moved enough.
     // This keeps the display smooth without jittering amplitude from constant recalculation.
-    if (!m_isStarted || !bpmWidget || !m_beatVisualMode)
+    if (!bpmWidget || !m_beatVisualMode)
         return;
 
+    if (!m_isStarted)
+        return;
+
+    // Playing: use actual player position
+    const QTime length = player->length();
     const QTime currentPos = player->position();
-    const int visPosMs = qMax(0, QTime(0, 0).msecsTo(currentPos) - m_visualLatencyMs);
+    if (length > QTime(0, 0) && currentPos >= length) {
+        qDebug() << Q_FUNC_INFO << ": reached end of track, pausing";
+        pause();
+        return;
+    }
+
+    const QTime displayPos = (length > QTime(0, 0) && currentPos > length) ? length : currentPos;
+
+    qDebug() << "Visual update:" << objectName()
+             << "currentPos=" << currentPos
+             << "displayPos=" << displayPos
+             << "length=" << length
+             << "visualLatencyMs=" << m_visualLatencyMs;
+    const int visPosMs = qMax(0, QTime(0, 0).msecsTo(displayPos) - m_visualLatencyMs);
+
+    // Update simulated position to track real position while playing.
+    m_simulatedPositionMs = visPosMs;
+    m_isSimulating = false;
 
     // Ensure track length is set for proper end-of-track windowing
     bpmWidget->setTrackLength(player->length());
@@ -1249,7 +1355,8 @@ void PlayerWidget::timerVisual_timeOut()
     constexpr int kRebuildThresholdMs = 8;
     if (m_lastWaveformRebuildPosMs < 0 || qAbs(visPosMs - m_lastWaveformRebuildPosMs) >= kRebuildThresholdMs) {
         m_lastWaveformRebuildPosMs = visPosMs;
-        bpmWidget->setState(m_bpm, QTime(0, 0).addMSecs(visPosMs), m_beatPosition, m_isStarted, m_bpmAnalyzed);
+        const double exactBpm = trackanalyzer ? trackanalyzer->exactBpm() : static_cast<double>(m_bpm);
+        bpmWidget->setState(m_bpm, exactBpm, QTime(0, 0).addMSecs(visPosMs), m_beatPosition, m_isStarted, m_bpmAnalyzed);
     }
 }
 
@@ -1354,15 +1461,16 @@ void PlayerWidget::loadTrack(Track* track)
             m_bpmAnalyzed = true;
             m_bpm = cachedTempo.bpm;
             m_beatPosition = QTime(0, 0).addMSecs(cachedTempo.beatOffsetMs);
-            bpmWidget->setState(m_bpm, player->position(), m_beatPosition, m_isStarted, true);
+            qDebug() << Q_FUNC_INFO << "Loaded cached tempo: bpm=" << m_bpm << "exactBpm=" << cachedTempo.exactBpm << "beatOffsetMs=" << cachedTempo.beatOffsetMs;
+            bpmWidget->setState(m_bpm, cachedTempo.exactBpm, player->position(), m_beatPosition, m_isStarted, true);
             Q_EMIT tempoChanged(m_bpm, m_beatPosition);
             // Apply auto-cue when cached BPM is available (before async analysis completes)
             applyAutoCueAfterAnalysis(m_beatVisualMode);
         }
 
         if (cachedEnvelope.valid) {
-            bpmWidget->setPreloadedEnvelope(cachedEnvelope.samples, kEnvelopeAnalysisIntervalMs);
             bpmWidget->setTrackLength(player->length());
+            bpmWidget->setPreloadedEnvelope(cachedEnvelope.samples, kEnvelopeAnalysisIntervalMs);
         }
 
         // Run exactly one analyzer pass when any analysis-dependent feature needs it.
@@ -1467,6 +1575,8 @@ void PlayerWidget::updateTimeAndPositionDisplay(bool isPassive)
 
     QTime length = player->length();
     QTime curpos = player->position();
+    if (length > QTime(0, 0) && curpos > length)
+        curpos = length;
     QTime remain(0, 0, 0);
     long remainMs;
 
@@ -1807,7 +1917,7 @@ void PlayerWidget::on_pitchSlider_valueChanged(int value)
 
     if (m_pitchResetButton) {
         m_pitchResetButton->setText(
-            value == 0 ? QStringLiteral("0.00%")
+            value == 0 ? QStringLiteral("0.0%")
                        : QString("%1%2%").arg(value > 0 ? "+" : "")
                                         .arg(value / 20.0, 0, 'f', 2));
     }

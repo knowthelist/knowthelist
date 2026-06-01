@@ -226,6 +226,8 @@ private:
     QString m_monitorOutputDeviceId;
     bool m_monitorRouteAvailable;
     bool m_monitorRouteEnabled;
+    qint64 m_simulatedPositionMs;
+    bool m_isSimulating;
 
     struct PlayerWidgetPrivate* p;
 };

@@ -44,6 +44,7 @@ public:
     QTime beatPosition();
     QTime beatActivityEndPosition();
     int bpm();
+    double exactBpm();
     QVector<float> amplitudeEnvelope() const;
     bool finished() { return m_finished; }
     void setMode(modeType mode);
@@ -70,6 +71,7 @@ private:
     std::unique_ptr<JuceAudioBackend> audioBackend;
 
     double m_GainDB = GAIN_INVALID;
+    double m_ExactBpm = 0.0;
     QTime m_StartPosition = QTime(0, 0);
     QTime m_EndPosition = QTime(0, 0);
     QTime m_BeatPosition = QTime(0, 0);

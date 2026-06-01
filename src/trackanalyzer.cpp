@@ -23,6 +23,7 @@
 #include <QMutexLocker>
 #include <QWaitCondition>
 #include <QTimer>
+#include <QThread>
 #include <QtConcurrent/QtConcurrent>
 #include <QVector>
 #include <QMetaObject>
@@ -149,6 +150,9 @@ static TrackAnalysisData scanAudioFile(const QUrl& url)
                 firstActiveFrame = static_cast<int>(data.frameRms.size()) - 1;
             lastActiveFrame = static_cast<int>(data.frameRms.size()) - 1;
         }
+
+        if ((data.frameRms.size() & 127) == 0)
+            QThread::yieldCurrentThread();
     }
 
     data.peakRms = peakRms;
@@ -407,6 +411,7 @@ void TrackAnalyzer::open(QUrl url)
     p->currentUrl = url;
     p->finishQueued = false;
     p->bpmDetected = false;
+    m_ExactBpm = 0.0;
     locker.unlock();
     QFuture<void> future = QtConcurrent::run([this, url]() { asyncOpen(url); });
     p->watcher.setFuture(future);
@@ -414,6 +419,9 @@ void TrackAnalyzer::open(QUrl url)
 
 void TrackAnalyzer::asyncOpen(QUrl url)
 {
+    QThread::currentThread()->setObjectName("TrackAnalyzerOpen");
+    QThread::currentThread()->setPriority(QThread::LowestPriority);
+
     if (!audioBackend) {
         if (p->analysisMode == TEMPO)
             emit finishTempo();
@@ -448,6 +456,7 @@ void TrackAnalyzer::asyncOpen(QUrl url)
 
     QTime duration = audioBackend->getDuration();
     TrackAnalysisData analysis = scanAudioFileCached(url);
+    qDebug() << Q_FUNC_INFO << "duration from JUCE:" << duration << "duration from analysis:" << QTime(0, 0).addMSecs(static_cast<int>(qRound(analysis.durationMs)));
     if (analysis.durationMs > 0.0)
         duration = QTime(0, 0).addMSecs(static_cast<int>(qRound(analysis.durationMs)));
 
@@ -547,6 +556,11 @@ int TrackAnalyzer::bpm()
 {
     QMutexLocker locker(&p->mutex);
     return p->bpm;
+}
+
+double TrackAnalyzer::exactBpm()
+{
+    return m_ExactBpm > 0.0 ? m_ExactBpm : static_cast<double>(p->bpm);
 }
 
 QVector<float> TrackAnalyzer::amplitudeEnvelope() const
@@ -679,6 +693,8 @@ void TrackAnalyzer::detectTempo()
     const QVector<int> onsetsLow = pickOnsets(lowEnv, minDistance + 2);
 
     QVector<double> score(kMaxBpm + 1, 0.0);
+    QVector<double> exactBpmSum(kMaxBpm + 1, 0.0);
+    QVector<double> exactBpmWeight(kMaxBpm + 1, 0.0);
 
     auto voteTempo = [&](const QVector<int>& onsets, const QList<float>& env, double weight, bool lowBandSource) {
         for (int i = 0; i < onsets.size(); ++i) {
@@ -702,6 +718,8 @@ void TrackAnalyzer::detectTempo()
                     const double pairDistancePenalty = 1.0 / (1.0 + 0.08 * (j - i - 1));
                     const double contribution = weight * static_cast<double>(baseWeight * pairWeight) * pairDistancePenalty;
                     score[bpmBin] += contribution;
+                    exactBpmSum[bpmBin] += contribution * bpm;
+                    exactBpmWeight[bpmBin] += contribution;
 
                     if (lowBandSource && bpmBin >= 72 && bpmBin <= 90) {
                         const int doubledBin = bpmBin * 2;
@@ -938,11 +956,16 @@ void TrackAnalyzer::detectTempo()
         }
     }
 
+    double finalExactBpm = static_cast<double>(finalBpm);
+    if (finalBpm >= kMinBpm && finalBpm <= kMaxBpm && exactBpmWeight[finalBpm] > 0.0)
+        finalExactBpm = exactBpmSum[finalBpm] / exactBpmWeight[finalBpm];
+
     {
         QMutexLocker locker(&p->mutex);
         p->bpm = qBound(0, finalBpm, kMaxBpm);
         p->bpmDetected = true;
     }
+    m_ExactBpm = finalExactBpm;
 
     int beatAnchorIdx = -1;
     const QList<float>& anchorEnv = lowEnv.isEmpty() ? fullEnv : lowEnv;
@@ -975,8 +998,8 @@ void TrackAnalyzer::detectTempo()
     if (beatAnchorIdx >= 0) {
         if (p->bpm > 0 && beatAnchorIdx < spectralFluxTimes.size() && spectralFluxTimes.at(beatAnchorIdx) > 0) {
             const qint64 anchorMs = spectralFluxTimes.at(beatAnchorIdx) / 1000000LL;
-            const qint64 beatMs = qMax<qint64>(1LL, 60000LL / static_cast<qint64>(p->bpm));
-            const qint64 phaseMs = anchorMs % beatMs;
+            const double beatMs = 60000.0 / m_ExactBpm;
+            const qint64 phaseMs = static_cast<qint64>(std::fmod(static_cast<double>(anchorMs), beatMs));
             m_BeatPosition = QTime(0, 0).addMSecs(static_cast<int>(phaseMs));
         } else {
             const qint64 offsetMs = static_cast<qint64>((1000.0 * beatAnchorIdx) / kAnalysisFrameRate);
@@ -991,7 +1014,8 @@ void TrackAnalyzer::detectTempo()
         tempoCache.insert(cacheKey, qMakePair(qBound(0, finalBpm, kMaxBpm), QTime(0, 0).msecsTo(m_BeatPosition)));
     }
 
-    qDebug() << Q_FUNC_INFO << "Estimated BPM:" << p->bpm << "frames:" << spectralFlux.size()
+    qDebug() << Q_FUNC_INFO << "Estimated BPM:" << p->bpm << "exactBpm:" << m_ExactBpm
+             << "frames:" << spectralFlux.size()
              << "onsetsFull:" << onsetsFull.size() << "onsetsLow:" << onsetsLow.size();
 }
 
@@ -1031,5 +1055,23 @@ void TrackAnalyzer::cleanup()
 void TrackAnalyzer::loadThreadFinished()
 {
     // Analysis load thread finished
-    start();
+    TrackAnalyzer::modeType mode;
+    {
+        QMutexLocker locker(&p->mutex);
+        mode = p->analysisMode;
+    }
+
+    if (mode == TEMPO) {
+        QMutexLocker locker(&p->mutex);
+        p->tempoWindowStarted = true;
+        p->tempoTimeout->start(p->tempoScanDurationSeconds * 1000);
+        (void)QtConcurrent::run([this]() {
+            QThread::currentThread()->setObjectName("TrackAnalyzerTempo");
+            QThread::currentThread()->setPriority(QThread::LowestPriority);
+            detectTempo();
+            need_finish();
+        });
+    } else {
+        start();
+    }
 }

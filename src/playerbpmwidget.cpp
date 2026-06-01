@@ -5,6 +5,7 @@
 #include <QLinearGradient>
 #include <QMouseEvent>
 #include <QResizeEvent>
+#include <QtConcurrent/QtConcurrent>
 #include <QtMath>
 
 namespace {
@@ -21,6 +22,121 @@ QString formatTempoValue(double tempo)
         return QString::number(qRound(tempo));
     return QString::number(tempo, 'f', 1);
 }
+
+static QVector<float> buildVisibleEnvelope(const QVector<float>& timelineEnvelope,
+                                           const QVector<quint8>& timelineKnown,
+                                           int sampleIntervalMs,
+                                           int bandWidth,
+                                           int windowMs,
+                                           int leftMs,
+                                           int trackLenMs)
+{
+    const int intervalMs = qMax(1, sampleIntervalMs);
+    const int targetSamples = qMax(2, bandWidth);
+    QVector<float> envelope;
+    envelope.resize(targetSamples);
+
+    const float* envelopeData = timelineEnvelope.constData();
+    const quint8* knownData = timelineKnown.constData();
+    const int timelineCount = timelineEnvelope.size();
+
+    float lastValidEnvelope = 0.0f;
+    for (int k = timelineCount - 1; k >= 0; --k) {
+        if (knownData[k]) {
+            lastValidEnvelope = envelopeData[k];
+            break;
+        }
+    }
+
+    const int rightMs = leftMs + windowMs;
+    const int visibleWindowMs = rightMs - leftMs;
+    const double stepMs = static_cast<double>(visibleWindowMs) / static_cast<double>(targetSamples);
+
+    for (int i = 0; i < targetSamples; ++i) {
+        const double tStartMs = leftMs + static_cast<double>(i) * stepMs;
+        const double tEndMs   = tStartMs + stepMs;
+
+        if (tEndMs < 0.0) {
+            envelope[i] = 0.0f;
+            continue;
+        }
+
+        const int rawFirst = static_cast<int>(tStartMs / intervalMs);
+        const int rawLast  = static_cast<int>(tEndMs   / intervalMs);
+        const int idxFirst = rawFirst < 0 ? 0 : rawFirst;
+        const int idxLast  = rawLast >= timelineCount ? timelineCount - 1 : rawLast;
+
+        if (rawFirst >= timelineCount) {
+            envelope[i] = lastValidEnvelope;
+            continue;
+        }
+
+        float maxVal = 0.0f;
+        for (int j = idxFirst; j <= idxLast; ++j) {
+            if (knownData[j]) {
+                const float v = envelopeData[j];
+                if (v > maxVal) maxVal = v;
+            }
+        }
+
+        if (maxVal <= 0.0f && rawLast >= timelineCount)
+            maxVal = lastValidEnvelope;
+
+        envelope[i] = maxVal;
+    }
+
+    return envelope;
+}
+
+static void buildEnvelopePaths(const QVector<float>& envelope,
+                               const QRect& band,
+                               int centerY,
+                               double halfH,
+                               QPainterPath& fillPath,
+                               QPainterPath& topPath,
+                               QPainterPath& bottomPath)
+{
+    const int count = envelope.size();
+    if (count < 2) {
+        fillPath = QPainterPath();
+        topPath = QPainterPath();
+        bottomPath = QPainterPath();
+        return;
+    }
+
+    const double bandLeft = band.left();
+    const double bandW = band.width();
+    const double binWidth = bandW / static_cast<double>(count);
+    const float* envData = envelope.constData();
+
+    fillPath = QPainterPath();
+    fillPath.moveTo(bandLeft, centerY);
+    for (int i = 0; i < count; ++i) {
+        const double x = bandLeft + (static_cast<double>(i) + 0.5) * binWidth;
+        fillPath.lineTo(x, centerY - envData[i] * halfH);
+    }
+    fillPath.lineTo(bandLeft + bandW, centerY);
+    for (int i = count - 1; i >= 0; --i) {
+        const double x = bandLeft + (static_cast<double>(i) + 0.5) * binWidth;
+        fillPath.lineTo(x, centerY + envData[i] * halfH);
+    }
+    fillPath.closeSubpath();
+
+    topPath = QPainterPath();
+    bottomPath = QPainterPath();
+    for (int i = 0; i < count; ++i) {
+        const double x = bandLeft + (static_cast<double>(i) + 0.5) * binWidth;
+        const double yt = centerY - envData[i] * halfH;
+        const double yb = centerY + envData[i] * halfH;
+        if (i == 0) {
+            topPath.moveTo(x, yt);
+            bottomPath.moveTo(x, yb);
+        } else {
+            topPath.lineTo(x, yt);
+            bottomPath.lineTo(x, yb);
+        }
+    }
+}
 } // namespace
 
 PlayerBpmWidget::PlayerBpmWidget(QWidget* parent)
@@ -34,6 +150,8 @@ PlayerBpmWidget::PlayerBpmWidget(QWidget* parent)
     , m_syncAdjusting(false)
     , m_windowMs(6000)
     , m_sampleIntervalMs(50)  // Keep 50ms: dense enough, rebuilds less often = stable display
+    , m_exactBpm(0.0)
+    , m_rebuildRequested(false)
     , m_envelopeDirty(false)
     , m_envelopePreloaded(false)
     , m_scrubbing(false)
@@ -46,6 +164,7 @@ PlayerBpmWidget::PlayerBpmWidget(QWidget* parent)
     m_updateTimer.setSingleShot(true);
     m_updateTimer.setInterval(33);
     connect(&m_updateTimer, &QTimer::timeout, this, &PlayerBpmWidget::onUpdateTimer);
+    connect(&m_rebuildWatcher, &QFutureWatcher<RebuildResult>::finished, this, &PlayerBpmWidget::onRebuildFinished);
 }
 
 void PlayerBpmWidget::onUpdateTimer()
@@ -55,7 +174,13 @@ void PlayerBpmWidget::onUpdateTimer()
 
 void PlayerBpmWidget::setState(int bpm, const QTime& position, const QTime& beatReference, bool running, bool analyzed)
 {
+    setState(bpm, static_cast<double>(bpm), position, beatReference, running, analyzed);
+}
+
+void PlayerBpmWidget::setState(int bpm, double exactBpm, const QTime& position, const QTime& beatReference, bool running, bool analyzed)
+{
     m_bpm = bpm;
+    m_exactBpm = exactBpm > 0.0 ? exactBpm : static_cast<double>(bpm);
     m_position = position;
     m_beatReference = beatReference;
     m_running = running;
@@ -65,11 +190,73 @@ void PlayerBpmWidget::setState(int bpm, const QTime& position, const QTime& beat
     update();
 }
 
+void PlayerBpmWidget::setExactBpm(double exactBpm)
+{
+    if (exactBpm > 0.0) {
+        m_exactBpm = exactBpm;
+        m_envelopeDirty = true;
+        update();
+    }
+}
+
 void PlayerBpmWidget::setTempoInfo(double tempoRate, bool syncAdjusting)
 {
     m_tempoRate = tempoRate;
     m_syncAdjusting = syncAdjusting;
     update();
+}
+
+void PlayerBpmWidget::requestEnvelopeRebuild(const QRect& band, int centerY, double halfH)
+{
+    if (m_rebuildWatcher.isRunning()) {
+        m_rebuildRequested = true;
+        m_requestedBand = band;
+        m_requestedCenterY = centerY;
+        m_requestedHalfH = halfH;
+        return;
+    }
+
+    const QVector<float> timelineEnvelope = m_timelineEnvelope;
+    const QVector<quint8> timelineKnown = m_timelineKnown;
+    const int sampleIntervalMs = m_sampleIntervalMs;
+    const int leftMs = visibleWindowLeftMs();
+    const int trackLenMs = QTime(0, 0).msecsTo(m_trackLength);
+
+    const int windowMs = m_windowMs;
+    QFuture<RebuildResult> future = QtConcurrent::run([timelineEnvelope,
+                                                       timelineKnown,
+                                                       sampleIntervalMs,
+                                                       band,
+                                                       centerY,
+                                                       halfH,
+                                                       leftMs,
+                                                       windowMs,
+                                                       trackLenMs]() {
+        RebuildResult result;
+        result.band = band;
+        result.envelope = buildVisibleEnvelope(timelineEnvelope, timelineKnown, sampleIntervalMs, band.width(), windowMs, leftMs, trackLenMs);
+        buildEnvelopePaths(result.envelope, band, centerY, halfH, result.envFillPath, result.topEdgePath, result.bottomEdgePath);
+        return result;
+    });
+
+    m_rebuildWatcher.setFuture(future);
+}
+
+void PlayerBpmWidget::onRebuildFinished()
+{
+    const RebuildResult result = m_rebuildWatcher.result();
+    m_envelope = result.envelope;
+    m_envFillPath = result.envFillPath;
+    m_topEdgePath = result.topEdgePath;
+    m_bottomEdgePath = result.bottomEdgePath;
+    m_cachedBand = result.band;
+    m_envelopeDirty = false;
+    update();
+
+    if (m_rebuildRequested) {
+        m_rebuildRequested = false;
+        requestEnvelopeRebuild(m_requestedBand, m_requestedCenterY, m_requestedHalfH);
+    }
 }
 
 void PlayerBpmWidget::appendEnvelopeSample(float value)
@@ -122,9 +309,18 @@ void PlayerBpmWidget::setPreloadedEnvelope(const QVector<float>& samples, int so
     m_timelineEnvelope.clear();
     m_timelineKnown.clear();
 
-    // Analyzer runs at 120fps (~8.33ms per sample), not the integer value passed in.
-    // Use floating-point for accurate duration to prevent ~15s undersizing on a 5+ minute track.
-    const qint64 totalMs = qRound(static_cast<double>(samples.size() - 1) * 1000.0 / 120.0);
+    // Use the known track length (set via setTrackLength before this call) so frames are
+    // distributed evenly across the actual audio duration. The analysis frame size rounds
+    // to 368 samples at 44100 Hz (8.345ms actual vs 8.333ms nominal), and the error
+    // accumulates to ~450ms over a 5-minute track. With the 80% lookahead window that
+    // makes the waveform appear to end ~5 seconds before the song actually ends.
+    const qint64 trackMs = QTime(0, 0).msecsTo(m_trackLength);
+    const qint64 totalMs = qRound(static_cast<double>(samples.size() -1) * 1000.0 / 120.0);
+
+    // Per-frame duration derived from the true track length ensures the last frame
+    // lands at the very end of the timeline regardless of sample-rate rounding.
+    const double frameDurationMs = static_cast<double>(totalMs) / static_cast<double>(samples.size() -1);
+
     const int dstInterval = qMax(1, m_sampleIntervalMs);
     const int targetSize = qMax(1, static_cast<int>(totalMs / dstInterval) + 1);
     m_timelineEnvelope.resize(targetSize);
@@ -137,7 +333,7 @@ void PlayerBpmWidget::setPreloadedEnvelope(const QVector<float>& samples, int so
     // Map analyzer samples into the live timeline grid using max pooling so
     // transient peaks remain clearly visible after resampling.
     for (int i = 0; i < samples.size(); ++i) {
-        const double tMs = static_cast<double>(i) * 1000.0 / 120.0;
+        const double tMs = (static_cast<double>(i)) * frameDurationMs;
         const int dstIndex = static_cast<int>(tMs / dstInterval);
         if (dstIndex < 0 || dstIndex >= m_timelineEnvelope.size())
             continue;
@@ -171,18 +367,11 @@ void PlayerBpmWidget::setTrackLength(const QTime& length)
 int PlayerBpmWidget::visibleWindowLeftMs() const
 {
     const int posMs = QTime(0, 0).msecsTo(m_position);
-    const int trackLenMs = QTime(0, 0).msecsTo(m_trackLength);
     const int desiredLeftMs = posMs - qRound(0.20 * m_windowMs);
-    const int uncappedRightMs = posMs + qRound(0.80 * m_windowMs);
 
-    // Clamp left edge to 0
-    int leftMs = qMax(0, desiredLeftMs);
-
-    // If window would extend past track end, shift left edge to keep right edge at track end
-    if (trackLenMs > 0 && uncappedRightMs > trackLenMs)
-        leftMs = qMax(0, trackLenMs - m_windowMs);
-
-    return leftMs;
+    // Clamp left edge to 0, but allow the visible window to extend beyond track end
+    // so playback can continue scrolling right up to the very last second.
+    return qMax(0, desiredLeftMs);
 }
 
 QTime PlayerBpmWidget::visualBeatReference() const
@@ -203,8 +392,9 @@ void PlayerBpmWidget::rebuildVisibleEnvelope(int bandWidth)
 
     const int leftMs = visibleWindowLeftMs();
     const int trackLenMs = QTime(0, 0).msecsTo(m_trackLength);
-    // Use actual visible window width (may be smaller than m_windowMs at track end)
-    const int rightMs = (trackLenMs > 0) ? qMin(leftMs + m_windowMs, trackLenMs) : (leftMs + m_windowMs);
+    // Always keep the visible window width constant so it can continue scrolling
+    // beyond the track end if playback has reached the final section.
+    const int rightMs = leftMs + m_windowMs;
     const int visibleWindowMs = rightMs - leftMs;
     // Divide by targetSamples (not targetSamples-1) so each bin has width windowMs/count.
     const double stepMs = static_cast<double>(visibleWindowMs) / static_cast<double>(targetSamples);
@@ -213,6 +403,15 @@ void PlayerBpmWidget::rebuildVisibleEnvelope(int bandWidth)
     const float* envelopeData = m_timelineEnvelope.constData();
     const quint8* knownData = m_timelineKnown.constData();
     const int timelineCount = m_timelineEnvelope.size();
+
+    // Find the last valid envelope value for extending during simulation
+    float lastValidEnvelope = 0.0f;
+    for (int k = timelineCount - 1; k >= 0; --k) {
+        if (knownData[k]) {
+            lastValidEnvelope = envelopeData[k];
+            break;
+        }
+    }
 
     for (int i = 0; i < targetSamples; ++i) {
         const double tStartMs = leftMs + static_cast<double>(i) * stepMs;
@@ -228,9 +427,14 @@ void PlayerBpmWidget::rebuildVisibleEnvelope(int bandWidth)
         // timeline sample into the slot's range, giving a clean 1-slot discrete hop.
         const int rawFirst = static_cast<int>(tStartMs / intervalMs);
         const int rawLast  = static_cast<int>(tEndMs   / intervalMs);
-        if (rawFirst >= timelineCount) { m_envelope[i] = 0.0f; continue; }
         const int idxFirst = rawFirst < 0 ? 0 : rawFirst;
         const int idxLast  = rawLast >= timelineCount ? timelineCount - 1 : rawLast;
+
+        // If we're past the end of known timeline data, extend the last valid envelope value.
+        if (rawFirst >= timelineCount) {
+            m_envelope[i] = lastValidEnvelope;
+            continue;
+        }
 
         float maxVal = 0.0f;
         for (int j = idxFirst; j <= idxLast; ++j) {
@@ -239,6 +443,12 @@ void PlayerBpmWidget::rebuildVisibleEnvelope(int bandWidth)
                 if (v > maxVal) maxVal = v;
             }
         }
+
+        // If the time window extends beyond the known timeline and there is no valid
+        // data inside the current slot, carry the last value forward instead of freezing.
+        if (maxVal <= 0.0f && rawLast >= timelineCount)
+            maxVal = lastValidEnvelope;
+
         m_envelope[i] = maxVal;
     }
 }
@@ -366,7 +576,9 @@ void PlayerBpmWidget::rebuildEnvelopePaths(const QRect& band, int centerY, doubl
 double PlayerBpmWidget::phase() const
 {
     if (m_bpm <= 0) return 0.0;
-    const double beatMs = 60000.0 / static_cast<double>(m_bpm);
+    double effectiveBpm = (m_exactBpm > 0.0) ? m_exactBpm : static_cast<double>(m_bpm);
+    effectiveBpm *= qMax(0.0, m_tempoRate);
+    const double beatMs = 60000.0 / effectiveBpm;
     if (beatMs <= 0.0) return 0.0;
 
     const qint64 posMs    = QTime(0, 0).msecsTo(m_position);
@@ -438,25 +650,27 @@ void PlayerBpmWidget::paintEvent(QPaintEvent* event)
 
     // ── Beat grid ─────────────────────────────────────────────────────────────
     if (m_bpm > 0 && m_windowMs > 0) {
-        const double beatMs    = 60000.0 / static_cast<double>(m_bpm);
-        const qint64 posMs     = QTime(0, 0).msecsTo(m_position);
+        double effectiveBpm = (m_exactBpm > 0.0) ? m_exactBpm : static_cast<double>(m_bpm);
+        effectiveBpm *= qMax(0.0, m_tempoRate);
+        const double beatMs = 60000.0 / effectiveBpm;
+        const qint64 posMs = QTime(0, 0).msecsTo(m_position);
         const QTime visualBeatRef = visualBeatReference();
         const qint64 beatRefMs = visualBeatRef.isValid() ? QTime(0, 0).msecsTo(visualBeatRef) : 0;
-        const qint64 leftMs    = visibleWindowLeftMs();
+        const qint64 leftMs = visibleWindowLeftMs();
         const int trackLenMs = QTime(0, 0).msecsTo(m_trackLength);
         // Use actual visible window width (may be smaller than m_windowMs at track end)
-        const qint64 rightMs   = (trackLenMs > 0) ? qMin(leftMs + m_windowMs, trackLenMs) : (leftMs + m_windowMs);
+        const qint64 rightMs = (trackLenMs > 0) ? qMin(leftMs + m_windowMs, trackLenMs) : (leftMs + m_windowMs);
         const int visibleWindowMs = rightMs - leftMs;
 
         // Collect all beat lines into one vector, then draw in one call
         QVector<QLineF> beatLines;
         beatLines.reserve(32);
-        int beatIndex = static_cast<int>(qFloor(static_cast<double>(leftMs - beatRefMs) / beatMs));
+        const double firstBeatIndex = qFloor(static_cast<double>(leftMs - beatRefMs) / beatMs);
         for (int i = 0; i < 128; ++i) {
-            const qint64 beatTime = beatRefMs + static_cast<qint64>((beatIndex + i) * beatMs);
-            if (beatTime > rightMs)  break;
-            if (beatTime < leftMs) continue;
-            const double norm = static_cast<double>(beatTime - leftMs) / static_cast<double>(visibleWindowMs);
+            const double beatTime = static_cast<double>(beatRefMs) + (firstBeatIndex + static_cast<double>(i)) * beatMs;
+            if (beatTime > static_cast<double>(rightMs))  break;
+            if (beatTime < static_cast<double>(leftMs)) continue;
+            const double norm = (beatTime - static_cast<double>(leftMs)) / static_cast<double>(visibleWindowMs);
             const int x = phaseBand.left() + qRound(norm * phaseBand.width());
             beatLines.append(QLineF(x, phaseBand.top() + 1, x, phaseBand.bottom() - 1));
         }
@@ -466,35 +680,35 @@ void PlayerBpmWidget::paintEvent(QPaintEvent* event)
 
     // ── Envelope waveform (cached paths) ──────────────────────────────────────
     if (!m_timelineEnvelope.isEmpty()) {
-        if (m_envelopeDirty) {
-            rebuildVisibleEnvelope(phaseBand.width());
-            rebuildEnvelopePaths(phaseBand, centerY, qMax(4.0, (phaseBand.height() / 2.0) - 2.0));
-            m_cachedBand = phaseBand;
-            m_envelopeDirty = false;
+        const double halfH = qMax(4.0, (phaseBand.height() / 2.0) - 2.0);
+        if (m_envelopeDirty && !m_rebuildWatcher.isRunning()) {
+            requestEnvelopeRebuild(phaseBand, centerY, halfH);
         }
 
-        const double halfH = qMax(4.0, (phaseBand.height() / 2.0) - 2.0);
+        if (!m_envFillPath.isEmpty()) {
+            QLinearGradient envGrad(0, centerY - halfH, 0, centerY + halfH);
+            envGrad.setColorAt(0.00, QColor(160, 195, 232, 220));
+            envGrad.setColorAt(0.35, QColor(112, 152, 200, 200));
+            envGrad.setColorAt(0.50, QColor( 75, 110, 165, 170));
+            envGrad.setColorAt(0.65, QColor(112, 152, 200, 200));
+            envGrad.setColorAt(1.00, QColor(160, 195, 232, 220));
 
-        QLinearGradient envGrad(0, centerY - halfH, 0, centerY + halfH);
-        envGrad.setColorAt(0.00, QColor(160, 195, 232, 220));
-        envGrad.setColorAt(0.35, QColor(112, 152, 200, 200));
-        envGrad.setColorAt(0.50, QColor( 75, 110, 165, 170));
-        envGrad.setColorAt(0.65, QColor(112, 152, 200, 200));
-        envGrad.setColorAt(1.00, QColor(160, 195, 232, 220));
+            painter.setPen(Qt::NoPen);
+            painter.setBrush(envGrad);
+            painter.drawPath(m_envFillPath);
 
-        painter.setPen(Qt::NoPen);
-        painter.setBrush(envGrad);
-        painter.drawPath(m_envFillPath);
-
-        painter.setPen(QPen(QColor(195, 218, 248, 160), 1.0));
-        painter.setBrush(Qt::NoBrush);
-        painter.drawPath(m_topEdgePath);
-        painter.drawPath(m_bottomEdgePath);
+            painter.setPen(QPen(QColor(195, 218, 248, 160), 1.0));
+            painter.setBrush(Qt::NoBrush);
+            painter.drawPath(m_topEdgePath);
+            painter.drawPath(m_bottomEdgePath);
+        }
     }
 
     // ── Beat cursor (flash exactly when a beat tick crosses the reference) ───
     if (m_bpm > 0 && m_windowMs > 0) {
-        const double beatMs = 60000.0 / static_cast<double>(m_bpm);
+        double effectiveBpm = (m_exactBpm > 0.0) ? m_exactBpm : static_cast<double>(m_bpm);
+        effectiveBpm *= qMax(0.0, m_tempoRate);
+        const double beatMs = 60000.0 / effectiveBpm;
         const qint64 posMs = QTime(0, 0).msecsTo(m_position);
         const QTime visualBeatRef = visualBeatReference();
         const qint64 beatRefMs = visualBeatRef.isValid() ? QTime(0, 0).msecsTo(visualBeatRef) : 0;
