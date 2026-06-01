@@ -996,11 +996,20 @@ void PlayerWidget::setPositionMarkers()
 
 void PlayerWidget::applyAutoCueAfterAnalysis(bool preferBeatCue)
 {
-    if (m_isStarted || !trackanalyzer->finished())
+    // Skip if already playing
+    if (m_isStarted)
         return;
 
-    QTime cuePosition = trackanalyzer->startPosition();
+    QTime cuePosition;
+    // Use cached beat position if available and preferBeatCue, otherwise fall back to trackanalyzer start position
     if (preferBeatCue && m_beatCueEnabled && m_bpm > 0 && m_beatPosition.isValid())
+        cuePosition = m_beatPosition;
+    else if (trackanalyzer->finished())
+        cuePosition = trackanalyzer->startPosition();
+
+    // When cached BPM is available and trackanalyzer wasn't loaded, we have valid m_beatPosition but
+    // preferBeatCue=false (m_beatVisualMode=false). In this case, use m_beatPosition as cue.
+    if (cuePosition.isNull() && m_bpm > 0 && m_beatPosition.isValid() && !m_isStarted)
         cuePosition = m_beatPosition;
 
     if (cuePosition > QTime(0, 0))
@@ -1338,40 +1347,50 @@ void PlayerWidget::loadTrack(Track* track)
         QUrl url = track->url();
         player->open(url);
 
-        trackanalyzer->setMode(TrackAnalyzer::STANDARD);
-        trackanalyzer->open(url);
-
+        // Check cache first to skip redundant analyzer loading
+        QSettings settings;
+        const bool analyzeTempo = settings.value("beatSyncAnalyzeTempo", true).toBool();
+        const CachedTempo cachedTempo = loadCachedTempo(url);
         const CachedEnvelope cachedEnvelope = loadCachedEnvelope(url);
+
+        // Apply cached data immediately to minimize wait time
+        if (cachedTempo.valid && cachedTempo.bpm > 0) {
+            m_bpmAnalyzed = true;
+            m_bpm = cachedTempo.bpm;
+            m_beatPosition = QTime(0, 0).addMSecs(cachedTempo.beatOffsetMs);
+            bpmWidget->setState(m_bpm, player->position(), m_beatPosition, m_isStarted, true);
+            Q_EMIT tempoChanged(m_bpm, m_beatPosition);
+            // Apply auto-cue when cached BPM is available (before async analysis completes)
+            applyAutoCueAfterAnalysis(m_beatVisualMode);
+        }
+
         if (cachedEnvelope.valid) {
             bpmWidget->setPreloadedEnvelope(cachedEnvelope.samples, kEnvelopeAnalysisIntervalMs);
             bpmWidget->setTrackLength(player->length());
         }
 
+        // Only run analysis if cache is incomplete
+        const bool haveCachedTempo = cachedTempo.valid && cachedTempo.bpm > 0;
+        const bool needEnvelope = m_beatVisualMode && !cachedEnvelope.valid;
+        const bool needTempo = m_beatSyncEnabled && analyzeTempo && !haveCachedTempo;
+
+        // Skip all analysis if we have everything cached
+        if (!haveCachedTempo || needEnvelope || needTempo) {
+            trackanalyzer->setMode(TrackAnalyzer::STANDARD);
+            trackanalyzer->open(url);
+        }
+
         // Defer full envelope extraction until BPM view is active.
-        if (m_beatVisualMode && !cachedEnvelope.valid) {
+        if (needEnvelope) {
             envelopeAnalyzer->setMode(TrackAnalyzer::ENVELOPE);
             envelopeAnalyzer->open(url);
         }
 
-        if (m_beatSyncEnabled) {
-            QSettings settings;
-            const bool analyzeTempo = settings.value("beatSyncAnalyzeTempo", true).toBool();
-            const CachedTempo cached = loadCachedTempo(url);
-            if (cached.valid && cached.bpm > 0) {
-                m_bpmAnalyzed = true;
-                m_bpm = cached.bpm;
-                m_beatPosition = QTime(0, 0).addMSecs(cached.beatOffsetMs);
-                bpmWidget->setState(m_bpm, player->position(), m_beatPosition, m_isStarted, true);
-                Q_EMIT tempoChanged(m_bpm, m_beatPosition);
-            }
-
-            // Cached BPM can be stale after detector improvements, so re-check
-            // in the background whenever auto analysis is enabled.
-            if (analyzeTempo) {
-                tempoAnalyzer->setTempoScanDurationSeconds(qMax(16, settings.value("beatSyncScanSeconds", 16).toInt()));
-                tempoAnalyzer->setMode(TrackAnalyzer::TEMPO);
-                tempoAnalyzer->open(url);
-            }
+        // Only re-analyze tempo if explicitly requested and cache is stale/missing
+        if (needTempo) {
+            tempoAnalyzer->setTempoScanDurationSeconds(qMax(16, settings.value("beatSyncScanSeconds", 16).toInt()));
+            tempoAnalyzer->setMode(TrackAnalyzer::TEMPO);
+            tempoAnalyzer->open(url);
         }
 
         m_pendingPlay = doPlay;
