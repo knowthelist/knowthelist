@@ -375,6 +375,9 @@ void Playlist::queueTempoScan(Track* track)
     if (!track)
         return;
 
+    if (track->bpm() > 0)
+        return;
+
     const QString url = track->url().toString();
     if (url.isEmpty() || m_tempoScanQueue.contains(url) || url == m_tempoScanUrl)
         return;

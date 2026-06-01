@@ -426,12 +426,8 @@ PlayerWidget::PlayerWidget(QWidget* parent)
 
     trackanalyzer = new TrackAnalyzer(this);
     connect(trackanalyzer, SIGNAL(finishGain()), this, SLOT(analyzeGainFinished()));
-
-    tempoAnalyzer = new TrackAnalyzer(this);
-    connect(tempoAnalyzer, SIGNAL(finishTempo()), this, SLOT(analyzeTempoFinished()));
-
-    envelopeAnalyzer = new TrackAnalyzer(this);
-    connect(envelopeAnalyzer, SIGNAL(finishEnvelope()), this, SLOT(analyzeEnvelopeFinished()));
+    connect(trackanalyzer, SIGNAL(finishTempo()), this, SLOT(analyzeTempoFinished()));
+    connect(trackanalyzer, SIGNAL(finishEnvelope()), this, SLOT(analyzeEnvelopeFinished()));
 }
 
 PlayerWidget::~PlayerWidget()
@@ -441,10 +437,6 @@ PlayerWidget::~PlayerWidget()
     delete timerLevel;
     delete trackanalyzer;
     trackanalyzer = nullptr;
-    delete tempoAnalyzer;
-    tempoAnalyzer = nullptr;
-    delete envelopeAnalyzer;
-    envelopeAnalyzer = nullptr;
     delete p;
 }
 
@@ -520,8 +512,12 @@ void PlayerWidget::setBeatVisualMode(bool enabled)
         bpmWidget->raise();
 
         if (m_CurrentTrack && !bpmWidget->isEnvelopePreloaded()) {
-            envelopeAnalyzer->setMode(TrackAnalyzer::ENVELOPE);
-            envelopeAnalyzer->open(m_CurrentTrack->url());
+            if (trackanalyzer->finished()) {
+                analyzeEnvelopeFinished();
+            } else {
+                trackanalyzer->setMode(TrackAnalyzer::ENVELOPE);
+                trackanalyzer->open(m_CurrentTrack->url());
+            }
         }
         applyAutoCueAfterAnalysis(true);
     } else {
@@ -1001,16 +997,13 @@ void PlayerWidget::applyAutoCueAfterAnalysis(bool preferBeatCue)
         return;
 
     QTime cuePosition;
-    // Use cached beat position if available and preferBeatCue, otherwise fall back to trackanalyzer start position
-    if (preferBeatCue && m_beatCueEnabled && m_bpm > 0 && m_beatPosition.isValid())
+
+    // Priority 1: Use cached beat position for auto-cue when beat-cue is enabled
+    if (m_beatCueEnabled && m_bpm > 0 && m_beatPosition.isValid())
         cuePosition = m_beatPosition;
+    // Priority 2: Use trackanalyzer start position when it finished (always available if loaded)
     else if (trackanalyzer->finished())
         cuePosition = trackanalyzer->startPosition();
-
-    // When cached BPM is available and trackanalyzer wasn't loaded, we have valid m_beatPosition but
-    // preferBeatCue=false (m_beatVisualMode=false). In this case, use m_beatPosition as cue.
-    if (cuePosition.isNull() && m_bpm > 0 && m_beatPosition.isValid() && !m_isStarted)
-        cuePosition = m_beatPosition;
 
     if (cuePosition > QTime(0, 0))
         player->setPosition(cuePosition);
@@ -1118,6 +1111,9 @@ void PlayerWidget::analyzeGainFinished()
             if (analyzeTempo && !m_bpmAnalyzed)
                 bpmWidget->setState(0, player->position(), m_beatPosition, m_isStarted, false);
         }
+
+        if (m_beatVisualMode && !bpmWidget->isEnvelopePreloaded())
+            analyzeEnvelopeFinished();
     }
 }
 
@@ -1127,8 +1123,8 @@ void PlayerWidget::analyzeTempoFinished()
         return;
 
     m_bpmAnalyzed = true;
-    m_bpm = tempoAnalyzer->bpm();
-    m_beatPosition = tempoAnalyzer->beatPosition();
+    m_bpm = trackanalyzer->bpm();
+    m_beatPosition = trackanalyzer->beatPosition();
 
     if (m_bpm > 0)
         Q_EMIT tempoChanged(m_bpm, m_beatPosition);
@@ -1146,21 +1142,21 @@ void PlayerWidget::analyzeEnvelopeFinished()
     if (!m_CurrentTrack)
         return;
 
-    const QVector<float> env = envelopeAnalyzer->amplitudeEnvelope();
+    const QVector<float> env = trackanalyzer->amplitudeEnvelope();
     if (env.isEmpty())
         return;
 
     qDebug() << "ENVELOPE analysis finished:" << objectName() << "samples=" << env.size();
     storeCachedEnvelope(m_CurrentTrack->url(), env);
     bpmWidget->setPreloadedEnvelope(env, kEnvelopeAnalysisIntervalMs);
-    bpmWidget->setTrackLength(envelopeAnalyzer->length());
+    bpmWidget->setTrackLength(trackanalyzer->length());
 
     // If beat-sync mode is active and we found a meaningful beat-activity end,
     // override the cue time so voice/instrument-free tail passages are skipped.
     if (m_beatSyncEnabled && m_skipSilentEnd) {
-        const QTime beatEnd = envelopeAnalyzer->beatActivityEndPosition();
+        const QTime beatEnd = trackanalyzer->beatActivityEndPosition();
         if (beatEnd.isValid() && beatEnd > QTime(0, 0)) {
-            const QTime trackLen = envelopeAnalyzer->length();
+            const QTime trackLen = trackanalyzer->length();
             const int newRemainMs = beatEnd.msecsTo(trackLen);
             if (newRemainMs > 0 && newRemainMs > static_cast<int>(remainCueTime)) {
                 remainCueTime = newRemainMs;
@@ -1369,28 +1365,18 @@ void PlayerWidget::loadTrack(Track* track)
             bpmWidget->setTrackLength(player->length());
         }
 
-        // Only run analysis if cache is incomplete
+        // Run exactly one analyzer pass when any analysis-dependent feature needs it.
         const bool haveCachedTempo = cachedTempo.valid && cachedTempo.bpm > 0;
+        const bool needCueAnalysis = m_skipSilentBegin || m_skipSilentEnd;
         const bool needEnvelope = m_beatVisualMode && !cachedEnvelope.valid;
         const bool needTempo = m_beatSyncEnabled && analyzeTempo && !haveCachedTempo;
+        const bool needAnalysis = needCueAnalysis || needEnvelope || needTempo;
 
-        // Skip all analysis if we have everything cached
-        if (!haveCachedTempo || needEnvelope || needTempo) {
-            trackanalyzer->setMode(TrackAnalyzer::STANDARD);
+        if (needAnalysis) {
+            if (needTempo)
+                trackanalyzer->setTempoScanDurationSeconds(qMax(16, settings.value("beatSyncScanSeconds", 16).toInt()));
+            trackanalyzer->setMode(needTempo ? TrackAnalyzer::TEMPO : TrackAnalyzer::STANDARD);
             trackanalyzer->open(url);
-        }
-
-        // Defer full envelope extraction until BPM view is active.
-        if (needEnvelope) {
-            envelopeAnalyzer->setMode(TrackAnalyzer::ENVELOPE);
-            envelopeAnalyzer->open(url);
-        }
-
-        // Only re-analyze tempo if explicitly requested and cache is stale/missing
-        if (needTempo) {
-            tempoAnalyzer->setTempoScanDurationSeconds(qMax(16, settings.value("beatSyncScanSeconds", 16).toInt()));
-            tempoAnalyzer->setMode(TrackAnalyzer::TEMPO);
-            tempoAnalyzer->open(url);
         }
 
         m_pendingPlay = doPlay;
@@ -1688,6 +1674,7 @@ void PlayerWidget::on_butCue_clicked()
     this->pause();
 
     QTime cuePosition = trackanalyzer->startPosition();
+    qDebug() << Q_FUNC_INFO << "cuePosition from analyzer:" << cuePosition << "m_beatCueEnabled:" << m_beatCueEnabled << " beatPosition:" << m_beatPosition << " bpm:" << m_bpm;
     if (m_beatCueEnabled && m_bpm > 0 && m_beatPosition.isValid())
         cuePosition = m_beatPosition;
 

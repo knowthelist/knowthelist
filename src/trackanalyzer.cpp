@@ -19,7 +19,9 @@
 #include "juce_audio_backend.h"
 
 #include <QWidget>
+#include <QFileInfo>
 #include <QMutexLocker>
+#include <QWaitCondition>
 #include <QTimer>
 #include <QtConcurrent/QtConcurrent>
 #include <QVector>
@@ -35,6 +37,7 @@ constexpr bool kLogDebug = false;
 constexpr int kAnalysisFrameRate = 120;
 constexpr int kTempoMinBpm = 70;
 constexpr int kTempoMaxBpm = 200;
+constexpr float kSilenceRmsThreshold = 0.1f;
 
 struct TrackAnalysisData {
     double sampleRate = 44100.0;
@@ -71,6 +74,11 @@ static float lowPassStep(float input, float& lowState, float alpha)
     return lowState;
 }
 
+/*
+  Description:
+    Scans the given audio file and extracts analysis data such as RMS, spectral flux, and envelope.
+    This is a CPU-intensive operation and should be run in a background thread to avoid blocking the UI.
+*/
 static TrackAnalysisData scanAudioFile(const QUrl& url)
 {
     TrackAnalysisData data;
@@ -98,6 +106,8 @@ static TrackAnalysisData scanAudioFile(const QUrl& url)
     float prevLowRms = 0.0f;
     float peakRms = 0.0f;
     double sumRms = 0.0;
+    int firstActiveFrame = -1;
+    int lastActiveFrame = -1;
 
     for (qint64 samplePos = 0; samplePos < totalSamples; samplePos += frameSize) {
         const int numSamples = static_cast<int>(qMin<qint64>(frameSize, totalSamples - samplePos));
@@ -106,8 +116,6 @@ static TrackAnalysisData scanAudioFile(const QUrl& url)
 
         double sumSq = 0.0;
         double lowSumSq = 0.0;
-        float framePeak = 0.0f;
-
         for (int i = 0; i < numSamples; ++i) {
             float mono = 0.0f;
             for (int ch = 0; ch < channels; ++ch)
@@ -115,7 +123,6 @@ static TrackAnalysisData scanAudioFile(const QUrl& url)
             mono /= static_cast<float>(channels);
 
             const float low = lowPassStep(mono, lowState, lowAlpha);
-            framePeak = qMax(framePeak, std::abs(mono));
             sumSq += static_cast<double>(mono) * static_cast<double>(mono);
             lowSumSq += static_cast<double>(low) * static_cast<double>(low);
         }
@@ -136,6 +143,12 @@ static TrackAnalysisData scanAudioFile(const QUrl& url)
         prevLowRms = frameLowRms;
         peakRms = qMax(peakRms, frameRms);
         sumRms += frameRms;
+
+        if (frameRms >= kSilenceRmsThreshold) {
+            if (firstActiveFrame < 0)
+                firstActiveFrame = static_cast<int>(data.frameRms.size()) - 1;
+            lastActiveFrame = static_cast<int>(data.frameRms.size()) - 1;
+        }
     }
 
     data.peakRms = peakRms;
@@ -146,16 +159,9 @@ static TrackAnalysisData scanAudioFile(const QUrl& url)
     for (float rms : data.frameRms)
         data.envelope.append(qBound(0.0f, rms / envelopePeak, 1.0f));
 
-    const float silenceThreshold = qMax(peakRms * 0.08f, 0.004f);
-    int firstActiveFrame = -1;
-    int lastActiveFrame = -1;
-    for (int i = 0; i < data.frameRms.size(); ++i) {
-        if (data.frameRms.at(i) >= silenceThreshold) {
-            if (firstActiveFrame < 0)
-                firstActiveFrame = i;
-            lastActiveFrame = i;
-        }
-    }
+      qDebug() << "Silence threshold (fixed RMS):" << kSilenceRmsThreshold
+                << "firstActiveFrame:" << firstActiveFrame
+                << "lastActiveFrame:" << lastActiveFrame;
 
     if (firstActiveFrame < 0) {
         data.startPosition = QTime(0, 0);
@@ -195,6 +201,47 @@ static TrackAnalysisData scanAudioFile(const QUrl& url)
     else
         data.gainDb = 0.0;
 
+    return data;
+}
+
+static QString analysisCacheKey(const QUrl& url)
+{
+    const QFileInfo info(url.toLocalFile());
+    const QString path = info.canonicalFilePath().isEmpty() ? info.absoluteFilePath() : info.canonicalFilePath();
+    const qint64 size = info.exists() ? info.size() : -1;
+    const qint64 modified = info.exists() ? info.lastModified().toMSecsSinceEpoch() : -1;
+    return QStringLiteral("%1|%2|%3").arg(path).arg(size).arg(modified);
+}
+
+static TrackAnalysisData scanAudioFileCached(const QUrl& url)
+{
+    static QMutex cacheMutex;
+    static QHash<QString, TrackAnalysisData> cache;
+    static QSet<QString> inProgress;
+    static QWaitCondition scanComplete;
+
+    const QString key = analysisCacheKey(url);
+    QMutexLocker locker(&cacheMutex);
+
+    // Wait if another thread is already scanning this file
+    while (true) {
+        const auto it = cache.constFind(key);
+        if (it != cache.constEnd())
+            return it.value();
+        if (!inProgress.contains(key)) {
+            inProgress.insert(key);
+            break;
+        }
+        scanComplete.wait(&cacheMutex);
+    }
+
+    locker.unlock();
+    TrackAnalysisData data = scanAudioFile(url);
+    locker.relock();
+
+    cache.insert(key, data);
+    inProgress.remove(key);
+    scanComplete.wakeAll();
     return data;
 }
 
@@ -289,11 +336,13 @@ struct TrackAnalyzer_Private {
     QFutureWatcher<void> watcher;
     QMutex mutex;
     int bpm = 0;
+    bool bpmDetected = false;
     bool tempoWindowStarted = false;
     int tempoScanDurationSeconds = 24;
     QTimer* tempoTimeout;
     bool finishQueued = false;
     bool shuttingDown = false;
+    bool inProgress = false;
     TrackAnalyzer::modeType analysisMode = TrackAnalyzer::STANDARD;
     QList<float> spectralFlux;
     QList<float> spectralFluxLow;
@@ -303,6 +352,7 @@ struct TrackAnalyzer_Private {
     QTime analysisEndPosition = QTime(0, 0);
     QTime analysisBeatActivityEndPosition = QTime(0, 0);
     double analysisGainDb = TrackAnalyzer::GAIN_INVALID;
+    QUrl currentUrl;
 };
 
 TrackAnalyzer::TrackAnalyzer(QWidget* parent)
@@ -350,6 +400,14 @@ bool TrackAnalyzer::prepare()
 void TrackAnalyzer::open(QUrl url)
 {
     qDebug() << Q_FUNC_INFO << "url=" << url;
+    QMutexLocker locker(&p->mutex);
+    if (p->inProgress && p->currentUrl == url)
+        return;
+    p->inProgress = true;
+    p->currentUrl = url;
+    p->finishQueued = false;
+    p->bpmDetected = false;
+    locker.unlock();
     QFuture<void> future = QtConcurrent::run([this, url]() { asyncOpen(url); });
     p->watcher.setFuture(future);
 }
@@ -368,6 +426,12 @@ void TrackAnalyzer::asyncOpen(QUrl url)
 
     m_finished = false;
 
+    // Reset BPM detection flag for new file
+    {
+        QMutexLocker locker(&p->mutex);
+        p->bpmDetected = false;
+    }
+
     // Load file with JUCE backend for analysis
     audioBackend->load(url);
 
@@ -383,7 +447,7 @@ void TrackAnalyzer::asyncOpen(QUrl url)
     }
 
     QTime duration = audioBackend->getDuration();
-    TrackAnalysisData analysis = scanAudioFile(url);
+    TrackAnalysisData analysis = scanAudioFileCached(url);
     if (analysis.durationMs > 0.0)
         duration = QTime(0, 0).addMSecs(static_cast<int>(qRound(analysis.durationMs)));
 
@@ -407,10 +471,12 @@ void TrackAnalyzer::asyncOpen(QUrl url)
 
     qDebug() << Q_FUNC_INFO << "File loaded: duration=" << duration
              << "gainDb=" << analysis.gainDb
+             << "start=" << analysis.startPosition
+             << "end=" << analysis.endPosition
+             << "beatActivityEnd=" << analysis.beatActivityEndPosition
              << "frames=" << analysis.spectralFlux.size();
 
-    if (p->analysisMode == STANDARD)
-        emit finishGain();
+    emit finishGain();
 }
 
 void TrackAnalyzer::start()
@@ -539,6 +605,7 @@ void TrackAnalyzer::finalizeAnalysis()
         p->tempoTimeout->stop();
         if (mode == TEMPO)
             p->tempoWindowStarted = false;
+        p->inProgress = false;
         m_finished = true;
     }
 
@@ -563,15 +630,35 @@ void TrackAnalyzer::detectTempo()
 {
     static const int kMinBpm = kTempoMinBpm;
     static const int kMaxBpm = kTempoMaxBpm;
+    static QMutex tempoCacheMutex;
+    static QHash<QString, QPair<int, int> > tempoCache;
 
     QList<float> spectralFlux;
     QList<float> spectralFluxLow;
     QList<qint64> spectralFluxTimes;
+    QUrl currentUrl;
     {
         QMutexLocker locker(&p->mutex);
+        // Skip if BPM already detected for this session
+        if (p->bpmDetected)
+            return;
         spectralFlux = p->spectralFlux;
         spectralFluxLow = p->spectralFluxLow;
         spectralFluxTimes = p->spectralFluxTimes;
+        currentUrl = p->currentUrl;
+    }
+
+    const QString cacheKey = analysisCacheKey(currentUrl);
+    {
+        QMutexLocker cacheLocker(&tempoCacheMutex);
+        const auto it = tempoCache.constFind(cacheKey);
+        if (it != tempoCache.constEnd()) {
+            QMutexLocker locker(&p->mutex);
+            p->bpm = it.value().first;
+            m_BeatPosition = QTime(0, 0).addMSecs(it.value().second);
+            p->bpmDetected = true;
+            return;
+        }
     }
 
     if (spectralFlux.isEmpty()) {
@@ -854,6 +941,7 @@ void TrackAnalyzer::detectTempo()
     {
         QMutexLocker locker(&p->mutex);
         p->bpm = qBound(0, finalBpm, kMaxBpm);
+        p->bpmDetected = true;
     }
 
     int beatAnchorIdx = -1;
@@ -896,6 +984,11 @@ void TrackAnalyzer::detectTempo()
         }
     } else {
         m_BeatPosition = m_StartPosition;
+    }
+
+    {
+        QMutexLocker cacheLocker(&tempoCacheMutex);
+        tempoCache.insert(cacheKey, qMakePair(qBound(0, finalBpm, kMaxBpm), QTime(0, 0).msecsTo(m_BeatPosition)));
     }
 
     qDebug() << Q_FUNC_INFO << "Estimated BPM:" << p->bpm << "frames:" << spectralFlux.size()

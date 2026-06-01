@@ -176,8 +176,6 @@ private:
 
     Player* player;
     TrackAnalyzer* trackanalyzer;
-    TrackAnalyzer* tempoAnalyzer;
-    TrackAnalyzer* envelopeAnalyzer;
     float m_level;
     QLabel* m_positionLabel;
     QLabel* m_volumeLabel;
