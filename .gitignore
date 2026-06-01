@@ -25,4 +25,4 @@ dist-*/
 *.pro.user
 .docs/*
 .vscode/*
-*/.github/*
+.github/*

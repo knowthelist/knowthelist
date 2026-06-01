@@ -1006,6 +1006,7 @@ void PlayerWidget::applyAutoCueAfterAnalysis(bool preferBeatCue)
     if (cuePosition > QTime(0, 0))
         player->setPosition(cuePosition);
 
+    bpmWidget->setTrackLength(player->length());
     ui->butCue->setChecked(true);
     bpmWidget->setState(m_bpm, cuePosition, m_beatPosition, m_isStarted, m_bpmAnalyzed);
     updateTimeAndPositionDisplay(false);
@@ -1127,6 +1128,7 @@ void PlayerWidget::analyzeTempoFinished()
         storeCachedTempo(m_CurrentTrack->url(), m_bpm, m_beatPosition);
 
     applyAutoCueAfterAnalysis(m_beatVisualMode);
+    bpmWidget->setTrackLength(player->length());
     bpmWidget->setState(m_bpm, player->position(), m_beatPosition, m_isStarted, true);
 }
 
@@ -1142,6 +1144,7 @@ void PlayerWidget::analyzeEnvelopeFinished()
     qDebug() << "ENVELOPE analysis finished:" << objectName() << "samples=" << env.size();
     storeCachedEnvelope(m_CurrentTrack->url(), env);
     bpmWidget->setPreloadedEnvelope(env, kEnvelopeAnalysisIntervalMs);
+    bpmWidget->setTrackLength(envelopeAnalyzer->length());
 
     // If beat-sync mode is active and we found a meaningful beat-activity end,
     // override the cue time so voice/instrument-free tail passages are skipped.
@@ -1232,6 +1235,9 @@ void PlayerWidget::timerVisual_timeOut()
 
     const QTime currentPos = player->position();
     const int visPosMs = qMax(0, QTime(0, 0).msecsTo(currentPos) - m_visualLatencyMs);
+
+    // Ensure track length is set for proper end-of-track windowing
+    bpmWidget->setTrackLength(player->length());
 
     // Only rebuild waveform display if we've moved more than ~8ms to avoid jittering
     // while still maintaining responsive scrolling.
@@ -1338,6 +1344,7 @@ void PlayerWidget::loadTrack(Track* track)
         const CachedEnvelope cachedEnvelope = loadCachedEnvelope(url);
         if (cachedEnvelope.valid) {
             bpmWidget->setPreloadedEnvelope(cachedEnvelope.samples, kEnvelopeAnalysisIntervalMs);
+            bpmWidget->setTrackLength(player->length());
         }
 
         // Defer full envelope extraction until BPM view is active.
@@ -1667,6 +1674,7 @@ void PlayerWidget::on_butCue_clicked()
 
     suppressAboutFinishForMs(1000);
     player->setPosition(cuePosition);
+    bpmWidget->setTrackLength(player->length());
     bpmWidget->setState(m_bpm, cuePosition, m_beatPosition, m_isStarted, m_bpmAnalyzed);
     updateTimeAndPositionDisplay();
 }

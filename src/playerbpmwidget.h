@@ -29,6 +29,7 @@ public:
     void clearEnvelope();
     void setPreloadedEnvelope(const QVector<float>& samples, int sourceIntervalMs = 0);
     void setWindowMilliseconds(int windowMs);
+    void setTrackLength(const QTime& length);
     int windowMilliseconds() const { return m_windowMs; }
     bool isEnvelopePreloaded() const { return m_envelopePreloaded; }
 
@@ -50,6 +51,7 @@ private:
     int m_bpm;
     QTime m_position;
     QTime m_beatReference;
+    QTime m_trackLength;
     bool m_running;
     bool m_analyzed;
     double m_tempoRate;
