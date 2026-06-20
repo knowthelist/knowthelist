@@ -81,7 +81,7 @@ private:
     QVector<float> m_envelope;
 
     void detectTempo();
-    float AutoCorrelation(QList<float> buffer, int frames, int minBpm, int maxBpm, int sampleRate);
+    float AutoCorrelation(QList<float> buffer, int frames, int minBpm, int maxBpm, double sampleRate);
 
     void cleanup();
     void asyncOpen(QUrl url);

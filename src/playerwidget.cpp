@@ -390,6 +390,7 @@ PlayerWidget::PlayerWidget(QWidget* parent)
 
     timerVisual = new QTimer(this);
     timerVisual->setInterval(16);  // ~60fps refresh rate (16.67ms ≈ 16ms)
+    timerVisual->setTimerType(Qt::PreciseTimer);
     connect(timerVisual, SIGNAL(timeout()), SLOT(timerVisual_timeOut()));
 
     m_envelopeScrubSeekTimer = new QTimer(this);
@@ -538,6 +539,12 @@ void PlayerWidget::setBeatVisualMode(bool enabled)
         bpmWidget->show();
         bpmWidget->raise();
 
+        if (m_isStarted && !timerVisual->isActive()) {
+            timerVisual->start();
+            m_visualFrameTimer.restart();
+            m_lastWaveformRebuildPosMs = -1;
+        }
+
         if (m_CurrentTrack && !bpmWidget->isEnvelopePreloaded()) {
             if (trackanalyzer->finished()) {
                 analyzeEnvelopeFinished();
@@ -548,6 +555,8 @@ void PlayerWidget::setBeatVisualMode(bool enabled)
         }
         applyAutoCueAfterAnalysis(true);
     } else {
+        if (timerVisual->isActive())
+            timerVisual->stop();
         bpmWidget->hide();
         vuMeter->show();
         applyAutoCueAfterAnalysis(false);
@@ -1090,8 +1099,10 @@ void PlayerWidget::play()
         }
         timerLevel->start(50);  // Sample audio levels every 50ms
         timerPosition->start(100);
-        timerVisual->start();  // High-frequency waveform updates for smooth display
-        m_visualFrameTimer.restart();
+        if (m_beatVisualMode) {
+            timerVisual->start();  // High-frequency waveform updates for smooth display
+            m_visualFrameTimer.restart();
+        }
         m_lastWaveformRebuildPosMs = -1;  // Reset for fresh rebuild on play
         m_isSimulating = false;  // Not simulating when playing
         Q_EMIT statusChanged(m_isStarted);
@@ -1109,6 +1120,7 @@ void PlayerWidget::pause()
     m_syncAdopting = false;
     timerLevel->stop();
     timerPosition->stop();
+    timerVisual->stop();
     m_isSimulating = false;
     vuMeter->reset();
     bpmWidget->setTempoInfo(m_tempoRate, m_syncAdopting);
@@ -1128,6 +1140,7 @@ void PlayerWidget::stop()
     player->stop();
     timerLevel->stop();
     timerPosition->stop();
+    timerVisual->stop();
     m_isSimulating = false;
     vuMeter->reset();
     bpmWidget->clearEnvelope();
@@ -1336,11 +1349,6 @@ void PlayerWidget::timerVisual_timeOut()
 
     const QTime displayPos = (length > QTime(0, 0) && currentPos > length) ? length : currentPos;
 
-    qDebug() << "Visual update:" << objectName()
-             << "currentPos=" << currentPos
-             << "displayPos=" << displayPos
-             << "length=" << length
-             << "visualLatencyMs=" << m_visualLatencyMs;
     const int visPosMs = qMax(0, QTime(0, 0).msecsTo(displayPos) - m_visualLatencyMs);
 
     // Update simulated position to track real position while playing.

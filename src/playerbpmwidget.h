@@ -15,6 +15,7 @@
 #include <QVector>
 #include <QWidget>
 #include <QPainterPath>
+#include <QPixmap>
 #include <QRect>
 #include <QFutureWatcher>
 
@@ -73,6 +74,7 @@ private:
     int m_windowMs;
     int m_sampleIntervalMs;
     double m_exactBpm;
+    double m_trueSampleIntervalMs;  // Calculated from track length / sample count (not rounded)
 
     QFutureWatcher<RebuildResult> m_rebuildWatcher;
     QRect    m_requestedBand;
@@ -88,11 +90,17 @@ private:
     QPainterPath m_envFillPath;
     QPainterPath m_topEdgePath;
     QPainterPath m_bottomEdgePath;
+    QPixmap m_waveformLayer;
+    int m_waveformLayerHeight;
+    int m_waveformLayerSampleCount;
+    bool m_waveformLayerDirty;
     bool m_scrubbing;
     double m_scrubStartNorm;
     int m_scrubStartX;
 
     void rebuildEnvelopePaths(const QRect& band, int centerY, double halfH);
+    void invalidateWaveformLayer();
+    void rebuildWaveformLayer(int bandHeight);
     void rebuildVisibleEnvelope(int bandWidth);
     int visibleWindowLeftMs() const;
     QTime visualBeatReference() const;
