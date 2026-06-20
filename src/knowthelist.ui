@@ -153,7 +153,16 @@ QLineEdit {
 SearchEdit {
      padding: 0px 18px;
 	font-size:14px;
+     background-color: #2a2a2a;
+     color: #ffffff;
+     border: 2px solid #555555;
+     border-radius: 6px;
+     selection-background-color: #4a4a8a;
  }
+SearchEdit:focus {
+     background-color: #333333;
+     border: 2px solid #6699cc;
+}
 QTreeWidget, QTreeView{
  selection-background-color: gray; 
         selection-color: white; 

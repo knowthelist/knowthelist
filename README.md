@@ -87,7 +87,7 @@ It can be compiled to a .app bundle, suitable for placing in /Applications.
 Install the required dependencies using [Homebrew](https://brew.sh):
 
 ```
-brew install qt gstreamer gst-plugins-base gst-plugins-good gst-plugins-bad taglib
+brew install qt taglib
 qmake6
 make
 

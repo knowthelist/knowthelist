@@ -215,13 +215,29 @@ void CollectionWidget::resizeEvent(QResizeEvent*)
 SearchEdit::SearchEdit(QWidget* parent)
     : QLineEdit(parent)
 {
+    setStyleSheet("QLineEdit { "
+                  "background-color: #2a2a2a; "
+                  "color: #CCCCCC; "
+                  "border: 1px solid #555555; "
+                  "border-radius: 3px; "
+                  "padding: 4px 18px; "
+                  "}"
+                  "QLineEdit:focus { "
+                  "background-color: #2a2a2a; "
+                  "color: #EEEEEE; "
+                  "border: 1px solid #666666; "
+                  "}"
+                  "QLineEdit::placeholder { "
+                  "color: #999999; "
+                  "}");
+
     QPixmap searchIcon(":search.png");
     QLabel* lbl = new QLabel(this);
     lbl->setScaledContents(true);
     lbl->setPixmap(searchIcon);
     lbl->setFixedSize(QSize(23, 23));
     lbl->setStyleSheet("QLabel { border: none; padding: 0px; margin-left: 9px; "
-                       "margin-top: 11px; margin-right: 3px}");
+                       "margin-top: 11px; margin-right: 3px; color: #CCCCCC; }");
     clearButton = new QToolButton(this);
     QPixmap pixmap(":clear_left.png");
     clearButton->setIcon(QIcon(pixmap));

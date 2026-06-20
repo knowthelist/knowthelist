@@ -297,7 +297,7 @@ void DjSession::storePlaylists(const QString& name, bool replace)
                               .arg(p->database->escapeString((*i)->url().toLocalFile()))
                               .arg(p->database->escapeString(name))
                               .arg((*i)->length())
-                              .arg((*i)->flags())
+                               .arg(static_cast<int>((*i)->flags()))
                               .arg(n);
 
         p->database->executeSql(command);

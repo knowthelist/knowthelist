@@ -92,12 +92,12 @@ set(FETCHCONTENT_UPDATES_DISCONNECTED ON)
 find_package(JUCE QUIET CONFIG)
 
 if(NOT JUCE_FOUND)
-    # Fetch JUCE from GitHub (version 7.0.x)
+    # Fetch JUCE from GitHub (master branch for macOS 15 / ScreenCaptureKit support)
     message(STATUS "JUCE not found locally; fetching from GitHub...")
     FetchContent_Declare(
         JUCE
         GIT_REPOSITORY https://github.com/juce-framework/JUCE.git
-        GIT_TAG 7.0.11
+        GIT_TAG master
         GIT_SHALLOW TRUE
         GIT_PROGRESS ON
     )
@@ -116,7 +116,10 @@ if(DEFINED ENV{FLATPAK_ID} AND IS_DIRECTORY /run/host/usr)
     set_target_properties(Qt6::moc PROPERTIES IMPORTED_LOCATION "${CMAKE_SOURCE_DIR}/cmake/flatpak-wrappers/moc")
     set_target_properties(Qt6::rcc PROPERTIES IMPORTED_LOCATION "${CMAKE_SOURCE_DIR}/cmake/flatpak-wrappers/rcc")
 endif()
-find_package(PkgConfig REQUIRED)
+# macOS doesn't have pkg-config; it's only needed on Linux for ALSA and TagLib discovery
+if(UNIX AND NOT APPLE OR DEFINED ENV{FLATPAK_ID})
+    find_package(PkgConfig REQUIRED)
+endif()
 
 # TagLib: on macOS use explicit brew opt path to avoid GStreamer framework's
 # bundled TagLib 1.x taking precedence. On other platforms try native CMake
