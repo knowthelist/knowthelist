@@ -268,10 +268,42 @@ target_compile_definitions(knowthelist PRIVATE
     APP_VERSION="${PROJECT_VERSION}"
 )
 
+# Optional: SoundTouch enables pitch-preserving tempo changes (DJ-style time-stretch).
+set(KNOWTHELIST_HAVE_SOUNDTOUCH 0)
+find_path(SOUNDTOUCH_INCLUDE_DIR
+    NAMES SoundTouch.h soundtouch/SoundTouch.h
+    PATHS
+        /opt/homebrew/include
+        /opt/homebrew/opt/sound-touch/include
+        /usr/local/include
+        /usr/local/opt/sound-touch/include
+)
+find_library(SOUNDTOUCH_LIBRARY
+    NAMES SoundTouch soundtouch
+    PATHS
+        /opt/homebrew/lib
+        /opt/homebrew/opt/sound-touch/lib
+        /usr/local/lib
+        /usr/local/opt/sound-touch/lib
+)
+
+if(SOUNDTOUCH_INCLUDE_DIR AND SOUNDTOUCH_LIBRARY)
+    set(KNOWTHELIST_HAVE_SOUNDTOUCH 1)
+    message(STATUS "SoundTouch found: enabling pitch-preserving time-stretch")
+endif()
+
+target_compile_definitions(knowthelist PRIVATE
+    KNOWTHELIST_HAVE_SOUNDTOUCH=${KNOWTHELIST_HAVE_SOUNDTOUCH}
+)
+
 target_include_directories(knowthelist PRIVATE
     src
     ${TAGLIB_INCLUDE_DIRS}
 )
+
+if(KNOWTHELIST_HAVE_SOUNDTOUCH)
+    target_include_directories(knowthelist PRIVATE ${SOUNDTOUCH_INCLUDE_DIR})
+endif()
 
 target_link_libraries(knowthelist PRIVATE
     Qt6::Core
@@ -286,6 +318,10 @@ target_link_libraries(knowthelist PRIVATE
     juce::juce_audio_devices
     juce::juce_audio_formats
 )
+
+if(KNOWTHELIST_HAVE_SOUNDTOUCH)
+    target_link_libraries(knowthelist PRIVATE ${SOUNDTOUCH_LIBRARY})
+endif()
 
 target_link_options(knowthelist PRIVATE
     ${TAGLIB_LDFLAGS_OTHER}

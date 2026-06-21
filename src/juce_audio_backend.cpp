@@ -19,6 +19,18 @@
 #include <juce_audio_basics/juce_audio_basics.h>
 #include <QString>
 #include <cmath>
+#include <vector>
+
+#if defined(KNOWTHELIST_HAVE_SOUNDTOUCH) && KNOWTHELIST_HAVE_SOUNDTOUCH
+#if __has_include(<SoundTouch.h>)
+#include <SoundTouch.h>
+#elif __has_include(<soundtouch/SoundTouch.h>)
+#include <soundtouch/SoundTouch.h>
+#else
+#undef KNOWTHELIST_HAVE_SOUNDTOUCH
+#define KNOWTHELIST_HAVE_SOUNDTOUCH 0
+#endif
+#endif
 
 #if defined(Q_OS_DARWIN)
 #include <CoreAudio/CoreAudio.h>
@@ -116,35 +128,164 @@ public:
 
     void setResamplingRatio(double ratio)
     {
-        resampler.setResamplingRatio(ratio);
+        targetRate.store(juce::jlimit(0.5, 2.0, ratio), std::memory_order_relaxed);
+#if !defined(KNOWTHELIST_HAVE_SOUNDTOUCH) || !KNOWTHELIST_HAVE_SOUNDTOUCH
+        resampler.setResamplingRatio(targetRate.load(std::memory_order_relaxed));
+#endif
     }
 
     void prepareToPlay(int samplesPerBlockExpected, double sampleRate) override
     {
         inputSource->prepareToPlay(samplesPerBlockExpected, sampleRate);
         resampler.prepareToPlay(samplesPerBlockExpected, sampleRate);
+
+#if defined(KNOWTHELIST_HAVE_SOUNDTOUCH) && KNOWTHELIST_HAVE_SOUNDTOUCH
+        const int sr = static_cast<int>(juce::jmax(8000.0, sampleRate));
+        stretcher.clear();
+        stretcher.setSampleRate(static_cast<unsigned int>(sr));
+        stretcher.setChannels(static_cast<unsigned int>(channelCount));
+        stretcher.setPitch(1.0f); // Preserve musical key while tempo changes.
+        appliedRate = targetRate.load(std::memory_order_relaxed);
+        stretcher.setTempo(static_cast<float>(appliedRate));
+        stretcher.setSetting(SETTING_USE_QUICKSEEK, 1);
+
+        pullBuffer.setSize(channelCount, juce::jmax(512, samplesPerBlockExpected), false, false, true);
+        interleavedInput.clear();
+        interleavedOutput.clear();
+        endOfInput = false;
+        smoothedReadPositionSamples.store(static_cast<double>(inputSource->getNextReadPosition()), std::memory_order_relaxed);
+#endif
     }
 
     void releaseResources() override
     {
         resampler.releaseResources();
         inputSource->releaseResources();
+
+#if defined(KNOWTHELIST_HAVE_SOUNDTOUCH) && KNOWTHELIST_HAVE_SOUNDTOUCH
+        stretcher.clear();
+        pullBuffer.setSize(channelCount, 0);
+        interleavedInput.clear();
+        interleavedOutput.clear();
+        endOfInput = false;
+#endif
     }
 
     void getNextAudioBlock(const juce::AudioSourceChannelInfo& info) override
     {
+#if defined(KNOWTHELIST_HAVE_SOUNDTOUCH) && KNOWTHELIST_HAVE_SOUNDTOUCH
+        if (info.buffer == nullptr || info.numSamples <= 0)
+            return;
+
+        const double rate = targetRate.load(std::memory_order_relaxed);
+        if (std::abs(rate - appliedRate) > 1.0e-4) {
+            appliedRate = rate;
+            stretcher.setTempo(static_cast<float>(appliedRate));
+        }
+
+        info.clearActiveBufferRegion();
+
+        float* outL = info.buffer->getNumChannels() > 0
+                ? info.buffer->getWritePointer(0, info.startSample)
+                : nullptr;
+        float* outR = info.buffer->getNumChannels() > 1
+                ? info.buffer->getWritePointer(1, info.startSample)
+                : nullptr;
+
+        int produced = 0;
+        while (produced < info.numSamples) {
+            const int needed = info.numSamples - produced;
+            interleavedOutput.resize(static_cast<size_t>(needed) * static_cast<size_t>(channelCount));
+
+            const unsigned int received = stretcher.receiveSamples(interleavedOutput.data(), static_cast<unsigned int>(needed));
+            if (received > 0) {
+                const int frames = static_cast<int>(received);
+                for (int i = 0; i < frames; ++i) {
+                    const size_t base = static_cast<size_t>(i) * static_cast<size_t>(channelCount);
+                    if (outL)
+                        outL[produced + i] = interleavedOutput[base];
+                    if (outR)
+                        outR[produced + i] = interleavedOutput[base + 1];
+                }
+                produced += frames;
+                continue;
+            }
+
+            if (endOfInput)
+                break;
+
+            const int pullFrames = juce::jmax(256, juce::jmin(needed * 2, 2048));
+            if (pullBuffer.getNumSamples() < pullFrames)
+                pullBuffer.setSize(channelCount, pullFrames, false, false, true);
+            pullBuffer.clear();
+
+            const juce::int64 beforePos = inputSource->getNextReadPosition();
+            juce::AudioSourceChannelInfo pullInfo(&pullBuffer, 0, pullFrames);
+            inputSource->getNextAudioBlock(pullInfo);
+            const juce::int64 afterPos = inputSource->getNextReadPosition();
+            const int advanced = static_cast<int>(juce::jmax<juce::int64>(0, afterPos - beforePos));
+
+            if (advanced <= 0) {
+                endOfInput = true;
+                stretcher.flush();
+                continue;
+            }
+
+            interleavedInput.resize(static_cast<size_t>(advanced) * static_cast<size_t>(channelCount));
+            const float* inL = pullBuffer.getReadPointer(0);
+            const float* inR = pullBuffer.getNumChannels() > 1 ? pullBuffer.getReadPointer(1) : nullptr;
+
+            for (int i = 0; i < advanced; ++i) {
+                const size_t base = static_cast<size_t>(i) * static_cast<size_t>(channelCount);
+                interleavedInput[base] = inL[i];
+                interleavedInput[base + 1] = inR ? inR[i] : inL[i];
+            }
+
+            stretcher.putSamples(interleavedInput.data(), static_cast<unsigned int>(advanced));
+
+            if (afterPos >= inputSource->getTotalLength()) {
+                endOfInput = true;
+                stretcher.flush();
+            }
+        }
+
+        // SoundTouch consumes source samples in bursts. Expose a smooth source-timeline
+        // cursor so the waveform/playhead motion remains stable frame-to-frame.
+        double smoothPos = smoothedReadPositionSamples.load(std::memory_order_relaxed);
+        smoothPos += static_cast<double>(produced) * appliedRate;
+
+        const double actualPos = static_cast<double>(inputSource->getNextReadPosition());
+        const double drift = actualPos - smoothPos;
+        if (std::abs(drift) > 8192.0) {
+            smoothPos = actualPos;
+        } else {
+            smoothPos += drift * 0.08;
+        }
+        smoothedReadPositionSamples.store(smoothPos, std::memory_order_relaxed);
+#else
         resampler.getNextAudioBlock(info);
+#endif
     }
 
     void setNextReadPosition(juce::int64 newPosition) override
     {
         inputSource->setNextReadPosition(newPosition);
         resampler.flushBuffers();
+
+#if defined(KNOWTHELIST_HAVE_SOUNDTOUCH) && KNOWTHELIST_HAVE_SOUNDTOUCH
+        stretcher.clear();
+        endOfInput = false;
+    smoothedReadPositionSamples.store(static_cast<double>(newPosition), std::memory_order_relaxed);
+#endif
     }
 
     juce::int64 getNextReadPosition() const override
     {
+#if defined(KNOWTHELIST_HAVE_SOUNDTOUCH) && KNOWTHELIST_HAVE_SOUNDTOUCH
+    return static_cast<juce::int64>(std::llround(smoothedReadPositionSamples.load(std::memory_order_relaxed)));
+#else
         return inputSource->getNextReadPosition();
+#endif
     }
 
     juce::int64 getTotalLength() const override
@@ -160,6 +301,18 @@ public:
 private:
     juce::PositionableAudioSource* inputSource;
     juce::ResamplingAudioSource resampler;
+    std::atomic<double> targetRate{1.0};
+
+#if defined(KNOWTHELIST_HAVE_SOUNDTOUCH) && KNOWTHELIST_HAVE_SOUNDTOUCH
+    soundtouch::SoundTouch stretcher;
+    juce::AudioBuffer<float> pullBuffer;
+    std::vector<float> interleavedInput;
+    std::vector<float> interleavedOutput;
+    double appliedRate = 1.0;
+    static constexpr int channelCount = 2;
+    bool endOfInput = false;
+    std::atomic<double> smoothedReadPositionSamples{0.0};
+#endif
 };
 
 namespace {

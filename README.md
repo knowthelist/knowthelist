@@ -96,6 +96,9 @@ make
 cmake -S . -B build
 cmake --build build -j
 
+# Optional: DJ-style pitch-preserving tempo changes (time-stretch)
+brew install sound-touch
+
 # clean before
 cmake --build build --target clean
 cmake --build build -j
