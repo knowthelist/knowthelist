@@ -50,6 +50,7 @@ public:
     void setUseMonitorOutput(bool enabled);
     bool useMonitorOutput() const;
     void setMonitorVolume(double v);
+    int outputLatencyMs() const;
 
     QTime length();
     bool isPlaying();

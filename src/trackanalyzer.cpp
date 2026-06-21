@@ -1023,47 +1023,90 @@ void TrackAnalyzer::detectTempo()
     }
     m_ExactBpm = finalExactBpm;
 
-    int beatAnchorIdx = -1;
     const QList<float>& anchorEnv = lowEnv.isEmpty() ? fullEnv : lowEnv;
-    float strongestAnchor = 0.0f;
-    for (float value : anchorEnv)
-        strongestAnchor = qMax(strongestAnchor, value);
+    const QVector<int>& phaseOnsets = !onsetsLow.isEmpty() ? onsetsLow : onsetsFull;
+    int phaseMs = 0;
 
-    if (strongestAnchor > 0.0f) {
-        const float earlyThreshold = strongestAnchor * 0.60f;
-        const int earlyLimit = qMin(anchorEnv.size(), static_cast<int>(actualFps * 20));
-        for (int i = 1; i < earlyLimit - 1; ++i) {
-            if (anchorEnv.at(i) >= earlyThreshold
-                && anchorEnv.at(i) >= anchorEnv.at(i - 1)
-                && anchorEnv.at(i) > anchorEnv.at(i + 1)) {
-                beatAnchorIdx = i;
-                break;
+    if (p->bpm > 0 && m_ExactBpm > 0.0 && !phaseOnsets.isEmpty() && !spectralFluxTimes.isEmpty()) {
+        const double beatMs = 60000.0 / m_ExactBpm;
+        if (beatMs > 1.0) {
+            // Fit beat phase globally over all onsets instead of anchoring on a single
+            // early spike. This is much more stable and aligns beat grid to kick peaks.
+            const int periodMs = qMax(1, qRound(beatMs));
+            const int coarseStepMs = qMax(1, periodMs / 240);
+            const double sigmaMs = qMax(6.0, beatMs * 0.10);
+            const double invTwoSigma2 = 1.0 / (2.0 * sigmaMs * sigmaMs);
+
+            auto phaseScore = [&](int candidatePhaseMs) {
+                double score = 0.0;
+                for (int onsetIdx : phaseOnsets) {
+                    if (onsetIdx < 0 || onsetIdx >= spectralFluxTimes.size())
+                        continue;
+                    const qint64 tMs = spectralFluxTimes.at(onsetIdx) / 1000000LL;
+                    double wrap = std::fmod(static_cast<double>(tMs - candidatePhaseMs), beatMs);
+                    if (wrap < 0.0)
+                        wrap += beatMs;
+                    const double dist = qMin(wrap, beatMs - wrap);
+                    const double weight = (onsetIdx >= 0 && onsetIdx < anchorEnv.size())
+                            ? qMax(0.01, static_cast<double>(anchorEnv.at(onsetIdx)))
+                            : 0.01;
+                    score += weight * std::exp(-(dist * dist) * invTwoSigma2);
+                }
+                return score;
+            };
+
+            double bestScore = -1.0;
+            int bestPhase = 0;
+            for (int cand = 0; cand < periodMs; cand += coarseStepMs) {
+                const double score = phaseScore(cand);
+                if (score > bestScore) {
+                    bestScore = score;
+                    bestPhase = cand;
+                }
             }
-        }
-    }
 
-    if (beatAnchorIdx < 0) {
+            // 1 ms local refinement around the best coarse phase.
+            int refined = bestPhase;
+            double refinedScore = bestScore;
+            for (int d = -coarseStepMs; d <= coarseStepMs; ++d) {
+                int cand = bestPhase + d;
+                while (cand < 0)
+                    cand += periodMs;
+                while (cand >= periodMs)
+                    cand -= periodMs;
+                const double score = phaseScore(cand);
+                if (score > refinedScore) {
+                    refinedScore = score;
+                    refined = cand;
+                }
+            }
+
+            phaseMs = refined;
+        }
+    } else {
+        // Fallback: preserve previous behaviour if onset set is unavailable.
+        int beatAnchorIdx = -1;
+        float strongestAnchor = 0.0f;
+        for (float value : anchorEnv)
+            strongestAnchor = qMax(strongestAnchor, value);
+
         for (int i = 0; i < anchorEnv.size(); ++i) {
             if (anchorEnv.at(i) > strongestAnchor * 0.95f) {
                 beatAnchorIdx = i;
                 break;
             }
         }
+
+        if (beatAnchorIdx >= 0 && p->bpm > 0 && beatAnchorIdx < spectralFluxTimes.size() && spectralFluxTimes.at(beatAnchorIdx) > 0) {
+            const qint64 anchorMs = spectralFluxTimes.at(beatAnchorIdx) / 1000000LL;
+            const double beatMs = 60000.0 / qMax(1e-6, m_ExactBpm);
+            phaseMs = static_cast<int>(std::fmod(static_cast<double>(anchorMs), beatMs));
+            if (phaseMs < 0)
+                phaseMs += qMax(1, qRound(beatMs));
+        }
     }
 
-    if (beatAnchorIdx >= 0) {
-        if (p->bpm > 0 && beatAnchorIdx < spectralFluxTimes.size() && spectralFluxTimes.at(beatAnchorIdx) > 0) {
-            const qint64 anchorMs = spectralFluxTimes.at(beatAnchorIdx) / 1000000LL;
-            const double beatMs = 60000.0 / m_ExactBpm;
-            const qint64 phaseMs = static_cast<qint64>(std::fmod(static_cast<double>(anchorMs), beatMs));
-            m_BeatPosition = QTime(0, 0).addMSecs(static_cast<int>(phaseMs));
-        } else {
-            const qint64 offsetMs = static_cast<qint64>((1000.0 * beatAnchorIdx) / actualFps);
-            m_BeatPosition = m_StartPosition.addMSecs(static_cast<int>(offsetMs));
-        }
-    } else {
-        m_BeatPosition = m_StartPosition;
-    }
+    m_BeatPosition = QTime(0, 0).addMSecs(qMax(0, phaseMs));
 
     {
         QMutexLocker cacheLocker(&tempoCacheMutex);

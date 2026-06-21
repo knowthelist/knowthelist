@@ -42,8 +42,8 @@ struct PlayerWidgetPrivate {
 };
 
 namespace {
-constexpr int kTempoCacheVersion = 10;
-constexpr int kEnvelopeCacheVersion = 1;
+constexpr int kTempoCacheVersion = 11;
+constexpr int kEnvelopeCacheVersion = 2;
 constexpr int kEnvelopeAnalysisIntervalMs = 8; // TrackAnalyzer uses 120 fps for envelope analysis.
 constexpr double kScrubSeekGain = 1.5;
 constexpr int kScrubSeekMinDeltaMs = 10;
@@ -67,9 +67,11 @@ struct CachedTempo {
 struct CachedEnvelope {
     bool valid;
     QVector<float> samples;
+    int durationMs;
 
     CachedEnvelope()
         : valid(false)
+        , durationMs(0)
     {
     }
 };
@@ -146,6 +148,10 @@ bool ensureTempoCacheTable()
                             QLatin1String("ALTER TABLE analysis_cache ADD COLUMN envelope_data BLOB")))
         return false;
 
+    if (!addColumnIfMissing(db, QLatin1String("envelope_duration_ms"),
+                            QLatin1String("ALTER TABLE analysis_cache ADD COLUMN envelope_duration_ms INTEGER DEFAULT 0")))
+        return false;
+
     return true;
 }
 
@@ -201,7 +207,7 @@ CachedEnvelope loadCachedEnvelope(const QUrl& url)
         return cached;
 
     QSqlQuery q(QSqlDatabase::database());
-    q.prepare("SELECT envelope_version, envelope_data FROM analysis_cache WHERE url = :url");
+    q.prepare("SELECT envelope_version, envelope_data, envelope_duration_ms FROM analysis_cache WHERE url = :url");
     q.bindValue(":url", url.toLocalFile());
     if (!q.exec())
         return cached;
@@ -211,6 +217,7 @@ CachedEnvelope loadCachedEnvelope(const QUrl& url)
         if (!decoded.isEmpty()) {
             cached.valid = true;
             cached.samples = decoded;
+            cached.durationMs = qMax(0, q.value(2).toInt());
         }
     }
 
@@ -238,7 +245,7 @@ void storeCachedTempo(const QUrl& url, int bpm, double exactBpm, const QTime& be
     q.exec();
 }
 
-void storeCachedEnvelope(const QUrl& url, const QVector<float>& samples)
+void storeCachedEnvelope(const QUrl& url, const QVector<float>& samples, int durationMs)
 {
     if (samples.isEmpty())
         return;
@@ -246,16 +253,17 @@ void storeCachedEnvelope(const QUrl& url, const QVector<float>& samples)
         return;
 
     QSqlQuery q(QSqlDatabase::database());
-    q.prepare("INSERT OR REPLACE INTO analysis_cache (url, bpm, beat_offset_ms, changedate, analysis_version, envelope_version, envelope_data) "
+    q.prepare("INSERT OR REPLACE INTO analysis_cache (url, bpm, beat_offset_ms, changedate, analysis_version, envelope_version, envelope_data, envelope_duration_ms) "
               "VALUES (:url, "
               "COALESCE((SELECT bpm FROM analysis_cache WHERE url = :url), 0), "
               "COALESCE((SELECT beat_offset_ms FROM analysis_cache WHERE url = :url), 0), "
               "strftime('%s','now'), "
               "COALESCE((SELECT analysis_version FROM analysis_cache WHERE url = :url), 0), "
-              ":envelope_version, :envelope_data)");
+              ":envelope_version, :envelope_data, :envelope_duration_ms)");
     q.bindValue(":url", url.toLocalFile());
     q.bindValue(":envelope_version", kEnvelopeCacheVersion);
     q.bindValue(":envelope_data", encodeEnvelopeSamples(samples));
+    q.bindValue(":envelope_duration_ms", qMax(0, durationMs));
     q.exec();
 }
 }
@@ -837,11 +845,37 @@ void PlayerWidget::jumpByBeats(int beatCount)
     if (!m_CurrentTrack || beatCount == 0)
         return;
 
-    const int beatMs = (m_bpm > 0) ? qRound(60000.0 / static_cast<double>(m_bpm)) : 500;
     const int curMs = QTime(0, 0).msecsTo(player->position());
     const int lenMs = QTime(0, 0).msecsTo(player->length());
+    const int fallbackBeatMs = (m_bpm > 0) ? qRound(60000.0 / static_cast<double>(m_bpm)) : 500;
 
-    int targetMs = curMs + beatCount * beatMs;
+    int targetMs = curMs;
+
+    const double exactBpm = trackanalyzer ? trackanalyzer->exactBpm() : 0.0;
+    if (m_bpm > 0 && exactBpm > 0.0 && m_beatPosition.isValid()) {
+        const double beatMs = 60000.0 / exactBpm;
+        const qint64 anchorMs = QTime(0, 0).msecsTo(m_beatPosition);
+        const double beatIndex = (static_cast<double>(curMs) - static_cast<double>(anchorMs)) / beatMs;
+        const qint64 baseBeatIndex = (beatCount < 0)
+                ? static_cast<qint64>(qFloor(beatIndex))
+                : static_cast<qint64>(qCeil(beatIndex));
+        const qint64 targetBeatIndex = baseBeatIndex + static_cast<qint64>(beatCount);
+        targetMs = static_cast<int>(qRound(static_cast<double>(anchorMs) + static_cast<double>(targetBeatIndex) * beatMs));
+
+        if (beatCount < 0 && targetMs >= curMs)
+            targetMs -= qMax(1, qRound(beatMs));
+        else if (beatCount > 0 && targetMs <= curMs)
+            targetMs += qMax(1, qRound(beatMs));
+    } else {
+        targetMs = curMs + beatCount * fallbackBeatMs;
+    }
+
+    // Final semantic guard.
+    if (beatCount < 0 && targetMs >= curMs)
+        targetMs = curMs - qMax(1, qAbs(beatCount) * fallbackBeatMs);
+    else if (beatCount > 0 && targetMs <= curMs)
+        targetMs = curMs + qMax(1, qAbs(beatCount) * fallbackBeatMs);
+
     if (targetMs < 0)
         targetMs = 0;
     if (lenMs > 0)
@@ -859,7 +893,21 @@ void PlayerWidget::onBeatJumpButtonClicked()
     QObject* src = sender();
     if (!src)
         return;
-    jumpByBeats(src->property("beats").toInt());
+
+    int beats = src->property("beats").toInt();
+    if (beats == 0) {
+        if (QAbstractButton* btn = qobject_cast<QAbstractButton*>(src)) {
+            const QString text = btn->text().trimmed();
+            if (text.startsWith('-'))
+                beats = -4;
+            else if (text.startsWith('+'))
+                beats = 4;
+        }
+    }
+
+    if (beats == 0)
+        return;
+    jumpByBeats(beats);
 }
 
 void PlayerWidget::onEnvelopeScrubStarted()
@@ -1223,7 +1271,7 @@ void PlayerWidget::analyzeEnvelopeFinished()
         return;
 
     qDebug() << "ENVELOPE analysis finished:" << objectName() << "samples=" << env.size();
-    storeCachedEnvelope(m_CurrentTrack->url(), env);
+    storeCachedEnvelope(m_CurrentTrack->url(), env, QTime(0, 0).msecsTo(trackanalyzer->length()));
     bpmWidget->setTrackLength(trackanalyzer->length());
     bpmWidget->setPreloadedEnvelope(env, kEnvelopeAnalysisIntervalMs);
 
@@ -1295,11 +1343,11 @@ void PlayerWidget::timerLevel_timeOut()
     m_liveEnvelopeSmoothed = 0.55f * m_liveEnvelopeSmoothed + 0.45f * target;
     const float env = qBound(0.0f, std::pow(m_liveEnvelopeSmoothed, 0.90f), 1.0f);
 
-    // Stable Player API has no output latency query; keep visual offset neutral.
-    m_visualLatencyMs = 0;
+    // Align visuals to audible output using device latency from backend.
+    m_visualLatencyMs = qBound(0, player->outputLatencyMs(), 250);
     const int rawPosMs = QTime(0, 0).msecsTo(player->position());
     const int visPosMs = qMax(0, rawPosMs - m_visualLatencyMs);
-    const int delaySamples = qBound(0, (m_visualLatencyMs + 25) / 50, 7);
+    const int delaySamples = qBound(0, (m_visualLatencyMs + (kEnvelopeAnalysisIntervalMs / 2)) / kEnvelopeAnalysisIntervalMs, 32);
     m_pendingEnvelope.enqueue(env);
     if (m_pendingEnvelope.size() > delaySamples && !bpmWidget->isEnvelopePreloaded())
         bpmWidget->appendEnvelopeSampleAt(visPosMs, m_pendingEnvelope.dequeue());
@@ -1317,11 +1365,12 @@ void PlayerWidget::timerLevel_timeOut()
 void PlayerWidget::timerPosition_timeOut()
 {
     if (m_isStarted) {
-        const QTime length = player->length();
-        const QTime currentPos = player->position();
-        if (length > QTime(0, 0) && currentPos >= length) {
-            qDebug() << Q_FUNC_INFO << ": reached end of track, pausing";
+        // Use backend running state for end detection. Position can lead audible
+        // output due buffering/read-ahead and would stop playback prematurely.
+        if (!player->isPlaying()) {
+            qDebug() << Q_FUNC_INFO << ": backend stopped, pausing";
             pause();
+            return;
         }
     }
 
@@ -1339,13 +1388,14 @@ void PlayerWidget::timerVisual_timeOut()
         return;
 
     // Playing: use actual player position
-    const QTime length = player->length();
-    const QTime currentPos = player->position();
-    if (length > QTime(0, 0) && currentPos >= length) {
-        qDebug() << Q_FUNC_INFO << ": reached end of track, pausing";
+    if (!player->isPlaying()) {
+        qDebug() << Q_FUNC_INFO << ": backend stopped, pausing";
         pause();
         return;
     }
+
+    const QTime length = player->length();
+    const QTime currentPos = player->position();
 
     const QTime displayPos = (length > QTime(0, 0) && currentPos > length) ? length : currentPos;
 
@@ -1445,6 +1495,7 @@ void PlayerWidget::loadTrack(Track* track)
     m_beatPosition = QTime();
     bpmWidget->setState(m_bpm, QTime(0, 0), m_beatPosition, false, track == nullptr);
     bpmWidget->setTempoInfo(m_tempoRate, m_syncAdopting);
+    bpmWidget->setTrackLength(QTime(0, 0));
     bpmWidget->clearEnvelope();
     m_envelopeScrubbing = false;
 
@@ -1477,7 +1528,10 @@ void PlayerWidget::loadTrack(Track* track)
         }
 
         if (cachedEnvelope.valid) {
-            bpmWidget->setTrackLength(player->length());
+            if (cachedEnvelope.durationMs > 0)
+                bpmWidget->setTrackLength(QTime(0, 0).addMSecs(cachedEnvelope.durationMs));
+            else if (m_CurrentTrack && m_CurrentTrack->length() > 0)
+                bpmWidget->setTrackLength(QTime(0, 0).addSecs(m_CurrentTrack->length()));
             bpmWidget->setPreloadedEnvelope(cachedEnvelope.samples, kEnvelopeAnalysisIntervalMs);
         }
 

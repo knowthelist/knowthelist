@@ -324,6 +324,13 @@ void Player::setMonitorVolume(double v)
     }
 }
 
+int Player::outputLatencyMs() const
+{
+    if (audioBackend)
+        return audioBackend->outputLatencyMs();
+    return 0;
+}
+
 QTime Player::length()
 {
     return QTime(0, 0).addMSecs(p->length);

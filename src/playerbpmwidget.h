@@ -72,7 +72,7 @@ private:
     QVector<quint8> m_timelineKnown;
     QVector<float> m_envelope;
     int m_windowMs;
-    int m_sampleIntervalMs;
+    int m_liveSampleIntervalMs;
     double m_exactBpm;
     double m_trueSampleIntervalMs;  // Calculated from track length / sample count (not rounded)
 

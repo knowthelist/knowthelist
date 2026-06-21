@@ -245,10 +245,14 @@ void JuceAudioBackend::load(const QUrl& url)
         transportSource->setSource(nullptr);
         tempoSource.reset();
         currentSource.reset();
+        sourceSampleRate = reader->sampleRate > 0.0 ? reader->sampleRate : 0.0;
         currentSource = std::make_unique<juce::AudioFormatReaderSource>(reader, true);
         tempoSource = std::make_unique<TempoSource>(currentSource.get());
         tempoSource->setResamplingRatio(currentRate);
-        transportSource->setSource(tempoSource.get());
+        // Tell transport the source timeline sample rate so setPosition(seconds)
+        // and getCurrentPosition() map correctly to file time (not device rate).
+        transportSource->setSource(tempoSource.get(), 0, nullptr,
+                       sourceSampleRate > 0.0 ? sourceSampleRate : 0.0, 2);
         lastError = QString();
     } catch (const std::exception& e) {
         lastError = QString("Load failed: %1").arg(e.what());
@@ -280,14 +284,29 @@ void JuceAudioBackend::seek(const QTime& position)
 
 QTime JuceAudioBackend::getPosition()
 {
-    double seconds = transportSource->getCurrentPosition();
+    double seconds = 0.0;
+    if (tempoSource && sourceSampleRate > 0.0) {
+        // Use source read position so visuals map to the track timeline even
+        // when playback speed is changed via resampling.
+        const juce::int64 srcSamples = tempoSource->getNextReadPosition();
+        seconds = static_cast<double>(srcSamples) / sourceSampleRate;
+    } else {
+        seconds = transportSource->getCurrentPosition();
+    }
     int ms = static_cast<int>(seconds * 1000);
     return QTime(0, 0).addMSecs(ms);
 }
 
 QTime JuceAudioBackend::getDuration()
 {
-    double seconds = transportSource->getLengthInSeconds();
+    double seconds = 0.0;
+    if (currentSource && sourceSampleRate > 0.0) {
+        // Keep duration in the same source timeline domain as getPosition().
+        const juce::int64 totalSamples = currentSource->getTotalLength();
+        seconds = static_cast<double>(totalSamples) / sourceSampleRate;
+    } else {
+        seconds = transportSource->getLengthInSeconds();
+    }
     int ms = static_cast<int>(seconds * 1000);
     return QTime(0, 0).addMSecs(ms);
 }
@@ -440,6 +459,25 @@ void JuceAudioBackend::setMonitorVolume(double volume)
     monitorVolume = juce::jlimit(0.0, 2.0, volume);
     if (monitorTeeCallback)
         monitorTeeCallback->volume.store(static_cast<float>(monitorVolume));
+}
+
+int JuceAudioBackend::outputLatencyMs() const
+{
+    if (!deviceManager)
+        return 0;
+
+    auto* device = deviceManager->getCurrentAudioDevice();
+    if (!device)
+        return 0;
+
+    const double sr = device->getCurrentSampleRate();
+    if (sr <= 0.0)
+        return 0;
+
+    // Include device-reported output latency and one callback buffer of scheduling lead time.
+    const int latencySamples = qMax(0, device->getOutputLatencyInSamples())
+                             + qMax(0, device->getCurrentBufferSizeSamples());
+    return qMax(0, qRound(1000.0 * static_cast<double>(latencySamples) / sr));
 }
 
 QString JuceAudioBackend::getLastError()

@@ -151,7 +151,7 @@ PlayerBpmWidget::PlayerBpmWidget(QWidget* parent)
     , m_tempoRate(1.0)
     , m_syncAdjusting(false)
     , m_windowMs(6000)
-    , m_sampleIntervalMs(50)  // Keep 50ms: dense enough, rebuilds less often = stable display
+    , m_liveSampleIntervalMs(25)  // Live-only envelope binning; preloaded waveform uses m_trueSampleIntervalMs.
     , m_exactBpm(0.0)
     , m_trueSampleIntervalMs(8.0)  // Default to 120fps analyzer rate (1000/120 ≈ 8.333ms)
     , m_rebuildRequested(false)
@@ -280,7 +280,9 @@ void PlayerBpmWidget::requestEnvelopeRebuild(const QRect& band, int centerY, dou
 
     const QVector<float> timelineEnvelope = m_timelineEnvelope;
     const QVector<quint8> timelineKnown = m_timelineKnown;
-    const double sampleIntervalMs = static_cast<double>(qMax(1, m_sampleIntervalMs));
+    const double sampleIntervalMs = m_envelopePreloaded
+            ? qMax(0.001, m_trueSampleIntervalMs)
+            : static_cast<double>(qMax(1, m_liveSampleIntervalMs));
     const int leftMs = visibleWindowLeftMs();
     const int trackLenMs = QTime(0, 0).msecsTo(m_trackLength);
 
@@ -331,7 +333,7 @@ void PlayerBpmWidget::appendEnvelopeSampleAt(int positionMs, float value)
     if (positionMs < 0)
         return;
 
-    const int sampleIndex = positionMs / qMax(1, m_sampleIntervalMs);
+    const int sampleIndex = positionMs / qMax(1, m_liveSampleIntervalMs);
     if (sampleIndex < 0)
         return;
 
@@ -361,6 +363,10 @@ void PlayerBpmWidget::clearEnvelope()
     m_cachedBand   = QRect();
     m_envelopeDirty = false;
     m_envelopePreloaded = false;
+    // Reset track length so the next preloaded waveform cannot inherit stale
+    // timing from a previously loaded track.
+    m_trackLength = QTime(0, 0);
+    m_trueSampleIntervalMs = 8.0;
     invalidateWaveformLayer();
     update();
 }
@@ -374,13 +380,17 @@ void PlayerBpmWidget::setPreloadedEnvelope(const QVector<float>& samples, int so
     m_timelineKnown.clear();
 
     const qint64 trackMs = QTime(0, 0).msecsTo(m_trackLength);
-    qint64 totalMs = 0;
+    const qint64 fallbackMs = (sourceIntervalMs > 0)
+            ? static_cast<qint64>(samples.size() - 1) * static_cast<qint64>(sourceIntervalMs)
+            : static_cast<qint64>(qRound(static_cast<double>(samples.size() - 1) * 1000.0 / 120.0));
+
+    // Guard against stale track length (e.g. previous song) when cached envelope
+    // arrives before the new player length is known.
+    qint64 totalMs = fallbackMs;
     if (trackMs > 0) {
-        totalMs = trackMs;
-    } else if (sourceIntervalMs > 0) {
-        totalMs = static_cast<qint64>(samples.size() - 1) * static_cast<qint64>(sourceIntervalMs);
-    } else {
-        totalMs = qRound(static_cast<double>(samples.size() - 1) * 1000.0 / 120.0);
+        const double ratio = fallbackMs > 0 ? static_cast<double>(trackMs) / static_cast<double>(fallbackMs) : 1.0;
+        if (ratio > 0.9 && ratio < 1.1)
+            totalMs = trackMs;
     }
 
     const double frameDurationMs = (samples.size() > 1)
@@ -388,26 +398,11 @@ void PlayerBpmWidget::setPreloadedEnvelope(const QVector<float>& samples, int so
             : static_cast<double>(qMax(1, sourceIntervalMs));
     m_trueSampleIntervalMs = frameDurationMs;  // Store exact interval for beat-grid alignment
 
-    const int dstInterval = qMax(1, m_sampleIntervalMs);
-    const int targetSize = qMax(1, static_cast<int>(totalMs / dstInterval) + 1);
-    m_timelineEnvelope.resize(targetSize);
-    m_timelineKnown.resize(targetSize);
-    for (int i = 0; i < targetSize; ++i) {
-        m_timelineEnvelope[i] = 0.0f;
-        m_timelineKnown[i] = 0;
-    }
-
-    // Map analyzer samples into the live timeline grid using max pooling so
-    // transient peaks remain clearly visible after resampling.
+    m_timelineEnvelope.resize(samples.size());
+    m_timelineKnown.resize(samples.size());
     for (int i = 0; i < samples.size(); ++i) {
-        const double tMs = (static_cast<double>(i)) * frameDurationMs;
-        const int dstIndex = static_cast<int>(tMs / dstInterval);
-        if (dstIndex < 0 || dstIndex >= m_timelineEnvelope.size())
-            continue;
-        const float v = qBound(0.0f, samples.at(i), 1.0f);
-        if (!m_timelineKnown[dstIndex] || v > m_timelineEnvelope[dstIndex])
-            m_timelineEnvelope[dstIndex] = v;
-        m_timelineKnown[dstIndex] = 1;
+        m_timelineEnvelope[i] = qBound(0.0f, samples.at(i), 1.0f);
+        m_timelineKnown[i] = 1;
     }
 
     m_envelopeDirty = true;
@@ -452,7 +447,9 @@ QTime PlayerBpmWidget::visualBeatReference() const
 
 void PlayerBpmWidget::rebuildVisibleEnvelope(int bandWidth)
 {
-    const int intervalMs = qMax(1, m_sampleIntervalMs);
+    const double intervalMs = m_envelopePreloaded
+            ? qMax(0.001, m_trueSampleIntervalMs)
+            : static_cast<double>(qMax(1, m_liveSampleIntervalMs));
     // Use exactly bandWidth samples so each pixel represents one time bin.
     // This ensures 1:1 pixel mapping and prevents horizontal squeezing.
     const int targetSamples = qMax(2, bandWidth);
@@ -645,9 +642,9 @@ void PlayerBpmWidget::rebuildEnvelopePaths(const QRect& band, int centerY, doubl
 double PlayerBpmWidget::phase() const
 {
     if (m_bpm <= 0) return 0.0;
-    double effectiveBpm = (m_exactBpm > 0.0) ? m_exactBpm : static_cast<double>(m_bpm);
-    effectiveBpm *= qMax(0.0, m_tempoRate);
-    const double beatMs = 60000.0 / effectiveBpm;
+    // Use base BPM — beats are fixed positions in the audio file.
+    const double baseBpm = (m_exactBpm > 0.0) ? m_exactBpm : static_cast<double>(m_bpm);
+    const double beatMs = 60000.0 / baseBpm;
     if (beatMs <= 0.0) return 0.0;
 
     const qint64 posMs    = QTime(0, 0).msecsTo(m_position);
@@ -666,6 +663,7 @@ void PlayerBpmWidget::paintEvent(QPaintEvent* event)
     // Antialiasing only for text; all geometry drawn without it (big CPU saving)
     painter.setRenderHint(QPainter::Antialiasing, false);
     painter.setRenderHint(QPainter::TextAntialiasing, true);
+    painter.setRenderHint(QPainter::SmoothPixmapTransform, false);
 
     // ── Background ──────────────────────────────────────────────────────────
     painter.fillRect(rect(), QColor(14, 19, 28));
@@ -682,14 +680,12 @@ void PlayerBpmWidget::paintEvent(QPaintEvent* event)
     // ── BPM label ────────────────────────────────────────────────────────────
     painter.setRenderHint(QPainter::Antialiasing, true);  // on for text
     QString bpmText;
-    if (!m_analyzed)
-        bpmText = "Analysing BPM...";
-    else if (m_bpm > 0) {
+    if (m_bpm > 0) {
         bpmText = QString::number(m_bpm) + " BPM";
         const double adjusted = static_cast<double>(m_bpm) * m_tempoRate;
         if (qAbs(adjusted - static_cast<double>(m_bpm)) >= 0.05)
             bpmText += " (" + formatTempoValue(adjusted) + ")";
-    } else {
+    } else if (m_analyzed) {
         bpmText = "No BPM detected";
     }
     painter.setPen(QColor(222, 231, 242));
@@ -719,9 +715,10 @@ void PlayerBpmWidget::paintEvent(QPaintEvent* event)
 
     // ── Beat grid ─────────────────────────────────────────────────────────────
     if (m_bpm > 0 && m_windowMs > 0) {
-        double effectiveBpm = (m_exactBpm > 0.0) ? m_exactBpm : static_cast<double>(m_bpm);
-        effectiveBpm *= qMax(0.0, m_tempoRate);
-        const double beatMs = 60000.0 / effectiveBpm;
+        // Use base BPM (without tempo adjustment) — beats are fixed positions in the audio file.
+        // Tempo only changes how fast the playhead scrolls across them, not where they are.
+        const double baseBpm = (m_exactBpm > 0.0) ? m_exactBpm : static_cast<double>(m_bpm);
+        const double beatMs = 60000.0 / baseBpm;
         const QTime visualBeatRef = visualBeatReference();
         const qint64 beatRefMs = visualBeatRef.isValid() ? QTime(0, 0).msecsTo(visualBeatRef) : 0;
         const qint64 leftMs = visibleWindowLeftMs();
@@ -755,12 +752,13 @@ void PlayerBpmWidget::paintEvent(QPaintEvent* event)
             rebuildWaveformLayer(phaseBand.height());
         }
 
-        if (!m_waveformLayer.isNull() && m_sampleIntervalMs > 0) {
-            const double sampleIntervalF = static_cast<double>(qMax(1, m_sampleIntervalMs));
+        if (!m_waveformLayer.isNull()) {
+            const double sampleIntervalF = m_envelopePreloaded
+                    ? qMax(0.001, m_trueSampleIntervalMs)
+                    : static_cast<double>(qMax(1, m_liveSampleIntervalMs));
             const double leftMsF  = static_cast<double>(visibleWindowLeftMs());
             const double rightMsF = leftMsF + static_cast<double>(m_windowMs);
-            // Use floating-point source coordinates so the waveform scrolls pixel-smoothly
-            // in exact sync with the beat-line grid (no 50 ms staircase stutter).
+            // Keep exact time-domain mapping so beat-grid and waveform stay phase-locked.
             const double srcLeftF  = leftMsF  / sampleIntervalF;
             const double srcRightF = rightMsF / sampleIntervalF;
             const double totalSrcW = srcRightF - srcLeftF;
@@ -774,15 +772,6 @@ void PlayerBpmWidget::paintEvent(QPaintEvent* event)
                 const QRectF dstRect(phaseBand.left(), phaseBand.top(), dstValidW, phaseBand.height());
                 const QRectF srcRect(clampedL, 0, validSrcW, m_waveformLayer.height());
                 painter.drawPixmap(dstRect, m_waveformLayer, srcRect);
-
-                if (dstValidW < phaseBand.width() - 0.5) {
-                    const QRectF tailDst(phaseBand.left() + dstValidW,
-                                         phaseBand.top(),
-                                         phaseBand.width() - dstValidW,
-                                         phaseBand.height());
-                    const QRectF tailSrc(maxW - 1.0, 0, 1.0, m_waveformLayer.height());
-                    painter.drawPixmap(tailDst, m_waveformLayer, tailSrc);
-                }
             }
         } else {
             if (m_envelopeDirty && !m_rebuildWatcher.isRunning())
@@ -810,9 +799,9 @@ void PlayerBpmWidget::paintEvent(QPaintEvent* event)
 
     // ── Beat cursor (flash exactly when a beat tick crosses the reference) ───
     if (m_bpm > 0 && m_windowMs > 0) {
-        double effectiveBpm = (m_exactBpm > 0.0) ? m_exactBpm : static_cast<double>(m_bpm);
-        effectiveBpm *= qMax(0.0, m_tempoRate);
-        const double beatMs = 60000.0 / effectiveBpm;
+        // Use base BPM — beats are fixed positions in the audio file.
+        const double baseBpm = (m_exactBpm > 0.0) ? m_exactBpm : static_cast<double>(m_bpm);
+        const double beatMs = 60000.0 / baseBpm;
         const qint64 posMs = QTime(0, 0).msecsTo(m_position);
         const QTime visualBeatRef = visualBeatReference();
         const qint64 beatRefMs = visualBeatRef.isValid() ? QTime(0, 0).msecsTo(visualBeatRef) : 0;

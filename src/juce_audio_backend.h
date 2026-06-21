@@ -69,6 +69,7 @@ public:
     void setUseMonitorOutput(bool enabled) override;
     bool useMonitorOutput() override;
     void setMonitorVolume(double volume) override;
+    int outputLatencyMs() const override;
     QString getLastError() override;
 
     // Monitor output level metering
@@ -112,6 +113,7 @@ private:
 
     // Playback state
     double currentRate = 1.0;
+    double sourceSampleRate = 0.0;
     double masterVolume = 1.0;
     double gainDb = 0.0;
     

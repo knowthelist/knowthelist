@@ -180,6 +180,12 @@ public:
     virtual void setMonitorVolume(double volume) = 0;
 
     /**
+     * Estimated output latency in milliseconds for the active output device.
+     * Used to align visual playhead/beat grid with audible output.
+     */
+    virtual int outputLatencyMs() const { return 0; }
+
+    /**
      * Get last error message.
      * @return Error string, empty if no error
      */
