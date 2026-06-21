@@ -67,6 +67,7 @@ public:
     void setVolume(double volume);
     void setGain(double gain);
     int currentBpm() const { return m_bpm; }
+    double exactBpmForSync() const;
     QTime currentPosition() const;
     QTime beatPosition() const { return m_beatPosition; }
     void setTempoRate(double rate);
@@ -74,9 +75,9 @@ public:
     void setSyncActive(bool active);
     void setSyncAdopting(bool active);
     bool supportsSmoothTempo() const;
-    void syncNowToReferenceBeat(int referenceBpm, const QTime& referencePosition,
+    void syncNowToReferenceBeat(double referenceBpm, const QTime& referencePosition,
                                 const QTime& referenceBeatAnchor = QTime());
-    void alignCueToReferenceBeat(int referenceBpm, const QTime& referencePosition,
+    void alignCueToReferenceBeat(double referenceBpm, const QTime& referencePosition,
                                    const QTime& referenceBeatAnchor = QTime());
     void setBeatSyncEnabled(bool enabled) { m_beatSyncEnabled = enabled; }
     void setBeatCueEnabled(bool enabled) { m_beatCueEnabled = enabled; }

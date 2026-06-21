@@ -1862,14 +1862,25 @@ QTime PlayerWidget::currentPosition() const
     return player->position();
 }
 
-void PlayerWidget::alignCueToReferenceBeat(int referenceBpm, const QTime& referencePosition,
+double PlayerWidget::exactBpmForSync() const
+{
+    if (trackanalyzer) {
+        const double exact = trackanalyzer->exactBpm();
+        if (exact > 0.0)
+            return exact;
+    }
+    return (m_bpm > 0) ? static_cast<double>(m_bpm) : 0.0;
+}
+
+void PlayerWidget::alignCueToReferenceBeat(double referenceBpm, const QTime& referencePosition,
                                             const QTime& referenceBeatAnchor)
 {
-    if (m_isStarted || m_bpm <= 0 || referenceBpm <= 0)
+    const double ownBpm = exactBpmForSync();
+    if (m_isStarted || ownBpm <= 0.0 || referenceBpm <= 0.0)
         return;
 
-    const double ownBeatMs = 60000.0 / static_cast<double>(m_bpm);
-    const double refBeatMs = 60000.0 / static_cast<double>(referenceBpm);
+    const double ownBeatMs = 60000.0 / ownBpm;
+    const double refBeatMs = 60000.0 / referenceBpm;
 
     // Use a 4-beat bar for bar-level cue alignment
     const int    BAR_BEATS = 4;
@@ -1895,17 +1906,18 @@ void PlayerWidget::alignCueToReferenceBeat(int referenceBpm, const QTime& refere
     updateTimeAndPositionDisplay(false);
 }
 
-void PlayerWidget::syncNowToReferenceBeat(int referenceBpm, const QTime& referencePosition,
+void PlayerWidget::syncNowToReferenceBeat(double referenceBpm, const QTime& referencePosition,
                                           const QTime& referenceBeatAnchor)
 {
     // Works while playing: seeks to the nearest bar-aligned position that puts
     // this deck on the same beat-of-the-bar as the reference deck, so both
     // decks share the same beat-1 in a standard 4/4 bar.
-    if (m_bpm <= 0 || referenceBpm <= 0)
+    const double ownBpm = exactBpmForSync();
+    if (ownBpm <= 0.0 || referenceBpm <= 0.0)
         return;
 
-    const double ownBeatMs   = 60000.0 / static_cast<double>(m_bpm);
-    const double refBeatMs   = 60000.0 / static_cast<double>(referenceBpm);
+    const double ownBeatMs   = 60000.0 / ownBpm;
+    const double refBeatMs   = 60000.0 / referenceBpm;
 
     // Use a 4-beat bar so both decks land on the same beat-of-the-bar (beat 1).
     const int    BAR_BEATS   = 4;
@@ -1942,8 +1954,8 @@ void PlayerWidget::syncNowToReferenceBeat(int referenceBpm, const QTime& referen
     updateTimeAndPositionDisplay(false);
 
     // If BPMs differ, also match the tempo rate
-    if (referenceBpm != m_bpm)
-        setTempoRate(static_cast<double>(referenceBpm) / m_bpm);
+    if (qAbs(referenceBpm - ownBpm) > 1.0e-6)
+        setTempoRate(referenceBpm / ownBpm);
 }
 
 void PlayerWidget::on_butSync_toggled(bool checked)
