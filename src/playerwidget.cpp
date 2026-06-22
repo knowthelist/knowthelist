@@ -1115,19 +1115,16 @@ void PlayerWidget::applyAutoCueAfterAnalysis(bool preferBeatCue)
 
     QTime cuePosition;
 
-    // Priority 1: Use cached beat position for auto-cue when beat-cue is enabled
-    //if (m_beatCueEnabled && m_bpm > 0 && m_beatPosition.isValid())
-    //    cuePosition = m_beatPosition;
-    // Priority 2: Use trackanalyzer start position when it finished (always available if loaded)
-   // else if (trackanalyzer->finished())
-   if (trackanalyzer->finished())
-        cuePosition = trackanalyzer->startPosition();
+    // Use the centralized function to determine the best cue position.
+    QTime cuePosition = calculateCuePosition();
+
 qDebug() << Q_FUNC_INFO << ":" << objectName()
          << " preferBeatCue=" << preferBeatCue
          << " beatPositionValid=" << m_beatPosition.isValid()
          << " beatPosition=" << m_beatPosition
          << " analyzerFinished=" << trackanalyzer->finished()
-         << " analyzerStartPosition=" << trackanalyzer->startPosition();
+         << " calculatedCuePosition=" << cuePosition;
+
     if (cuePosition > QTime(0, 0))
         player->setPosition(cuePosition);
 
@@ -1852,10 +1849,8 @@ void PlayerWidget::on_butCue_clicked()
         //ToDo: Visualize skipped silent at start and at the end (color bar)
         this->pause();
 
-        QTime cuePosition = trackanalyzer->startPosition();
-        qDebug() << Q_FUNC_INFO << "cuePosition from analyzer:" << cuePosition << "m_beatCueEnabled:" << m_beatCueEnabled << " beatPosition:" << m_beatPosition << " bpm:" << m_bpm;
-        //if (m_beatCueEnabled && m_bpm > 0 && m_beatPosition.isValid())
-        //  cuePosition = m_beatPosition;
+        QTime cuePosition = calculateCuePosition();
+        qDebug() << Q_FUNC_INFO << "cuePosition calculated:" << cuePosition << "m_beatCueEnabled:" << m_beatCueEnabled << " beatPosition:" << m_beatPosition << " bpm:" << m_bpm;
 
         suppressAboutFinishForMs(1000);
         player->setPosition(cuePosition);
