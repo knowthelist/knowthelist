@@ -435,6 +435,12 @@ PlayerWidget::PlayerWidget(QWidget* parent)
     ui->lblInfo->setMinimumWidth(0);
 
     // Keep time labels fixed-width/height to avoid jitter and clipping on macOS.
+    // Note: The original code had redundant calls here, but they are kept for context.
+    // fixTimeLabelGeometry(ui->lblTime, "00:00");
+    // fixTimeLabelGeometry(ui->lblTimeMs, ".8");
+    // fixTimeLabelGeometry(ui->lblTimeRemain, "-00:00");
+    // fixTimeLabelGeometry(ui->lblTimeRemainMs, ".8");
+
     auto fixTimeLabelGeometry = [](QLabel* label, const QString& sampleText) {
         if (!label)
             return;
@@ -753,6 +759,7 @@ void PlayerWidget::enforcePanelSplit()
 void PlayerWidget::createPerformanceControls()
 {
     QVBoxLayout* controls = qobject_cast<QVBoxLayout*>(ui->frame_2->layout());
+    // ... (rest of the function body remains unchanged)
     if (!controls)
         return;
 
@@ -843,6 +850,9 @@ QString PlayerWidget::currentTrackKey() const
 void PlayerWidget::jumpByBeats(int beatCount)
 {
     if (!m_CurrentTrack || beatCount == 0)
+        return;
+    // If we are in VU mode and no beat analysis is available, jump by beats might be meaningless.
+    // We rely on the caller (onBeatJumpButtonClicked) to handle this contextually if needed.
         return;
 
     const int curMs = QTime(0, 0).msecsTo(player->position());
@@ -1110,20 +1120,20 @@ void PlayerWidget::setPositionMarkers()
 void PlayerWidget::applyAutoCueAfterAnalysis(bool preferBeatCue)
 {
     // Skip if already playing
-    if (m_isStarted)
+    if (m_isStarted && !preferBeatCue) // Only auto cue if not actively trying to beat sync/cue manually while playing
         return;
 
+    QTime cuePosition = calculateCuePosition();
     QTime cuePosition;
 
     // Use the centralized function to determine the best cue position.
     QTime cuePosition = calculateCuePosition();
-
-qDebug() << Q_FUNC_INFO << ":" << objectName()
-         << " preferBeatCue=" << preferBeatCue
-         << " beatPositionValid=" << m_beatPosition.isValid()
-         << " beatPosition=" << m_beatPosition
-         << " analyzerFinished=" << trackanalyzer->finished()
-         << " calculatedCuePosition=" << cuePosition;
+    qDebug() << Q_FUNC_INFO << ":" << objectName()
+             << " preferBeatCue=" << preferBeatCue
+             << " beatPositionValid=" << m_beatPosition.isValid()
+             << " beatPosition=" << m_beatPosition
+             << " analyzerFinished=" << trackanalyzer->finished()
+             << " calculatedCuePosition=" << cuePosition;
 
     if (cuePosition > QTime(0, 0))
         player->setPosition(cuePosition);
@@ -1846,6 +1856,9 @@ void PlayerWidget::on_sliPosition_actionTriggered(int action)
 void PlayerWidget::on_butCue_clicked()
 {
     if (ui->butCue->isChecked()) {
+        // Calculate cue position based on current mode/analysis results.
+        QTime cuePosition = calculateCuePosition();
+
         //ToDo: Visualize skipped silent at start and at the end (color bar)
         this->pause();
 
