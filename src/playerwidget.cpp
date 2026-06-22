@@ -1162,7 +1162,7 @@ void PlayerWidget::applyAutoCueAfterAnalysis(bool preferBeatCue)
         return;
 
     // Use the centralized function to determine the best cue position (replaces redundant calls).
-    const QTime cuePosition = computeCuePosition();
+    const QTime cuePosition = calculateCuePosition();
 
     qDebug() << Q_FUNC_INFO << ":" << objectName()
              << " preferBeatCue=" << preferBeatCue
@@ -1170,7 +1170,7 @@ void PlayerWidget::applyAutoCueAfterAnalysis(bool preferBeatCue)
              << " beatPositionValid=" << m_beatPosition.isValid()
              << " beatPosition=" << m_beatPosition
              << " analyzerFinished=" << trackanalyzer->finished()
-             << " calculatedCuePosition=" << computeCuePosition();
+             << " calculatedCuePosition=" << cuePosition;
 
     if (cuePosition > QTime(0, 0))
         player->setPosition(cuePosition);
@@ -1894,10 +1894,8 @@ void PlayerWidget::on_sliPosition_actionTriggered(int action)
 void PlayerWidget::on_butCue_clicked()
 {
     if (!ui->butCue->isChecked()) { // Only act if the button is not already checked/active
-        // Calculate cue position based on current mode/analysis results (using computeCuePosition).
-        // Calculate cue position based on current mode/analysis results (using computeCuePosition).
-        // Calculate cue position based on current mode/analysis results (using computeCuePosition).
-        const QTime cuePosition = computeCuePosition();
+        // Calculate cue position based on current mode/analysis results (using calculateCuePosition).
+        const QTime cuePosition = calculateCuePosition();
 
         //ToDo: Visualize skipped silent at start and at the end (color bar)
         this->pause();
