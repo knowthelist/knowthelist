@@ -30,6 +30,7 @@
 #include <QSignalBlocker>
 #include <QSlider>
 #include <QSettings>
+#include <QtGlobal>
 #include <QApplication>
 #include <QMargins>
 #include <QtSql/QSqlDatabase>
