@@ -1903,6 +1903,7 @@ void PlayerWidget::on_butCue_clicked()
     if (!ui->butCue->isChecked()) { // Only act if the button is not already checked/active
         // Calculate cue position based on current mode/analysis results (using computeCuePosition).
         // Calculate cue position based on current mode/analysis results (using computeCuePosition).
+        // Calculate cue position based on current mode/analysis results (using computeCuePosition).
         const QTime cuePosition = computeCuePosition();
 
         //ToDo: Visualize skipped silent at start and at the end (color bar)
@@ -1912,6 +1913,7 @@ void PlayerWidget::on_butCue_clicked()
         qDebug() << Q_FUNC_INFO << "cuePosition calculated:" << cuePosition << "m_beatCueEnabled:" << m_beatCueEnabled << " beatPosition:" << m_beatPosition << " bpm:" << m_bpm;
 
         suppressAboutFinishForMs(1000);
+        player->setPosition(cuePosition);
         player->setPosition(cuePosition);
         bpmWidget->setTrackLength(player->length());
         player->setPosition(cuePosition);
