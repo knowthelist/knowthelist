@@ -1001,7 +1001,7 @@ void PlayerWidget::onEnvelopeScrubPositionChanged(double normalizedPosition, boo
     }
 }
 
-QTime PlayerWidget::calculateCuePosition()
+QTime PlayerWidget::calculateCuePosition() const
 {
     if (!m_CurrentTrack || !player->isPlaying())
         return QTime();
@@ -1013,9 +1013,11 @@ QTime PlayerWidget::calculateCuePosition()
     }
 
     // Otherwise, calculate based on silent end detection (VU mode).
-    return determineSilentEndCuePosition();
+    return determineSilentEndCuePosition(); // Centralized calculation
 }
 
+QTime PlayerWidget::determineSilentEndCuePosition() const
+// Implementation of determineSilentEndCuePosition()
 QTime PlayerWidget::determineSilentEndCuePosition() const
 {
     if (!trackanalyzer || !trackanalyzer->finished()) {
@@ -1157,11 +1159,12 @@ void PlayerWidget::setPositionMarkers()
 
 void PlayerWidget::applyAutoCueAfterAnalysis(bool preferBeatCue)
 {
-    // Skip if already playing
+    // Skip if already playing and we are not explicitly forcing a beat cue.
     if (m_isStarted && !preferBeatCue) // Only auto cue if not actively trying to beat sync/cue manually while playing
         return;
 
-    QTime cuePosition = calculateCuePosition();
+    // Use the centralized function to determine the best cue position.
+    const QTime cuePosition = calculateCuePosition();
     QTime cuePosition;
 
     // Use the centralized function to determine the best cue position.
@@ -1176,7 +1179,7 @@ void PlayerWidget::applyAutoCueAfterAnalysis(bool preferBeatCue)
     if (cuePosition > QTime(0, 0))
         player->setPosition(cuePosition);
 
-    bpmWidget->setTrackLength(player->length());
+    bpmWidget->setTrackLength(player->length()); // This line was already here, keeping it.
     ui->butCue->setChecked(true);
     bpmWidget->setState(m_bpm, calculateCuePosition(), m_beatPosition, m_isStarted, m_bpmAnalyzed);
     updateTimeAndPositionDisplay(false);
@@ -1896,16 +1899,16 @@ void PlayerWidget::on_butCue_clicked()
 {
     if (!ui->butCue->isChecked()) { // Only act if the button is not already checked/active
         // Calculate cue position based on current mode/analysis results.
-        QTime cuePosition = calculateCuePosition(); // Centralized calculation
+        const QTime cuePosition = calculateCuePosition();
 
         //ToDo: Visualize skipped silent at start and at the end (color bar)
         this->pause();
 
-        QTime cuePosition = calculateCuePosition();
+        // Use the variable defined above:
         qDebug() << Q_FUNC_INFO << "cuePosition calculated:" << cuePosition << "m_beatCueEnabled:" << m_beatCueEnabled << " beatPosition:" << m_beatPosition << " bpm:" << m_bpm;
 
         suppressAboutFinishForMs(1000);
-        player->setPosition(cuePosition); // Use calculated position
+        player->setPosition(cuePosition); // Use calculated position (variable scope is fine here)
         bpmWidget->setTrackLength(player->length());
         bpmWidget->setState(m_bpm, cuePosition, m_beatPosition, m_isStarted, m_bpmAnalyzed);
         updateTimeAndPositionDisplay();
