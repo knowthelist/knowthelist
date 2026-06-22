@@ -86,7 +86,7 @@ public:
     void setMonitorRouteAvailable(bool available);
     void setMonitorRouteEnabled(bool enabled);
     bool isMonitorRouteEnabled() const { return m_monitorRouteEnabled; }
-    void setMonitorVolume(double v);
+    void setMonitorVolume(double v); // Removed redundant declaration here
     void setSkipSilentEnd(bool checked)
     {
         m_skipSilentEnd = checked;
@@ -196,10 +196,9 @@ private:
     QTimer* timerLevel;
     QTimer* timerPosition;
     QTimer* timerVisual;
-    void dropEvent(QDropEvent*) override;
+    void dropEvent(QDropEvent*) override; // Removed redundant declarations here
     void dragEnterEvent(QDragEnterEvent*) override;
     void dragMoveEvent(QDragMoveEvent*) override;
-    void setPositionMarkers();    QTime computeCuePosition() const;    int mTrackFinishEmitTime;
     Track* m_CurrentTrack;
     long remainCueTime;
     bool m_isStarted;
