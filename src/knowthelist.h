@@ -211,7 +211,7 @@ private:
     int m_fadeSyncBeatWaitSteps;
 
 protected:
-    virtual void closeEvent(QCloseEvent*);
+    virtual void closeEvent(QCloseEvent *event) override;
     void resizeEvent(QResizeEvent* event) override;
     void showEvent(QShowEvent* event) override;
 
