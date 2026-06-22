@@ -110,6 +110,7 @@ public:
     QTime computeCuePosition() const;
 
 public Q_SLOTS:
+    void setPositionMarkers();
     void loadTrack(Track*);
     void analyzeGainFinished();
     void analyzeTempoFinished();
