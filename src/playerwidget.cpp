@@ -852,10 +852,6 @@ void PlayerWidget::jumpByBeats(int beatCount)
 {
     if (!m_CurrentTrack || beatCount == 0)
         return;
-    // If we are in VU mode and no beat analysis is available, jump by beats might be meaningless.
-    // We rely on the caller (onBeatJumpButtonClicked) to handle this contextually if needed.
-        return;
-
     const int curMs = QTime(0, 0).msecsTo(player->position());
     const int lenMs = QTime(0, 0).msecsTo(player->length());
     const int fallbackBeatMs = (m_bpm > 0) ? qRound(60000.0 / static_cast<double>(m_bpm)) : 500;
@@ -1166,7 +1162,6 @@ void PlayerWidget::applyAutoCueAfterAnalysis(bool preferBeatCue)
 
     qDebug() << Q_FUNC_INFO << ":" << objectName()
              << " preferBeatCue=" << preferBeatCue
-            << " beatPositionValid=" << m_beatPosition.isValid()
              << " beatPositionValid=" << m_beatPosition.isValid()
              << " beatPosition=" << m_beatPosition
              << " analyzerFinished=" << trackanalyzer->finished()
@@ -1905,9 +1900,7 @@ void PlayerWidget::on_butCue_clicked()
 
         suppressAboutFinishForMs(1000);
         player->setPosition(cuePosition);
-        player->setPosition(cuePosition);
         bpmWidget->setTrackLength(player->length());
-        player->setPosition(cuePosition);
         bpmWidget->setState(m_bpm, cuePosition, m_beatPosition, m_isStarted, m_bpmAnalyzed);
         updateTimeAndPositionDisplay();
     }
@@ -2047,7 +2040,7 @@ void PlayerWidget::on_pitchSlider_valueChanged(int value)
 
     if (m_pitchResetButton) {
         m_pitchResetButton->setText(
-            value == 0 ? QStringLiteral("0.0%")
+            value == 0 ? QStringLiteral("0.00%")
                        : QString("%1%2%").arg(value > 0 ? "+" : "")
                                         .arg(value / 20.0, 0, 'f', 2));
     }

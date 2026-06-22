@@ -63,7 +63,7 @@ public:
     bool isStarted() { return m_isStarted; }
 
     void setTrackFinishEmitTime(const int sec);
-    int TrackFinishEmitTime() const { return m_TrackFinishEmitTime; }
+    int TrackFinishEmitTime() const { return mTrackFinishEmitTime; }
     void setVolume(double volume);
     void setGain(double gain);
     int currentBpm() const { return m_bpm; }
