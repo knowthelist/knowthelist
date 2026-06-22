@@ -380,8 +380,8 @@ PlayerWidget::PlayerWidget(QWidget* parent)
     bpmWidget->setGeometry(ui->fraVuMeter->rect());
     bpmWidget->setTempoInfo(m_tempoRate, m_syncAdopting);
     bpmWidget->hide();
-    connect(bpmWidget, SIGNAL(envelopeScrubStarted()), this, SLOT(onEnvelopeScrubStarted()));
-    connect(bpmWidget, SIGNAL(envelopeScrubPositionChanged(double,bool)), this, SLOT(onEnvelopeScrubPositionChanged(double,bool)));
+    connect(bpmWidget, &PlayerBpmWidget::envelopeScrubStarted, this, &PlayerWidget::onEnvelopeScrubStarted);
+    connect(bpmWidget, &PlayerBpmWidget::envelopeScrubPositionChanged, this, &PlayerWidget::onEnvelopeScrubPositionChanged);
 
     for (int i = 0; i < 4; ++i)
         m_beatJumpButtons[i] = nullptr;
@@ -759,7 +759,7 @@ void PlayerWidget::enforcePanelSplit()
 void PlayerWidget::createPerformanceControls()
 {
     QVBoxLayout* controls = qobject_cast<QVBoxLayout*>(ui->frame_2->layout());
-    // ... (rest of the function body remains unchanged)
+    // The rest of the function body is kept as is.
     if (!controls)
         return;
 
@@ -1298,8 +1298,9 @@ void PlayerWidget::analyzeTempoFinished()
     m_bpm = trackanalyzer->bpm();
     m_beatPosition = trackanalyzer->beatPosition();
 
-    if (m_bpm > 0)
-        Q_EMIT tempoChanged(m_bpm, m_beatPosition);
+    if (m_bpm > 0) {
+        emit tempoChanged(m_bpm, m_beatPosition);
+    }
 
     if (m_CurrentTrack) {
         qDebug() << Q_FUNC_INFO << "Storing tempo cache: bpm=" << m_bpm << "exactBpm=" << trackanalyzer->exactBpm();
@@ -1810,7 +1811,7 @@ void PlayerWidget::playerLoaded()
 void PlayerWidget::on_butRew_clicked()
 {
     if (player->position() < QTime(0, 0, 3))
-        Q_EMIT rewindPressed();
+        emit rewindPressed();
     else {
         suppressAboutFinishForMs(1000);
         player->setPosition(QTime(0, 0, 0));
