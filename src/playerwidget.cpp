@@ -1116,12 +1116,18 @@ void PlayerWidget::applyAutoCueAfterAnalysis(bool preferBeatCue)
     QTime cuePosition;
 
     // Priority 1: Use cached beat position for auto-cue when beat-cue is enabled
-    if (m_beatCueEnabled && m_bpm > 0 && m_beatPosition.isValid())
-        cuePosition = m_beatPosition;
+    //if (m_beatCueEnabled && m_bpm > 0 && m_beatPosition.isValid())
+    //    cuePosition = m_beatPosition;
     // Priority 2: Use trackanalyzer start position when it finished (always available if loaded)
-    else if (trackanalyzer->finished())
+   // else if (trackanalyzer->finished())
+   if (trackanalyzer->finished())
         cuePosition = trackanalyzer->startPosition();
-
+qDebug() << Q_FUNC_INFO << ":" << objectName()
+         << " preferBeatCue=" << preferBeatCue
+         << " beatPositionValid=" << m_beatPosition.isValid()
+         << " beatPosition=" << m_beatPosition
+         << " analyzerFinished=" << trackanalyzer->finished()
+         << " analyzerStartPosition=" << trackanalyzer->startPosition();
     if (cuePosition > QTime(0, 0))
         player->setPosition(cuePosition);
 
@@ -1842,19 +1848,21 @@ void PlayerWidget::on_sliPosition_actionTriggered(int action)
 
 void PlayerWidget::on_butCue_clicked()
 {
-    //ToDo: Visualize skipped silent at start and at the end (color bar)
-    this->pause();
+    if (ui->butCue->isChecked()) {
+        //ToDo: Visualize skipped silent at start and at the end (color bar)
+        this->pause();
 
-    QTime cuePosition = trackanalyzer->startPosition();
-    qDebug() << Q_FUNC_INFO << "cuePosition from analyzer:" << cuePosition << "m_beatCueEnabled:" << m_beatCueEnabled << " beatPosition:" << m_beatPosition << " bpm:" << m_bpm;
-    if (m_beatCueEnabled && m_bpm > 0 && m_beatPosition.isValid())
-        cuePosition = m_beatPosition;
+        QTime cuePosition = trackanalyzer->startPosition();
+        qDebug() << Q_FUNC_INFO << "cuePosition from analyzer:" << cuePosition << "m_beatCueEnabled:" << m_beatCueEnabled << " beatPosition:" << m_beatPosition << " bpm:" << m_bpm;
+        //if (m_beatCueEnabled && m_bpm > 0 && m_beatPosition.isValid())
+        //  cuePosition = m_beatPosition;
 
-    suppressAboutFinishForMs(1000);
-    player->setPosition(cuePosition);
-    bpmWidget->setTrackLength(player->length());
-    bpmWidget->setState(m_bpm, cuePosition, m_beatPosition, m_isStarted, m_bpmAnalyzed);
-    updateTimeAndPositionDisplay();
+        suppressAboutFinishForMs(1000);
+        player->setPosition(cuePosition);
+        bpmWidget->setTrackLength(player->length());
+        bpmWidget->setState(m_bpm, cuePosition, m_beatPosition, m_isStarted, m_bpmAnalyzed);
+        updateTimeAndPositionDisplay();
+    }
 }
 
 QTime PlayerWidget::currentPosition() const
