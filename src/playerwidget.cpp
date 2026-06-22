@@ -1164,13 +1164,8 @@ void PlayerWidget::applyAutoCueAfterAnalysis(bool preferBeatCue)
         return;
 
     // Use the centralized function to determine the best cue position (replaces redundant calls).
-    // Use the centralized function to determine the best cue position (replaces redundant calls).
     const QTime cuePosition = computeCuePosition();
-    const QTime cuePosition = computeCuePosition();
-    QTime cuePosition;
 
-    // Use the centralized function to determine the best cue position.
-    QTime cuePosition = computeCuePosition(); // Centralized calculation
     qDebug() << Q_FUNC_INFO << ":" << objectName()
              << " preferBeatCue=" << preferBeatCue
             << " beatPositionValid=" << m_beatPosition.isValid()
