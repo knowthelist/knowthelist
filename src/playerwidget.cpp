@@ -1908,8 +1908,6 @@ void PlayerWidget::on_butCue_clicked()
         player->setPosition(cuePosition);
         bpmWidget->setTrackLength(player->length());
         player->setPosition(cuePosition);
-        bpmWidget->setTrackLength(player->length());
-        bpmWidget->setState(m_bpm, cuePosition, m_beatPosition, m_isStarted, m_bpmAnalyzed);
         bpmWidget->setState(m_bpm, cuePosition, m_beatPosition, m_isStarted, m_bpmAnalyzed);
         updateTimeAndPositionDisplay();
     }
