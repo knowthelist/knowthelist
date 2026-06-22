@@ -1017,8 +1017,6 @@ QTime PlayerWidget::calculateCuePosition() const
 }
 
 QTime PlayerWidget::determineSilentEndCuePosition() const
-// Implementation of determineSilentEndCuePosition()
-QTime PlayerWidget::determineSilentEndCuePosition() const
 {
     if (!trackanalyzer || !trackanalyzer->finished()) {
         return QTime();
