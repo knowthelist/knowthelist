@@ -98,16 +98,6 @@ public:
         setPositionMarkers();
     }
 
-    /** Compute the optimal cue position based on the current CUE mode.
-     *
-     *  Modes:
-     *   - Beat-sync CUE (m_beatVisualMode == true): returns the first detected beat
-     *     with significant amplitude (m_beatPosition), falling back to the track start.
-     *   - VU/skip-silent CUE (m_beatVisualMode == false): returns the first position
-     *     where significant energy is detected (m_firstSignificantEnergyPosition) or
-     *     the raw trackanalyzer start position as a last resort.
-     */
-    QTime computeCuePosition() const;
 
 public Q_SLOTS:
     void setPositionMarkers();
@@ -195,13 +185,12 @@ private:
 
     QTimer* timerLevel;
     QTimer* timerPosition;
-    QTimer* timerVisual;
-    void dropEvent(QDropEvent*) override; // Removed redundant declarations here
+
     void dragEnterEvent(QDragEnterEvent*) override;
     void dragMoveEvent(QDragMoveEvent*) override;
     Track* m_CurrentTrack;
     long remainCueTime;
-    int mTrackFinishEmitTime;
+
     bool m_isStarted;
     bool m_isHanging;
     bool m_pendingPlay;
