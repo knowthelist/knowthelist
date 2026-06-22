@@ -86,7 +86,7 @@ public:
     void setMonitorRouteAvailable(bool available);
     void setMonitorRouteEnabled(bool enabled);
     bool isMonitorRouteEnabled() const { return m_monitorRouteEnabled; }
-    void setMonitorVolume(double v); // Removed redundant declaration here
+    void setMonitorVolume(double v);
     void setSkipSilentEnd(bool checked)
     {
         m_skipSilentEnd = checked;
@@ -111,7 +111,7 @@ public:
 
 public Q_SLOTS:
     void setPositionMarkers();
-    void loadTrack(Track*);
+    void loadTrack(Track* track);
     void analyzeGainFinished();
     void analyzeTempoFinished();
     void analyzeEnvelopeFinished();
@@ -201,6 +201,7 @@ private:
     void dragMoveEvent(QDragMoveEvent*) override;
     Track* m_CurrentTrack;
     long remainCueTime;
+    int mTrackFinishEmitTime;
     bool m_isStarted;
     bool m_isHanging;
     bool m_pendingPlay;
