@@ -22,15 +22,10 @@ Needed packages for building:
 ------------------
 Linux (Debian/Ubuntu):
 
-        $ sudo apt update
-        $ sudo apt install build-essential cmake qt6-base-dev qt6-base-dev-tools qmake6 \
-            libtag1-dev libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev \
-            gstreamer1.0-plugins-base gstreamer1.0-plugins-good gstreamer1.0-plugins-bad \
-            libasound2-dev
+                 $ sudo apt install build-essential cmake qt6-base-dev qt6-base-dev-tools qmake6 \
+             libtag1-dev libasound2-dev libjack-jackd2-dev libsndfile1-dev ladspa-sdk
 
-`libtag1-dev` is the Debian/Ubuntu package name for TagLib development headers.
-
-Build:
+        libtag1-dev libasound2-dev libjack-jackd2-dev libsndfile1-dev ladspa-sdk
 ----------
 - cd ~/src
 - git clone https://github.com/knowthelist/knowthelist.git
@@ -114,22 +109,17 @@ An icon for "knowthelist" should now be in your main macOS Applications list, re
 
 Windows:
 ----------
-A prebuilt package for Windows is available in the release section on this page. The only prerequisite is an installed GStreamer runtime. But if you want to build Knowthelist on Windows yourself, you can do this as follows:
+A prebuilt package for Windows is available in the release section on this page. But if you want to build Knowthelist on Windows yourself, you can do this as follows:
 
 Build dynamic version to debug project:
-- Install [GStreamer runtime & devel](https://gstreamer.freedesktop.org/data/pkg/windows) (MSVC or MinGW variant matching your Qt build)
 - Install [Qt6 incl. QtCreator](https://www.qt.io/download)
 - Get [CMake](https://cmake.org) and install
 - Get [taglib](http://taglib.github.io) and build it with CMake
 - Add the taglib bin path (e.g. `C:\Program Files\taglib\bin`) to the PATH variable in the QtCreator project build environment settings
-- Add the GStreamer bin path (e.g. `C:\gstreamer\1.0\msvc_x86_64\bin`) to the PATH variable in the QtCreator project build environment settings
 - Build and run the knowthelist project within QtCreator (Ctrl-R)
 
 Build for release:
-- Install [GStreamer runtime & devel](https://gstreamer.freedesktop.org/data/pkg/windows)
 - Build knowthelist via QtCreator (qmake, build release)
-- Copy all DLL files from the GStreamer bin folder (e.g. `C:\gstreamer\1.0\msvc_x86_64\bin`) into the target folder together with knowthelist.exe
-- Copy all DLL files from the GStreamer plugins folder (e.g. `C:\gstreamer\1.0\msvc_x86_64\lib\gstreamer-1.0`) into a new folder named `plugin` alongside knowthelist.exe
 - Run knowthelist.exe
 
 Install packages:
@@ -142,7 +132,7 @@ Prebuilt packages for Linux can be found on the [releases page](https://github.c
 
 Versions:
 ----------
-- 2.4 (2026)   :  Qt6 compatibility and BPM mode
+- 2.4 (2026)   :  Qt6 compatibility, BPM mode, and pure JUCE audio backend
 - 2.3 (2014-09):	Qt5 compatibility and usage of GStreamer 1.x
 - 2.2 (2014-08):	Support for stored lists
 - 2.1 (2014-05):	First public version; removed qt3support

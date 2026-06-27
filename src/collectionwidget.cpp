@@ -104,8 +104,8 @@ CollectionWidget::CollectionWidget(QWidget* parent)
     connect(p->searchEdit, SIGNAL(trackDropped(QString)), this,
         SIGNAL(trackDropped(QString)));
 
-    connect(p->collectiontree, SIGNAL(selectionChanged(QList<Track*>)), this,
-        SIGNAL(selectionChanged(QList<Track*>)));
+    connect(p->collectiontree, SIGNAL(tracksSelected(QList<Track*>)), this,
+        SLOT(onTracksSelected(QList<Track*>)));
 
     connect(p->collectiontree, SIGNAL(wantLoad(QList<Track*>, QString)), this,
         SIGNAL(wantLoad(QList<Track*>, QString)));

@@ -193,7 +193,7 @@ void CollectionTree::asynchronTriggerRandomSelection()
     }
 
     qDebug() << Q_FUNC_INFO << p->tracks.count();
-    emit selectionChanged(p->tracks);
+    emit tracksSelected(p->tracks);
 }
 
 void CollectionTree::on_currentItemChanged(QTreeWidgetItem* item)
@@ -227,7 +227,7 @@ void CollectionTree::asynchronCurrentItemChanged(QTreeWidgetItem* item)
         p->tracks.append(new Track(tag));
     }
 
-    emit selectionChanged(p->tracks);
+    emit tracksSelected(p->tracks);
 
     //qDebug() << Q_FUNC_INFO << "[End]" ;
 }

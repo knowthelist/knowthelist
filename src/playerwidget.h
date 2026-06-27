@@ -26,8 +26,10 @@
 #include <QVBoxLayout>
 #include <QWidget>
 #include <QVector>
+#include <QDropEvent>
 #include <QtCore/QTimer>
 #include <QtCore/QElapsedTimer>
+#include <memory>
 
 #include "player.h"
 #include "playerbpmwidget.h"
@@ -36,7 +38,22 @@
 #include "playlistitem.h"
 #include "trackanalyzer.h"
 
-class QLed;
+class PlayerCueManager;
+
+#include "analysiscachemanager.h"
+
+// ---- Cue mode: two distinct strategies for finding start & end cue points ----
+enum CueMode {
+    CUE_SKIP_SILENT,        // skipSilent:   start at first non-silent sample / end at last non-silent beat-activity
+    CUE_BEAT_OCCURRENCE     // beatOccurrence: start at first significant beat / end where enough fade-room remains for beat-sync mix-out
+};
+
+// Pair of cue points (start of track + mix-out point near the end)
+struct CuePoints {
+    bool valid{false};
+    QTime start;               // cue point at song start (intro skipped)
+    QTime end;                 // mix-out / fade-in start point near song end
+};
 
 namespace Ui {
 class PlayerWidget;
@@ -56,6 +73,15 @@ public:
     float currentLevelLeft();
     float currentLevelRight();
     void loadFile(QUrl);
+
+    // Cache management — exposed for TrackLoader.
+    using CachedTempo = AnalysisCacheManager::CachedTempo;
+    using CachedEnvelope = AnalysisCacheManager::CachedEnvelope;
+
+    void storeCachedTempo(const QUrl& url, int bpm, double exactBpm, const QTime& beatPosition);
+    CachedTempo loadCachedTempo(const QUrl& url) const { return m_cacheManager->loadCachedTempo(url); }
+    void storeCachedEnvelope(const QUrl& url, const QVector<float>& samples, int durationMs);
+    CachedEnvelope loadCachedEnvelope(const QUrl& url) const { return m_cacheManager->loadCachedEnvelope(url); }
 
     void play();
     void stop();
@@ -82,6 +108,8 @@ public:
     void setBeatSyncEnabled(bool enabled) { m_beatSyncEnabled = enabled; }
     void setBeatCueEnabled(bool enabled) { m_beatCueEnabled = enabled; }
     void setBeatVisualMode(bool enabled);
+    QTime getTrackLength() const { return player->length(); }
+    void setCurrentPosition(QTime pos) { return player->setPosition(pos); }
     void setMonitorOutputDeviceId(const QString& deviceId);
     void setMonitorRouteAvailable(bool available);
     void setMonitorRouteEnabled(bool enabled);
@@ -155,7 +183,7 @@ protected:
     long songTime;
 
 private:
-    //ToDo: move privates to struct Private
+    // ToDo: move privates to struct Private
     Ui::PlayerWidget* ui;
     QToolButton* initButton(QStyle::StandardPixmap icon, const QString& tip,
         QObject* dstobj, const char* slot_method, QLayout* layout);
@@ -172,11 +200,27 @@ private:
     void createPerformanceControls();
     void jumpByBeats(int beatCount);
     QString currentTrackKey() const;
+
+    // ---- Unified cue-point helpers (delegated to PlayerCueManager) ----
+    CuePoints computeCuePoints(CueMode mode) const;  // Now in playercuemanager.cpp
     void applyAutoCueAfterAnalysis(bool preferBeatCue);
+    void applyCuePoints(const CuePoints& cue, bool isManual);
     void suppressAboutFinishForMs(int ms);
     bool seekOvershootsFadePoint(const QTime& targetPos) const;
     void armImmediateAboutFinish();
+    QTime calculateCuePosition() const;  // Thin dispatcher -> m_cueManager
 
+    // Allow cue manager to access protected members (trackanalyzer, player, m_bpm, etc.)
+    friend class PlayerCueManager;
+
+    // ---- Internal fade-point helpers (replaces duplicated logic) ----
+    QTime computeFadePoint() const;
+    long computeRemainCueTime(const QTime& fadePoint) const;
+
+    // Sub-objects can access these shared members via PlayerWidget& or through their own methods.
+    // Note: These are accessed by sub-classes during construction before the full class is defined.
+
+protected:
     Player* player;
     TrackAnalyzer* trackanalyzer;
     float m_level;
@@ -185,9 +229,11 @@ private:
 
     QTimer* timerLevel;
     QTimer* timerPosition;
+    QTimer* timerVisual;
 
     void dragEnterEvent(QDragEnterEvent*) override;
     void dragMoveEvent(QDragMoveEvent*) override;
+    void dropEvent(QDropEvent*) override;
     Track* m_CurrentTrack;
     long remainCueTime;
 
@@ -228,9 +274,16 @@ private:
     bool m_monitorRouteAvailable;
     bool m_monitorRouteEnabled;
     qint64 m_simulatedPositionMs;
-    bool m_isSimulating;
+     bool m_isSimulating;
+     int mTrackFinishEmitTime;
 
-    struct PlayerWidgetPrivate* p;
+     struct PlayerWidgetPrivate* p;
+
+    // Analysis cache manager — owns all tempo/envelope caching logic.
+    std::unique_ptr<AnalysisCacheManager> m_cacheManager;
+
+    // Cue-point sub-object — computation of cue positions, fade points, auto-cue.
+    std::unique_ptr<PlayerCueManager> m_cueManager;
 };
 
 #endif // PLAYERWIDGET_H

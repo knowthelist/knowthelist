@@ -356,6 +356,8 @@ struct TrackAnalyzer_Private {
     QTime analysisEndPosition = QTime(0, 0);
     QTime analysisBeatActivityEndPosition = QTime(0, 0);
     double analysisGainDb = TrackAnalyzer::GAIN_INVALID;
+    double averageRms = 0.0;
+    QList<float> frameRms;
     QUrl currentUrl;
 };
 
@@ -423,12 +425,7 @@ void TrackAnalyzer::asyncOpen(QUrl url)
     QThread::currentThread()->setPriority(QThread::LowestPriority);
 
     if (!audioBackend) {
-        if (p->analysisMode == TEMPO)
-            emit finishTempo();
-        else if (p->analysisMode == ENVELOPE)
-            emit finishEnvelope();
-        else
-            emit finishGain();
+        need_finish();
         return;
     }
 
@@ -445,12 +442,7 @@ void TrackAnalyzer::asyncOpen(QUrl url)
 
     if (!audioBackend->isLoaded()) {
         qWarning() << "Failed to load file for analysis:" << url;
-        if (p->analysisMode == TEMPO)
-            emit finishTempo();
-        else if (p->analysisMode == ENVELOPE)
-            emit finishEnvelope();
-        else
-            emit finishGain();
+        need_finish();
         return;
     }
 
@@ -470,6 +462,8 @@ void TrackAnalyzer::asyncOpen(QUrl url)
         p->analysisEndPosition = analysis.endPosition;
         p->analysisBeatActivityEndPosition = analysis.beatActivityEndPosition;
         p->analysisGainDb = analysis.gainDb;
+        p->averageRms = analysis.averageRms;
+        p->frameRms = analysis.frameRms;
         m_GainDB = analysis.gainDb;
         m_StartPosition = analysis.startPosition;
         m_EndPosition = analysis.endPosition;
@@ -484,8 +478,6 @@ void TrackAnalyzer::asyncOpen(QUrl url)
              << "end=" << analysis.endPosition
              << "beatActivityEnd=" << analysis.beatActivityEndPosition
              << "frames=" << analysis.spectralFlux.size();
-
-    emit finishGain();
 }
 
 void TrackAnalyzer::start()
@@ -549,7 +541,34 @@ QTime TrackAnalyzer::beatPosition()
 QTime TrackAnalyzer::beatActivityEndPosition()
 {
     QMutexLocker locker(&p->mutex);
-    return m_BeatActivityEndPosition;
+
+    // Find the first frame where RMS crosses a "significant" threshold
+    // (above silence and above average by some margin). This is more reliable
+    // than beat detection for finding the true start of musical content.
+    if (p->frameRms.isEmpty()) {
+        return m_StartPosition; // fallback to audio start
+    }
+
+    const double significantThreshold = qMax(p->averageRms * 0.5, kSilenceRmsThreshold * 3);
+    const int frameMs = qMax(1, qRound(1000.0 / kAnalysisFrameRate));
+
+    for (int i = 0; i < p->frameRms.size(); ++i) {
+        if (p->frameRms.at(i) >= significantThreshold) {
+            return QTime(0, 0).addMSecs(i * frameMs);
+        }
+    }
+
+    // No significant energy found - fallback to beat position or start position
+    if (p->bpmDetected && m_BeatPosition.isValid()) {
+        return m_BeatPosition;
+    }
+    return m_StartPosition;
+}
+
+QTime TrackAnalyzer::firstSignificantEnergyPosition()
+{
+    QMutexLocker locker(&p->mutex);
+    return m_FirstSignificantEnergyPosition;
 }
 
 int TrackAnalyzer::bpm()
@@ -650,6 +669,8 @@ void TrackAnalyzer::detectTempo()
     QList<float> spectralFlux;
     QList<float> spectralFluxLow;
     QList<qint64> spectralFluxTimes;
+    QList<float> frameRms;
+    double averageRms = 0.0;
     QUrl currentUrl;
     {
         QMutexLocker locker(&p->mutex);
@@ -659,6 +680,8 @@ void TrackAnalyzer::detectTempo()
         spectralFlux = p->spectralFlux;
         spectralFluxLow = p->spectralFluxLow;
         spectralFluxTimes = p->spectralFluxTimes;
+        frameRms = p->frameRms;
+        averageRms = p->averageRms;
         currentUrl = p->currentUrl;
     }
 
@@ -670,6 +693,7 @@ void TrackAnalyzer::detectTempo()
             QMutexLocker locker(&p->mutex);
             p->bpm = it.value().first;
             m_BeatPosition = QTime(0, 0).addMSecs(it.value().second);
+            m_FirstSignificantEnergyPosition = m_BeatPosition;
             p->bpmDetected = true;
             return;
         }
@@ -1108,6 +1132,37 @@ void TrackAnalyzer::detectTempo()
 
     m_BeatPosition = QTime(0, 0).addMSecs(qMax(0, phaseMs));
 
+    // Compute first significant energy position, snapped to the beat grid.
+    // Find the first frame where RMS crosses a significant threshold, then snap
+    // to the nearest beat using the detected BPM and phase.
+    {
+        const double significantThreshold = qMax(averageRms * 0.5, kSilenceRmsThreshold * 3);
+        const int frameMs = qMax(1, qRound(1000.0 / kAnalysisFrameRate));
+        int firstSignificantFrame = -1;
+
+        for (int i = 0; i < frameRms.size(); ++i) {
+            if (frameRms.at(i) >= significantThreshold) {
+                firstSignificantFrame = i;
+                break;
+            }
+        }
+
+        if (firstSignificantFrame >= 0 && p->bpm > 0 && m_ExactBpm > 0.0) {
+            const double beatMs = 60000.0 / m_ExactBpm;
+            const int energyMs = firstSignificantFrame * frameMs;
+            // Snap to nearest beat: round((energyMs - phaseMs) / beatMs) * beatMs + phaseMs
+            const double beatIndex = std::round((static_cast<double>(energyMs) - static_cast<double>(phaseMs)) / beatMs);
+            const int snappedMs = static_cast<int>(qRound(beatIndex * beatMs + phaseMs));
+            m_FirstSignificantEnergyPosition = QTime(0, 0).addMSecs(qMax(0, snappedMs));
+        } else if (firstSignificantFrame >= 0) {
+            // No BPM detected - use the raw position
+            m_FirstSignificantEnergyPosition = QTime(0, 0).addMSecs(firstSignificantFrame * frameMs);
+        } else {
+            // No significant energy found - fallback to beat position
+            m_FirstSignificantEnergyPosition = m_BeatPosition;
+        }
+    }
+
     {
         QMutexLocker cacheLocker(&tempoCacheMutex);
         tempoCache.insert(cacheKey, qMakePair(qBound(0, finalBpm, kMaxBpm), QTime(0, 0).msecsTo(m_BeatPosition)));
@@ -1155,10 +1210,17 @@ void TrackAnalyzer::loadThreadFinished()
 {
     // Analysis load thread finished
     TrackAnalyzer::modeType mode;
+    bool inProgress;
     {
         QMutexLocker locker(&p->mutex);
         mode = p->analysisMode;
+        inProgress = p->inProgress;
     }
+
+    // If asyncOpen() failed early and already called need_finish(), finalizeAnalysis()
+    // may have already run and set inProgress=false. Guard against double-finalization.
+    if (!inProgress)
+        return;
 
     if (mode == TEMPO) {
         QMutexLocker locker(&p->mutex);
@@ -1170,7 +1232,11 @@ void TrackAnalyzer::loadThreadFinished()
             detectTempo();
             need_finish();
         });
-    } else {
+    } else if (mode == ENVELOPE) {
         start();
+    } else {
+        // STANDARD mode: analysis data is already stored in asyncOpen();
+        // just finalize so that m_finished becomes true and finishGain fires.
+        need_finish();
     }
 }

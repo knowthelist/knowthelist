@@ -333,7 +333,7 @@ void Knowthelist::createUI()
     QPixmap pixmap1(":database.png");
     ui->sideTab->AddTab(splitter, QIcon(pixmap1), tr("Collection"));
 
-    connect(collectionBrowser, SIGNAL(selectionChanged(QList<Track*>)), trackList, SLOT(changeTracks(QList<Track*>)));
+    connect(collectionBrowser, SIGNAL(tracksSelected(QList<Track*>)), trackList, SLOT(changeTracks(QList<Track*>)));
     connect(collectionBrowser, SIGNAL(setupDirs()), this, SLOT(showCollectionSetup()));
     connect(collectionBrowser, SIGNAL(wantLoad(QList<Track*>, QString)), this, SLOT(onWantLoad(QList<Track*>, QString)));
 
@@ -1383,7 +1383,7 @@ bool Knowthelist::initMonitorPlayer()
     ui->cmdMonitorStop->setIcon(QIcon(":stop.png"));
     ui->cmdMonitorPlay->setIcon(QIcon(":play.png"));
     connect(monitorPlayer, SIGNAL(loadFinished()), this, SLOT(timerMonitor_loadFinished()));
-    // Update VU meter directly from the GStreamer level signal (cross-thread safe via queued).
+    // Update VU meter directly from the JUCE level signal (cross-thread safe via queued).
     connect(monitorPlayer, &MonitorPlayer::levelChanged, this, [this]() {
         monitorMeter->setValueLeft(monitorPlayer->levelLeft());
         monitorMeter->setValueRight(monitorPlayer->levelRight());

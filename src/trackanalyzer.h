@@ -43,6 +43,7 @@ public:
     QTime endPosition();
     QTime beatPosition();
     QTime beatActivityEndPosition();
+    QTime firstSignificantEnergyPosition();
     int bpm();
     double exactBpm();
     QVector<float> amplitudeEnvelope() const;
@@ -76,6 +77,7 @@ private:
     QTime m_EndPosition = QTime(0, 0);
     QTime m_BeatPosition = QTime(0, 0);
     QTime m_BeatActivityEndPosition = QTime(0, 0);
+    QTime m_FirstSignificantEnergyPosition = QTime(0, 0);
     QTime m_MaxPosition = QTime(0, 0);
     bool m_finished = false;
     QVector<float> m_envelope;

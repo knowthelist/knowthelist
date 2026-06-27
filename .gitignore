@@ -26,3 +26,4 @@ dist-*/
 .docs/*
 .vscode/*
 .github/*
+.aider*

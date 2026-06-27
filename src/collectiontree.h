@@ -37,7 +37,7 @@ public:
     modeType treeMode;
     
 Q_SIGNALS:
-    void selectionChanged(QList<Track*>);
+    void tracksSelected(QList<Track*>);
     void wantLoad(QList<Track*>, QString);
     void rescan();
     

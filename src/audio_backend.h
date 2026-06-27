@@ -25,7 +25,7 @@
 
 /**
  * Abstract audio backend interface.
- * Allows swapping between GStreamer (legacy) and JUCE implementations.
+ * Allows swapping between audio backend implementations.
  */
 class AudioBackend {
 public:

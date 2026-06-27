@@ -14,7 +14,7 @@ QT += core \
     concurrent
 
 CONFIG += c++17
-DEFINES += GST_API_VERSION_1
+DEFINES += JUCE_GLOBAL_MODULE_SETTINGS_INCLUDED=1
 
 TARGET = knowthelist
 TEMPLATE = app
@@ -158,39 +158,17 @@ win32 {
     QMAKE_POST_LINK = $$QMAKE_COPY \"$${DESTDIR}\libgstdirectsoundsink.dll\" \"$${GST_HOME}lib\gstreamer-1.0\" $$escape_expand(\\n\\t)
 }
 macx { 
-    BREW_PREFIX = $$system(brew --prefix 2>/dev/null)
-    isEmpty(BREW_PREFIX): BREW_PREFIX = /usr/local
+    BREW_TAGLIB = $$system(brew --prefix taglib 2>/dev/null)
+    isEmpty(BREW_TAGLIB): BREW_TAGLIB = /opt/homebrew/opt/taglib
 
-    # Official GStreamer framework takes priority over Homebrew
-    GST_FRAMEWORK = /Library/Frameworks/GStreamer.framework/Versions/1.0
-    exists($$GST_FRAMEWORK/include/gstreamer-1.0/gst/gst.h) {
-        GST_PREFIX = $$GST_FRAMEWORK
-    } else {
-        GST_PREFIX = $${BREW_PREFIX}
-    }
+    LIBS += -L$${BREW_TAGLIB}/lib -ltag -lz
 
-    INCLUDEPATH += $${GST_PREFIX}/include/gstreamer-1.0 \
-        $${GST_PREFIX}/include/glib-2.0 \
-        $${GST_PREFIX}/lib/glib-2.0/include \
-        $${BREW_PREFIX}/lib/glib-2.0/include \
-        $${GST_PREFIX}/include \
-        $${BREW_PREFIX}/include
-    # TagLib: use exact brew opt path to avoid picking up GStreamer's bundled TagLib 1.x
-    TAGLIB_PREFIX = $$system(brew --prefix taglib 2>/dev/null)
-    isEmpty(TAGLIB_PREFIX): TAGLIB_PREFIX = $${BREW_PREFIX}/opt/taglib
-    LIBS += -L$${TAGLIB_PREFIX}/lib -ltag
+    INCLUDEPATH += $${BREW_TAGLIB}/include \
+                   $${BREW_TAGLIB}/opt/taglib/include
 
-    LIBS += -L$${GST_PREFIX}/lib \
-        -lgstreamer-1.0 \
-        -lglib-2.0 \
-        -lgobject-2.0
-
-    LIBS += -framework CoreAudio \
-        -framework CoreFoundation
-
-    # Add GStreamer framework lib path to rpath so @rpath/libgstreamer-1.0.0.dylib
-    # resolves to the framework (1.28.3) at runtime rather than the dyld fallback
-    QMAKE_LFLAGS += -Wl,-rpath,$${GST_PREFIX}/lib
+    # Note: this project's build path is CMake-based, see CMakeLists.txt.
+    # JUCE is linked via FetchContent (pre-built .a files in $JUCE_PATH/build/Release).
+    # The qmake src.pro below works only if you have a pre-built JUCE or use CMake.
 
 }
 unix:!macx {

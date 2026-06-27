@@ -29,7 +29,7 @@
 
 /**
  * JUCE-based audio backend implementation.
- * Replaces GStreamer with JUCE for playback, routing, and level metering.
+ * Pure JUCE-based audio backend for playback, routing, and level metering.
  * 
  * Supports:
  * - Main deck playback with seek, tempo, EQ, gain, volume

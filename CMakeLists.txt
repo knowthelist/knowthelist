@@ -161,6 +161,7 @@ set(SOURCES
     src/monitor_audio_backend.cpp
     src/vumeter.cpp
     src/playerwidget.cpp
+    src/playercuemanager.cpp
     src/qled.cpp
     src/playlistitem.cpp
     src/playlist.cpp
@@ -190,6 +191,7 @@ set(SOURCES
     src/djbrowser.cpp
     src/ratingwidget.cpp
     src/customdial.cpp
+    src/AnalysisCacheManager.cpp
 )
 
 set(HEADERS
@@ -229,6 +231,7 @@ set(HEADERS
     src/djbrowser.h
     src/ratingwidget.h
     src/customdial.h
+    src/analysiscachemanager.h
 )
 
 set(FORMS

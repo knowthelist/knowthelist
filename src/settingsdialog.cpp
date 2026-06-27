@@ -125,7 +125,7 @@ SettingsDialog::SettingsDialog(QWidget* parent)
 
     // Beat sync options are shown in the Fader page to keep transition settings in one place.
     p->beatSyncGroup = new QGroupBox(tr("Beat Sync"), p->ui.page);
-    p->beatSyncGroup->setGeometry(QRect(10, 210, 380, 145));
+    p->beatSyncGroup->setGeometry(QRect(10, 270, 380, 145));
 
     p->checkBeatSyncEnabled = new QCheckBox(tr("Enable BPM analysis and beat sync cue"), p->beatSyncGroup);
     p->checkBeatSyncEnabled->setGeometry(QRect(10, 20, 360, 20));
