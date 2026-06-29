@@ -271,8 +271,8 @@ PlayerWidget::~PlayerWidget()
 void PlayerWidget::storeCachedTempo(const QUrl& url, int bpm, double exactBpm, const QTime& beatPosition)
 {
     const QTime cueStart = trackanalyzer
-            ? (trackanalyzer->firstSignificantEnergyPosition().isValid() && trackanalyzer->firstSignificantEnergyPosition() > QTime(0, 0)
-                   ? trackanalyzer->firstSignificantEnergyPosition()
+            ? (trackanalyzer->beatStartPosition().isValid() && trackanalyzer->beatStartPosition() > QTime(0, 0)
+                   ? trackanalyzer->beatStartPosition()
                    : trackanalyzer->startPosition())
             : QTime();
     m_cacheManager->storeCachedTempo(url, bpm, exactBpm, beatPosition, cueStart);
@@ -359,7 +359,6 @@ void PlayerWidget::setBeatVisualMode(bool enabled)
             if (trackanalyzer->finished()) {
                 analyzeEnvelopeFinished();
             } else {
-                trackanalyzer->setMode(TrackAnalyzer::ENVELOPE);
                 trackanalyzer->open(m_CurrentTrack->url());
             }
         }
@@ -1154,9 +1153,9 @@ void PlayerWidget::analyzeTempoFinished()
 
     if (m_CurrentTrack) {
         qDebug() << Q_FUNC_INFO << "Storing tempo cache: bpm=" << m_bpm << "exactBpm=" << trackanalyzer->exactBpm();
-        const QTime cueStart = trackanalyzer->firstSignificantEnergyPosition().isValid()
-                                   && trackanalyzer->firstSignificantEnergyPosition() > QTime(0, 0)
-                               ? trackanalyzer->firstSignificantEnergyPosition()
+        const QTime cueStart = trackanalyzer->beatStartPosition().isValid()
+                                   && trackanalyzer->beatStartPosition() > QTime(0, 0)
+                               ? trackanalyzer->beatStartPosition()
                                : trackanalyzer->startPosition();
         m_cacheManager->storeCachedTempo(m_CurrentTrack->url(), m_bpm, trackanalyzer->exactBpm(), m_beatPosition, cueStart);
     }
@@ -1424,9 +1423,6 @@ void PlayerWidget::loadTrack(Track* track)
         const bool needAnalysis = needCueAnalysis || needEnvelope || needTempo || missingCachedCueStart;
 
         if (needAnalysis) {
-            if (needTempo)
-                trackanalyzer->setTempoScanDurationSeconds(qMax(16, settings.value("beatSyncScanSeconds", 16).toInt()));
-            trackanalyzer->setMode(needTempo ? TrackAnalyzer::TEMPO : TrackAnalyzer::STANDARD);
             trackanalyzer->open(url);
         }
 

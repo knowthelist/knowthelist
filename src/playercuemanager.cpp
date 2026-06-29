@@ -69,63 +69,50 @@ PlayerCueManager::CuePoints PlayerCueManager::computeCuePoints(CueMode mode) con
     if (!m_owner.trackanalyzer || !m_owner.trackanalyzer->finished())
         return result;
 
-    if (mode == CUE_BEAT_OCCURRENCE) {
-        const QTime firstEnergy = m_owner.trackanalyzer->firstSignificantEnergyPosition();
-        result.start = firstEnergy.isValid() && firstEnergy > QTime(0, 0)
-                           ? firstEnergy
-                           : (m_owner.trackanalyzer->startPosition() > QTime(0, 0) ? m_owner.trackanalyzer->startPosition() : QTime(0, 0));
-        result.end = computeFadePoint();
-        result.valid = result.start.isValid() && result.start > QTime(0, 0);
-        return result;
+    // Determine cue start based on mode semantics.
+    if (mode == CUE_BEAT_OCCURRENCE || mode == CUE_SKIP_SILENT_OCCURRENCE) {
+        // Use beatStartPosition() for beat-based modes.
+        const QTime firstBeat = m_owner.trackanalyzer->beatStartPosition();
+        result.start = firstBeat.isValid() && firstBeat > QTime(0, 0)
+                           ? firstBeat
+                           : (m_owner.trackanalyzer->startPosition() > QTime(0, 0)
+                                      ? m_owner.trackanalyzer->startPosition()
+                                      : QTime(0, 0));
+    } else {
+        // CUE_SKIP_SILENT: skip the silent intro entirely → raw first active frame.
+        result.start = m_owner.trackanalyzer->startPosition();
     }
 
-    const QTime firstEnergy = m_owner.trackanalyzer->firstSignificantEnergyPosition();
-    result.start = firstEnergy.isValid() && firstEnergy > QTime(0, 0)
-                       ? firstEnergy
-                       : (m_owner.trackanalyzer->startPosition() > QTime(0, 0) ? m_owner.trackanalyzer->startPosition() : QTime(0, 0));
-
-    result.end = computeFadePoint();
-
-    result.valid = true;
+    // All modes share the same end point (fade-room for beat-sync mix-out).
+    result.end       = computeFadePoint();
+    result.valid     = result.start.isValid() && result.start > QTime(0, 0);
     return result;
 }
 
 QTime PlayerCueManager::calculateCuePosition(CueMode mode) const
 {
-    // For CUE_BEAT_OCCURRENCE mode, we can return a valid cue position even when
-    // the analyzer hasn't finished yet, as long as we have the first significant
-    // energy position from asyncOpen(). This allows auto-cue to work with cached
-    // tempo data before the analyzer completes.
-    if (mode == CUE_BEAT_OCCURRENCE) {
-        // Try the beat-grid snapped position first (from detectTempo)
+    // Beat-based modes can return a valid cue position even when the analyzer
+    // has not yet finished, using first-significant-energy from asyncOpen().
+    if (mode == CUE_BEAT_OCCURRENCE || mode == CUE_SKIP_SILENT_OCCURRENCE) {
         if (m_owner.trackanalyzer && m_owner.trackanalyzer->finished()) {
-            QTime firstEnergy = m_owner.trackanalyzer->firstSignificantEnergyPosition();
-            if (firstEnergy.isValid() && firstEnergy > QTime(0, 0)) {
-                return firstEnergy;
-            }
+            QTime firstBeat = m_owner.trackanalyzer->beatStartPosition();
+            if (firstBeat.isValid() && firstBeat > QTime(0, 0))
+                return firstBeat;
         }
-        // Fallback to the raw first significant energy position (from asyncOpen)
-        // This is available even when cached tempo is used (STANDARD mode)
         if (m_owner.trackanalyzer) {
-            const int cachedCueStartMs = m_owner.trackanalyzer->property("cachedCueStartMs").toInt();
-            if (cachedCueStartMs > 0)
-                return QTime(0, 0).addMSecs(cachedCueStartMs);
-
+            int cachedMs = m_owner.trackanalyzer->property("cachedCueStartMs").toInt();
+            if (cachedMs > 0)
+                return QTime(0, 0).addMSecs(cachedMs);
             QTime firstEnergy = m_owner.trackanalyzer->startPosition();
-            if (firstEnergy.isValid() && firstEnergy > QTime(0, 0)) {
+            if (firstEnergy.isValid() && firstEnergy > QTime(0, 0))
                 return firstEnergy;
-            }
         }
-        // If analyzer hasn't finished yet and no first significant energy position
-        // is available, return invalid to let the analyzer complete first.
-        // The auto-cue will be applied after the analyzer finishes.
         return QTime(0, 0);
     }
 
-    // Skip_Silent and silent-end modes need live analyzer results — guard is correct.
-    if (!m_owner.trackanalyzer || !m_owner.trackanalyzer->finished()) {
+    // CUE_SKIP_SILENT needs live analyzer results.
+    if (!m_owner.trackanalyzer || !m_owner.trackanalyzer->finished())
         return QTime();
-    }
 
     if (mode == CUE_SKIP_SILENT) {
         const CuePoints cue = computeCuePoints(mode);

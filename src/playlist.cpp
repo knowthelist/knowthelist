@@ -434,11 +434,9 @@ void Playlist::startTempoScan()
     m_tempoScanUrl = m_tempoScanQueue.dequeue();
     m_tempoScanActive = true;
 
-    QSettings settings;
-    // Playlist background scan gets a slightly longer window than live deck scan
-    // for more stable BPM estimation.
-    m_tempoAnalyzer->setTempoScanDurationSeconds(qMax(18, settings.value("beatSyncScanSeconds", 16).toInt()));
-    m_tempoAnalyzer->setMode(TrackAnalyzer::TEMPO);
+    // Beat-sync scan window (`beatSyncScanSeconds`) was tied to the removed TEMPO-only mode; BPM
+    // detection now unconditionally runs on a much longer full-file analysis window. The
+    // finishTempo() signal is connected in the Playlist ctor — just open and start here.
     m_tempoAnalyzer->open(QUrl(m_tempoScanUrl));
 }
 

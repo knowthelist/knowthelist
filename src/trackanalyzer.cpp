@@ -163,10 +163,6 @@ static TrackAnalysisData scanAudioFile(const QUrl& url)
     for (float rms : data.frameRms)
         data.envelope.append(qBound(0.0f, rms / envelopePeak, 1.0f));
 
-      qDebug() << "Silence threshold (fixed RMS):" << kSilenceRmsThreshold
-                << "firstActiveFrame:" << firstActiveFrame
-                << "lastActiveFrame:" << lastActiveFrame;
-
     if (firstActiveFrame < 0) {
         data.startPosition = QTime(0, 0);
         data.endPosition = QTime(0, 0).addMSecs(static_cast<int>(qRound(data.durationMs)));
@@ -341,21 +337,15 @@ struct TrackAnalyzer_Private {
     QMutex mutex;
     int bpm = 0;
     bool bpmDetected = false;
-    bool tempoWindowStarted = false;
-    int tempoScanDurationSeconds = 24;
-    QTimer* tempoTimeout;
     bool finishQueued = false;
     bool shuttingDown = false;
     bool inProgress = false;
-    TrackAnalyzer::modeType analysisMode = TrackAnalyzer::STANDARD;
+
+    // Intermediate workspace for detectTempo() only — never exported
     QList<float> spectralFlux;
     QList<float> spectralFluxLow;
     QList<qint64> spectralFluxTimes;
-    QVector<float> envelope;
-    QTime analysisStartPosition = QTime(0, 0);
-    QTime analysisEndPosition = QTime(0, 0);
-    QTime analysisBeatActivityEndPosition = QTime(0, 0);
-    double analysisGainDb = TrackAnalyzer::GAIN_INVALID;
+
     double averageRms = 0.0;
     QList<float> frameRms;
     QUrl currentUrl;
@@ -367,13 +357,6 @@ TrackAnalyzer::TrackAnalyzer(QWidget* parent)
     , audioBackend(std::make_unique<JuceAudioBackend>())
 {
     qDebug() << Q_FUNC_INFO << "Creating TrackAnalyzer";
-
-    p->tempoTimeout = new QTimer(this);
-    p->tempoTimeout->setSingleShot(true);
-    connect(p->tempoTimeout, &QTimer::timeout, this, [this]() {
-        if (p->analysisMode == TEMPO)
-            need_finish();
-    });
 
     if (audioBackend) {
         audioBackend->initialize();
@@ -389,7 +372,6 @@ TrackAnalyzer::~TrackAnalyzer()
         p->shuttingDown = true;
     }
 
-    p->tempoTimeout->stop();
     p->watcher.waitForFinished();  // ensure asyncOpen() thread has exited before freeing p
     cleanup();
     delete p;
@@ -454,50 +436,38 @@ void TrackAnalyzer::asyncOpen(QUrl url)
 
     {
         QMutexLocker locker(&p->mutex);
-        p->spectralFlux = analysis.spectralFlux;
-        p->spectralFluxLow = analysis.spectralFluxLow;
+
+        // ── Output state → m_ fields (ONE source of truth) ──
+        m_trackEffectiveStart   = analysis.startPosition;
+        m_trackEffectiveEnd     = analysis.endPosition;
+        m_beatStopPosition      = analysis.beatActivityEndPosition;
+        m_beatStartPosition     = QTime(0, 0);              // set later in detectTempo()
+        m_trackDuration         = duration;                 // full duration from audioBackend/analysis
+
+        m_GainDB              = analysis.gainDb;
+        m_envelope            = analysis.envelope;           // live array for amplitudeEnvelope() callers
+
+        // ── Intermediate workspace → p- fields (detectTempo only) ──
+        p->spectralFlux     = analysis.spectralFlux;
+        p->spectralFluxLow  = analysis.spectralFluxLow;
         p->spectralFluxTimes = analysis.spectralFluxTimes;
-        p->envelope = analysis.envelope;
-        p->analysisStartPosition = analysis.startPosition;
-        p->analysisEndPosition = analysis.endPosition;
-        p->analysisBeatActivityEndPosition = analysis.beatActivityEndPosition;
-        p->analysisGainDb = analysis.gainDb;
-        p->averageRms = analysis.averageRms;
-        p->frameRms = analysis.frameRms;
-        m_GainDB = analysis.gainDb;
-        m_StartPosition = analysis.startPosition;
-        m_EndPosition = analysis.endPosition;
-        m_BeatActivityEndPosition = analysis.beatActivityEndPosition;
-        m_MaxPosition = duration;
-        m_envelope = analysis.envelope;
+        p->frameRms         = analysis.frameRms;
+        p->averageRms       = analysis.averageRms;
     }
 
-    qDebug() << Q_FUNC_INFO << "File loaded: duration=" << duration
-             << "gainDb=" << analysis.gainDb
-             << "start=" << analysis.startPosition
-             << "end=" << analysis.endPosition
-             << "beatActivityEnd=" << analysis.beatActivityEndPosition
-             << "frames=" << analysis.spectralFlux.size();
+    // ── ONE log per operation, AFTER all data is available ──
+    qDebug() << "asyncOpen:" << url.fileName()
+             << "effectiveStart=" << m_trackEffectiveStart
+             << "effectiveEnd=" << m_trackEffectiveEnd
+             << "beatStop=" << m_beatStopPosition
+             << "trackDuration=" << duration << "gainDb=" << analysis.gainDb;
 }
 
 void TrackAnalyzer::start()
 {
-    qDebug() << Q_FUNC_INFO << "Starting analysis, mode=" << p->analysisMode;
-
-    switch (p->analysisMode) {
-    case STANDARD:
-        // Gain analysis happens during load
-        break;
-    case TEMPO:
-        p->tempoWindowStarted = true;
-        p->tempoTimeout->start(p->tempoScanDurationSeconds * 1000);
-        detectTempo();
-        need_finish();
-        break;
-    case ENVELOPE:
-        need_finish();  // data is already in p->envelope from asyncOpen(); just trigger finalizeAnalysis
-        break;
-    }
+    qDebug() << Q_FUNC_INFO << "Starting unified analysis";
+    detectTempo();
+    need_finish();
 }
 
 bool TrackAnalyzer::close()
@@ -523,13 +493,13 @@ double TrackAnalyzer::gainFactor()
 QTime TrackAnalyzer::startPosition()
 {
     QMutexLocker locker(&p->mutex);
-    return m_StartPosition;
+    return m_trackEffectiveStart;
 }
 
 QTime TrackAnalyzer::endPosition()
 {
     QMutexLocker locker(&p->mutex);
-    return m_EndPosition;
+    return m_trackEffectiveEnd;
 }
 
 QTime TrackAnalyzer::beatPosition()
@@ -546,7 +516,7 @@ QTime TrackAnalyzer::beatActivityEndPosition()
     // (above silence and above average by some margin). This is more reliable
     // than beat detection for finding the true start of musical content.
     if (p->frameRms.isEmpty()) {
-        return m_StartPosition; // fallback to audio start
+        return m_trackEffectiveStart; // fallback to audio start
     }
 
     const double significantThreshold = qMax(p->averageRms * 0.5, kSilenceRmsThreshold * 3);
@@ -559,16 +529,16 @@ QTime TrackAnalyzer::beatActivityEndPosition()
     }
 
     // No significant energy found - fallback to beat position or start position
-    if (p->bpmDetected && m_BeatPosition.isValid()) {
-        return m_BeatPosition;
+    if (p->bpmDetected) {
+        return m_beatStartPosition;
     }
-    return m_StartPosition;
+    return m_trackEffectiveStart;
 }
 
-QTime TrackAnalyzer::firstSignificantEnergyPosition()
+QTime TrackAnalyzer::beatStartPosition()
 {
     QMutexLocker locker(&p->mutex);
-    return m_FirstSignificantEnergyPosition;
+    return m_beatStartPosition;
 }
 
 int TrackAnalyzer::bpm()
@@ -587,13 +557,6 @@ QVector<float> TrackAnalyzer::amplitudeEnvelope() const
     return m_envelope;
 }
 
-void TrackAnalyzer::setMode(modeType mode)
-{
-    QMutexLocker locker(&p->mutex);
-    p->analysisMode = mode;
-    qDebug() << Q_FUNC_INFO << "Analysis mode set to:" << mode;
-}
-
 void TrackAnalyzer::setPosition(QTime position)
 {
     if (audioBackend) {
@@ -601,21 +564,10 @@ void TrackAnalyzer::setPosition(QTime position)
     }
 }
 
-int TrackAnalyzer::tempoScanDurationSeconds() const
-{
-    return p->tempoScanDurationSeconds;
-}
-
-void TrackAnalyzer::setTempoScanDurationSeconds(int seconds)
-{
-    p->tempoScanDurationSeconds = seconds;
-    qDebug() << Q_FUNC_INFO << "Tempo scan duration set to:" << seconds << "seconds";
-}
-
 QTime TrackAnalyzer::length()
 {
     QMutexLocker locker(&p->mutex);
-    return m_MaxPosition;
+    return m_trackDuration;
 }
 
 void TrackAnalyzer::need_finish()
@@ -630,33 +582,24 @@ void TrackAnalyzer::need_finish()
 
 void TrackAnalyzer::finalizeAnalysis()
 {
-    modeType mode;
+    bool finishedWasQueued = false;
+
     {
         QMutexLocker locker(&p->mutex);
-        mode = p->analysisMode;
         p->finishQueued = false;
-        p->tempoTimeout->stop();
-        if (mode == TEMPO)
-            p->tempoWindowStarted = false;
         p->inProgress = false;
         m_finished = true;
+        finishedWasQueued = true;
     }
 
-    qDebug() << Q_FUNC_INFO << "Analysis mode=" << mode;
+    if (kLogDebug)
+        qDebug() << Q_FUNC_INFO << "Unified analysis complete.";
 
     // Emit outside the analyzer mutex: slots may query analyzer state and
     // would deadlock if finalizeAnalysis keeps the lock while emitting.
-    switch (mode) {
-    case STANDARD:
-        emit finishGain();
-        break;
-    case TEMPO:
-        emit finishTempo();
-        break;
-    case ENVELOPE:
-        emit finishEnvelope();
-        break;
-    }
+    emit finishGain();
+    emit finishTempo();
+    emit finishEnvelope();
 }
 
 void TrackAnalyzer::detectTempo()
@@ -693,7 +636,7 @@ void TrackAnalyzer::detectTempo()
             QMutexLocker locker(&p->mutex);
             p->bpm = it.value().first;
             m_BeatPosition = QTime(0, 0).addMSecs(it.value().second);
-            m_FirstSignificantEnergyPosition = m_BeatPosition;
+            m_beatStartPosition = m_BeatPosition; // first significant energy ≈ beat start
             p->bpmDetected = true;
             return;
         }
@@ -702,7 +645,7 @@ void TrackAnalyzer::detectTempo()
     if (spectralFlux.isEmpty()) {
         QMutexLocker locker(&p->mutex);
         p->bpm = 0;
-        m_BeatPosition = m_StartPosition;
+        m_BeatPosition = m_trackEffectiveStart;
         return;
     }
 
@@ -1153,13 +1096,16 @@ void TrackAnalyzer::detectTempo()
             // Snap to nearest beat: round((energyMs - phaseMs) / beatMs) * beatMs + phaseMs
             const double beatIndex = std::round((static_cast<double>(energyMs) - static_cast<double>(phaseMs)) / beatMs);
             const int snappedMs = static_cast<int>(qRound(beatIndex * beatMs + phaseMs));
-            m_FirstSignificantEnergyPosition = QTime(0, 0).addMSecs(qMax(0, snappedMs));
+            m_beatStartPosition = QTime(0, 0).addMSecs(qMax(0, snappedMs));
+            qDebug() << Q_FUNC_INFO << "[m_beatStartPosition]:" << m_beatStartPosition << "Snapped to nearest beat from first significant energy position";
         } else if (firstSignificantFrame >= 0) {
             // No BPM detected - use the raw position
-            m_FirstSignificantEnergyPosition = QTime(0, 0).addMSecs(firstSignificantFrame * frameMs);
+            m_beatStartPosition = QTime(0, 0).addMSecs(firstSignificantFrame * frameMs);
+            qDebug() << Q_FUNC_INFO << "[m_beatStartPosition]:" << m_beatStartPosition << "No BPM detected, using first significant energy position";
         } else {
             // No significant energy found - fallback to beat position
-            m_FirstSignificantEnergyPosition = m_BeatPosition;
+            m_beatStartPosition = m_BeatPosition;
+            qDebug() << Q_FUNC_INFO << "[m_beatStartPosition]:" << m_beatStartPosition << "No significant energy found, falling back to beat position";
         }
     }
 
@@ -1208,12 +1154,9 @@ void TrackAnalyzer::cleanup()
 
 void TrackAnalyzer::loadThreadFinished()
 {
-    // Analysis load thread finished
-    TrackAnalyzer::modeType mode;
     bool inProgress;
     {
         QMutexLocker locker(&p->mutex);
-        mode = p->analysisMode;
         inProgress = p->inProgress;
     }
 
@@ -1222,21 +1165,5 @@ void TrackAnalyzer::loadThreadFinished()
     if (!inProgress)
         return;
 
-    if (mode == TEMPO) {
-        QMutexLocker locker(&p->mutex);
-        p->tempoWindowStarted = true;
-        p->tempoTimeout->start(p->tempoScanDurationSeconds * 1000);
-        (void)QtConcurrent::run([this]() {
-            QThread::currentThread()->setObjectName("TrackAnalyzerTempo");
-            QThread::currentThread()->setPriority(QThread::LowestPriority);
-            detectTempo();
-            need_finish();
-        });
-    } else if (mode == ENVELOPE) {
-        start();
-    } else {
-        // STANDARD mode: analysis data is already stored in asyncOpen();
-        // just finalize so that m_finished becomes true and finishGain fires.
-        need_finish();
-    }
+    start();
 }

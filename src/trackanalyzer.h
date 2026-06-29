@@ -30,8 +30,6 @@ public:
     TrackAnalyzer(QWidget* parent = nullptr);
     ~TrackAnalyzer();
 
-    enum modeType { STANDARD, TEMPO, ENVELOPE };
-
     bool prepare();
     void open(QUrl url);
     void start();
@@ -43,15 +41,12 @@ public:
     QTime endPosition();
     QTime beatPosition();
     QTime beatActivityEndPosition();
-    QTime firstSignificantEnergyPosition();
+    QTime beatStartPosition();
     int bpm();
     double exactBpm();
     QVector<float> amplitudeEnvelope() const;
     bool finished() { return m_finished; }
-    void setMode(modeType mode);
     void setPosition(QTime position);
-    int tempoScanDurationSeconds() const;
-    void setTempoScanDurationSeconds(int seconds);
 
     QTime length();
     static const int GAIN_INVALID = -99;
@@ -73,12 +68,15 @@ private:
 
     double m_GainDB = GAIN_INVALID;
     double m_ExactBpm = 0.0;
-    QTime m_StartPosition = QTime(0, 0);
-    QTime m_EndPosition = QTime(0, 0);
-    QTime m_BeatPosition = QTime(0, 0);
-    QTime m_BeatActivityEndPosition = QTime(0, 0);
-    QTime m_FirstSignificantEnergyPosition = QTime(0, 0);
-    QTime m_MaxPosition = QTime(0, 0);
+    // track-level temporal boundaries (output state — one source of truth)
+    QTime m_trackEffectiveStart = QTime(0, 0);      // first frame > silence threshold (excludes intro)
+    QTime m_trackEffectiveEnd = QTime(0, 0);         // last frame before trailing silence (excludes fadeout tail)
+    QTime m_beatStopPosition = QTime(0, 0);           // beat flux drops below + 3s silent window
+    // beat-grid phase (output state)
+    QTime m_BeatPosition = QTime(0, 0);               // phase offset within detected period
+    QTime m_beatStartPosition = QTime(0, 0);          // first detected beat in content zone
+    QTime m_trackDuration = QTime(0, 0);            // full track length incl. ALL silence from audioBackend
+    // scalar analyzer results
     bool m_finished = false;
     QVector<float> m_envelope;
 
