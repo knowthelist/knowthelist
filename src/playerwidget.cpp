@@ -21,9 +21,7 @@
 #include "trackanalyzer.h"
 #include "ui_playerwidget.h"
 #include "vumeter.h"
-#include "analysiscachemanager.h"
 
-// Forward declaration — complete type definition via playercuemanager.h include below.
 #include "playercuemanager.h"
 
 #include <QDragEnterEvent>
@@ -170,7 +168,6 @@ PlayerWidget::PlayerWidget(QWidget* parent)
     createPerformanceControls();
 
     // ---- Sub-object instantiation ----
-    m_cacheManager = std::make_unique<AnalysisCacheManager>(this);
     m_cueManager = std::make_unique<PlayerCueManager>(*this);
 
     QSettings settings;
@@ -266,16 +263,6 @@ PlayerWidget::~PlayerWidget()
     delete trackanalyzer;
     trackanalyzer = nullptr;
     delete p;
-}
-
-void PlayerWidget::storeCachedTempo(const QUrl& url, int bpm, double exactBpm, const QTime& beatPosition)
-{
-    const QTime cueStart = trackanalyzer
-            ? (trackanalyzer->beatStartPosition().isValid() && trackanalyzer->beatStartPosition() > QTime(0, 0)
-                   ? trackanalyzer->beatStartPosition()
-                   : trackanalyzer->startPosition())
-            : QTime();
-    m_cacheManager->storeCachedTempo(url, bpm, exactBpm, beatPosition, cueStart);
 }
 
 void PlayerWidget::setVolume(double volume)
@@ -1081,22 +1068,6 @@ void PlayerWidget::analyzeGainFinished()
     if (m_CurrentTrack) {
         setPositionMarkers();
 
-        // Backfill cue-start cache for tracks that load with cached BPM but without
-        // cached cue_start_ms (older cache rows). This unlocks correct startup auto-cue
-        // on the next loads without requiring TEMPO re-analysis.
-        if (m_bpm > 0) {
-            const QTime cueStart = trackanalyzer->startPosition();
-            if (cueStart.isValid() && cueStart > QTime(0, 0)) {
-                m_cacheManager->storeCachedTempo(
-                    m_CurrentTrack->url(),
-                    m_bpm,
-                    trackanalyzer->exactBpm() > 0.0 ? trackanalyzer->exactBpm() : static_cast<double>(m_bpm),
-                    m_beatPosition,
-                    cueStart);
-                trackanalyzer->setProperty("cachedCueStartMs", QTime(0, 0).msecsTo(cueStart));
-            }
-        }
-
         // For STANDARD analysis (TEMPO not yet available), apply auto-cue position
         // and check CUE button if skipSilentBegin detected a valid start point.
         // In beat-visual mode without BPM data, try to use cueManager directly
@@ -1150,16 +1121,6 @@ void PlayerWidget::analyzeTempoFinished()
     if (m_bpm > 0) {
         emit tempoChanged(m_bpm, m_beatPosition);
     }
-
-    if (m_CurrentTrack) {
-        qDebug() << Q_FUNC_INFO << "Storing tempo cache: bpm=" << m_bpm << "exactBpm=" << trackanalyzer->exactBpm();
-        const QTime cueStart = trackanalyzer->beatStartPosition().isValid()
-                                   && trackanalyzer->beatStartPosition() > QTime(0, 0)
-                               ? trackanalyzer->beatStartPosition()
-                               : trackanalyzer->startPosition();
-        m_cacheManager->storeCachedTempo(m_CurrentTrack->url(), m_bpm, trackanalyzer->exactBpm(), m_beatPosition, cueStart);
-    }
-
     applyAutoCueAfterAnalysis(m_beatVisualMode);
     bpmWidget->setTrackLength(player->length());
     bpmWidget->setState(m_bpm, trackanalyzer->exactBpm(), player->position(), m_beatPosition, m_isStarted, true);
@@ -1180,22 +1141,23 @@ void PlayerWidget::analyzeEnvelopeFinished()
         return;
 
     qDebug() << "ENVELOPE analysis finished:" << objectName() << "samples=" << env.size();
-    m_cacheManager->storeCachedEnvelope(m_CurrentTrack->url(), env, QTime(0, 0).msecsTo(trackanalyzer->length()));
     bpmWidget->setTrackLength(trackanalyzer->length());
     bpmWidget->setPreloadedEnvelope(env, kEnvelopeAnalysisIntervalMs);
 
-    // If beat-sync mode is active and we found a meaningful beat-activity end,
-    // override the cue time so voice/instrument-free tail passages are skipped.
-    if (m_beatSyncEnabled && m_skipSilentEnd) {
-        const QTime fadePoint = m_cueManager->computeFadePoint();
-        if (fadePoint.isValid() && fadePoint > QTime(0, 0)) {
+    // Use beat-stop (beatActivityEnd) from the same analysis pass already done in TrackAnalyzer.
+    // Skip CueManager::computeFadePoint() here — it would redo identical work that's already in
+    // m_beatStopPosition / endPosition. The fade point stays up to date via setPositionMarkers().
+    if (m_beatSyncEnabled && m_skipSilentEnd && trackanalyzer->finished()) {
+        const QTime beatStop = trackanalyzer->beatEndPosition();
+        const int lastBeatMs = QTime(0, 0).msecsTo(beatStop);
+        if (lastBeatMs > 3 * 1000) {                         // at least 3s of content after first beat
             const QTime trackLen = trackanalyzer->length();
-            const int newRemainMs = fadePoint.msecsTo(trackLen);
-            if (newRemainMs > 0 && newRemainMs > static_cast<int>(remainCueTime)) {
+            const int newRemainMs = qMax(0, QTime(0, 0).msecsTo(trackLen) - lastBeatMs);
+            if (newRemainMs > static_cast<int>(remainCueTime)) {
                 remainCueTime = newRemainMs;
                 ui->txtCue->setText("-" + QString::number(remainCueTime / 1000));
-                qDebug() << Q_FUNC_INFO << "fade point overrides cue time:"
-                         << fadePoint << "remainCue=" << remainCueTime;
+                qDebug() << Q_FUNC_INFO << "beat-stop override:" << beatStop
+                         << "newRemainCue=" << remainCueTime;
             }
         }
     }
@@ -1396,76 +1358,39 @@ void PlayerWidget::loadTrack(Track* track)
     bpmWidget->clearEnvelope();
     m_envelopeScrubbing = false;
 
-    if (track != nullptr) {
-
-        drawTitle();
-
-        bool doPlay = m_isStarted;
-        player->stop();
-
-        QUrl url = track->url();
-        player->open(url);
-
-        // Check cache first to skip redundant analyzer loading
-        QSettings settings;
-        const bool analyzeTempo = settings.value("beatSyncAnalyzeTempo", true).toBool();
-        const CachedTempo cachedTempo = m_cacheManager->loadCachedTempo(url);
-        const CachedEnvelope cachedEnvelope = m_cacheManager->loadCachedEnvelope(url);
-
-        // Start the analyzer first to populate m_StartPosition before auto-cue is applied
-        // Run exactly one analyzer pass when any analysis-dependent feature needs it.
-        const bool haveCachedTempo = cachedTempo.valid && cachedTempo.bpm > 0;
-        const bool hasCachedCueStart = cachedTempo.cueStartMs > 0;
-        const bool missingCachedCueStart = haveCachedTempo && !hasCachedCueStart;
-        const bool needCueAnalysis = m_skipSilentBegin || m_skipSilentEnd;
-        const bool needEnvelope = m_beatVisualMode && !cachedEnvelope.valid;
-        const bool needTempo = m_beatSyncEnabled && analyzeTempo && !haveCachedTempo;
-        const bool needAnalysis = needCueAnalysis || needEnvelope || needTempo || missingCachedCueStart;
-
-        if (needAnalysis) {
-            trackanalyzer->open(url);
-        }
-
-        // Apply cached data immediately to minimize wait time
-        if (cachedTempo.valid && cachedTempo.bpm > 0) {
-            m_bpmAnalyzed = true;
-            m_bpm = cachedTempo.bpm;
-            m_beatPosition = QTime(0, 0).addMSecs(cachedTempo.beatOffsetMs);
-            if (hasCachedCueStart && trackanalyzer)
-                trackanalyzer->setProperty("cachedCueStartMs", cachedTempo.cueStartMs);
-            qDebug() << Q_FUNC_INFO << "Loaded cached tempo: bpm=" << m_bpm << "exactBpm=" << cachedTempo.exactBpm << "beatOffsetMs=" << cachedTempo.beatOffsetMs;
-            bpmWidget->setState(m_bpm, cachedTempo.exactBpm, player->position(), m_beatPosition, m_isStarted, true);
-            Q_EMIT tempoChanged(m_bpm, m_beatPosition);
-        }
-
-        if (cachedEnvelope.valid) {
-            if (cachedEnvelope.durationMs > 0)
-                bpmWidget->setTrackLength(QTime(0, 0).addMSecs(cachedEnvelope.durationMs));
-            else if (m_CurrentTrack && m_CurrentTrack->length() > 0)
-                bpmWidget->setTrackLength(QTime(0, 0).addSecs(m_CurrentTrack->length()));
-            bpmWidget->setPreloadedEnvelope(cachedEnvelope.samples, kEnvelopeAnalysisIntervalMs);
-        }
-
-        // Apply auto-cue after analyzer has started (m_StartPosition will be available)
-        // This ensures the correct cue point (first significant energy position) is used
-        if (cachedTempo.valid && cachedTempo.bpm > 0 && hasCachedCueStart) {
-            applyAutoCueAfterAnalysis(m_beatVisualMode);
-        }
-
-        m_pendingPlay = doPlay;
-
-    } else {
-        if (player->lastError != "")
-            ui->lblTitle->setText(player->lastError);
-        else
-            ui->lblTitle->setText("no track");
-
+    if (track == nullptr) {
+        ui->lblTitle->setText("no track");
         ui->lblTime->setText("-:-");
         ui->lblTimeMs->setText(".-");
         ui->lblTimeRemain->setText("-:-");
         ui->lblTimeRemainMs->setText(".-");
         stop();
+        remainCueTime = 0;
+        ui->sliPosition->setValue(0);
+        ui->txtCue->setText("-");
+        ui->butCue->setChecked(false);
+        return;
     }
+
+    drawTitle();
+
+    bool doPlay = m_isStarted;
+    player->stop();
+
+    QUrl url = track->url();
+    player->open(url);
+
+    // Start TrackAnalyzer when any analysis-dependent feature is needed.
+    // All cache reads/writes are centralized in Player::analyze().
+    QSettings settings;
+    const bool analyzeTempo = settings.value("beatSyncAnalyzeTempo", true).toBool();
+    if (m_beatSyncEnabled && analyzeTempo || m_skipSilentBegin || m_skipSilentEnd ||
+        (m_beatVisualMode && !bpmWidget->isEnvelopePreloaded())) {
+        qDebug() << Q_FUNC_INFO << "Starting TrackAnalyzer for:" << url;
+        trackanalyzer->open(url);
+    }
+
+    m_pendingPlay = doPlay;
 
     remainCueTime = 0;
     ui->sliPosition->setValue(0);

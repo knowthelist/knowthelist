@@ -17,6 +17,7 @@
 #ifndef TRACKANALYSER_H
 #define TRACKANALYSER_H
 
+#include "analysiscachemanager.h"
 #include <QtCore>
 #include <QWidget>
 #include <memory>
@@ -40,7 +41,7 @@ public:
     QTime startPosition();
     QTime endPosition();
     QTime beatPosition();
-    QTime beatActivityEndPosition();
+    QTime beatEndPosition();
     QTime beatStartPosition();
     int bpm();
     double exactBpm();
@@ -66,6 +67,13 @@ private:
     struct TrackAnalyzer_Private* p;
     std::unique_ptr<JuceAudioBackend> audioBackend;
 
+    // Tempo / envelope caching backed by AnalysisCacheManager (SQLite)
+    // Sole owner of tempo/envelope caching lifecycle (read + write).
+    std::shared_ptr<AnalysisCacheManager> m_analysisCache;
+
+    // Computed in asyncOpen() and persisted in finalizeAnalysis().
+    QString m_lastCacheKey;                 // file-hash key for cache row invalidation
+
     double m_GainDB = GAIN_INVALID;
     double m_ExactBpm = 0.0;
     // track-level temporal boundaries (output state — one source of truth)
@@ -81,10 +89,19 @@ private:
     QVector<float> m_envelope;
 
     void detectTempo();
+
+    AnalysisCacheManager::CachedTempo loadCachedTempo(const QUrl& url);
+    bool hasValidCache(const QUrl& url, const QString& cacheKey) const;
+    void     storeCachedTempo();            // writes from current analyzer state — no params
+    void     storeCachedEnvelope(int durationMs);
+    AnalysisCacheManager::CachedEnvelope loadCachedEnvelope(const QUrl& url);
+
     float AutoCorrelation(QList<float> buffer, int frames, int minBpm, int maxBpm, double sampleRate);
 
     void cleanup();
     void asyncOpen(QUrl url);
 };
+
+
 
 #endif // TRACKANALYSER_H

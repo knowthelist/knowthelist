@@ -71,6 +71,9 @@ public:
     bool skipSilentEnd() const;
 
 private:
+    // ---- Internal helpers ----
+    QTime computeFallbackCueFromAnalyzer() const;
+
     PlayerWidget& m_owner;
     bool m_skipSilentEnd;
     bool m_skipSilentBegin;

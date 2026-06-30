@@ -18,22 +18,43 @@ public:
     explicit AnalysisCacheManager(QObject *parent = nullptr);
 
     // Tempo caching methods
-    bool ensureTempoCacheTable();
-    void storeCachedTempo(const QUrl& url, int bpm, double exactBpm, const QTime& beatPosition,
-                          const QTime& cueStartPosition = QTime());
+    bool ensureTempoCacheTable() const;
+    
+    void storeCachedTempo(const QUrl& url, int bpm, double exactBpm,
+                          int startPositionMs, int endPositionMs,
+                          int beatStartPosMs, int beatEndPosMs);
+    
     struct CachedTempo {
         bool valid;
         int bpm;
-        int beatOffsetMs;
-        int cueStartMs;
         double exactBpm;
 
-        CachedTempo() : valid(false), bpm(0), beatOffsetMs(0), cueStartMs(0), exactBpm(0.0) {}
+        // Track boundaries (ms from T=0)
+        int startPositionMs;     // first frame > silence threshold
+        int endPositionMs;       // last significant-beat frame (excludes fadeout tail)
+
+        // Beat-grid phase (ms from T=0)
+        int beatStartPositionMs;  // first detected beat in content zone
+        int beatEndPositionMs;    // beat flux drops below + 3s silent window
+
+        // File-based invalidation key (path|size|mtime)
+        QString analysisCacheKey;
+
+        CachedTempo() : valid(false), bpm(0), exactBpm(0.0),
+                        startPositionMs(0), endPositionMs(0),
+                        beatStartPositionMs(0), beatEndPositionMs(0) {}
     };
+    
     CachedTempo loadCachedTempo(const QUrl& url);
+
+    // Check cache validity: DB row exists AND file key matches (no stale cache on file replacement).
+    bool hasValidCache(const QUrl& url, const QString& currentKey) const;
 
     // Envelope caching methods
     void storeCachedEnvelope(const QUrl& url, const QVector<float>& samples, int durationMs);
+
+    // Helper to set analysis_cache_key after storeCachedTempo() (key is passed separately)
+    void setCachedKey(const QUrl& url, const QString& key);
     struct CachedEnvelope {
         bool valid;
         QVector<float> samples;
@@ -54,3 +75,4 @@ private:
 };
 
 #endif // ANALYSISCACHEMANAGER_H
+

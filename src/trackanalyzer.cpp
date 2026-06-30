@@ -355,6 +355,7 @@ TrackAnalyzer::TrackAnalyzer(QWidget* parent)
     : QWidget(parent)
     , p(new TrackAnalyzer_Private)
     , audioBackend(std::make_unique<JuceAudioBackend>())
+    , m_analysisCache(std::make_shared<AnalysisCacheManager>(this))
 {
     qDebug() << Q_FUNC_INFO << "Creating TrackAnalyzer";
 
@@ -429,8 +430,52 @@ void TrackAnalyzer::asyncOpen(QUrl url)
     }
 
     QTime duration = audioBackend->getDuration();
+
+    // ── Step D: Check SQLite cache before running full analysis ──
+    QString cachedKey;
+    {
+        QFileInfo info(url.toLocalFile());
+        const QString canonicalPath = info.canonicalFilePath().isEmpty() ? info.absoluteFilePath() : info.canonicalFilePath();
+        const qint64 fileSize  = info.exists() ? info.size() : -1;
+        const qint64 fileMTime = info.exists() ? info.lastModified().toMSecsSinceEpoch() : -1;
+        cachedKey = QStringLiteral("%1|%2|%3")
+                        .arg(canonicalPath,
+                             QByteArray::number(fileSize),
+                             QByteArray::number(fileMTime));
+
+        AnalysisCacheManager::CachedTempo cached = loadCachedTempo(url);
+        if (cached.valid && cached.bpm > 0 && hasValidCache(url, cachedKey)) {
+            qDebug() << "[cache hit] skipping analysis for:" << url.toLocalFile();
+
+            // Apply cached state — direct ms→QTime conversion
+            {
+                QMutexLocker locker(&p->mutex);
+                p->bpm       = cached.bpm;
+                m_ExactBpm   = cached.exactBpm;
+                m_finished   = true;
+                p->inProgress = false;
+            }
+
+            m_trackEffectiveStart  = QTime(0, 0).addMSecs(cached.startPositionMs);
+            m_trackEffectiveEnd    = QTime(0, 0).addMSecs(cached.endPositionMs);
+            m_beatStartPosition    = QTime(0, 0).addMSecs(cached.beatStartPositionMs);
+            m_beatStopPosition     = QTime(0, 0).addMSecs(cached.beatEndPositionMs);
+
+            // Load cached envelope if available
+            AnalysisCacheManager::CachedEnvelope envCached = loadCachedEnvelope(url);
+            if (envCached.valid && !envCached.samples.isEmpty()) {
+                m_envelope = envCached.samples;
+            }
+
+            need_finish();   // emits finishGain/Tempo/Envelope
+            return;
+        }
+    }
+
     TrackAnalysisData analysis = scanAudioFileCached(url);
-    qDebug() << Q_FUNC_INFO << "duration from JUCE:" << duration << "duration from analysis:" << QTime(0, 0).addMSecs(static_cast<int>(qRound(analysis.durationMs)));
+    if (kLogDebug) {
+        qDebug() << Q_FUNC_INFO << "duration from JUCE:" << duration << "duration from analysis:" << QTime(0, 0).addMSecs(static_cast<int>(qRound(analysis.durationMs)));
+    }
     if (analysis.durationMs > 0.0)
         duration = QTime(0, 0).addMSecs(static_cast<int>(qRound(analysis.durationMs)));
 
@@ -508,31 +553,13 @@ QTime TrackAnalyzer::beatPosition()
     return m_BeatPosition;
 }
 
-QTime TrackAnalyzer::beatActivityEndPosition()
+QTime TrackAnalyzer::beatEndPosition()
 {
     QMutexLocker locker(&p->mutex);
 
-    // Find the first frame where RMS crosses a "significant" threshold
-    // (above silence and above average by some margin). This is more reliable
-    // than beat detection for finding the true start of musical content.
-    if (p->frameRms.isEmpty()) {
-        return m_trackEffectiveStart; // fallback to audio start
-    }
-
-    const double significantThreshold = qMax(p->averageRms * 0.5, kSilenceRmsThreshold * 3);
-    const int frameMs = qMax(1, qRound(1000.0 / kAnalysisFrameRate));
-
-    for (int i = 0; i < p->frameRms.size(); ++i) {
-        if (p->frameRms.at(i) >= significantThreshold) {
-            return QTime(0, 0).addMSecs(i * frameMs);
-        }
-    }
-
-    // No significant energy found - fallback to beat position or start position
-    if (p->bpmDetected) {
-        return m_beatStartPosition;
-    }
-    return m_trackEffectiveStart;
+    // Return the pre-computed beat stop position from finalizeAnalysis().
+    // Computation was done once during asyncOpen — no live recalculation.
+    return m_beatStopPosition;
 }
 
 QTime TrackAnalyzer::beatStartPosition()
@@ -592,6 +619,13 @@ void TrackAnalyzer::finalizeAnalysis()
         finishedWasQueued = true;
     }
 
+    // Persist analyzed results to SQLite (one-write, uses current analyzer state)
+    if (p->currentUrl.isValid() && m_analysisCache) {
+        storeCachedTempo();
+        int durMs = qBound(0, static_cast<int>(qRound(static_cast<double>(m_trackDuration.msecsTo(QTime(0, 0))))), INT_MAX);
+        storeCachedEnvelope(durMs);
+    }
+
     if (kLogDebug)
         qDebug() << Q_FUNC_INFO << "Unified analysis complete.";
 
@@ -637,6 +671,7 @@ void TrackAnalyzer::detectTempo()
             p->bpm = it.value().first;
             m_BeatPosition = QTime(0, 0).addMSecs(it.value().second);
             m_beatStartPosition = m_BeatPosition; // first significant energy ≈ beat start
+            qDebug() << "[tempo cache hit] bpm=" << p->bpm << "beatStartPosition=" << m_beatStartPosition;
             p->bpmDetected = true;
             return;
         }
@@ -1166,4 +1201,55 @@ void TrackAnalyzer::loadThreadFinished()
         return;
 
     start();
+}
+
+// ── Cache lifecycle (Steps C/E): owned by TrackAnalyzer ──
+
+AnalysisCacheManager::CachedTempo TrackAnalyzer::loadCachedTempo(const QUrl& url)
+{
+    if (!m_analysisCache)
+        return {};
+    return m_analysisCache->loadCachedTempo(url);
+}
+
+void TrackAnalyzer::storeCachedTempo()
+{
+    if (p->bpm <= 0 || !m_analysisCache || p->currentUrl.isEmpty())
+        return;
+
+    const int startPosMs   = m_trackEffectiveStart.msecsSinceStartOfDay();
+    const int endPosMs     = m_trackEffectiveEnd.msecsSinceStartOfDay();
+    const int beatStartMs  = m_beatStartPosition.msecsSinceStartOfDay();
+    const int beatEndMs    = m_beatStopPosition.msecsSinceStartOfDay();
+
+    m_analysisCache->storeCachedTempo(
+        p->currentUrl,
+        p->bpm,
+        m_ExactBpm,
+        startPosMs,
+        endPosMs,
+        beatStartMs,
+        beatEndMs
+    );
+}
+
+void TrackAnalyzer::storeCachedEnvelope(int durationMs)
+{
+    if (m_envelope.isEmpty() || !m_analysisCache || p->currentUrl.isEmpty())
+        return;
+    m_analysisCache->storeCachedEnvelope(p->currentUrl, m_envelope, qBound(0, durationMs, INT_MAX));
+}
+
+bool TrackAnalyzer::hasValidCache(const QUrl& url, const QString& cacheKey) const
+{
+    if (!m_analysisCache)
+        return false;
+    return m_analysisCache->hasValidCache(url, cacheKey);
+}
+
+AnalysisCacheManager::CachedEnvelope TrackAnalyzer::loadCachedEnvelope(const QUrl& url)
+{
+    if (!m_analysisCache)
+        return {};
+    return m_analysisCache->loadCachedEnvelope(url);
 }

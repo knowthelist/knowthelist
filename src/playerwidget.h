@@ -40,8 +40,6 @@
 
 class PlayerCueManager;
 
-#include "analysiscachemanager.h"
-
 // ---- Cue mode: two distinct strategies for finding start & end cue points ----
 enum CueMode {
     CUE_SKIP_SILENT,        // skipSilent:   start at first non-silent sample / end at last non-silent beat-activity
@@ -74,14 +72,6 @@ public:
     float currentLevelRight();
     void loadFile(QUrl);
 
-    // Cache management — exposed for TrackLoader.
-    using CachedTempo = AnalysisCacheManager::CachedTempo;
-    using CachedEnvelope = AnalysisCacheManager::CachedEnvelope;
-
-    void storeCachedTempo(const QUrl& url, int bpm, double exactBpm, const QTime& beatPosition);
-    CachedTempo loadCachedTempo(const QUrl& url) const { return m_cacheManager->loadCachedTempo(url); }
-    void storeCachedEnvelope(const QUrl& url, const QVector<float>& samples, int durationMs);
-    CachedEnvelope loadCachedEnvelope(const QUrl& url) const { return m_cacheManager->loadCachedEnvelope(url); }
 
     void play();
     void stop();
@@ -278,9 +268,6 @@ protected:
      int mTrackFinishEmitTime;
 
      struct PlayerWidgetPrivate* p;
-
-    // Analysis cache manager — owns all tempo/envelope caching logic.
-    std::unique_ptr<AnalysisCacheManager> m_cacheManager;
 
     // Cue-point sub-object — computation of cue positions, fade points, auto-cue.
     std::unique_ptr<PlayerCueManager> m_cueManager;

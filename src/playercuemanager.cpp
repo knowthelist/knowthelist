@@ -39,7 +39,7 @@ QTime PlayerCueManager::computeFadePoint() const
     if (!m_owner.trackanalyzer || !m_owner.trackanalyzer->finished())
         return QTime();
 
-    QTime beatEnd   = m_owner.trackanalyzer->beatActivityEndPosition();
+    QTime beatEnd   = m_owner.trackanalyzer->beatEndPosition();
     QTime trackEnd  = m_owner.trackanalyzer->endPosition();
     QTime fadePoint;
 
@@ -92,22 +92,17 @@ PlayerCueManager::CuePoints PlayerCueManager::computeCuePoints(CueMode mode) con
 QTime PlayerCueManager::calculateCuePosition(CueMode mode) const
 {
     // Beat-based modes can return a valid cue position even when the analyzer
-    // has not yet finished, using first-significant-energy from asyncOpen().
+    // has not yet finished.
     if (mode == CUE_BEAT_OCCURRENCE || mode == CUE_SKIP_SILENT_OCCURRENCE) {
         if (m_owner.trackanalyzer && m_owner.trackanalyzer->finished()) {
             QTime firstBeat = m_owner.trackanalyzer->beatStartPosition();
-            if (firstBeat.isValid() && firstBeat > QTime(0, 0))
+            if (firstBeat.isValid() && firstBeat > QTime(0, 0)) {
+                qDebug() << Q_FUNC_INFO << "Using first beat position:" << firstBeat;
                 return firstBeat;
+            }
         }
-        if (m_owner.trackanalyzer) {
-            int cachedMs = m_owner.trackanalyzer->property("cachedCueStartMs").toInt();
-            if (cachedMs > 0)
-                return QTime(0, 0).addMSecs(cachedMs);
-            QTime firstEnergy = m_owner.trackanalyzer->startPosition();
-            if (firstEnergy.isValid() && firstEnergy > QTime(0, 0))
-                return firstEnergy;
-        }
-        return QTime(0, 0);
+        // analyzer not ready or no beat — fall back to first-significant-energy
+        return computeFallbackCueFromAnalyzer();
     }
 
     // CUE_SKIP_SILENT needs live analyzer results.
@@ -163,21 +158,11 @@ void PlayerCueManager::applyAutoCueAfterAnalysis(bool preferBeatCue)
     CueMode mode = preferBeatCue ? CUE_BEAT_OCCURRENCE : (m_skipSilentEnd ? CUE_SKIP_SILENT : CUE_BEAT_OCCURRENCE);
     QTime cuePosition = calculateCuePosition(mode);
 
-    // If analysis isn't ready yet, use analyzer-provided first-energy/start positions only.
-    // Do not fall back to cached beat phase offset (m_beatPosition), because that is not
-    // a cue start and causes premature cueing around ~0.4s (e.g. 00:00:00.449).
+    // If analysis isn't ready yet, fall back to first-significant-energy position.
+    // Do not use cached beat phase offset (m_beatPosition) — it is not a cue start
+    // and causes premature cueing around ~0.4s (e.g. 00:00:00.449).
     if ((!cuePosition.isValid() || cuePosition <= QTime(0, 0))) {
-        // Try the raw first significant energy position (from asyncOpen) first
-        if (m_owner.trackanalyzer) {
-            const int cachedCueStartMs = m_owner.trackanalyzer->property("cachedCueStartMs").toInt();
-            if (cachedCueStartMs > 0)
-                cuePosition = QTime(0, 0).addMSecs(cachedCueStartMs);
-
-            QTime firstEnergy = m_owner.trackanalyzer->startPosition();
-            if (firstEnergy.isValid() && firstEnergy > QTime(0, 0)) {
-                cuePosition = firstEnergy;
-            }
-        }
+        cuePosition = computeFallbackCueFromAnalyzer();
     }
 
     if (cuePosition.isValid() && cuePosition > QTime(0, 0)) {
@@ -198,6 +183,27 @@ void PlayerCueManager::applyAutoCueAfterAnalysis(bool preferBeatCue)
         qWarning("PlayerCueManager::applyAutoCueAfterAnalysis: no valid cue position, cached BPM=%d beatPosition=%s",
                  m_owner.m_bpm, m_owner.m_beatPosition.toString().toLatin1().constData());
     }
+}
+
+// ---- Private helpers ----
+
+QTime PlayerCueManager::computeFallbackCueFromAnalyzer() const {
+    if (!m_owner.trackanalyzer)
+        return QTime();
+
+    int cachedMs = m_owner.trackanalyzer->property("cachedCueStartMs").toInt();
+    if (cachedMs > 0) {
+        qDebug() << Q_FUNC_INFO << "Using cached cue start position:" << QTime(0, 0).addMSecs(cachedMs);
+        return QTime(0, 0).addMSecs(cachedMs);
+    }
+
+    QTime firstEnergy = m_owner.trackanalyzer->startPosition();
+    if (firstEnergy.isValid() && firstEnergy > QTime(0, 0)) {
+        qDebug() << Q_FUNC_INFO << "Using first significant energy position:" << firstEnergy;
+        return firstEnergy;
+    }
+
+    return QTime();
 }
 
 QTime PlayerCueManager::determineSilentEndCuePosition(CueMode mode) const
