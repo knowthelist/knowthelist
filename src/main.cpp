@@ -122,15 +122,23 @@ int main(int argc, char* argv[])
     if (!path.exists())
         path.mkpath(pathName);
 
-    QSqlDatabase db = QSqlDatabase::addDatabase("QSQLITE");
-    db.setDatabaseName(path.absolutePath() + "/collection.db");
-
-    if (!db.open()) {
-        QMessageBox::critical(nullptr, "fatal database error",
-            db.lastError().text());
-        return 1;
+    const QString dbName = path.absolutePath() + "/collection.db";
+    if (!QSqlDatabase::contains("CollectionDB")) {
+        QSqlDatabase db = QSqlDatabase::addDatabase("QSQLITE", "CollectionDB");
+        db.setDatabaseName(dbName);
+        db.setHostName("localhost");
+        if (!db.open()) {
+            QMessageBox::critical(nullptr, "fatal database error",
+                db.lastError().text());
+            return 1;
+        }
+        QSqlQuery q("PRAGMA journal_mode=WAL", db);
+        (void)q.next();
+        qDebug() << "load database:" << dbName << "journal_mode" << q.value(0).toString();
+    } else {
+        qDebug() << "load database:" << dbName << "(connection already exists on this thread)";
     }
-    qDebug() << "load database: " << db.databaseName();
+
     Knowthelist w;
     w.show();
 

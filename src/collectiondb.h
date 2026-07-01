@@ -86,6 +86,8 @@ public:
     QList<QStringList> selectPlaylistData();
     QList<QStringList> selectPlaylistTracks(QString name);
 
+    static bool ensureCollectionDatabase();
+
 signals:
     void scanDone(bool changed);
 
