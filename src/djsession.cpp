@@ -293,7 +293,7 @@ void DjSession::storePlaylists(const QString& name, bool replace)
 
     try {
         // Use the instance's method directly, which will use the readonly connection for selects
-        CollectionDB* coll = CollectionDB::instance();
+        CollectionDB* coll = p->database;
 
         // Use transaction for deleting playlists
         if (replace) {
