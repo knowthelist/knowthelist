@@ -443,6 +443,9 @@ void TrackAnalyzer::asyncOpen(QUrl url)
                              QByteArray::number(fileSize),
                              QByteArray::number(fileMTime));
 
+        // Store cache key for later use in finalizeAnalysis
+        m_lastCacheKey = cachedKey;
+
         AnalysisCacheManager::CachedTempo cached = loadCachedTempo(url);
         if (cached.valid && cached.bpm > 0 && hasValidCache(url, cachedKey)) {
             qDebug() << "[cache hit] skipping analysis for:" << url.toLocalFile();
