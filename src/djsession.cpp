@@ -283,26 +283,47 @@ void DjSession::storePlaylists(const QString& name, bool replace)
     listToStore.append(p->playList1_Tracks);
     listToStore.append(p->playList2_Tracks);
 
-    if (replace)
-        p->database->executeSql(QString("DELETE FROM playlists WHERE name ='%1';")
-                                    .arg(p->database->escapeString(name)));
+    // Create a transaction to reduce database locking issues
+    QSqlDatabase db = QSqlDatabase::database("CollectionDB");
+    if (!db.transaction()) {
+        qDebug() << "Failed to start transaction";
+        Q_EMIT savedPlaylists();
+        return;
+    }
 
-    int n = 0;
-    QList<Track*>::Iterator i = listToStore.begin();
-    while (i != listToStore.end()) {
+    try {
+        // Use the instance's method directly, which will use the readonly connection for selects
+        CollectionDB* coll = CollectionDB::instance();
 
-        QString command = QString("INSERT OR REPLACE INTO playlists "
-                                  "( url, name, length, flags, norder, changedate ) "
-                                  "VALUES('%1','%2', %3, %4, %5, strftime('%s', 'now'));")
-                              .arg(p->database->escapeString((*i)->url().toLocalFile()))
-                              .arg(p->database->escapeString(name))
-                              .arg((*i)->length())
-                               .arg(static_cast<int>((*i)->flags()))
-                              .arg(n);
+        // Use transaction for deleting playlists
+        if (replace) {
+            QString command = QString("DELETE FROM playlists WHERE name ='%1';")
+                                .arg(coll->escapeString(name));
+            coll->executeSql(command);
+        }
 
-        p->database->executeSql(command);
-        i++;
-        n++;
+        int n = 0;
+        QList<Track*>::Iterator i = listToStore.begin();
+        while (i != listToStore.end()) {
+
+            QString command = QString("INSERT OR REPLACE INTO playlists "
+                                      "( url, name, length, flags, norder, changedate ) "
+                                      "VALUES('%1','%2', %3, %4, %5, strftime('%s', 'now'));")
+                                  .arg(coll->escapeString((*i)->url().toLocalFile()))
+                                  .arg(coll->escapeString(name))
+                                  .arg((*i)->length())
+                                   .arg(static_cast<int>((*i)->flags()))
+                                  .arg(n);
+
+            coll->executeSql(command);
+            i++;
+            n++;
+        }
+        
+        db.commit();
+    } catch (...) {
+        db.rollback();
+        qDebug() << "Failed to store playlists - rolled back transaction";
     }
 
     Q_EMIT savedPlaylists();

@@ -38,7 +38,8 @@ public:
     QString sqlQuickFilter;
     QString sqlFromString;
     QString sqlFromStringPL;
-    QSqlDatabase* db;
+    QSqlDatabase db;
+    QSqlDatabase db_readonly;
     QSqlQuery* query;
     QMutex mutex;
 
@@ -93,13 +94,16 @@ public:
     }
 };
 
+static constexpr const char* kDbConnName = "CollectionDB";
+
 CollectionDB::CollectionDB()
 {
     p = new CollectionDbPrivate;
-    db = QSqlDatabase::database();
 
-    p->db = &db;
-    p->query = new QSqlQuery(*(p->db));
+    // Use the named connection created in main.cpp, not a copy. QSqlDatabase is
+    // implicitly shared; each value-copy still refers to the same Qt connection pool entry.
+    p->db = QSqlDatabase::database(kDbConnName);
+    p->db_readonly = QSqlDatabase::cloneDatabase(p->db, QString("%1_readonly").arg(kDbConnName));
 
     p->genreCount = 0;
     p->resultCount = 0;
@@ -132,7 +136,10 @@ CollectionDB::CollectionDB()
 
 CollectionDB::~CollectionDB()
 {
-    db.close();
+    if (!p->db.databaseName().isEmpty() && p->db.isOpen())
+        p->db.close();
+    if (!p->db_readonly.databaseName().isEmpty() && p->db_readonly.isOpen())
+        p->db_readonly.close();
     delete p;
     p = nullptr;
 }
@@ -272,57 +279,127 @@ void CollectionDB::removePlaylist(QString name)
 
 long CollectionDB::selectSqlNumber(const QString& statement)
 {
-    p->mutex.lock();
+    long result = -1;
+    // Use readonly connection for select operations to better separate read from write locks
+    QSqlQuery query(p->db_readonly);
+    
+    const int maxRetries = 3;
+    int attempts = 0;
 
-    if (p->query->exec(statement)) {
-        while (p->query->next()) {
-            p->mutex.unlock();
-            return p->query->value(0).toInt();
+    while (attempts < maxRetries) {
+        if (query.exec(statement)) {
+            while (query.next()) {
+                result = query.value(0).toInt();
+                break; // Since we expect only one value
+            }
+            return result;
+        } else {
+            QSqlError lastError = query.lastError();
+            
+            // Check for database locked errors that should be retried
+            if (lastError.text().contains("database is locked", Qt::CaseInsensitive)) {
+                
+                qDebug() << "Database locked error detected in selectSqlNumber, attempt" << (attempts + 1) << "for statement:" << statement;
+                
+                // Wait before retry with exponential backoff
+                if (attempts < maxRetries - 1) {
+                    QThread::msleep(50 * (attempts + 1));  // 50ms, 100ms, 150ms
+                    attempts++;
+                    continue;
+                }
+            }
+            
+            qDebug() << "Database error in selectSqlNumber:" << lastError.text();
+            qDebug() << "Statement: " << statement;
+            return result;
         }
-    } else
-        qDebug() << p->query->lastError();
-    p->mutex.unlock();
-    return -1;
+    }
+    
+    return result;
 }
 
 bool CollectionDB::executeSql(const QString& statement)
 {
-    p->mutex.lock();
+    const int maxRetries = 5;
+    int attempts = 0;
 
-    if (p->query->exec(statement)) {
-        p->mutex.unlock();
-        return true;
-    } else {
-        qDebug() << p->query->lastError();
-        qDebug() << "Statement: " << statement;
-        p->mutex.unlock();
-        return false;
+    while (attempts < maxRetries) {
+        // Use write connection for executeSql operations
+        QSqlQuery query(p->db);
+        
+        if (query.exec(statement)) {
+            return true;
+        } else {
+            QSqlError lastError = query.lastError();
+            
+            // Check for database locked errors that should be retried
+            if (lastError.text().contains("database is locked", Qt::CaseInsensitive)) {
+                
+                qDebug() << "Database locked error detected, attempt" << (attempts + 1) << "for statement:" << statement;
+                
+                // Wait before retry with exponential backoff
+                if (attempts < maxRetries - 1) {
+                    QThread::msleep(50 * (attempts + 1));  // 50ms, 100ms, 150ms, 200ms, 250ms
+                    attempts++;
+                    continue;
+                }
+            } else {
+                qDebug() << "Database error:" << lastError.text();
+                qDebug() << "Statement: " << statement;
+                return false;
+            }
+        }
     }
+    
+    // If we've exhausted all retries, return false
+    return false;
 }
 
 QList<QStringList> CollectionDB::selectSql(const QString& statement)
 {
     QList<QStringList> tags;
-    p->mutex.lock();
     tags.clear();
     int count;
 
-    if (p->query->exec(statement)) {
-        while (p->query->next()) {
-            QStringList tag;
-            count = p->query->record().count();
-            for (int i = 0; i < count; i++) {
-                tag << p->query->value(i).toString();
-            }
-            tags << tag;
-        }
-    } else {
-        qDebug() << p->db->lastError() << "\n"
-                 << p->query->lastError();
-        qDebug() << "SQL-query: " << statement;
-    }
+    const int maxRetries = 3;
+    int attempts = 0;
 
-    p->mutex.unlock();
+    // Use readonly connection for select operations to better separate read from write locks
+    QSqlQuery query(p->db_readonly);
+    
+    while (attempts < maxRetries) {
+        if (query.exec(statement)) {
+            while (query.next()) {
+                QStringList tag;
+                count = query.record().count();
+                for (int i = 0; i < count; i++) {
+                    tag << query.value(i).toString();
+                }
+                tags << tag;
+            }
+            return tags;
+        } else {
+            QSqlError lastError = query.lastError();
+            
+            // Check for database locked errors that should be retried
+            if (lastError.text().contains("database is locked", Qt::CaseInsensitive)) {
+                
+                qDebug() << "Database locked error detected in selectSql, attempt" << (attempts + 1) << "for statement:" << statement;
+                
+                // Wait before retry with exponential backoff
+                if (attempts < maxRetries - 1) {
+                    QThread::msleep(50 * (attempts + 1));  // 50ms, 100ms, 150ms
+                    attempts++;
+                    continue;
+                }
+            }
+            
+            qDebug() << "Database error in selectSql:" << lastError.text();
+            qDebug() << "SQL-query: " << statement;
+            return tags; // Return empty list on error
+        }
+    }
+    
     return tags;
 }
 
@@ -505,7 +582,13 @@ ulong CollectionDB::getValueID(QString name, QString value, bool autocreate, boo
                       .arg(escapeString(value));
 
         executeSql(command);
-        return p->query->lastInsertId().toInt();
+        
+        // Use readonly connection to get last insert ID (which is safe to do since we know it was a write operation)
+        QSqlQuery query(p->db_readonly);
+        if (query.exec("SELECT last_insert_rowid();")) {
+            query.next();
+            return query.value(0).toInt();
+        }
     }
 
     return id;
@@ -720,5 +803,45 @@ QList<QStringList> CollectionDB::selectPlaylistTracks(QString name)
         + p->sqlFromStringPL + "AND playlists.name ='" + escapeString(name) + "' "
                                                                               "ORDER BY playlists.norder";
 
-    return selectSql(command);
+    // Use readonly connection for this read-only operation to avoid database locking
+    QSqlQuery query(p->db_readonly);
+    
+    const int maxRetries = 3;
+    int attempts = 0;
+
+    while (attempts < maxRetries) {
+        if (query.exec(command)) {
+            QList<QStringList> tags;
+            while (query.next()) {
+                QStringList tag;
+                int count = query.record().count();
+                for (int i = 0; i < count; i++) {
+                    tag << query.value(i).toString();
+                }
+                tags << tag;
+            }
+            return tags;
+        } else {
+            QSqlError lastError = query.lastError();
+            
+            // Check for database locked errors that should be retried
+            if (lastError.text().contains("database is locked", Qt::CaseInsensitive)) {
+                
+                qDebug() << "Database locked error detected in selectPlaylistTracks, attempt" << (attempts + 1) << "for statement:" << command;
+                
+                // Wait before retry with exponential backoff
+                if (attempts < maxRetries - 1) {
+                    QThread::msleep(50 * (attempts + 1));  // 50ms, 100ms, 150ms
+                    attempts++;
+                    continue;
+                }
+            }
+            
+            qDebug() << "Database error in selectPlaylistTracks:" << lastError.text();
+            qDebug() << "SQL-query: " << command;
+            return QList<QStringList>(); // Return empty list on error
+        }
+    }
+    
+    return QList<QStringList>();
 }

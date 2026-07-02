@@ -1,11 +1,51 @@
 #include "analysiscachemanager.h"
+#include <QFileInfo>
 #include <QIODevice>
+#include <QDir>
 #include <QSqlDatabase>
+#include <QSqlQuery>
+#include <QStandardPaths>
+#include <QThread>
 #include <QtGlobal>
 
 AnalysisCacheManager::AnalysisCacheManager(QObject *parent) : QObject(parent) {}
 
 // --- Utility Functions ---
+
+// Per-thread unique connection name so each thread has its own QSqlDatabase instance.
+// The main thread's "CollectionDB" is just one of many connections in the pool; all point
+// to the same SQLite file on disk, which WAL mode can handle concurrently.
+static QString getDbFilePath()
+{
+    const QString pathName = QStandardPaths::standardLocations(QStandardPaths::AppDataLocation).at(0);
+    QDir dir(pathName);
+    if (!dir.exists()) {
+        dir.mkpath(pathName);
+    }
+    return QFileInfo(dir.absolutePath(), "collection.db").absoluteFilePath();
+}
+
+static QSqlDatabase collectionDb()
+{
+    // Each thread gets its own uniquely-named connection.
+    const QString connName = QStringLiteral("CollectionDB_%1")
+                                .arg(qulonglong(QThread::currentThreadId()), 0, 16);
+
+    if (!QSqlDatabase::contains(connName)) {
+        QSqlDatabase db = QSqlDatabase::addDatabase("QSQLITE", connName);
+        db.setDatabaseName(getDbFilePath());
+
+        if (!db.open()) {
+            qCritical() << "Failed to open database for thread"
+                        << QThread::currentThreadId();
+        } else {
+            QSqlQuery pragma("PRAGMA journal_mode=WAL", db);
+            (void)pragma.next();
+        }
+    }
+
+    return QSqlDatabase::database(connName);
+}
 
 QByteArray AnalysisCacheManager::encodeEnvelopeSamples(const QVector<float>& samples)
 {
@@ -35,6 +75,9 @@ QVector<float> AnalysisCacheManager::decodeEnvelopeSamples(const QByteArray& com
 
 bool AnalysisCacheManager::addColumnIfMissing(QSqlDatabase& db, const QString& columnName, const QString& alterSql)
 {
+    if (!db.isOpen())
+        return false;
+
     QSqlQuery q(db);
     if (!q.exec("PRAGMA table_info(analysis_cache)"))
         return false;
@@ -52,7 +95,7 @@ bool AnalysisCacheManager::addColumnIfMissing(QSqlDatabase& db, const QString& c
 
 bool AnalysisCacheManager::ensureTempoCacheTable() const
 {
-    QSqlDatabase db = QSqlDatabase::database();
+    QSqlDatabase db = collectionDb();
     if (!db.isValid() || !db.isOpen())
         return false;
 
@@ -101,7 +144,7 @@ AnalysisCacheManager::CachedTempo AnalysisCacheManager::loadCachedTempo(const QU
     if (!ensureTempoCacheTable())
         return cached;
 
-    QSqlQuery q(QSqlDatabase::database());
+    QSqlQuery q(collectionDb());
     // v12 SELECT with new positional fields, plus analysis_cache_key for hasValidCache
     q.prepare("SELECT bpm, exact_bpm, start_position_ms, end_position_ms, "
               "beat_start_position_ms, beat_end_position_ms, analysis_version, analysis_cache_key "
@@ -173,7 +216,7 @@ bool AnalysisCacheManager::hasValidCache(const QUrl& url, const QString& current
     if (currentKey.isEmpty())
         return false;
 
-    QSqlQuery q(QSqlDatabase::database());
+    QSqlQuery q(collectionDb());
     q.prepare("SELECT analysis_cache_key, analysis_version FROM analysis_cache WHERE url = :url");
     q.bindValue(":url", url.toLocalFile());
 
@@ -198,7 +241,7 @@ void AnalysisCacheManager::storeCachedTempo(const QUrl& url, int bpm, double exa
 
     // We store the analysis_cache_key later via a separate column write.
     // Note: the key parameter is passed separately via setCachedKey().
-    QSqlQuery q(QSqlDatabase::database());
+    QSqlQuery q(collectionDb());
     q.prepare(
         "INSERT OR REPLACE INTO analysis_cache ("
         "url, bpm, exact_bpm, start_position_ms, end_position_ms, "
@@ -222,7 +265,7 @@ void AnalysisCacheManager::setCachedKey(const QUrl& url, const QString& key)
 {
     if (key.isEmpty())
         return;
-    QSqlQuery q(QSqlDatabase::database());
+    QSqlQuery q(collectionDb());
     q.prepare("UPDATE analysis_cache SET analysis_cache_key = :key WHERE url = :url");
     q.bindValue(":url", url.toLocalFile());
     q.bindValue(":key", key);
@@ -235,7 +278,7 @@ AnalysisCacheManager::CachedEnvelope AnalysisCacheManager::loadCachedEnvelope(co
     if (!ensureTempoCacheTable())
         return cached;
 
-    QSqlQuery q(QSqlDatabase::database());
+    QSqlQuery q(collectionDb());
     q.prepare("SELECT envelope_version, envelope_data, envelope_duration_ms FROM analysis_cache WHERE url = :url");
     q.bindValue(":url", url.toLocalFile());
     if (!q.exec())
@@ -260,7 +303,7 @@ void AnalysisCacheManager::storeCachedEnvelope(const QUrl& url, const QVector<fl
     if (!ensureTempoCacheTable())
         return;
 
-    QSqlQuery q(QSqlDatabase::database());
+    QSqlQuery q(collectionDb());
     q.prepare("INSERT OR REPLACE INTO analysis_cache (url, bpm, beat_offset_ms, changedate, analysis_version, envelope_version, envelope_data, envelope_duration_ms) "
               "VALUES (:url, "
               "COALESCE((SELECT bpm FROM analysis_cache WHERE url = :url), 0), "

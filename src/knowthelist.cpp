@@ -484,9 +484,9 @@ void Knowthelist::loadStartSettings()
     hide();
     show();
 
-    if (settings.value("loadPlaylists", "true") == "true") {
+    //if (settings.value("loadPlaylists", "true") == "true") {
         djSession->playDefaultList();
-    }
+    //}
 
     //AutoFade, AGC ...
     ui->toggleAutoFade->setChecked(settings.value("checkAutoFade", true).toBool());
@@ -581,7 +581,7 @@ void Knowthelist::loadCurrentSettings()
 
 void Knowthelist::on_resetAnalysisCachePressed()
 {
-    QSqlDatabase db = QSqlDatabase::database();
+    QSqlDatabase db = QSqlDatabase::database("CollectionDB");
     if (!db.isValid() || !db.isOpen()) {
         QMessageBox::warning(this, tr("Reset analysis cache"), tr("The collection database is not open."));
         return;
@@ -1274,8 +1274,8 @@ void Knowthelist::timerRateRestore_timeOut()
 void Knowthelist::savePlaylists()
 {
     djSession->storePlaylists("defaultKnowthelist", true);
-    //    playList1->saveXML( playList1->defaultPlaylistPath() );
-    //    playList2->saveXML( playList2->defaultPlaylistPath() );
+        playList1->saveXML( playList1->defaultPlaylistPath() );
+        playList2->saveXML( playList2->defaultPlaylistPath() );
 }
 
 void Knowthelist::Track_selectionChanged(Track* track)

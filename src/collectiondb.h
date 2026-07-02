@@ -95,10 +95,10 @@ private slots:
 
 private:
     struct CollectionDbPrivate* p;
-    QSqlDatabase db;
     ProgressBar* m_progress;
     bool m_monitor;
     int m_lastInsertId;
+
 };
 
 #endif /* COLLECTIONDB_H */

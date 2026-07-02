@@ -32,6 +32,8 @@
 #include <QtXml>
 #include <qprogressdialog.h>
 #include <qscrollbar.h>
+#include <QFileDialog>
+#include <QDir>
 
 #include <QApplication>
 #include <QHeaderView>
@@ -1109,7 +1111,9 @@ void Playlist::showContextMenu(PlaylistItem* item, int col)
         LISTEN,
         FILTER,
         LOAD1,
-        LOAD2 };
+        LOAD2,
+        SAVE_XML,
+        LOAD_XML };
 
     if (item == nullptr)
         return;
@@ -1159,6 +1163,15 @@ void Playlist::showContextMenu(PlaylistItem* item, int col)
     a = popup.addAction(tr("&View Tag Information"), this, SLOT(dummySlot()));
     a->setIcon(QIcon(style()->standardPixmap(QStyle::SP_MessageBoxInformation)));
     a->setShortcut(Qt::Key_V);
+    
+    // Add XML save/load actions
+    popup.addSeparator();
+    a = popup.addAction(tr("&Save Playlist as XSPF"), this, SLOT(dummySlot()));
+    a->setIcon(QIcon(style()->standardPixmap(QStyle::SP_DesktopIcon)));
+    a->setShortcut(Qt::Key_X);
+    a = popup.addAction(tr("&Load Playlist from XSPF"), this, SLOT(dummySlot()));
+    a->setIcon(QIcon(style()->standardPixmap(QStyle::SP_FileIcon)));
+    a->setShortcut(Qt::Key_Z);
 
     a = popup.exec(QCursor::pos());
     if (!a)
@@ -1186,6 +1199,22 @@ void Playlist::showContextMenu(PlaylistItem* item, int col)
                 QUrl(QString("file://%1").arg(item->track()->dirPath())));
     } else if (shortcut == QKeySequence(Qt::Key_Delete)) {
         item = nullptr;
+    } else if (shortcut == QKeySequence(Qt::Key_X)) {
+        // Save playlist as XML
+        QString fileName = QFileDialog::getSaveFileName(this, tr("Save Playlist"), 
+                                                        QDir::homePath() + "/playlist.xspf",
+                                                        tr("XSPF Files (*.xspf)"));
+        if (!fileName.isEmpty()) {
+            saveXML(fileName);
+        }
+    } else if (shortcut == QKeySequence(Qt::Key_Z)) {
+        // Load playlist from XML
+        QString fileName = QFileDialog::getOpenFileName(this, tr("Load Playlist"), 
+                                                        QDir::homePath(),
+                                                        tr("XSPF Files (*.xspf)"));
+        if (!fileName.isEmpty()) {
+            loadXML(fileName);
+        }
     }
 }
 
