@@ -119,7 +119,6 @@ SettingsDialog::SettingsDialog(QWidget* parent)
 
     connect(p->ui.pushScanNow, SIGNAL(clicked()), this, SLOT(onScanNow()));
     connect(p->ui.pushResetStats, SIGNAL(clicked()), this, SIGNAL(resetStatsPressed()));
-    connect(p->ui.pushResetAnalysisCache, SIGNAL(clicked()), this, SLOT(on_pushResetAnalysisCache_clicked()));
 
     connect(p->ui.countDJ, SIGNAL(valueChanged(int)), this, SLOT(loadDjList(int)));
 
@@ -327,13 +326,18 @@ void SettingsDialog::onScanNow()
 
 void SettingsDialog::on_pushResetAnalysisCache_clicked()
 {
+    qDebug() << Q_FUNC_INFO << "Reset analysis cache prompt opened";
     const auto result = QMessageBox::warning(this,
                                              tr("Reset analysis cache"),
                                              tr("Delete all BPM and waveform analysis cache data?"),
                                              QMessageBox::Yes | QMessageBox::No,
                                              QMessageBox::No);
-    if (result == QMessageBox::Yes)
+    if (result == QMessageBox::Yes) {
+        qDebug() << Q_FUNC_INFO << "Reset analysis cache confirmed";
         Q_EMIT resetAnalysisCachePressed();
+    } else {
+        qDebug() << Q_FUNC_INFO << "Reset analysis cache canceled";
+    }
 }
 
 void SettingsDialog::on_faderEndSlider_sliderMoved(int position)

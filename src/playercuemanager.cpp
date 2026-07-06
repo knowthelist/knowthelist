@@ -150,13 +150,16 @@ void PlayerCueManager::applyCuePoints(const CuePoints& cue, bool isManual)
 
 void PlayerCueManager::applyAutoCueAfterAnalysis(bool preferBeatCue)
 {
+    if (!m_owner.m_CurrentTrack || !m_owner.trackanalyzer)
+        return;
+
     // Guard to match PlayerWidget::applyAutoCueAfterAnalysis: do not reposition while playing.
     if (m_owner.m_isStarted && !preferBeatCue)
         return;
 
-    // If preferBeatCue is true but analyzer hasn't finished and we don't have cached beat data,
-    // skip auto-cue - the analyzer will call this again when finished.
-    if (preferBeatCue && !m_owner.trackanalyzer->finished() && m_owner.m_bpm <= 0) {
+    // If analysis has not finished and we have no cached BPM, skip auto-cue.
+    // The analyzer will call this again when finished.
+    if (!m_owner.trackanalyzer->finished() && m_owner.m_bpm <= 0) {
         qDebug() << "PlayerCueManager::applyAutoCueAfterAnalysis: skipping auto-cue, analyzer not finished and no cached BPM";
         return;
     }

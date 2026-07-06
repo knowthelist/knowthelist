@@ -29,6 +29,7 @@
 #include <QMetaObject>
 #include <cmath>
 #include <limits>
+#include <atomic>
 
 // Analysis parameters
 constexpr bool kLogDebug = false;
@@ -36,6 +37,13 @@ constexpr int kAnalysisFrameRate = 120;
 constexpr int kTempoMinBpm = 70;
 constexpr int kTempoMaxBpm = 200;
 constexpr float kSilenceRmsThreshold = 0.1f;
+
+struct TempoCacheEntry {
+    int bpm = 0;
+    int beatPhaseMs = 0;
+    int beatStartMs = 0;
+    double exactBpm = 0.0;
+};
 
 struct TrackAnalysisData {
     double sampleRate = 44100.0;
@@ -53,6 +61,15 @@ struct TrackAnalysisData {
     QTime beatActivityEndPosition = QTime(0, 0);
     double gainDb = 0.0;
 };
+
+static QMutex g_scanCacheMutex;
+static QHash<QString, TrackAnalysisData> g_scanCache;
+static QSet<QString> g_scanInProgress;
+static QWaitCondition g_scanComplete;
+
+static QMutex g_tempoCacheMutex;
+static QHash<QString, TempoCacheEntry> g_tempoCache;
+static std::atomic<std::uint64_t> g_cacheEpoch {1};
 
 static float lowPassStep(float input, float& lowState, float alpha)
 {
@@ -200,33 +217,28 @@ static QString analysisCacheKey(const QUrl& url)
 
 static TrackAnalysisData scanAudioFileCached(const QUrl& url)
 {
-    static QMutex cacheMutex;
-    static QHash<QString, TrackAnalysisData> cache;
-    static QSet<QString> inProgress;
-    static QWaitCondition scanComplete;
-
     const QString key = analysisCacheKey(url);
-    QMutexLocker locker(&cacheMutex);
+    QMutexLocker locker(&g_scanCacheMutex);
 
     // Wait if another thread is already scanning this file
     while (true) {
-        const auto it = cache.constFind(key);
-        if (it != cache.constEnd())
+        const auto it = g_scanCache.constFind(key);
+        if (it != g_scanCache.constEnd())
             return it.value();
-        if (!inProgress.contains(key)) {
-            inProgress.insert(key);
+        if (!g_scanInProgress.contains(key)) {
+            g_scanInProgress.insert(key);
             break;
         }
-        scanComplete.wait(&cacheMutex);
+        g_scanComplete.wait(&g_scanCacheMutex);
     }
 
     locker.unlock();
     TrackAnalysisData data = scanAudioFile(url);
     locker.relock();
 
-    cache.insert(key, data);
-    inProgress.remove(key);
-    scanComplete.wakeAll();
+    g_scanCache.insert(key, data);
+    g_scanInProgress.remove(key);
+    g_scanComplete.wakeAll();
     return data;
 }
 
@@ -364,6 +376,19 @@ TrackAnalyzer::~TrackAnalyzer()
     p = nullptr;
 }
 
+void TrackAnalyzer::clearRuntimeCaches()
+{
+    g_cacheEpoch.fetch_add(1, std::memory_order_relaxed);
+    {
+        QMutexLocker locker(&g_tempoCacheMutex);
+        g_tempoCache.clear();
+    }
+    {
+        QMutexLocker locker(&g_scanCacheMutex);
+        g_scanCache.clear();
+    }
+}
+
 bool TrackAnalyzer::prepare()
 {
     if (kLogDebug)
@@ -373,7 +398,8 @@ bool TrackAnalyzer::prepare()
 
 void TrackAnalyzer::open(QUrl url)
 {
-    qDebug() << Q_FUNC_INFO << "url=" << url;
+    const QString owner = parent() ? parent()->objectName() : QString();
+    qDebug() << Q_FUNC_INFO << "owner=" << owner << "url=" << url;
     QMutexLocker locker(&p->mutex);
     if (p->inProgress && p->currentUrl == url)
         return;
@@ -391,6 +417,7 @@ void TrackAnalyzer::asyncOpen(QUrl url)
 {
     QThread::currentThread()->setObjectName("TrackAnalyzerOpen");
     QThread::currentThread()->setPriority(QThread::LowestPriority);
+    m_cacheEpochAtOpen = g_cacheEpoch.load(std::memory_order_relaxed);
 
     if (!audioBackend) {
         need_finish();
@@ -424,7 +451,7 @@ void TrackAnalyzer::asyncOpen(QUrl url)
 
         AnalysisCacheManager::CachedTempo cached = loadCachedTempo(url);
         if (cached.valid && cached.bpm > 0 && hasValidCache(url, cachedKey)) {
-            qDebug() << "[cache hit] skipping analysis for:" << url.toLocalFile();
+            qDebug() << "[db cache hit] skipping analysis for:" << url.toLocalFile();
 
             // Apply cached state — direct ms→QTime conversion
             {
@@ -623,8 +650,10 @@ void TrackAnalyzer::finalizeAnalysis()
         m_finished = true;
     }
 
-    // Persist analyzed results to SQLite (one-write, uses current analyzer state)
-    if (p->currentUrl.isValid() && m_analysisCache) {
+    // Persist analyzed results to SQLite (one-write, uses current analyzer state).
+    // Skip persisting if a cache reset happened while this analysis was in flight.
+    const std::uint64_t epochNow = g_cacheEpoch.load(std::memory_order_relaxed);
+    if (p->currentUrl.isValid() && m_analysisCache && m_cacheEpochAtOpen == epochNow) {
         storeCachedTempo();
         const int durMs = qBound(0, m_trackDuration.msecsSinceStartOfDay(), INT_MAX);
         storeCachedEnvelope(durMs);
@@ -644,14 +673,6 @@ void TrackAnalyzer::detectTempo()
 {
     static const int kMinBpm = kTempoMinBpm;
     static const int kMaxBpm = kTempoMaxBpm;
-    static QMutex tempoCacheMutex;
-    struct TempoCacheEntry {
-        int bpm = 0;
-        int beatPhaseMs = 0;
-        int beatStartMs = 0;
-        double exactBpm = 0.0;
-    };
-    static QHash<QString, TempoCacheEntry> tempoCache;
 
     QList<float> spectralFlux;
     QList<float> spectralFluxLow;
@@ -674,9 +695,9 @@ void TrackAnalyzer::detectTempo()
 
     const QString cacheKey = analysisCacheKey(currentUrl);
     {
-        QMutexLocker cacheLocker(&tempoCacheMutex);
-        const auto it = tempoCache.constFind(cacheKey);
-        if (it != tempoCache.constEnd()) {
+        QMutexLocker cacheLocker(&g_tempoCacheMutex);
+        const auto it = g_tempoCache.constFind(cacheKey);
+        if (it != g_tempoCache.constEnd()) {
             const TempoCacheEntry entry = it.value();
             QMutexLocker locker(&p->mutex);
             p->bpm = entry.bpm;
@@ -688,7 +709,7 @@ void TrackAnalyzer::detectTempo()
                         || m_beatStartPosition < m_trackEffectiveStart)) {
                 m_beatStartPosition = m_trackEffectiveStart;
             }
-            qDebug() << "[tempo cache hit] bpm=" << p->bpm
+            qDebug() << "[runtime tempo cache hit] bpm=" << p->bpm
                      << "beatPhase=" << m_BeatPosition
                      << "beatStartPosition=" << m_beatStartPosition;
             p->bpmDetected = true;
@@ -1154,13 +1175,13 @@ void TrackAnalyzer::detectTempo()
     }
 
     {
-        QMutexLocker cacheLocker(&tempoCacheMutex);
+        QMutexLocker cacheLocker(&g_tempoCacheMutex);
         TempoCacheEntry entry;
         entry.bpm = qBound(0, finalBpm, kMaxBpm);
         entry.beatPhaseMs = QTime(0, 0).msecsTo(m_BeatPosition);
         entry.beatStartMs = QTime(0, 0).msecsTo(m_beatStartPosition);
         entry.exactBpm = m_ExactBpm;
-        tempoCache.insert(cacheKey, entry);
+        g_tempoCache.insert(cacheKey, entry);
     }
 
     qDebug() << Q_FUNC_INFO << "Estimated BPM:" << p->bpm << "exactBpm:" << m_ExactBpm

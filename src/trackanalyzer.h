@@ -21,6 +21,7 @@
 #include <QtCore>
 #include <QWidget>
 #include <memory>
+#include <cstdint>
 
 class JuceAudioBackend;
 
@@ -30,6 +31,7 @@ class TrackAnalyzer : public QWidget
 public:
     TrackAnalyzer(QWidget* parent = nullptr);
     ~TrackAnalyzer();
+    static void clearRuntimeCaches();
 
     bool prepare();
     void open(QUrl url);
@@ -73,6 +75,7 @@ private:
 
     // Computed in asyncOpen() and persisted in finalizeAnalysis().
     QString m_lastCacheKey;                 // file-hash key for cache row invalidation
+    std::uint64_t m_cacheEpochAtOpen = 0;   // guards against stale writes after cache reset
 
     double m_GainDB = GAIN_INVALID;
     double m_ExactBpm = 0.0;

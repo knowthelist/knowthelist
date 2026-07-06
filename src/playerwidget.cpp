@@ -46,6 +46,19 @@ constexpr int kEnvelopeAnalysisIntervalMs = 8; // TrackAnalyzer uses 120 fps for
 constexpr double kScrubSeekGain = 1.5;
 constexpr int kScrubSeekMinDeltaMs = 10;
 constexpr int kScrubSeekCoalesceMs = 20;
+
+double normalizeSyncBpm(double bpm)
+{
+    if (bpm <= 0.0)
+        return bpm;
+
+    // Fold half/double-time BPM detections into a practical DJ range.
+    while (bpm < 60.0)
+        bpm *= 2.0;
+    while (bpm > 220.0)
+        bpm *= 0.5;
+    return bpm;
+}
 }
 
 PlayerWidget::PlayerWidget(QWidget* parent)
@@ -57,6 +70,8 @@ PlayerWidget::PlayerWidget(QWidget* parent)
     , remainCueTime(0)
     , m_isStarted(false)
     , m_isHanging(false)
+    , m_skipSilentEnd(true)
+    , m_skipSilentBegin(true)
     , m_beatSyncEnabled(true)
     , m_beatCueEnabled(true)
     , m_beatVisualMode(false)
@@ -891,7 +906,7 @@ bool PlayerWidget::seekOvershootsFadePoint(const QTime& targetPos) const
     // Use the unified computeFadePoint() from CueManager — matches setPositionMarkers() path.
     const int targetMs = qMax(0, QTime(0, 0).msecsTo(targetPos));
 
-    if (trackanalyzer->finished() && m_skipSilentEnd) {
+    if (trackanalyzer->finished() && (m_skipSilentEnd || m_beatCueEnabled)) {
         const QTime fadePoint = m_cueManager->computeFadePoint();
         if (fadePoint.isValid() && fadePoint > QTime(0, 0)) {
             const int triggerPosMs = qMax(0, QTime(0, 0).msecsTo(fadePoint) - mTrackFinishEmitTime);
@@ -935,7 +950,7 @@ void PlayerWidget::setEqualizer(EqBand band, int value)
 void PlayerWidget::setPositionMarkers()
 {
     if (trackanalyzer->finished()) {
-        if (m_skipSilentEnd) {
+        if (m_skipSilentEnd || m_beatCueEnabled) {
             const QTime fadePoint = m_cueManager->computeFadePoint();
             remainCueTime = m_cueManager->computeRemainCueTime(fadePoint);
             if (remainCueTime > 0) {
@@ -954,6 +969,9 @@ void PlayerWidget::setPositionMarkers()
 
 void PlayerWidget::applyAutoCueAfterAnalysis(bool preferBeatCue)
 {
+    if (!m_CurrentTrack || !trackanalyzer)
+        return;
+
     // Guard: do not reposition while actively playing (prevents CUE button from pausing mid-song).
     if (m_isStarted && !preferBeatCue)
         return;
@@ -966,8 +984,8 @@ void PlayerWidget::applyAutoCueAfterAnalysis(bool preferBeatCue)
 
     qDebug() << Q_FUNC_INFO << ":" << objectName()
              << " preferBeatCue=" << preferBeatCue
-             << " beatPositionValid=" << m_beatPosition.isValid()
-             << " beatPosition=" << m_beatPosition
+             << " beatPhaseValid=" << m_beatPosition.isValid()
+             << " beatPhase=" << m_beatPosition
              << " analyzerFinished=" << trackanalyzer->finished()
              << " appliedCuePosition=" << cuePosition;
 
@@ -1067,12 +1085,11 @@ void PlayerWidget::analyzeGainFinished()
     if (m_CurrentTrack) {
         setPositionMarkers();
 
-        // For STANDARD analysis (TEMPO not yet available), apply auto-cue position
-        // and check CUE button if skipSilentBegin detected a valid start point.
-        // In beat-visual mode without BPM data, try to use cueManager directly
-        // as a fallback rather than skipping it entirely.
+        // For STANDARD analysis (TEMPO not yet available), apply skip-silent
+        // start only when beat cueing is disabled. Otherwise keep the beat-based
+        // auto-cue position from setPositionMarkers().
         bool autoCueApplied = false;
-        if (m_skipSilentBegin) {
+        if (m_skipSilentBegin && !m_beatCueEnabled) {
             const QTime startPos = trackanalyzer->startPosition();
             if (startPos.isValid() && startPos > QTime(0, 0)) {
                 if (!m_isStarted || player->isLoaded()) {
@@ -1146,7 +1163,7 @@ void PlayerWidget::analyzeEnvelopeFinished()
     // Use beat-stop (beatActivityEnd) from the same analysis pass already done in TrackAnalyzer.
     // Skip CueManager::computeFadePoint() here — it would redo identical work that's already in
     // m_beatStopPosition / endPosition. The fade point stays up to date via setPositionMarkers().
-    if (m_beatSyncEnabled && m_skipSilentEnd && trackanalyzer->finished()) {
+    if (m_beatSyncEnabled && (m_skipSilentEnd || m_beatCueEnabled) && trackanalyzer->finished()) {
         const QTime beatStop = trackanalyzer->beatEndPosition();
         const int lastBeatMs = QTime(0, 0).msecsTo(beatStop);
         if (lastBeatMs > 3 * 1000) {                         // at least 3s of content after first beat
@@ -1483,7 +1500,17 @@ void PlayerWidget::updateTimeAndPositionDisplay(bool isPassive)
     ui->lblTimeRemain->setText("-" + remain.toString("mm:ss"));
     ui->lblTimeRemainMs->setText("." + remain.toString("zzz").left(1));
 
-    const bool nearEndByTime = (remainMs <= mTrackFinishEmitTime && 0 < remainMs);
+    bool nearEndByTime = false;
+    if (trackanalyzer->finished() && (m_skipSilentEnd || m_beatCueEnabled)) {
+        const QTime fadePoint = computeFadePoint();
+        if (fadePoint.isValid() && fadePoint > QTime(0, 0)) {
+            const int triggerPosMs = qMax(0, QTime(0, 0).msecsTo(fadePoint) - mTrackFinishEmitTime);
+            const int curMs = QTime(0, 0).msecsTo(curpos);
+            nearEndByTime = (curMs >= triggerPosMs) && (remainMs > 0);
+        }
+    }
+    if (!nearEndByTime)
+        nearEndByTime = (remainMs <= mTrackFinishEmitTime && 0 < remainMs);
     const bool aboutFinishCandidate = (nearEndByTime || m_isHanging) && m_isStarted;
     const qint64 nowMs = m_sessionTimer.isValid() ? m_sessionTimer.elapsed() : 0;
     const bool suppressionActive = nowMs < m_aboutFinishSuppressUntilMs;
@@ -1724,15 +1751,17 @@ double PlayerWidget::exactBpmForSync() const
 void PlayerWidget::alignCueToReferenceBeat(double referenceBpm, const QTime& referencePosition,
                                             const QTime& referenceBeatAnchor)
 {
-    const double ownBpm = exactBpmForSync();
-    if (m_isStarted || ownBpm <= 0.0 || referenceBpm <= 0.0)
+    const double ownBpm = normalizeSyncBpm(exactBpmForSync());
+    const double refBpm = normalizeSyncBpm(referenceBpm);
+    if (m_isStarted || ownBpm <= 0.0 || refBpm <= 0.0)
         return;
 
     const double ownBeatMs = 60000.0 / ownBpm;
-    const double refBeatMs = 60000.0 / referenceBpm;
+    const double refBeatMs = 60000.0 / refBpm;
 
     // Use a 4-beat bar for bar-level cue alignment
     const int    BAR_BEATS = 4;
+    const double ownBarMs  = BAR_BEATS * ownBeatMs;
     const double refBarMs  = BAR_BEATS * refBeatMs;
 
     const qint64 refMs = QTime(0, 0).msecsTo(referencePosition);
@@ -1745,13 +1774,24 @@ void PlayerWidget::alignCueToReferenceBeat(double referenceBpm, const QTime& ref
     // Scale to this track's beat period
     const double targetBarPhase = refBarPhase * (ownBeatMs / refBeatMs);
 
-    // Base cue: the waiting track's beat anchor (first detected strong beat).
-    // Best cue position = baseCueMs + targetBarPhase
-    const QTime baseCue = m_beatPosition.isValid() ? m_beatPosition : trackanalyzer->startPosition();
-    const qint64 baseCueMs = QTime(0, 0).msecsTo(baseCue);
+    // Move from the current cue/playhead to the *next* matching bar phase.
+    // This keeps pre-roll alignment stable and avoids large absolute jumps.
+    const qint64 anchorMs = m_beatPosition.isValid()
+                                ? QTime(0, 0).msecsTo(m_beatPosition) : 0LL;
+    const qint64 currentMs = QTime(0, 0).msecsTo(player->position());
 
-    const qint64 bestMs = baseCueMs + static_cast<qint64>(targetBarPhase + 0.5);
-    player->setPosition(QTime(0, 0).addMSecs(static_cast<int>(bestMs)));
+    double currentBarPhase = fmod(static_cast<double>(currentMs - anchorMs), ownBarMs);
+    if (currentBarPhase < 0.0) currentBarPhase += ownBarMs;
+
+    double delta = targetBarPhase - currentBarPhase;
+    if (delta < 0.0) delta += ownBarMs;
+
+    qint64 newMs = currentMs + static_cast<qint64>(delta + 0.5);
+    const qint64 lengthMs = QTime(0, 0).msecsTo(player->length());
+    if (lengthMs > 0)
+        newMs = qBound<qint64>(0LL, newMs, lengthMs);
+
+    player->setPosition(QTime(0, 0).addMSecs(static_cast<int>(newMs)));
     updateTimeAndPositionDisplay(false);
 }
 
@@ -1761,12 +1801,13 @@ void PlayerWidget::syncNowToReferenceBeat(double referenceBpm, const QTime& refe
     // Works while playing: seeks to the nearest bar-aligned position that puts
     // this deck on the same beat-of-the-bar as the reference deck, so both
     // decks share the same beat-1 in a standard 4/4 bar.
-    const double ownBpm = exactBpmForSync();
-    if (ownBpm <= 0.0 || referenceBpm <= 0.0)
+    const double ownBpm = normalizeSyncBpm(exactBpmForSync());
+    const double refBpm = normalizeSyncBpm(referenceBpm);
+    if (ownBpm <= 0.0 || refBpm <= 0.0)
         return;
 
     const double ownBeatMs   = 60000.0 / ownBpm;
-    const double refBeatMs   = 60000.0 / referenceBpm;
+    const double refBeatMs   = 60000.0 / refBpm;
 
     // Use a 4-beat bar so both decks land on the same beat-of-the-bar (beat 1).
     const int    BAR_BEATS   = 4;

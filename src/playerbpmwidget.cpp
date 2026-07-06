@@ -431,10 +431,10 @@ int PlayerBpmWidget::visibleWindowLeftMs() const
 {
     const int posMs = QTime(0, 0).msecsTo(m_position);
     const int desiredLeftMs = posMs - qRound(0.20 * m_windowMs);
-
-    // Clamp left edge to 0, but allow the visible window to extend beyond track end
-    // so playback can continue scrolling right up to the very last second.
-    return qMax(0, desiredLeftMs);
+    // Keep the playhead fixed at 20% while allowing a negative left edge near
+    // track start. This makes 0ms align to the playhead at startup and leaves
+    // a silent pre-roll area to the left.
+    return desiredLeftMs;
 }
 
 QTime PlayerBpmWidget::visualBeatReference() const
@@ -767,9 +767,10 @@ void PlayerBpmWidget::paintEvent(QPaintEvent* event)
             const double clampedR  = qMin(srcRightF, maxW);
             const double validSrcW = qMax(0.0, clampedR - clampedL);
 
-            if (validSrcW > 0.0 && clampedL < maxW) {
+            if (validSrcW > 0.0 && clampedL < maxW && totalSrcW > 0.0) {
+                const double dstOffsetW = ((clampedL - srcLeftF) / totalSrcW) * phaseBand.width();
                 const double dstValidW = (validSrcW / totalSrcW) * phaseBand.width();
-                const QRectF dstRect(phaseBand.left(), phaseBand.top(), dstValidW, phaseBand.height());
+                const QRectF dstRect(phaseBand.left() + dstOffsetW, phaseBand.top(), dstValidW, phaseBand.height());
                 const QRectF srcRect(clampedL, 0, validSrcW, m_waveformLayer.height());
                 painter.drawPixmap(dstRect, m_waveformLayer, srcRect);
             }
@@ -842,4 +843,3 @@ void PlayerBpmWidget::paintEvent(QPaintEvent* event)
         }
     }
 }
-

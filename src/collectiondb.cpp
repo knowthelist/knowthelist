@@ -28,6 +28,7 @@
 #include <QRandomGenerator>
 #include <QStandardPaths>
 #include <QThread>
+#include <QUuid>
 #include <qimage.h>
 
 struct CollectionDbPrivate {
@@ -79,6 +80,14 @@ static QString collectionDbPath()
     return QFileInfo(dir.absolutePath(), "collection.db").absoluteFilePath();
 }
 
+static QString currentThreadConnectionName()
+{
+    thread_local const QString connName = QStringLiteral("%1_worker_%2")
+                                              .arg(QString::fromLatin1(kDbConnName))
+                                              .arg(QUuid::createUuid().toString(QUuid::WithoutBraces));
+    return connName;
+}
+
 static QSqlDatabase currentThreadCollectionDb()
 {
     if (QCoreApplication::instance() != nullptr
@@ -91,9 +100,7 @@ static QSqlDatabase currentThreadCollectionDb()
         return db;
     }
 
-    const QString connName = QStringLiteral("%1_%2")
-                                 .arg(QString::fromLatin1(kDbConnName))
-                                 .arg(qulonglong(QThread::currentThreadId()), 0, 16);
+    const QString connName = currentThreadConnectionName();
 
     if (!QSqlDatabase::contains(connName)) {
         QSqlDatabase db = QSqlDatabase::addDatabase("QSQLITE", connName);
@@ -241,7 +248,8 @@ void CollectionDB::setFilterString(QString string)
     p->filterString = string;
     p->sqlQuickFilter = "";
 
-    for (const QString& token : string.split(" ")) {
+    const QStringList tokens = string.split(' ', Qt::SkipEmptyParts);
+    for (const QString& token : tokens) {
         p->sqlQuickFilter += QString(" AND ( lower(artist.name) LIKE lower('%%1%') OR "
                                      "lower(album.name) LIKE lower('%%1%') OR "
                                      "lower(tags.title) LIKE lower('%%1%') OR "
@@ -611,6 +619,7 @@ QList<QStringList> CollectionDB::selectArtists(QString year, QString genre)
     QString sql = "SELECT DISTINCT artist.name, artist.id "
                   "FROM tags "
                   " INNER JOIN artist ON tags.artist = artist.id "
+                  " INNER JOIN album ON tags.album = album.id "
                   " INNER JOIN year ON tags.year = year.id "
                   " INNER JOIN genre ON tags.genre = genre.id WHERE 1=1 ";
     sql += p->sqlQuickFilter;
@@ -629,7 +638,10 @@ QList<QStringList> CollectionDB::selectArtists(QString year, QString genre)
 QList<QStringList> CollectionDB::selectYears()
 {
     QString sql = "SELECT DISTINCT year.name, year.id FROM tags "
-                  " INNER JOIN year ON tags.year = year.id WHERE 1=1 ";
+                  " INNER JOIN artist ON tags.artist = artist.id "
+                  " INNER JOIN album ON tags.album = album.id "
+                  " INNER JOIN year ON tags.year = year.id "
+                  " INNER JOIN genre ON tags.genre = genre.id WHERE 1=1 ";
     sql += p->sqlQuickFilter;
     
     return selectSql(sql);
@@ -639,6 +651,9 @@ QList<QStringList> CollectionDB::selectGenres()
 {
     QString sql = "SELECT DISTINCT genre.name, genre.id "
                   "FROM tags "
+                  " INNER JOIN artist ON tags.artist = artist.id "
+                  " INNER JOIN album ON tags.album = album.id "
+                  " INNER JOIN year ON tags.year = year.id "
                   " INNER JOIN genre ON tags.genre = genre.id WHERE 1=1 ";
     sql += p->sqlQuickFilter;
     

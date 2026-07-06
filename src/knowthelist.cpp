@@ -53,6 +53,32 @@ bool nearBeatBoundary(const QTime& position, const QTime& beatReference, int bpm
     const double distanceToBeat = qMin(phaseMs, beatMs - phaseMs);
     return distanceToBeat <= toleranceMs;
 }
+
+double beatPhaseDistanceMs(const QTime& lhsPos, const QTime& lhsBeatRef,
+                           const QTime& rhsPos, const QTime& rhsBeatRef,
+                           int bpm)
+{
+    if (bpm <= 0)
+        return 0.0;
+
+    const double beatMs = 60000.0 / static_cast<double>(bpm);
+    if (beatMs <= 0.0)
+        return 0.0;
+
+    auto phaseFor = [beatMs](const QTime& pos, const QTime& beatRef) {
+        const qint64 posMs = QTime(0, 0).msecsTo(pos);
+        const qint64 beatRefMs = beatRef.isValid() ? QTime(0, 0).msecsTo(beatRef) : 0;
+        double phaseMs = std::fmod(static_cast<double>(posMs - beatRefMs), beatMs);
+        if (phaseMs < 0.0)
+            phaseMs += beatMs;
+        return phaseMs;
+    };
+
+    const double lhsPhase = phaseFor(lhsPos, lhsBeatRef);
+    const double rhsPhase = phaseFor(rhsPos, rhsBeatRef);
+    const double rawDelta = qAbs(lhsPhase - rhsPhase);
+    return qMin(rawDelta, beatMs - rawDelta);
+}
 }
 
 Knowthelist::Knowthelist(QWidget* parent)
@@ -581,6 +607,11 @@ void Knowthelist::loadCurrentSettings()
 
 void Knowthelist::on_resetAnalysisCachePressed()
 {
+    qDebug() << Q_FUNC_INFO << "Reset analysis cache requested";
+    // Invalidate in-flight analyzers first so they cannot repopulate cache rows
+    // while reset is in progress.
+    TrackAnalyzer::clearRuntimeCaches();
+
     QSqlDatabase db = QSqlDatabase::database("CollectionDB");
     if (!db.isValid() || !db.isOpen()) {
         QMessageBox::warning(this, tr("Reset analysis cache"), tr("The collection database is not open."));
@@ -589,11 +620,14 @@ void Knowthelist::on_resetAnalysisCachePressed()
 
     QSqlQuery query(db);
     if (!query.exec("DELETE FROM analysis_cache;")) {
+        qDebug() << Q_FUNC_INFO << "Reset analysis cache failed:" << query.lastError().text();
         QMessageBox::warning(this,
                              tr("Reset analysis cache"),
                              tr("Failed to clear analysis cache: %1").arg(query.lastError().text()));
         return;
     }
+
+    qDebug() << Q_FUNC_INFO << "Reset analysis cache completed";
 
     QMessageBox::information(this,
                              tr("Reset analysis cache"),
@@ -1121,14 +1155,12 @@ void Knowthelist::timerAutoFader_timerOut()
                                                  sharedTempoBpm,
                                                  toleranceMs);
 
-            ++m_fadeSyncBeatWaitSteps;
-            const int timerStepMs = qMax(1, mAutofadeLength * 5);
-            const int maxWaitSteps = qMax(5, qRound((beatMs * 2.0) / static_cast<double>(timerStepMs)));
-            const bool waitTimedOut = m_fadeSyncBeatWaitSteps >= maxWaitSteps;
-
-            if (onBeat || !m_fadeSyncWaitingBeatStart || waitTimedOut) {
+            if (onBeat || !m_fadeSyncWaitingBeatStart) {
                 if (!m_fadeSyncIncomingPlayer->isStarted())
                     m_fadeSyncIncomingPlayer->play();
+                m_fadeSyncIncomingPlayer->syncNowToReferenceBeat(sharedTempoBpm,
+                                                                 m_fadeSyncOutgoingPlayer->currentPosition(),
+                                                                 m_fadeSyncOutgoingBeatPosition);
                 m_fadeSyncPhase = FadeSyncCrossfade;
                 m_fadeSyncWaitingBeatStart = false;
                 m_fadeSyncBeatWaitSteps = 0;
@@ -1144,6 +1176,29 @@ void Knowthelist::timerAutoFader_timerOut()
         }
         m_fadeSyncStep = qMin(m_fadeSyncTotalSteps, m_fadeSyncStep + 1);
         applyAutoFadeSharedTempo(autoFadeSharedTempoForStep(m_fadeSyncStep));
+
+        if (m_fadeSyncIncomingPlayer && m_fadeSyncOutgoingPlayer
+            && m_fadeSyncIncomingPlayer->isStarted() && m_fadeSyncBeatWaitSteps < 4) {
+            const int sharedTempoBpm = qMax(1, qRound(autoFadeSharedTempoForStep(m_fadeSyncStep)));
+            const QTime incomingBeatPosition = (m_fadeSyncIncomingPlayer == player1)
+                                                   ? m_Player1BeatPosition
+                                                   : m_Player2BeatPosition;
+            const double beatMs = 60000.0 / static_cast<double>(sharedTempoBpm);
+            const double toleranceMs = qMin(18.0, beatMs * 0.04);
+            const double phaseDeltaMs = beatPhaseDistanceMs(m_fadeSyncIncomingPlayer->currentPosition(),
+                                                            incomingBeatPosition,
+                                                            m_fadeSyncOutgoingPlayer->currentPosition(),
+                                                            m_fadeSyncOutgoingBeatPosition,
+                                                            sharedTempoBpm);
+            if (phaseDeltaMs > toleranceMs) {
+                m_fadeSyncIncomingPlayer->syncNowToReferenceBeat(sharedTempoBpm,
+                                                                 m_fadeSyncOutgoingPlayer->currentPosition(),
+                                                                 m_fadeSyncOutgoingBeatPosition);
+                ++m_fadeSyncBeatWaitSteps;
+            } else {
+                m_fadeSyncBeatWaitSteps = 4;
+            }
+        }
 
         if (ui->sliFader->value() % 3 == 0) {
             if (m_xfadeDir < 0)
