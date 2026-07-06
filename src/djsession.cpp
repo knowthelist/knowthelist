@@ -219,6 +219,10 @@ void DjSession::playDefaultList()
 void DjSession::on_dj_filterChanged(Filter* f)
 {
     qDebug() << Q_FUNC_INFO;
+    if (!p->database || !p->database->isDbValid()) {
+        qWarning() << "Database not valid in on_dj_filterChanged";
+        return;
+    }
     int cnt = p->database->getCount(f->path(), f->genre(), f->artist());
     f->setLength(p->database->lastLengthSum());
     f->setCount(cnt);

@@ -31,9 +31,6 @@
 #include <limits>
 
 // Analysis parameters
-constexpr int AUDIOFREQ = 32000;
-constexpr int SCAN_DURATION = 60;
-constexpr int GAIN_ANALYSIS_CHUNK = 4096;
 constexpr bool kLogDebug = false;
 constexpr int kAnalysisFrameRate = 120;
 constexpr int kTempoMinBpm = 70;
@@ -56,18 +53,6 @@ struct TrackAnalysisData {
     QTime beatActivityEndPosition = QTime(0, 0);
     double gainDb = 0.0;
 };
-
-static float computeRMS(const float* samples, int numSamples)
-{
-    if (samples == nullptr || numSamples <= 0)
-        return 0.0f;
-
-    double sumSquares = 0.0;
-    for (int i = 0; i < numSamples; ++i)
-        sumSquares += static_cast<double>(samples[i]) * static_cast<double>(samples[i]);
-
-    return static_cast<float>(std::sqrt(sumSquares / static_cast<double>(numSamples)));
-}
 
 static float lowPassStep(float input, float& lowState, float alpha)
 {
@@ -432,17 +417,8 @@ void TrackAnalyzer::asyncOpen(QUrl url)
     QTime duration = audioBackend->getDuration();
 
     // ── Step D: Check SQLite cache before running full analysis ──
-    QString cachedKey;
+    const QString cachedKey = analysisCacheKey(url);
     {
-        QFileInfo info(url.toLocalFile());
-        const QString canonicalPath = info.canonicalFilePath().isEmpty() ? info.absoluteFilePath() : info.canonicalFilePath();
-        const qint64 fileSize  = info.exists() ? info.size() : -1;
-        const qint64 fileMTime = info.exists() ? info.lastModified().toMSecsSinceEpoch() : -1;
-        cachedKey = QStringLiteral("%1|%2|%3")
-                        .arg(canonicalPath,
-                             QByteArray::number(fileSize),
-                             QByteArray::number(fileMTime));
-
         // Store cache key for later use in finalizeAnalysis
         m_lastCacheKey = cachedKey;
 
@@ -455,6 +431,7 @@ void TrackAnalyzer::asyncOpen(QUrl url)
                 QMutexLocker locker(&p->mutex);
                 p->bpm       = cached.bpm;
                 m_ExactBpm   = cached.exactBpm;
+                m_trackDuration = duration;
                 m_finished   = true;
                 p->inProgress = false;
             }
@@ -463,6 +440,32 @@ void TrackAnalyzer::asyncOpen(QUrl url)
             m_trackEffectiveEnd    = QTime(0, 0).addMSecs(cached.endPositionMs);
             m_beatStartPosition    = QTime(0, 0).addMSecs(cached.beatStartPositionMs);
             m_beatStopPosition     = QTime(0, 0).addMSecs(cached.beatEndPositionMs);
+            if (m_trackEffectiveStart.isValid() && m_trackEffectiveStart > QTime(0, 0)
+                    && (!m_beatStartPosition.isValid() || m_beatStartPosition <= QTime(0, 0)
+                        || m_beatStartPosition < m_trackEffectiveStart)) {
+                // Legacy rows may contain beat phase offset (~0-1 beat) in place of
+                // absolute cue/beat-start position. Never allow that to override
+                // the effective track start.
+                m_beatStartPosition = m_trackEffectiveStart;
+            }
+
+            // Restore beat-grid phase for visual beat lines.
+            m_BeatPosition = QTime(0, 0).addMSecs(qMax(0, cached.beatPhasePositionMs));
+            if (m_BeatPosition <= QTime(0, 0)) {
+                // Backward compatibility for older cache rows without persisted phase.
+                const double bpmForPhase = cached.exactBpm > 0.0
+                        ? cached.exactBpm
+                        : static_cast<double>(cached.bpm);
+                if (bpmForPhase > 0.0 && cached.beatStartPositionMs > 0) {
+                    const double beatMs = 60000.0 / bpmForPhase;
+                    if (beatMs > 1.0e-6) {
+                        double phaseMs = std::fmod(static_cast<double>(cached.beatStartPositionMs), beatMs);
+                        if (phaseMs < 0.0)
+                            phaseMs += beatMs;
+                        m_BeatPosition = QTime(0, 0).addMSecs(qMax(0, qRound(phaseMs)));
+                    }
+                }
+            }
 
             // Load cached envelope if available
             AnalysisCacheManager::CachedEnvelope envCached = loadCachedEnvelope(url);
@@ -490,6 +493,7 @@ void TrackAnalyzer::asyncOpen(QUrl url)
         m_trackEffectiveEnd     = analysis.endPosition;
         m_beatStopPosition      = analysis.beatActivityEndPosition;
         m_beatStartPosition     = QTime(0, 0);              // set later in detectTempo()
+        m_BeatPosition          = QTime(0, 0);              // set later in detectTempo()
         m_trackDuration         = duration;                 // full duration from audioBackend/analysis
 
         m_GainDB              = analysis.gainDb;
@@ -612,20 +616,17 @@ void TrackAnalyzer::need_finish()
 
 void TrackAnalyzer::finalizeAnalysis()
 {
-    bool finishedWasQueued = false;
-
     {
         QMutexLocker locker(&p->mutex);
         p->finishQueued = false;
         p->inProgress = false;
         m_finished = true;
-        finishedWasQueued = true;
     }
 
     // Persist analyzed results to SQLite (one-write, uses current analyzer state)
     if (p->currentUrl.isValid() && m_analysisCache) {
         storeCachedTempo();
-        int durMs = qBound(0, static_cast<int>(qRound(static_cast<double>(m_trackDuration.msecsTo(QTime(0, 0))))), INT_MAX);
+        const int durMs = qBound(0, m_trackDuration.msecsSinceStartOfDay(), INT_MAX);
         storeCachedEnvelope(durMs);
     }
 
@@ -644,7 +645,13 @@ void TrackAnalyzer::detectTempo()
     static const int kMinBpm = kTempoMinBpm;
     static const int kMaxBpm = kTempoMaxBpm;
     static QMutex tempoCacheMutex;
-    static QHash<QString, QPair<int, int> > tempoCache;
+    struct TempoCacheEntry {
+        int bpm = 0;
+        int beatPhaseMs = 0;
+        int beatStartMs = 0;
+        double exactBpm = 0.0;
+    };
+    static QHash<QString, TempoCacheEntry> tempoCache;
 
     QList<float> spectralFlux;
     QList<float> spectralFluxLow;
@@ -670,11 +677,20 @@ void TrackAnalyzer::detectTempo()
         QMutexLocker cacheLocker(&tempoCacheMutex);
         const auto it = tempoCache.constFind(cacheKey);
         if (it != tempoCache.constEnd()) {
+            const TempoCacheEntry entry = it.value();
             QMutexLocker locker(&p->mutex);
-            p->bpm = it.value().first;
-            m_BeatPosition = QTime(0, 0).addMSecs(it.value().second);
-            m_beatStartPosition = m_BeatPosition; // first significant energy ≈ beat start
-            qDebug() << "[tempo cache hit] bpm=" << p->bpm << "beatStartPosition=" << m_beatStartPosition;
+            p->bpm = entry.bpm;
+            m_ExactBpm = (entry.exactBpm > 0.0) ? entry.exactBpm : static_cast<double>(entry.bpm);
+            m_BeatPosition = QTime(0, 0).addMSecs(qMax(0, entry.beatPhaseMs));
+            m_beatStartPosition = QTime(0, 0).addMSecs(qMax(0, entry.beatStartMs));
+            if (m_trackEffectiveStart.isValid() && m_trackEffectiveStart > QTime(0, 0)
+                    && (!m_beatStartPosition.isValid() || m_beatStartPosition <= QTime(0, 0)
+                        || m_beatStartPosition < m_trackEffectiveStart)) {
+                m_beatStartPosition = m_trackEffectiveStart;
+            }
+            qDebug() << "[tempo cache hit] bpm=" << p->bpm
+                     << "beatPhase=" << m_BeatPosition
+                     << "beatStartPosition=" << m_beatStartPosition;
             p->bpmDetected = true;
             return;
         }
@@ -935,10 +951,16 @@ void TrackAnalyzer::detectTempo()
     if (finalBpm == 0)
         finalBpm = (autoCorrConsensus >= kMinBpm && autoCorrConsensus <= kMaxBpm) ? autoCorrConsensus : bestBpm;
 
-    if (finalBpm >= 68 && finalBpm <= 95) {
+    auto promoteHalfTimeToDouble = [&](int minRange, int maxRange) {
+        if (finalBpm < minRange || finalBpm > maxRange)
+            return;
+
         const int doubledBpm = finalBpm * 2;
-        const bool hasDoubled = (doubledBpm >= kMinBpm && doubledBpm <= kMaxBpm);
-        QPair<int, double> doubledCandidate = hasDoubled ? strongestNear(doubledBpm, 6) : QPair<int, double>(0, 0.0);
+        if (doubledBpm < kMinBpm || doubledBpm > kMaxBpm)
+            return;
+
+        const double baseSupport = supportFor(finalBpm);
+        QPair<int, double> doubledCandidate = strongestNear(doubledBpm, 6);
         double doubledSupport = doubledCandidate.second;
         const int tripletBpm = qRound(finalBpm * 1.5);
         const double tripletSupport = (tripletBpm >= kMinBpm && tripletBpm <= kMaxBpm) ? supportFor(tripletBpm) : 0.0;
@@ -948,28 +970,12 @@ void TrackAnalyzer::detectTempo()
         if (autoCorrLowBpm >= kMinBpm && autoCorrLowBpm <= kMaxBpm && qAbs(doubledCandidate.first - autoCorrLowBpm) <= 5)
             doubledSupport *= 1.08;
 
-        if (doubledSupport >= supportFor(finalBpm) * 0.34 && doubledSupport >= tripletSupport * 0.92)
+        if (doubledSupport >= baseSupport * 0.34 && doubledSupport >= tripletSupport * 0.92)
             finalBpm = doubledCandidate.first;
-    }
+    };
 
-    if (finalBpm >= 70 && finalBpm <= 82) {
-        const int doubled = finalBpm * 2;
-        if (doubled <= kMaxBpm) {
-            const double baseSupport = supportFor(finalBpm);
-            QPair<int, double> doubledCandidate = strongestNear(doubled, 6);
-            double doubledSupport = doubledCandidate.second;
-            const int triplet = qRound(finalBpm * 1.5);
-            const double tripletSupport = (triplet >= kMinBpm && triplet <= kMaxBpm) ? supportFor(triplet) : 0.0;
-
-            if (autoCorrConsensus >= kMinBpm && autoCorrConsensus <= kMaxBpm && qAbs(doubledCandidate.first - autoCorrConsensus) <= 5)
-                doubledSupport *= 1.10;
-            if (autoCorrLowBpm >= kMinBpm && autoCorrLowBpm <= kMaxBpm && qAbs(doubledCandidate.first - autoCorrLowBpm) <= 5)
-                doubledSupport *= 1.08;
-
-            if (doubledSupport >= baseSupport * 0.34 && doubledSupport >= tripletSupport * 0.92)
-                finalBpm = doubledCandidate.first;
-        }
-    }
+    promoteHalfTimeToDouble(68, 95);
+    promoteHalfTimeToDouble(70, 82);
 
     double finalExactBpm = static_cast<double>(finalBpm);
     if (finalBpm >= kMinBpm && finalBpm <= kMaxBpm && exactBpmWeight[finalBpm] > 0.0)
@@ -1149,7 +1155,12 @@ void TrackAnalyzer::detectTempo()
 
     {
         QMutexLocker cacheLocker(&tempoCacheMutex);
-        tempoCache.insert(cacheKey, qMakePair(qBound(0, finalBpm, kMaxBpm), QTime(0, 0).msecsTo(m_BeatPosition)));
+        TempoCacheEntry entry;
+        entry.bpm = qBound(0, finalBpm, kMaxBpm);
+        entry.beatPhaseMs = QTime(0, 0).msecsTo(m_BeatPosition);
+        entry.beatStartMs = QTime(0, 0).msecsTo(m_beatStartPosition);
+        entry.exactBpm = m_ExactBpm;
+        tempoCache.insert(cacheKey, entry);
     }
 
     qDebug() << Q_FUNC_INFO << "Estimated BPM:" << p->bpm << "exactBpm:" << m_ExactBpm
@@ -1223,6 +1234,7 @@ void TrackAnalyzer::storeCachedTempo()
     const int startPosMs   = m_trackEffectiveStart.msecsSinceStartOfDay();
     const int endPosMs     = m_trackEffectiveEnd.msecsSinceStartOfDay();
     const int beatStartMs  = m_beatStartPosition.msecsSinceStartOfDay();
+    const int beatPhaseMs  = m_BeatPosition.msecsSinceStartOfDay();
     const int beatEndMs    = m_beatStopPosition.msecsSinceStartOfDay();
 
     m_analysisCache->storeCachedTempo(
@@ -1232,8 +1244,12 @@ void TrackAnalyzer::storeCachedTempo()
         startPosMs,
         endPosMs,
         beatStartMs,
+        beatPhaseMs,
         beatEndMs
     );
+
+    if (!m_lastCacheKey.isEmpty())
+        m_analysisCache->setCachedKey(p->currentUrl, m_lastCacheKey);
 }
 
 void TrackAnalyzer::storeCachedEnvelope(int durationMs)

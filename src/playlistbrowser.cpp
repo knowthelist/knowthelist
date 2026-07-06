@@ -161,10 +161,13 @@ void PlaylistBrowser::updateLists()
     // read stored lists
     QList<QStringList> listData = p->database->selectPlaylistData();
     for (const QStringList& data : listData) {
-        QString name = data[0];
-        int count = data[1].toInt();
-        int sum = data[2].toInt();
-        QDateTime date(QDateTime::fromSecsSinceEpoch( data[3].toInt() ));
+        if (data.isEmpty())
+            continue;
+
+        const QString name = data.value(0);
+        const int count = data.value(1, "0").toInt();
+        const int sum = data.value(2, "0").toInt();
+        const QDateTime date = QDateTime::fromSecsSinceEpoch(data.value(3, "0").toInt());
 
         qDebug() << Q_FUNC_INFO << "add playlist: " << name;
         list = new PlaylistWidget(p->listPlaylists);

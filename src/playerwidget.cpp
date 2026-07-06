@@ -783,8 +783,10 @@ QTime PlayerWidget::calculateCuePosition() const
     if (!m_CurrentTrack)
         return QTime();
 
-    // Delegate entirely to CueManager (same logic as before, but unified).
-    return m_cueManager->calculateCuePosition();
+    // Manual CUE follows beat-cue setting: when enabled, jump to first beat occurrence.
+    const auto mode = m_beatCueEnabled ? PlayerCueManager::CUE_BEAT_OCCURRENCE
+                                       : PlayerCueManager::CUE_SKIP_SILENT;
+    return m_cueManager->calculateCuePosition(mode);
 }
 
 // ---------------------------------------------------------------------------
@@ -959,18 +961,15 @@ void PlayerWidget::applyAutoCueAfterAnalysis(bool preferBeatCue)
     // Delegate to CueManager but preserve PlayerWidget-specific UI state (bpmWidget/ui updates).
     m_cueManager->applyAutoCueAfterAnalysis(preferBeatCue);
 
-    // Sync PlayerWidget state after delegate applies positions.
-    const QTime cuePosition = calculateCuePosition();
+    // Sync UI using the position that was actually applied by CueManager.
+    const QTime cuePosition = player->position();
 
     qDebug() << Q_FUNC_INFO << ":" << objectName()
              << " preferBeatCue=" << preferBeatCue
              << " beatPositionValid=" << m_beatPosition.isValid()
              << " beatPosition=" << m_beatPosition
              << " analyzerFinished=" << trackanalyzer->finished()
-             << " calculatedCuePosition=" << cuePosition;
-
-    if (cuePosition > QTime(0, 0))
-        player->setPosition(cuePosition);
+             << " appliedCuePosition=" << cuePosition;
 
     bpmWidget->setTrackLength(player->length());
     ui->butCue->setChecked(true);
@@ -1849,5 +1848,3 @@ void PlayerWidget::on_pitchSlider_valueChanged(int value)
     if (std::fabs(m_tempoRate - 1.0) < 0.001 && !m_syncAdopting)
         updateSyncButtonState(false);
 }
-
-

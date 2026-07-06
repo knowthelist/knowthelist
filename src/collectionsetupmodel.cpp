@@ -50,6 +50,8 @@ bool CollectionSetupModel::setData(const QModelIndex& index, const QVariant& val
 {
     if (index.isValid() && index.column() == 0 && role == Qt::CheckStateRole) {
         // store checked paths, remove unchecked paths
+        QList<QModelIndex> changedIndexes;
+        changedIndexes << index;
         QModelIndex idx = parent(index);
         if (value.toInt() == Qt::Checked) {
             checked.insert(filePath(index));
@@ -57,6 +59,7 @@ bool CollectionSetupModel::setData(const QModelIndex& index, const QVariant& val
             while (idx.isValid()) {
                 checkedPartially.insert(filePath(idx));
                 checked.remove(filePath(idx));
+                changedIndexes << idx;
                 idx = idx.parent();
             }
         } else {
@@ -69,12 +72,14 @@ bool CollectionSetupModel::setData(const QModelIndex& index, const QVariant& val
                         hasChildren = true;
                 if (!hasChildren) {
                     checkedPartially.remove(filePath(idx));
-                    checked.insert(filePath(idx));
+                    checked.remove(filePath(idx));
                 }
+                changedIndexes << idx;
                 idx = idx.parent();
             }
         }
-        emit dataChanged(parent(index), index);
+        for (const QModelIndex& changedIndex : changedIndexes)
+            Q_EMIT dataChanged(changedIndex, changedIndex, {Qt::CheckStateRole});
         return true;
     }
     return QFileSystemModel::setData(index, value, role);

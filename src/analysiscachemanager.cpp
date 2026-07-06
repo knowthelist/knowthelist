@@ -47,6 +47,35 @@ static QSqlDatabase collectionDb()
     return QSqlDatabase::database(connName);
 }
 
+static constexpr int kEnvelopeCacheVersion = 2;
+
+static AnalysisCacheManager::CachedTempo buildLegacyCachedTempo(const QSqlQuery& query)
+{
+    AnalysisCacheManager::CachedTempo cached;
+
+    const int storedBpm = query.value(0).toInt();
+    if (storedBpm <= 0)
+        return cached;
+
+    const int legacyBeatOffsetMs = qMax(0, query.value(1).toInt());
+    const int legacyCueStartMs = qMax(0, query.value(2).toInt());
+
+    cached.valid = true;
+    cached.bpm = storedBpm;
+    cached.exactBpm = query.value(3).toDouble() > 0.0
+            ? query.value(3).toDouble()
+            : static_cast<double>(storedBpm);
+    cached.startPositionMs = legacyCueStartMs;
+    cached.endPositionMs = 0; // not available in legacy schema
+    // cue_start_ms is the best absolute approximation for legacy rows.
+    // beat_offset_ms is only phase and must not override cue_start_ms.
+    cached.beatStartPositionMs = (legacyCueStartMs > 0) ? legacyCueStartMs : legacyBeatOffsetMs;
+    cached.beatPhasePositionMs = legacyBeatOffsetMs;
+    cached.beatEndPositionMs = 0;
+
+    return cached;
+}
+
 QByteArray AnalysisCacheManager::encodeEnvelopeSamples(const QVector<float>& samples)
 {
     QByteArray payload;
@@ -110,12 +139,14 @@ bool AnalysisCacheManager::ensureTempoCacheTable() const
         "start_position_ms INTEGER DEFAULT 0,"
         "end_position_ms INTEGER DEFAULT 0,"
         "beat_start_position_ms INTEGER DEFAULT 0,"
+        "beat_phase_position_ms INTEGER DEFAULT 0,"
         "beat_end_position_ms INTEGER DEFAULT 0,"
         "changedate INTEGER,"
         "analysis_version INTEGER DEFAULT 12,"
         "envelope_version INTEGER DEFAULT 0,"
         "exact_bpm REAL DEFAULT 0.0,"
         "envelope_data BLOB,"
+        "envelope_duration_ms INTEGER DEFAULT 0,"
         "analysis_cache_key VARCHAR(360) DEFAULT ''"   // file key for stale-cache detection
         ")");
     if (!q.exec(baseTable)) {
@@ -127,7 +158,9 @@ bool AnalysisCacheManager::ensureTempoCacheTable() const
         {"start_position_ms",       "ALTER TABLE analysis_cache ADD COLUMN start_position_ms INTEGER DEFAULT 0"},
         {"end_position_ms",         "ALTER TABLE analysis_cache ADD COLUMN end_position_ms INTEGER DEFAULT 0"},
         {"beat_start_position_ms",  "ALTER TABLE analysis_cache ADD COLUMN beat_start_position_ms INTEGER DEFAULT 0"},
+        {"beat_phase_position_ms",  "ALTER TABLE analysis_cache ADD COLUMN beat_phase_position_ms INTEGER DEFAULT 0"},
         {"beat_end_position_ms",    "ALTER TABLE analysis_cache ADD COLUMN beat_end_position_ms INTEGER DEFAULT 0"},
+        {"envelope_duration_ms",    "ALTER TABLE analysis_cache ADD COLUMN envelope_duration_ms INTEGER DEFAULT 0"},
         {"analysis_cache_key",      "ALTER TABLE analysis_cache ADD COLUMN analysis_cache_key VARCHAR(360) DEFAULT ''"},
     };
     for (const auto &pair : colsToAdd) {
@@ -147,7 +180,7 @@ AnalysisCacheManager::CachedTempo AnalysisCacheManager::loadCachedTempo(const QU
     QSqlQuery q(collectionDb());
     // v12 SELECT with new positional fields, plus analysis_cache_key for hasValidCache
     q.prepare("SELECT bpm, exact_bpm, start_position_ms, end_position_ms, "
-              "beat_start_position_ms, beat_end_position_ms, analysis_version, analysis_cache_key "
+              "beat_start_position_ms, beat_phase_position_ms, beat_offset_ms, beat_end_position_ms, analysis_version, analysis_cache_key "
               "FROM analysis_cache WHERE url = :url");
     q.bindValue(":url", url.toLocalFile());
 
@@ -158,28 +191,14 @@ AnalysisCacheManager::CachedTempo AnalysisCacheManager::loadCachedTempo(const QU
         q.bindValue(":url", url.toLocalFile());
         if (!q.exec() || !q.next())
             return cached;
-
-        const int storedBpm = q.value(0).toInt();
-        if (storedBpm <= 0)
-            return cached;
-
-        cached.valid = true;
-        cached.bpm = storedBpm;
-        cached.exactBpm = q.value(3).toDouble() > 0.0 ? q.value(3).toDouble() : static_cast<double>(storedBpm);
-        // Old offset: beat_offset_ms is meaningless without the original analysis context — keep it empty
-        cached.startPositionMs   = 0;
-        cached.endPositionMs     = 0;
-        cached.beatStartPositionMs = q.value(1).toInt();    // beat_offset_ms (best-effort)
-        cached.beatEndPositionMs = 0;
-
-        return cached;
+        return buildLegacyCachedTempo(q);
     }
 
     if (!q.next())
         return cached;
 
     const int storedBpm   = q.value(0).toInt();
-    const int version     = q.value(6).toInt();
+    const int version     = q.value(8).toInt();
 
     if (storedBpm <= 0)
         return cached;
@@ -192,18 +211,24 @@ AnalysisCacheManager::CachedTempo AnalysisCacheManager::loadCachedTempo(const QU
         cached.startPositionMs     = q.value(2).toInt();
         cached.endPositionMs       = q.value(3).toInt();
         cached.beatStartPositionMs = q.value(4).toInt();
-        cached.beatEndPositionMs   = q.value(5).toInt();
-        cached.analysisCacheKey  = q.value(7).toString();
+        cached.beatPhasePositionMs = qMax(0, q.value(5).toInt());
+        const int legacyPhaseMs = qMax(0, q.value(6).toInt());
+        if (cached.beatPhasePositionMs <= 0)
+            cached.beatPhasePositionMs = legacyPhaseMs;
+        cached.beatEndPositionMs   = q.value(7).toInt();
+        cached.analysisCacheKey  = q.value(9).toString();
+        if (cached.startPositionMs > 0 && (cached.beatStartPositionMs <= 0 || cached.beatStartPositionMs < cached.startPositionMs))
+            cached.beatStartPositionMs = cached.startPositionMs;
     }
     // Legacy v11: partial reconstruction from old offset fields
     else {
-        cached.valid         = true;
-        cached.bpm           = storedBpm;
-        cached.exactBpm      = (q.value(1).toDouble() > 0.0) ? q.value(1).toDouble() : static_cast<double>(storedBpm);
-        cached.startPositionMs     = q.value(5).toInt();   // cueStartMs from legacy row
-        cached.endPositionMs       = 0;                      // was never stored in v11
-        cached.beatStartPositionMs = q.value(1).toInt();    // beat_offset_ms (approximation)
-        cached.beatEndPositionMs   = 0;
+        QSqlQuery legacyQ(collectionDb());
+        legacyQ.prepare("SELECT bpm, beat_offset_ms, cue_start_ms, exact_bpm, analysis_version "
+                        "FROM analysis_cache WHERE url = :url");
+        legacyQ.bindValue(":url", url.toLocalFile());
+        if (!legacyQ.exec() || !legacyQ.next())
+            return cached;
+        cached = buildLegacyCachedTempo(legacyQ);
     }
 
     return cached;
@@ -232,7 +257,7 @@ bool AnalysisCacheManager::hasValidCache(const QUrl& url, const QString& current
 
 void AnalysisCacheManager::storeCachedTempo(const QUrl& url, int bpm, double exactBpm,
                                             int startPositionMs, int endPositionMs,
-                                            int beatStartPosMs, int beatEndPosMs)
+                                            int beatStartPosMs, int beatPhasePosMs, int beatEndPosMs)
 {
     if (bpm <= 0)
         return;
@@ -245,10 +270,10 @@ void AnalysisCacheManager::storeCachedTempo(const QUrl& url, int bpm, double exa
     q.prepare(
         "INSERT OR REPLACE INTO analysis_cache ("
         "url, bpm, exact_bpm, start_position_ms, end_position_ms, "
-         "beat_start_position_ms, beat_end_position_ms, changedate, "
+         "beat_start_position_ms, beat_phase_position_ms, beat_offset_ms, beat_end_position_ms, changedate, "
          "analysis_version, envelope_version) "
         "VALUES (:url, :bpm, :exact_bpm, :start_pos, :end_pos, "
-         ":beat_start, :beat_end, strftime('%s','now'), 12, "
+         ":beat_start, :beat_phase, :beat_phase, :beat_end, strftime('%s','now'), 12, "
          "COALESCE((SELECT envelope_version FROM analysis_cache WHERE url = :url), 0))"
     );
     q.bindValue(":url", url.toLocalFile());
@@ -257,6 +282,7 @@ void AnalysisCacheManager::storeCachedTempo(const QUrl& url, int bpm, double exa
     q.bindValue(":start_pos", startPositionMs);
     q.bindValue(":end_pos", endPositionMs);
     q.bindValue(":beat_start", beatStartPosMs);
+    q.bindValue(":beat_phase", beatPhasePosMs);
     q.bindValue(":beat_end", beatEndPosMs);
     q.exec();
 }
@@ -284,7 +310,7 @@ AnalysisCacheManager::CachedEnvelope AnalysisCacheManager::loadCachedEnvelope(co
     if (!q.exec())
         return cached;
 
-    if (q.next() && q.value(0).toInt() == 2) { // Using hardcoded version for simplicity here
+    if (q.next() && q.value(0).toInt() == kEnvelopeCacheVersion) {
         const QVector<float> decoded = decodeEnvelopeSamples(q.value(1).toByteArray());
         if (!decoded.isEmpty()) {
             cached.valid = true;
@@ -304,15 +330,17 @@ void AnalysisCacheManager::storeCachedEnvelope(const QUrl& url, const QVector<fl
         return;
 
     QSqlQuery q(collectionDb());
-    q.prepare("INSERT OR REPLACE INTO analysis_cache (url, bpm, beat_offset_ms, changedate, analysis_version, envelope_version, envelope_data, envelope_duration_ms) "
-              "VALUES (:url, "
-              "COALESCE((SELECT bpm FROM analysis_cache WHERE url = :url), 0), "
-              "COALESCE((SELECT beat_offset_ms FROM analysis_cache WHERE url = :url), 0), "
-              "strftime('%s','now'), "
-              "COALESCE((SELECT analysis_version FROM analysis_cache WHERE url = :url), 0), "
-              ":envelope_version, :envelope_data, :envelope_duration_ms)");
+    q.prepare(
+        "INSERT INTO analysis_cache (url, changedate, envelope_version, envelope_data, envelope_duration_ms) "
+        "VALUES (:url, strftime('%s','now'), :envelope_version, :envelope_data, :envelope_duration_ms) "
+        "ON CONFLICT(url) DO UPDATE SET "
+        "changedate = excluded.changedate, "
+        "envelope_version = excluded.envelope_version, "
+        "envelope_data = excluded.envelope_data, "
+        "envelope_duration_ms = excluded.envelope_duration_ms"
+    );
     q.bindValue(":url", url.toLocalFile());
-    q.bindValue(":envelope_version", 2); // Using hardcoded version for simplicity here
+    q.bindValue(":envelope_version", kEnvelopeCacheVersion);
     q.bindValue(":envelope_data", encodeEnvelopeSamples(samples));
     q.bindValue(":envelope_duration_ms", qMax(0, durationMs));
     q.exec();

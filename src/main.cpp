@@ -18,6 +18,8 @@
 #include "knowthelist.h"
 
 #include <QApplication>
+#include <QDateTime>
+#include <QFile>
 #include <QMessageBox>
 #include <QTranslator>
 #include <QtSql>
@@ -123,20 +125,83 @@ int main(int argc, char* argv[])
         path.mkpath(pathName);
 
     const QString dbName = path.absolutePath() + "/collection.db";
-    if (!QSqlDatabase::contains("CollectionDB")) {
-        QSqlDatabase db = QSqlDatabase::addDatabase("QSQLITE", "CollectionDB");
+    bool integrityCorrupt = false;
+    auto openAndVerifyDb = [&](QSqlDatabase& db) -> bool {
+        integrityCorrupt = false;
         db.setDatabaseName(dbName);
         db.setHostName("localhost");
         if (!db.open()) {
             QMessageBox::critical(nullptr, "fatal database error",
-                db.lastError().text());
-            return 1;
+                db.lastError().text() + QString("\n\nMake sure '%1' is writable.").arg(pathName));
+            return false;
         }
-        QSqlQuery q("PRAGMA journal_mode=WAL", db);
-        (void)q.next();
-        qDebug() << "load database:" << dbName << "journal_mode" << q.value(0).toString();
+
+        QSqlQuery journalModeQuery(db);
+        if (!journalModeQuery.exec("PRAGMA journal_mode=WAL")) {
+            QMessageBox::critical(nullptr, "Database initialization error",
+                QString("Failed to set WAL mode: %1").arg(journalModeQuery.lastError().text()));
+            return false;
+        }
+
+        const QString journalMode = (journalModeQuery.next() ? journalModeQuery.value(0).toString() : QString());
+
+        QSqlQuery integrityQuery(db);
+        if (!integrityQuery.exec("PRAGMA integrity_check") || !integrityQuery.next()
+            || integrityQuery.value(0).toString().compare("ok", Qt::CaseInsensitive) != 0) {
+            integrityCorrupt = true;
+            return false;
+        }
+
+        QSqlQuery testQuery(db);
+        if (!testQuery.exec("SELECT COUNT(*) FROM sqlite_master;")) {
+            QMessageBox::critical(nullptr, "Database verification error",
+                QString("Failed to verify database connection: %1").arg(testQuery.lastError().text()));
+            return false;
+        }
+
+        qDebug() << "load database:" << dbName << "journal_mode" << journalMode;
+        return true;
+    };
+
+    if (!QSqlDatabase::contains("CollectionDB")) {
+        QSqlDatabase db = QSqlDatabase::addDatabase("QSQLITE", "CollectionDB");
+        if (!openAndVerifyDb(db)) {
+            if (!integrityCorrupt) {
+                return 1;
+            }
+
+            const QString backupName = dbName + ".corrupt."
+                + QDateTime::currentDateTimeUtc().toString("yyyyMMddHHmmss");
+            db.close();
+
+            bool movedCorruptDb = true;
+            if (QFile::exists(dbName)) {
+                movedCorruptDb = QFile::rename(dbName, backupName);
+                if (!movedCorruptDb) {
+                    movedCorruptDb = QFile::remove(dbName);
+                }
+            }
+
+            if (!movedCorruptDb) {
+                QMessageBox::critical(nullptr, "fatal database error",
+                    QString("Database is corrupted and could not be moved: %1").arg(dbName));
+                return 1;
+            }
+
+            if (!openAndVerifyDb(db)) {
+                return 1;
+            }
+        }
     } else {
         qDebug() << "load database:" << dbName << "(connection already exists on this thread)";
+    }
+
+    // Ensure we have a valid CollectionDB connection for later use
+    QSqlDatabase db = QSqlDatabase::database("CollectionDB");
+    if (!db.isValid()) {
+        QMessageBox::critical(nullptr, "fatal database error",
+            QString("Failed to get CollectionDB connection"));
+        return 1;
     }
 
     Knowthelist w;

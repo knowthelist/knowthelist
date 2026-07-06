@@ -131,7 +131,9 @@ CollectionWidget::CollectionWidget(QWidget* parent)
     p->modeSelect->setMode(static_cast<ModeSelector::modeType>(
         settings.value("TreeMode", ModeSelector::MODENONE).toUInt()));
 
-    p->collectiontree->createTrunk();
+    // Defer initial tree population so external listeners can connect first
+    // (e.g. Knowthelist connects tracksSelected after constructing this widget).
+    QTimer::singleShot(0, p->collectiontree, SLOT(createTrunk()));
     setLayout(mainLayout);
 
     connect(p->updater, SIGNAL(progressChanged(int)), p->progress,

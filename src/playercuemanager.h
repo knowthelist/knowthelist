@@ -75,8 +75,7 @@ private:
     QTime computeFallbackCueFromAnalyzer() const;
 
     PlayerWidget& m_owner;
-    bool m_skipSilentEnd;
-    bool m_skipSilentBegin;
+    bool m_skipSilentEnd{false};
 };
 
 #endif // PLAYERCUEMANAGER_H

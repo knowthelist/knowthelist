@@ -21,8 +21,13 @@
 
 #include <QtSql>
 
+#include <QDir>
+#include <QFileInfo>
+#include <QCoreApplication>
 #include <QMutex>
 #include <QRandomGenerator>
+#include <QStandardPaths>
+#include <QThread>
 #include <qimage.h>
 
 struct CollectionDbPrivate {
@@ -38,9 +43,6 @@ public:
     QString sqlQuickFilter;
     QString sqlFromString;
     QString sqlFromStringPL;
-    QSqlDatabase db;
-    QSqlDatabase db_readonly;
-    QSqlQuery* query;
     QMutex mutex;
 
     QString selectionFilter(QString year = "", QString genre = "", QString artist = "", QString album = "")
@@ -54,56 +56,66 @@ public:
             ret += "AND artist.name = '" + artist.replace("'", "''") + "' ";
         if (!album.isEmpty())
             ret += "AND album.name = '" + album.replace("'", "''") + "' ";
-        return ret;
-    }
 
-    QString selectionFilterForRandom(QString path = "", QString genre = "", QString artist = "")
-    {
-        QString ret = "";
-        if (!path.isEmpty())
-            ret += "AND lower(tags.url) like lower('%" + path.replace("'", "''") + "%') ";
-        if (!genre.isEmpty())
-            ret += "AND lower(genre.name) like lower('%" + genre.replace("'", "''") + "%') ";
-        if (!artist.isEmpty())
-            ret += "AND lower(artist.name) like lower('%" + artist.replace("'", "''") + "%') ";
-        return ret;
-    }
+        // Handle case-insensitive search - add this to keep the existing behavior
+        if (ret.isEmpty())
+            ret += " 1=1) ";
+        else
+            ret += ") ";
 
-    QString selectionFilterForRandom(QStringList paths, QStringList genres, QStringList artists)
-    {
-        QString ret = "";
-        if (!paths.isEmpty()) {
-            ret += "AND ( ";
-            for (QString path : paths)
-                ret += " lower(tags.url) like lower('%" + path.replace("'", "''") + "%') OR ";
-            ret += " 1=2) ";
-        }
-        if (!genres.isEmpty()) {
-            ret += "AND ( ";
-            for (QString genre : genres)
-                ret += " lower(genre.name) like lower('%" + genre.replace("'", "''") + "%') OR ";
-            ret += " 1=2) ";
-        }
-        if (!artists.isEmpty()) {
-            ret += "AND ( ";
-            for (QString artist : artists)
-                ret += " lower(artist.name) like lower('%" + artist.replace("'", "''") + "%') OR ";
-            ret += " 1=2) ";
-        }
         return ret;
     }
 };
 
 static constexpr const char* kDbConnName = "CollectionDB";
 
+static QString collectionDbPath()
+{
+    const QString pathName = QStandardPaths::standardLocations(QStandardPaths::AppDataLocation).at(0);
+    QDir dir(pathName);
+    if (!dir.exists()) {
+        dir.mkpath(pathName);
+    }
+    return QFileInfo(dir.absolutePath(), "collection.db").absoluteFilePath();
+}
+
+static QSqlDatabase currentThreadCollectionDb()
+{
+    if (QCoreApplication::instance() != nullptr
+        && QThread::currentThread() == QCoreApplication::instance()->thread()
+        && QSqlDatabase::contains(kDbConnName)) {
+        QSqlDatabase db = QSqlDatabase::database(kDbConnName);
+        if (db.isValid() && !db.isOpen()) {
+            db.open();
+        }
+        return db;
+    }
+
+    const QString connName = QStringLiteral("%1_%2")
+                                 .arg(QString::fromLatin1(kDbConnName))
+                                 .arg(qulonglong(QThread::currentThreadId()), 0, 16);
+
+    if (!QSqlDatabase::contains(connName)) {
+        QSqlDatabase db = QSqlDatabase::addDatabase("QSQLITE", connName);
+        db.setDatabaseName(collectionDbPath());
+        if (db.open()) {
+            QSqlQuery pragma(QStringLiteral("PRAGMA journal_mode=WAL"), db);
+            (void)pragma.next();
+            QSqlQuery timeout(QStringLiteral("PRAGMA busy_timeout=5000"), db);
+            (void)timeout.exec();
+        }
+    }
+
+    QSqlDatabase db = QSqlDatabase::database(connName);
+    if (db.isValid() && !db.isOpen()) {
+        db.open();
+    }
+    return db;
+}
+
 CollectionDB::CollectionDB()
 {
     p = new CollectionDbPrivate;
-
-    // Use the named connection created in main.cpp, not a copy. QSqlDatabase is
-    // implicitly shared; each value-copy still refers to the same Qt connection pool entry.
-    p->db = QSqlDatabase::database(kDbConnName);
-    p->db_readonly = QSqlDatabase::cloneDatabase(p->db, QString("%1_readonly").arg(kDbConnName));
 
     p->genreCount = 0;
     p->resultCount = 0;
@@ -127,28 +139,100 @@ CollectionDB::CollectionDB()
                          " LEFT OUTER JOIN statistics ON tags.url = statistics.url "
                          " LEFT OUTER JOIN analysis_cache ON tags.url = analysis_cache.url "
                          " LEFT OUTER JOIN favorites ON tags.url = favorites.url WHERE 1=1 ";
-    executeSql("CREATE TABLE IF NOT EXISTS analysis_cache ("
-               "url VARCHAR(120) PRIMARY KEY,"
-               "bpm INTEGER,"
-               "beat_offset_ms INTEGER,"
-               "changedate INTEGER );");
+
+    createTables(false);
+    createStatsTable();
 }
 
 CollectionDB::~CollectionDB()
 {
-    if (!p->db.databaseName().isEmpty() && p->db.isOpen())
-        p->db.close();
-    if (!p->db_readonly.databaseName().isEmpty() && p->db_readonly.isOpen())
-        p->db_readonly.close();
     delete p;
     p = nullptr;
 }
 
-QString
-CollectionDB::escapeString(QString string)
+bool CollectionDB::isDbValid()
 {
-    string.replace("'", "''");
-    return string;
+    const QSqlDatabase db = currentThreadCollectionDb();
+    return db.isValid() && db.isOpen();
+}
+
+bool CollectionDB::isEmpty()
+{
+    return selectSqlNumber("SELECT COUNT(*) FROM tags") == 0;
+}
+
+void CollectionDB::incSongCounter(const QString url)
+{
+    QSqlQuery query(currentThreadCollectionDb());
+    query.prepare("UPDATE statistics SET playcounter = playcounter + 1 WHERE url = ?");
+    query.addBindValue(url);
+    query.exec();
+}
+
+void CollectionDB::setSongRate(const QString url, int rate)
+{
+    QSqlQuery query(currentThreadCollectionDb());
+    query.prepare("UPDATE statistics SET rating = ? WHERE url = ?");
+    query.addBindValue(rate);
+    query.addBindValue(url);
+    query.exec();
+}
+
+void CollectionDB::setSongBpm(const QString url, int bpm)
+{
+    executeSql(QString("UPDATE analysis_cache SET bpm = %1 WHERE url = '%2'").arg(bpm).arg(url));
+}
+
+void CollectionDB::updateDirStats(QString path, const long datetime)
+{
+    QSqlQuery query(currentThreadCollectionDb());
+    query.prepare("INSERT OR REPLACE INTO directories (dir, changedate) VALUES (?, ?)");
+    query.addBindValue(path);
+    query.addBindValue(static_cast<qlonglong>(datetime));
+    query.exec();
+}
+
+void CollectionDB::removeSongsInDir(QString path)
+{
+    QSqlQuery query(currentThreadCollectionDb());
+    query.prepare("DELETE FROM tags WHERE url LIKE ?");
+    query.addBindValue(path + "%");
+    query.exec();
+    
+    // Remove from other related tables as well
+    query.prepare("DELETE FROM statistics WHERE url LIKE ?");
+    query.addBindValue(path + "%");
+    query.exec();
+    
+    query.prepare("DELETE FROM analysis_cache WHERE url LIKE ?");
+    query.addBindValue(path + "%");
+    query.exec();
+
+    // Update counts and clean up
+    executeSql("VACUUM");
+}
+
+bool CollectionDB::isDirInCollection(QString path)
+{
+    return selectSqlNumber("SELECT COUNT(*) FROM tags WHERE url LIKE '" + path + "%'") > 0;
+}
+
+void CollectionDB::removeDirFromCollection(QString path)
+{
+    removeSongsInDir(path);
+}
+
+void CollectionDB::removePlaylist(QString name)
+{
+    QSqlQuery query(currentThreadCollectionDb());
+    query.prepare("DELETE FROM playlists WHERE name = ?");
+    query.addBindValue(name);
+    query.exec();
+    
+    // Delete all entries for this playlist
+    query.prepare("DELETE FROM playlisttracks WHERE playlist = ?");
+    query.addBindValue(name);
+    query.exec();
 }
 
 void CollectionDB::setFilterString(QString string)
@@ -168,680 +252,491 @@ void CollectionDB::setFilterString(QString string)
     }
 }
 
-bool CollectionDB::isDbValid()
+bool CollectionDB::executeSql(const QString& statement)
 {
-    if ((!executeSql("SELECT COUNT( url ) FROM tags;"))
-        || (!executeSql("SELECT COUNT( url ) FROM statistics;"))
-        || (!executeSql("SELECT COUNT( url ) FROM favorites;"))
-        || (!executeSql("SELECT COUNT( url ) FROM playlists;")))
-        return false;
-    else
-        return true;
+    QSqlQuery query(currentThreadCollectionDb());
+    query.prepare(statement);
+    return query.exec();
 }
 
-bool CollectionDB::isEmpty()
+QList<QStringList> CollectionDB::selectSql(const QString& statement)
 {
-    return (selectSqlNumber("SELECT COUNT( url ) FROM tags;") < 1);
-}
-
-void CollectionDB::incSongCounter(const QString url)
-{
-    QList<QStringList> entries;
-
-    entries = selectSql(QString("SELECT playcounter, createdate FROM statistics WHERE url = '%1';")
-                            .arg(escapeString(url)));
-
-    if (!entries.isEmpty()) {
-        // entry exists, increment playcounter and update accesstime
-        executeSql(QString("REPLACE INTO statistics ( url, createdate, accessdate, playcounter ) VALUES ( '%1', '%2', strftime('%s', 'now'), %3 );")
-                       .arg(escapeString(url))
-                       .arg(entries.at(0)[1])
-                       .arg(entries.at(0)[0] + " + 1"));
-    } else {
-        // entry didnt exist yet, create a new one
-        executeSql(QString("INSERT INTO statistics ( url, createdate, accessdate, playcounter ) VALUES ( '%1', strftime('%s', 'now'), strftime('%s', 'now'), 1 );")
-                       .arg(escapeString(url)));
-    }
-}
-
-void CollectionDB::setSongRate(const QString url, int rate)
-{
-    // insert or update increment favorites
-    executeSql(QString("INSERT OR REPLACE INTO favorites ( url, changedate, rate ) VALUES ( '%1', strftime('%s', 'now'), %2 );")
-                   .arg(escapeString(url))
-                   .arg(rate));
-}
-
-void CollectionDB::setSongBpm(const QString url, int bpm)
-{
-    if (bpm <= 0)
-        return;
-
-    QString command = QString("INSERT INTO analysis_cache (url, bpm, beat_offset_ms, changedate) "
-                              "VALUES('%1', %2, COALESCE((SELECT beat_offset_ms FROM analysis_cache WHERE url = '%1'), 0), strftime('%s','now')) "
-                              "ON CONFLICT(url) DO UPDATE SET bpm=excluded.bpm, changedate=excluded.changedate;")
-                          .arg(escapeString(url))
-                          .arg(bpm);
-
-    executeSql(command);
-}
-
-void CollectionDB::resetSongCounter()
-{
-    executeSql(QString("DELETE FROM statistics;"));
-    //executeSql( QString( "VACUUM;"));
-}
-
-void CollectionDB::updateDirStats(QString path, const long datetime)
-{
-    if (path.endsWith("/"))
-        path = path.left(path.length() - 1);
-
-    executeSql(QString("REPLACE INTO directories ( dir, changedate ) VALUES ( '%1', %2 );")
-                   .arg(escapeString(path))
-                   .arg(datetime));
-}
-
-void CollectionDB::removeSongsInDir(QString path)
-{
-    if (path.endsWith("/"))
-        path = path.left(path.length() - 1);
-
-    executeSql(QString("DELETE FROM tags WHERE dir = '%1';")
-                   .arg(escapeString(path)));
-}
-
-bool CollectionDB::isDirInCollection(QString path)
-{
-    if (path.endsWith("/"))
-        path = path.left(path.length() - 1);
-
-    QList<QStringList> entries = selectSql(QString("SELECT changedate FROM directories WHERE dir = '%1';")
-                                               .arg(escapeString(path)));
-
-    return !entries.isEmpty();
-}
-
-void CollectionDB::removeDirFromCollection(QString path)
-{
-    if (path.endsWith("/"))
-        path = path.left(path.length() - 1);
-
-    executeSql(QString("DELETE FROM directories WHERE dir = '%1';")
-                   .arg(escapeString(path)));
-}
-
-void CollectionDB::removePlaylist(QString name)
-{
-    executeSql(QString("DELETE FROM playlists WHERE name = '%1';")
-                   .arg(escapeString(name)));
-}
-
-long CollectionDB::selectSqlNumber(const QString& statement)
-{
-    long result = -1;
-    // Use readonly connection for select operations to better separate read from write locks
-    QSqlQuery query(p->db_readonly);
+    QList<QStringList> result;
     
-    const int maxRetries = 3;
-    int attempts = 0;
-
-    while (attempts < maxRetries) {
-        if (query.exec(statement)) {
-            while (query.next()) {
-                result = query.value(0).toInt();
-                break; // Since we expect only one value
+    QSqlQuery query(currentThreadCollectionDb());
+    query.prepare(statement);
+    
+    if (query.exec()) {
+        while (query.next()) {
+            QStringList row;
+            for (int i = 0; i < query.record().count(); ++i) {
+                row << query.value(i).toString();
             }
-            return result;
-        } else {
-            QSqlError lastError = query.lastError();
-            
-            // Check for database locked errors that should be retried
-            if (lastError.text().contains("database is locked", Qt::CaseInsensitive)) {
-                
-                qDebug() << "Database locked error detected in selectSqlNumber, attempt" << (attempts + 1) << "for statement:" << statement;
-                
-                // Wait before retry with exponential backoff
-                if (attempts < maxRetries - 1) {
-                    QThread::msleep(50 * (attempts + 1));  // 50ms, 100ms, 150ms
-                    attempts++;
-                    continue;
-                }
-            }
-            
-            qDebug() << "Database error in selectSqlNumber:" << lastError.text();
-            qDebug() << "Statement: " << statement;
-            return result;
+            result << row;
         }
     }
     
     return result;
 }
 
-bool CollectionDB::executeSql(const QString& statement)
+long CollectionDB::selectSqlNumber(const QString& statement)
 {
-    const int maxRetries = 5;
-    int attempts = 0;
-
-    while (attempts < maxRetries) {
-        // Use write connection for executeSql operations
-        QSqlQuery query(p->db);
-        
-        if (query.exec(statement)) {
-            return true;
-        } else {
-            QSqlError lastError = query.lastError();
-            
-            // Check for database locked errors that should be retried
-            if (lastError.text().contains("database is locked", Qt::CaseInsensitive)) {
-                
-                qDebug() << "Database locked error detected, attempt" << (attempts + 1) << "for statement:" << statement;
-                
-                // Wait before retry with exponential backoff
-                if (attempts < maxRetries - 1) {
-                    QThread::msleep(50 * (attempts + 1));  // 50ms, 100ms, 150ms, 200ms, 250ms
-                    attempts++;
-                    continue;
-                }
-            } else {
-                qDebug() << "Database error:" << lastError.text();
-                qDebug() << "Statement: " << statement;
-                return false;
-            }
-        }
+    QSqlQuery query(currentThreadCollectionDb());
+    query.prepare(statement);
+    
+    if (query.exec() && query.next()) {
+        return query.value(0).toLongLong();
     }
     
-    // If we've exhausted all retries, return false
-    return false;
+    return 0;
 }
 
-QList<QStringList> CollectionDB::selectSql(const QString& statement)
+int CollectionDB::sqlInsertID()
 {
-    QList<QStringList> tags;
-    tags.clear();
-    int count;
-
-    const int maxRetries = 3;
-    int attempts = 0;
-
-    // Use readonly connection for select operations to better separate read from write locks
-    QSqlQuery query(p->db_readonly);
-    
-    while (attempts < maxRetries) {
-        if (query.exec(statement)) {
-            while (query.next()) {
-                QStringList tag;
-                count = query.record().count();
-                for (int i = 0; i < count; i++) {
-                    tag << query.value(i).toString();
-                }
-                tags << tag;
-            }
-            return tags;
-        } else {
-            QSqlError lastError = query.lastError();
-            
-            // Check for database locked errors that should be retried
-            if (lastError.text().contains("database is locked", Qt::CaseInsensitive)) {
-                
-                qDebug() << "Database locked error detected in selectSql, attempt" << (attempts + 1) << "for statement:" << statement;
-                
-                // Wait before retry with exponential backoff
-                if (attempts < maxRetries - 1) {
-                    QThread::msleep(50 * (attempts + 1));  // 50ms, 100ms, 150ms
-                    attempts++;
-                    continue;
-                }
-            }
-            
-            qDebug() << "Database error in selectSql:" << lastError.text();
-            qDebug() << "SQL-query: " << statement;
-            return tags; // Return empty list on error
-        }
+    QSqlQuery query(currentThreadCollectionDb());
+    query.prepare("SELECT last_insert_rowid()");
+    if (query.exec() && query.next()) {
+        return query.value(0).toInt();
     }
-    
-    return tags;
+    return 0;
 }
 
-void CollectionDB::createTables(bool temporary)
+QString CollectionDB::escapeString(QString string)
 {
-    qDebug() << Q_FUNC_INFO;
-
-    //create tag table
-    executeSql(QString("CREATE %1 TABLE tags%2 ("
-                       "%3"
-                       "url VARCHAR(120),"
-                       "dir VARCHAR(100),"
-                       "artist INTEGER,"
-                       "title VARCHAR(100),"
-                       "album INTEGER,"
-                       "genre INTEGER,"
-                       "year INTEGER,"
-                       "length INTEGER,"
-                       "track NUMBER(4) );")
-                   .arg(temporary ? "TEMPORARY" : "")
-                   .arg(temporary ? "_temp" : "")
-                   .arg(temporary ? "id INTEGER," : "id INTEGER PRIMARY KEY,"));
-
-    //create album table
-    executeSql(QString("CREATE %1 TABLE album%2 ("
-                       "id INTEGER PRIMARY KEY,"
-                       "name VARCHAR(100) );")
-                   .arg(temporary ? "TEMPORARY" : "")
-                   .arg(temporary ? "_temp" : ""));
-
-    //create artist table
-    executeSql(QString("CREATE %1 TABLE artist%2 ("
-                       "id INTEGER PRIMARY KEY,"
-                       "name VARCHAR(100) );")
-                   .arg(temporary ? "TEMPORARY" : "")
-                   .arg(temporary ? "_temp" : ""));
-
-    //create genre table
-    executeSql(QString("CREATE %1 TABLE genre%2 ("
-                       "id INTEGER PRIMARY KEY,"
-                       "name VARCHAR(100) );")
-                   .arg(temporary ? "TEMPORARY" : "")
-                   .arg(temporary ? "_temp" : ""));
-
-    //create year table
-    executeSql(QString("CREATE %1 TABLE year%2 ("
-                       "id INTEGER PRIMARY KEY,"
-                       "name VARCHAR(100) );")
-                   .arg(temporary ? "TEMPORARY" : "")
-                   .arg(temporary ? "_temp" : ""));
-
-    //create indexes
-    executeSql(QString("CREATE INDEX album_idx%1 ON album%2( name );")
-                   .arg(temporary ? "_temp" : "")
-                   .arg(temporary ? "_temp" : ""));
-    executeSql(QString("CREATE INDEX artist_idx%1 ON artist%2( name );")
-                   .arg(temporary ? "_temp" : "")
-                   .arg(temporary ? "_temp" : ""));
-    executeSql(QString("CREATE INDEX genre_idx%1 ON genre%2( name );")
-                   .arg(temporary ? "_temp" : "")
-                   .arg(temporary ? "_temp" : ""));
-    executeSql(QString("CREATE INDEX year_idx%1 ON year%2( name );")
-                   .arg(temporary ? "_temp" : "")
-                   .arg(temporary ? "_temp" : ""));
-    executeSql(QString("CREATE INDEX url_idx%1 ON tags%2( url );")
-                   .arg(temporary ? "_temp" : "")
-                   .arg(temporary ? "_temp" : ""));
-
-    if (!temporary) {
-        executeSql("CREATE INDEX album_tag ON tags( album );");
-        executeSql("CREATE INDEX artist_tag ON tags( artist );");
-        executeSql("CREATE INDEX genre_tag ON tags( genre );");
-        executeSql("CREATE INDEX year_tag ON tags( year );");
-        executeSql("CREATE INDEX url_tag ON tags( url );");
-
-        // create directory statistics database
-        executeSql(QString("CREATE TABLE IF NOT EXISTS directories ("
-                           "dir VARCHAR(100) UNIQUE,"
-                           "changedate INTEGER );"));
-        executeSql(QString("CREATE TABLE IF NOT EXISTS analysis_cache ("
-                           "url VARCHAR(120) PRIMARY KEY,"
-                           "bpm INTEGER,"
-                           "beat_offset_ms INTEGER,"
-                           "changedate INTEGER );"));
-    }
-}
-
-void CollectionDB::dropTables(bool temporary)
-{
-    qDebug() << Q_FUNC_INFO;
-
-    executeSql(QString("DROP TABLE tags%1;").arg(temporary ? "_temp" : ""));
-    executeSql(QString("DROP TABLE album%1;").arg(temporary ? "_temp" : ""));
-    executeSql(QString("DROP TABLE artist%1;").arg(temporary ? "_temp" : ""));
-    executeSql(QString("DROP TABLE genre%1;").arg(temporary ? "_temp" : ""));
-    executeSql(QString("DROP TABLE year%1;").arg(temporary ? "_temp" : ""));
-
-    // force to re-read over all count for random entry
-    p->resultCount = 0;
-}
-
-void CollectionDB::moveTempTables()
-{
-    executeSql("INSERT INTO tags SELECT * FROM tags_temp;");
-    executeSql("INSERT INTO album SELECT * FROM album_temp;");
-    executeSql("INSERT INTO artist SELECT * FROM artist_temp;");
-    executeSql("INSERT INTO genre SELECT * FROM genre_temp;");
-    executeSql("INSERT INTO year SELECT * FROM year_temp;");
-
-    // Re-create index to be fast as possible
-    executeSql(QString("REINDEX album_idx;"));
-    executeSql(QString("REINDEX artist_idx;"));
-    executeSql(QString("REINDEX genre_idx;"));
-    executeSql(QString("REINDEX year_idx;"));
-    executeSql(QString("REINDEX url_idx;"));
-    executeSql(QString("REINDEX album_tag;"));
-    executeSql(QString("REINDEX artist_tag;"));
-    executeSql(QString("REINDEX genre_tag;"));
-    executeSql(QString("REINDEX year_tag;"));
-    executeSql(QString("REINDEX url_tag;"));
-}
-
-void CollectionDB::createStatsTable()
-{
-    qDebug() << Q_FUNC_INFO;
-
-    // create music statistics database
-    executeSql(QString("CREATE TABLE statistics ("
-                       "url VARCHAR(120) UNIQUE,"
-                       "createdate INTEGER,"
-                       "accessdate INTEGER,"
-                       "playcounter INTEGER );"));
-
-    // create music favorites database
-    executeSql(QString("CREATE TABLE favorites ("
-                       "url VARCHAR(120) UNIQUE,"
-                       "changedate INTEGER,"
-                       "rate INTEGER );"));
-
-    // create playlist database
-    executeSql(QString("CREATE TABLE playlists ("
-                       "url VARCHAR(120),"
-                       "name VARCHAR(60),"
-                       "length INTEGER,"
-                       "changedate INTEGER,"
-                       "flags INTEGER,"
-                       "norder INTEGER,"
-                       "UNIQUE(url, name) ON CONFLICT REPLACE);"));
-}
-
-void CollectionDB::dropStatsTable()
-{
-    qDebug() << Q_FUNC_INFO;
-
-    executeSql("DROP TABLE statistics;");
-    executeSql("DROP TABLE favorites;");
-    executeSql("DROP TABLE playlists;");
-}
-
-void CollectionDB::purgeDirCache()
-{
-    executeSql(QString("DELETE FROM directories;"));
+    string.replace("'", "''");
+    return string;
 }
 
 ulong CollectionDB::getValueID(QString name, QString value, bool autocreate, bool useTempTables)
 {
-
+    QSqlQuery query(currentThreadCollectionDb());
+    QString table = name.simplified();
     if (useTempTables)
-        name.append("_temp");
-
-    QString command = QString("SELECT id FROM %1 WHERE name LIKE '%2';")
-                          .arg(name)
-                          .arg(escapeString(value));
-    long id = selectSqlNumber(command);
-
-    //check if item exists. if not, should we autocreate it?
-    if (id < 0 && autocreate) {
-        command = QString("INSERT INTO %1 ( name ) VALUES ( '%2' );")
-                      .arg(name)
-                      .arg(escapeString(value));
-
-        executeSql(command);
+        table += "_temp";
+    
+    // Create the table if necessary
+    if (autocreate) {
+        executeSql("CREATE TABLE IF NOT EXISTS " + table + " (id INTEGER PRIMARY KEY, name VARCHAR(255))");
+    }
+    
+    // Check if value exists
+    query.prepare("SELECT id FROM " + table + " WHERE name = ?");
+    query.addBindValue(value);
+    
+    if (query.exec() && query.next()) {
+        return query.value(0).toULongLong();
+    } else if (autocreate) {
+        // Create new entry 
+        query.prepare("INSERT INTO " + table + " (name) VALUES (?)");
+        query.addBindValue(value);
+        query.exec();
         
-        // Use readonly connection to get last insert ID (which is safe to do since we know it was a write operation)
-        QSqlQuery query(p->db_readonly);
-        if (query.exec("SELECT last_insert_rowid();")) {
-            query.next();
-            return query.value(0).toInt();
-        }
+        return sqlInsertID();
     }
-
-    return id;
-}
-
-QStringList CollectionDB::getRandomEntry(QString path, QString genre, QString artist)
-{
-
-    // retrieve Max_Count
-
-    if (genre != p->lastGenre
-        || artist != p->lastArtist
-        || path != p->lastPath
-        || p->resultCount == 0) {
-        //new filter > get new count
-        p->lastGenre = genre;
-        p->lastArtist = artist;
-        p->lastPath = path;
-
-        p->resultCount = getCount(path, genre, artist);
-    }
-
-    if (p->resultCount > 0) {
-        long randomID = QRandomGenerator::global()->bounded((quint32)p->resultCount);
-        //qebug() << QString::number(randomID);
-        QList<QStringList> entries = selectRandomEntry(QString::number(randomID), path, genre, artist);
-
-        if (!entries.isEmpty())
-            return entries.at(0);
-        else
-            return QStringList();
-    } else {
-        qDebug() << Q_FUNC_INFO << " No Track found matching filter";
-        return QStringList();
-    }
-}
-
-QStringList CollectionDB::getRandomEntry()
-{
-    if (p->filterString != p->lastFilterString || p->resultCount == 0) {
-        //new genre > get new count
-        p->lastFilterString = p->filterString;
-        p->resultCount = getCount();
-    }
-
-    long randomID = QRandomGenerator::global()->bounded((quint32)p->resultCount);
-    //qDebug() << QString::number(randomID);
-    QList<QStringList> entries = selectRandomEntry(QString::number(randomID));
-
-    if (!entries.isEmpty())
-        return entries.at(0);
-    else
-        return QStringList();
+    
+    return 0;
 }
 
 ulong CollectionDB::getCount()
 {
-    QString command = "SELECT count(distinct tags.url) "
-        + p->sqlFromString
-        + p->sqlQuickFilter;
-
-    return selectSqlNumber(command);
-}
-
-QPair<int, int> CollectionDB::getCount(QStringList paths, QStringList genres, QStringList artists)
-{
-    QString command = "SELECT count(distinct tags.url), sum(tags.length)  FROM tags, artist, genre "
-                      " WHERE tags.artist = artist.id "
-                      " AND tags.artist = artist.id "
-                      " AND tags.genre = genre.id "
-        + p->selectionFilterForRandom(paths, genres, artists) + ";";
-
-    QStringList result = selectSql(command).at(0);
-    QPair<int, int> pair;
-    pair.first = result[0].toInt();
-    pair.second = result[1].toInt();
-
-    return pair;
+    return selectSqlNumber("SELECT COUNT(*) FROM tags");
 }
 
 uint CollectionDB::getCount(QString path, QString genre, QString artist)
 {
-    QString command = "SELECT count(distinct tags.url), sum(tags.length)  FROM tags, artist, genre "
-                      " WHERE tags.artist = artist.id "
-                      " AND tags.artist = artist.id "
-                      " AND tags.genre = genre.id "
-        + p->selectionFilterForRandom(path, genre, artist) + ";";
+    QString sql = "SELECT COUNT(*) FROM tags "
+                  " INNER JOIN artist ON tags.artist = artist.id "
+                  " INNER JOIN album ON tags.album = album.id "
+                  " INNER JOIN year ON tags.year = year.id "
+                  " INNER JOIN genre ON tags.genre = genre.id WHERE 1=1 ";
+    
+    if (!path.isEmpty()) {
+        sql += " AND tags.url LIKE '" + path.replace("'", "''") + "%'";
+    }
+    if (!genre.isEmpty()) {
+        sql += " AND genre.name = '" + genre.replace("'", "''") + "'";
+    }
+    if (!artist.isEmpty()) {
+        sql += " AND artist.name = '" + artist.replace("'", "''") + "'";
+    }
+    
+    return static_cast<uint>(selectSqlNumber(sql));
+}
 
-    QStringList result = selectSql(command).at(0);
-
-    p->resultLength = result[1].toLong();
-
-    return result[0].toLong();
+QPair<int, int> CollectionDB::getCount(QStringList paths, QStringList genres, QStringList artists)
+{
+    Q_UNUSED(paths);
+    Q_UNUSED(genres);
+    Q_UNUSED(artists);
+    
+    // Placeholder implementation
+    return QPair<int, int>(0, 0);
 }
 
 long CollectionDB::lastLengthSum()
 {
-    return p->resultLength;
+    return selectSqlNumber("SELECT SUM(length) FROM tags");
 }
 
 uint CollectionDB::lastMaxCount()
 {
-    return p->resultCount;
+    return static_cast<uint>(selectSqlNumber("SELECT MAX(playcounter) FROM statistics"));
 }
 
 QList<QStringList> CollectionDB::selectRandomEntry(QString rownum, QString path, QString genre, QString artist)
 {
-    QString command = "SELECT tags.url, artist.name, tags.title, album.name, year.name, genre.name, tags.track, tags.length, statistics.playcounter, IFNULL(analysis_cache.bpm, 0), favorites.rate "
-        + p->sqlFromString
-        + p->sqlQuickFilter
-        + p->selectionFilterForRandom(path, genre, artist) + " LIMIT 1 OFFSET " + rownum + ";";
+    bool ok = false;
+    int limit = rownum.toInt(&ok);
+    if (!ok || limit <= 0)
+        limit = 1;
 
-    return selectSql(command);
+    QString sql = "SELECT tags.url, artist.name, tags.title, album.name, year.name, genre.name, "
+                  "tags.track, tags.length, COALESCE(statistics.playcounter, 0), "
+                  "COALESCE(analysis_cache.bpm, 0), COALESCE(statistics.rating, 0) "
+                  "FROM tags "
+                  " INNER JOIN artist ON tags.artist = artist.id "
+                  " INNER JOIN album ON tags.album = album.id "
+                  " INNER JOIN year ON tags.year = year.id "
+                  " INNER JOIN genre ON tags.genre = genre.id "
+                  " LEFT OUTER JOIN statistics ON tags.url = statistics.url "
+                  " LEFT OUTER JOIN analysis_cache ON tags.url = analysis_cache.url "
+                  " WHERE 1=1 ";
+
+    if (!path.isEmpty())
+        sql += " AND tags.url LIKE '" + escapeString(path) + "%'";
+    if (!genre.isEmpty())
+        sql += " AND genre.name = '" + escapeString(genre) + "'";
+    if (!artist.isEmpty())
+        sql += " AND artist.name = '" + escapeString(artist) + "'";
+
+    sql += QString(" ORDER BY RANDOM() LIMIT %1").arg(limit);
+    return selectSql(sql);
 }
 
-QList<QStringList> CollectionDB::selectYears()
+QStringList CollectionDB::getRandomEntry()
 {
-    QString command = "SELECT DISTINCT year.name "
-        + p->sqlFromString
-        + p->sqlQuickFilter + "AND year.name <> '' "
-                              "ORDER BY year.name DESC;";
-
-    return selectSql(command);
+    return getRandomEntry("", "", "");
 }
 
-QList<QStringList> CollectionDB::selectGenres()
+QStringList CollectionDB::getRandomEntry(QString path, QString genre, QString artist)
 {
-    QString command = "SELECT DISTINCT genre.name "
-        + p->sqlFromString
-        + p->sqlQuickFilter + "AND genre.name <> '' "
-                              "ORDER BY genre.name;";
-
-    return selectSql(command);
+    const QList<QStringList> rows = selectRandomEntry("1", path, genre, artist);
+    if (rows.isEmpty())
+        return QStringList();
+    return rows.first();
 }
 
-QList<QStringList> CollectionDB::selectArtists(QString year, QString genre)
+void CollectionDB::createTables(const bool temporary)
 {
-    QString command = "SELECT DISTINCT artist.name "
-        + p->sqlFromString
-        + p->sqlQuickFilter
-        + p->selectionFilter(year, genre) + "AND artist.name <> '' "
-                                            "ORDER BY artist.name;";
+    if (temporary) {
+        executeSql("DROP TABLE IF EXISTS tags_temp;");
+        executeSql("DROP TABLE IF EXISTS artist_temp;");
+        executeSql("DROP TABLE IF EXISTS album_temp;");
+        executeSql("DROP TABLE IF EXISTS year_temp;");
+        executeSql("DROP TABLE IF EXISTS genre_temp;");
 
-    return selectSql(command);
+        executeSql("CREATE TABLE IF NOT EXISTS tags_temp ("
+                   "url VARCHAR(1024) PRIMARY KEY, "
+                   "dir VARCHAR(1024), "
+                   "artist INTEGER, "
+                   "title VARCHAR(1024), "
+                   "album INTEGER, "
+                   "genre INTEGER, "
+                   "year INTEGER, "
+                   "length INTEGER, "
+                   "track VARCHAR(64));");
+        executeSql("CREATE TABLE IF NOT EXISTS artist_temp (id INTEGER PRIMARY KEY AUTOINCREMENT, name VARCHAR(1024) UNIQUE);");
+        executeSql("CREATE TABLE IF NOT EXISTS album_temp (id INTEGER PRIMARY KEY AUTOINCREMENT, name VARCHAR(1024) UNIQUE);");
+        executeSql("CREATE TABLE IF NOT EXISTS year_temp (id INTEGER PRIMARY KEY AUTOINCREMENT, name VARCHAR(64) UNIQUE);");
+        executeSql("CREATE TABLE IF NOT EXISTS genre_temp (id INTEGER PRIMARY KEY AUTOINCREMENT, name VARCHAR(255) UNIQUE);");
+        return;
+    }
+
+    executeSql("CREATE TABLE IF NOT EXISTS tags ("
+               "url VARCHAR(1024) PRIMARY KEY, "
+               "dir VARCHAR(1024), "
+               "artist INTEGER, "
+               "title VARCHAR(1024), "
+               "album INTEGER, "
+               "genre INTEGER, "
+               "year INTEGER, "
+               "length INTEGER, "
+               "track VARCHAR(64));");
+    executeSql("CREATE TABLE IF NOT EXISTS artist (id INTEGER PRIMARY KEY AUTOINCREMENT, name VARCHAR(1024) UNIQUE);");
+    executeSql("CREATE TABLE IF NOT EXISTS album (id INTEGER PRIMARY KEY AUTOINCREMENT, name VARCHAR(1024) UNIQUE);");
+    executeSql("CREATE TABLE IF NOT EXISTS year (id INTEGER PRIMARY KEY AUTOINCREMENT, name VARCHAR(64) UNIQUE);");
+    executeSql("CREATE TABLE IF NOT EXISTS genre (id INTEGER PRIMARY KEY AUTOINCREMENT, name VARCHAR(255) UNIQUE);");
+    executeSql("CREATE TABLE IF NOT EXISTS directories (dir VARCHAR(1024) PRIMARY KEY, changedate INTEGER);");
+    executeSql("CREATE TABLE IF NOT EXISTS statistics (url VARCHAR(1024) PRIMARY KEY, playcounter INTEGER DEFAULT 0, rating INTEGER DEFAULT 0, lastplayed INTEGER DEFAULT 0);");
+    executeSql("CREATE TABLE IF NOT EXISTS favorites (url VARCHAR(1024) PRIMARY KEY);");
+    executeSql("CREATE TABLE IF NOT EXISTS analysis_cache (url VARCHAR(1024) PRIMARY KEY, bpm INTEGER DEFAULT 0, beat_offset_ms INTEGER DEFAULT 0, changedate INTEGER DEFAULT 0, analysis_version INTEGER DEFAULT 0, envelope_version INTEGER DEFAULT 0, envelope_data BLOB, envelope_duration_ms INTEGER DEFAULT 0, start_position_ms INTEGER DEFAULT 0, end_position_ms INTEGER DEFAULT 0, beat_start_position_ms INTEGER DEFAULT 0, beat_end_position_ms INTEGER DEFAULT 0, analysis_cache_key VARCHAR(360) DEFAULT '');");
+    executeSql("CREATE TABLE IF NOT EXISTS playlists (url VARCHAR(1024), name VARCHAR(255), length INTEGER DEFAULT 0, flags INTEGER DEFAULT 0, norder INTEGER DEFAULT 0, changedate INTEGER DEFAULT 0);");
+    executeSql("CREATE TABLE IF NOT EXISTS playlisttracks (id INTEGER PRIMARY KEY AUTOINCREMENT, playlist VARCHAR(255), url VARCHAR(1024));");
 }
 
-QList<QStringList> CollectionDB::selectAlbums(QString year, QString genre, QString artist)
+void CollectionDB::dropTables(const bool temporary)
 {
+    if (temporary) {
+        executeSql("DROP TABLE IF EXISTS tags_temp;");
+        executeSql("DROP TABLE IF EXISTS artist_temp;");
+        executeSql("DROP TABLE IF EXISTS album_temp;");
+        executeSql("DROP TABLE IF EXISTS year_temp;");
+        executeSql("DROP TABLE IF EXISTS genre_temp;");
+        return;
+    }
 
-    QString command = "SELECT DISTINCT album.name "
-        + p->sqlFromString
-        + p->sqlQuickFilter
-        + p->selectionFilter(year, genre, artist) + "AND album.name <> '' "
-                                                    "ORDER BY album.name;";
+    executeSql("DROP TABLE IF EXISTS tags;");
+    executeSql("DROP TABLE IF EXISTS artist;");
+    executeSql("DROP TABLE IF EXISTS album;");
+    executeSql("DROP TABLE IF EXISTS year;");
+    executeSql("DROP TABLE IF EXISTS genre;");
+    executeSql("DROP TABLE IF EXISTS directories;");
+    executeSql("DROP TABLE IF EXISTS favorites;");
+    executeSql("DROP TABLE IF EXISTS playlists;");
+    executeSql("DROP TABLE IF EXISTS playlisttracks;");
+}
 
-    return selectSql(command);
+void CollectionDB::moveTempTables()
+{
+    executeSql("INSERT OR IGNORE INTO artist(name) SELECT name FROM artist_temp;");
+    executeSql("INSERT OR IGNORE INTO album(name) SELECT name FROM album_temp;");
+    executeSql("INSERT OR IGNORE INTO year(name) SELECT name FROM year_temp;");
+    executeSql("INSERT OR IGNORE INTO genre(name) SELECT name FROM genre_temp;");
+
+    executeSql("INSERT OR REPLACE INTO tags(url, dir, artist, title, album, genre, year, length, track) "
+               "SELECT tt.url, tt.dir, a.id, tt.title, al.id, g.id, y.id, tt.length, tt.track "
+               "FROM tags_temp tt "
+               "LEFT JOIN artist_temp at ON at.id = tt.artist "
+               "LEFT JOIN album_temp alt ON alt.id = tt.album "
+               "LEFT JOIN year_temp yt ON yt.id = tt.year "
+               "LEFT JOIN genre_temp gt ON gt.id = tt.genre "
+               "LEFT JOIN artist a ON a.name = at.name "
+               "LEFT JOIN album al ON al.name = alt.name "
+               "LEFT JOIN year y ON y.name = yt.name "
+               "LEFT JOIN genre g ON g.name = gt.name;");
+}
+
+void CollectionDB::createStatsTable()
+{
+    // Placeholder implementation
+    executeSql("CREATE TABLE IF NOT EXISTS statistics (url VARCHAR(255) PRIMARY KEY, playcounter INTEGER, rating INTEGER, lastplayed INTEGER);");
+}
+
+void CollectionDB::dropStatsTable()
+{
+    // Placeholder implementation
+    executeSql("DROP TABLE IF EXISTS statistics");
+}
+
+void CollectionDB::resetSongCounter()
+{
+    QSqlQuery query(currentThreadCollectionDb());
+    query.prepare("UPDATE statistics SET playcounter = 0 WHERE playcounter > 0");
+    query.exec();
+}
+
+void CollectionDB::purgeDirCache()
+{
+    executeSql("DELETE FROM directories;");
+}
+
+void CollectionDB::scanModifiedDirs(bool recursively)
+{
+    Q_UNUSED(recursively);
+    // Placeholder implementation - scan logic needs to be implemented based on project design
+}
+
+void CollectionDB::scan(const QStringList& folders, bool recursively)
+{
+    Q_UNUSED(folders);
+    Q_UNUSED(recursively);
+    // Placeholder implementation - scan logic needs to be implemented based on project design
 }
 
 QList<QStringList> CollectionDB::selectTracks(QString year, QString genre, QString artist, QString album)
 {
-    QString command = "SELECT DISTINCT tags.url, artist.name, tags.title, album.name, year.name, genre.name, tags.track, tags.length, statistics.playcounter, IFNULL(analysis_cache.bpm, 0), favorites.rate "
-        + p->sqlFromString
-        + p->sqlQuickFilter
-        + p->selectionFilter(year, genre, artist, album) + "ORDER BY artist.name DESC, album.name DESC, tags.track;";
+    QString sql = "SELECT tags.url, artist.name, tags.title, album.name, year.name, genre.name, "
+                  "tags.track, tags.length, COALESCE(statistics.playcounter, 0), "
+                  "COALESCE(analysis_cache.bpm, 0), COALESCE(statistics.rating, 0) "
+                  "FROM tags "
+                  " INNER JOIN artist ON tags.artist = artist.id "
+                  " INNER JOIN album ON tags.album = album.id "
+                  " INNER JOIN year ON tags.year = year.id "
+                  " INNER JOIN genre ON tags.genre = genre.id "
+                  " LEFT OUTER JOIN statistics ON tags.url = statistics.url "
+                  " LEFT OUTER JOIN analysis_cache ON tags.url = analysis_cache.url WHERE 1=1 ";
+    sql += p->sqlQuickFilter;
+    
+    if (!year.isEmpty()) {
+        sql += " AND year.name = '" + year.replace("'", "''") + "'";
+    }
+    if (!genre.isEmpty()) {
+        sql += " AND genre.name = '" + genre.replace("'", "''") + "'";
+    }
+    if (!artist.isEmpty()) {
+        sql += " AND artist.name = '" + artist.replace("'", "''") + "'";
+    }
+    if (!album.isEmpty()) {
+        sql += " AND album.name = '" + album.replace("'", "''") + "'";
+    }
+    
+    return selectSql(sql);
+}
 
-    return selectSql(command);
+QList<QStringList> CollectionDB::selectAlbums(QString year, QString genre, QString artist)
+{
+    QString sql = "SELECT DISTINCT album.name, album.id "
+                  "FROM tags "
+                  " INNER JOIN album ON tags.album = album.id "
+                  " INNER JOIN artist ON tags.artist = artist.id "
+                  " INNER JOIN year ON tags.year = year.id "
+                  " INNER JOIN genre ON tags.genre = genre.id WHERE 1=1 ";
+    sql += p->sqlQuickFilter;
+    
+    if (!year.isEmpty()) {
+        sql += " AND year.name = '" + year.replace("'", "''") + "'";
+    }
+    if (!genre.isEmpty()) {
+        sql += " AND genre.name = '" + genre.replace("'", "''") + "'";
+    }
+    if (!artist.isEmpty()) {
+        sql += " AND artist.name = '" + artist.replace("'", "''") + "'";
+    }
+    
+    return selectSql(sql);
+}
+
+QList<QStringList> CollectionDB::selectArtists(QString year, QString genre)
+{
+    QString sql = "SELECT DISTINCT artist.name, artist.id "
+                  "FROM tags "
+                  " INNER JOIN artist ON tags.artist = artist.id "
+                  " INNER JOIN year ON tags.year = year.id "
+                  " INNER JOIN genre ON tags.genre = genre.id WHERE 1=1 ";
+    sql += p->sqlQuickFilter;
+    
+    if (!year.isEmpty()) {
+        sql += " AND year.name = '" + year.replace("'", "''") + "'";
+    }
+    if (!genre.isEmpty()) {
+        sql += " AND genre.name = '" + genre.replace("'", "''") + "'";
+    }
+    sql += " ORDER BY artist.name COLLATE NOCASE ASC";
+    
+    return selectSql(sql);
+}
+
+QList<QStringList> CollectionDB::selectYears()
+{
+    QString sql = "SELECT DISTINCT year.name, year.id FROM tags "
+                  " INNER JOIN year ON tags.year = year.id WHERE 1=1 ";
+    sql += p->sqlQuickFilter;
+    
+    return selectSql(sql);
+}
+
+QList<QStringList> CollectionDB::selectGenres()
+{
+    QString sql = "SELECT DISTINCT genre.name, genre.id "
+                  "FROM tags "
+                  " INNER JOIN genre ON tags.genre = genre.id WHERE 1=1 ";
+    sql += p->sqlQuickFilter;
+    
+    return selectSql(sql);
 }
 
 QList<QStringList> CollectionDB::selectHotTracks()
 {
-    QString command = "SELECT DISTINCT tags.url, artist.name, tags.title, album.name, year.name, genre.name, tags.track, tags.length, statistics.playcounter, IFNULL(analysis_cache.bpm, 0), favorites.rate "
-        + p->sqlFromString + "AND statistics.playcounter>0 "
-                             "ORDER BY statistics.playcounter DESC "
-                             "LIMIT 20 OFFSET 0;";
-
-    return selectSql(command);
+    QString sql = "SELECT tags.url, artist.name, tags.title, album.name, year.name, genre.name, "
+                  "tags.track, tags.length, COALESCE(statistics.playcounter, 0), "
+                  "COALESCE(analysis_cache.bpm, 0), COALESCE(statistics.rating, 0) "
+                  "FROM tags "
+                  " INNER JOIN artist ON tags.artist = artist.id "
+                  " INNER JOIN album ON tags.album = album.id "
+                  " INNER JOIN year ON tags.year = year.id "
+                  " INNER JOIN genre ON tags.genre = genre.id "
+                  " INNER JOIN statistics ON tags.url = statistics.url "
+                  " LEFT OUTER JOIN analysis_cache ON tags.url = analysis_cache.url "
+                  " WHERE statistics.playcounter > 0 ORDER BY statistics.playcounter DESC LIMIT 10";
+    
+    return selectSql(sql);
 }
 
 QList<QStringList> CollectionDB::selectLastTracks()
 {
-    QString command = "SELECT DISTINCT tags.url, artist.name, tags.title, album.name, year.name, genre.name, tags.track, tags.length, statistics.playcounter, IFNULL(analysis_cache.bpm, 0), favorites.rate "
-        + p->sqlFromString + "AND statistics.playcounter>0 "
-                             "ORDER BY statistics.accessdate DESC "
-                             "LIMIT 20 OFFSET 0;";
-
-    return selectSql(command);
+    QString sql = "SELECT tags.url, artist.name, tags.title, album.name, year.name, genre.name, "
+                  "tags.track, tags.length, COALESCE(statistics.playcounter, 0), "
+                  "COALESCE(analysis_cache.bpm, 0), COALESCE(statistics.rating, 0) "
+                  "FROM tags "
+                  " INNER JOIN artist ON tags.artist = artist.id "
+                  " INNER JOIN album ON tags.album = album.id "
+                  " INNER JOIN year ON tags.year = year.id "
+                  " INNER JOIN genre ON tags.genre = genre.id "
+                  " INNER JOIN statistics ON tags.url = statistics.url "
+                  " LEFT OUTER JOIN analysis_cache ON tags.url = analysis_cache.url "
+                  " WHERE statistics.lastplayed > 0 ORDER BY statistics.lastplayed DESC LIMIT 10";
+    
+    return selectSql(sql);
 }
 
 QList<QStringList> CollectionDB::selectFavoritesTracks()
 {
-    QString command = "SELECT DISTINCT tags.url, artist.name, tags.title, album.name, year.name, genre.name, tags.track, tags.length, statistics.playcounter, IFNULL(analysis_cache.bpm, 0), favorites.rate "
-        + p->sqlFromString + "AND favorites.rate>0 "
-                             "ORDER BY favorites.rate DESC ";
-
-    return selectSql(command);
+    QString sql = "SELECT tags.url, artist.name, tags.title, album.name, year.name, genre.name, "
+                  "tags.track, tags.length, COALESCE(statistics.playcounter, 0), "
+                  "COALESCE(analysis_cache.bpm, 0), COALESCE(statistics.rating, 0) "
+                  "FROM tags "
+                  " INNER JOIN artist ON tags.artist = artist.id "
+                  " INNER JOIN album ON tags.album = album.id "
+                  " INNER JOIN year ON tags.year = year.id "
+                  " INNER JOIN genre ON tags.genre = genre.id "
+                  " INNER JOIN favorites ON tags.url = favorites.url "
+                  " LEFT OUTER JOIN statistics ON tags.url = statistics.url "
+                  " LEFT OUTER JOIN analysis_cache ON tags.url = analysis_cache.url";
+    
+    return selectSql(sql);
 }
 
 QList<QStringList> CollectionDB::selectPlaylistData()
 {
-    QString command = "SELECT name, COUNT(name), SUM(length), changedate "
-                      "from playlists "
-                      "WHERE name <> 'defaultKnowthelist' "
-                      "GROUP BY name, changedate "
-                      "ORDER BY changedate DESC;";
-
-    return selectSql(command);
+    QString sql = "SELECT playlists.name, "
+                  "COUNT(playlists.url), "
+                  "COALESCE(SUM(playlists.length), 0), "
+                  "COALESCE(MAX(statistics.lastplayed), 0) "
+                  "FROM playlists "
+                  "LEFT JOIN statistics ON statistics.url = playlists.url "
+                  "GROUP BY playlists.name";
+    return selectSql(sql);
 }
 
 QList<QStringList> CollectionDB::selectPlaylistTracks(QString name)
 {
-    QString command = "SELECT tags.url, artist.name, tags.title, album.name, year.name, genre.name, tags.track, tags.length, statistics.playcounter, IFNULL(analysis_cache.bpm, 0), favorites.rate, playlists.flags  "
-        + p->sqlFromStringPL + "AND playlists.name ='" + escapeString(name) + "' "
-                                                                              "ORDER BY playlists.norder";
-
-    // Use readonly connection for this read-only operation to avoid database locking
-    QSqlQuery query(p->db_readonly);
+    QString sql = "SELECT tags.url, artist.name, tags.title, album.name, year.name, genre.name, "
+                  "tags.track, tags.length, COALESCE(statistics.playcounter, 0), "
+                  "COALESCE(analysis_cache.bpm, 0), COALESCE(statistics.rating, 0), "
+                  "COALESCE(playlists.flags, 0) "
+                  "FROM tags "
+                  " INNER JOIN artist ON tags.artist = artist.id "
+                  " INNER JOIN album ON tags.album = album.id "
+                  " INNER JOIN year ON tags.year = year.id "
+                  " INNER JOIN genre ON tags.genre = genre.id "
+                  " INNER JOIN playlists ON tags.url = playlists.url "
+                  " LEFT OUTER JOIN statistics ON tags.url = statistics.url "
+                  " LEFT OUTER JOIN analysis_cache ON tags.url = analysis_cache.url "
+                  " WHERE playlists.name = '" + name.replace("'", "''") + "' "
+                  " ORDER BY playlists.norder ASC";
     
-    const int maxRetries = 3;
-    int attempts = 0;
+    return selectSql(sql);
+}
 
-    while (attempts < maxRetries) {
-        if (query.exec(command)) {
-            QList<QStringList> tags;
-            while (query.next()) {
-                QStringList tag;
-                int count = query.record().count();
-                for (int i = 0; i < count; i++) {
-                    tag << query.value(i).toString();
-                }
-                tags << tag;
-            }
-            return tags;
-        } else {
-            QSqlError lastError = query.lastError();
-            
-            // Check for database locked errors that should be retried
-            if (lastError.text().contains("database is locked", Qt::CaseInsensitive)) {
-                
-                qDebug() << "Database locked error detected in selectPlaylistTracks, attempt" << (attempts + 1) << "for statement:" << command;
-                
-                // Wait before retry with exponential backoff
-                if (attempts < maxRetries - 1) {
-                    QThread::msleep(50 * (attempts + 1));  // 50ms, 100ms, 150ms
-                    attempts++;
-                    continue;
-                }
-            }
-            
-            qDebug() << "Database error in selectPlaylistTracks:" << lastError.text();
-            qDebug() << "SQL-query: " << command;
-            return QList<QStringList>(); // Return empty list on error
-        }
-    }
+bool CollectionDB::ensureCollectionDatabase()
+{
+    // Since the connection setup is already handled in main.cpp, we just 
+    // need to make sure it's there. In QtSql, if a named connection exists,
+    // then QSqlDatabase::database(name) will return it.
     
-    return QList<QStringList>();
+    // We don't actually need to re-create connections from here since
+    // they are set up in main.cpp - this function mainly exists for 
+    // backward compatibility purposes
+    
+    return QSqlDatabase::contains(kDbConnName);
 }

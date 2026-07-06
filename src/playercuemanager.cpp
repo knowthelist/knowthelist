@@ -73,11 +73,11 @@ PlayerCueManager::CuePoints PlayerCueManager::computeCuePoints(CueMode mode) con
     if (mode == CUE_BEAT_OCCURRENCE || mode == CUE_SKIP_SILENT_OCCURRENCE) {
         // Use beatStartPosition() for beat-based modes.
         const QTime firstBeat = m_owner.trackanalyzer->beatStartPosition();
-        result.start = firstBeat.isValid() && firstBeat > QTime(0, 0)
+        const QTime firstEnergy = m_owner.trackanalyzer->startPosition();
+        result.start = (firstBeat.isValid() && firstBeat > QTime(0, 0)
+                        && (!firstEnergy.isValid() || firstEnergy <= QTime(0, 0) || firstBeat >= firstEnergy))
                            ? firstBeat
-                           : (m_owner.trackanalyzer->startPosition() > QTime(0, 0)
-                                      ? m_owner.trackanalyzer->startPosition()
-                                      : QTime(0, 0));
+                           : (firstEnergy > QTime(0, 0) ? firstEnergy : QTime(0, 0));
     } else {
         // CUE_SKIP_SILENT: skip the silent intro entirely → raw first active frame.
         result.start = m_owner.trackanalyzer->startPosition();
@@ -95,10 +95,16 @@ QTime PlayerCueManager::calculateCuePosition(CueMode mode) const
     // has not yet finished.
     if (mode == CUE_BEAT_OCCURRENCE || mode == CUE_SKIP_SILENT_OCCURRENCE) {
         if (m_owner.trackanalyzer && m_owner.trackanalyzer->finished()) {
-            QTime firstBeat = m_owner.trackanalyzer->beatStartPosition();
-            if (firstBeat.isValid() && firstBeat > QTime(0, 0)) {
+            const QTime firstBeat = m_owner.trackanalyzer->beatStartPosition();
+            const QTime firstEnergy = m_owner.trackanalyzer->startPosition();
+            if (firstBeat.isValid() && firstBeat > QTime(0, 0)
+                    && (!firstEnergy.isValid() || firstEnergy <= QTime(0, 0) || firstBeat >= firstEnergy)) {
                 qDebug() << Q_FUNC_INFO << "Using first beat position:" << firstBeat;
                 return firstBeat;
+            }
+            if (firstEnergy.isValid() && firstEnergy > QTime(0, 0)) {
+                qDebug() << Q_FUNC_INFO << "Ignoring invalid beatStartPosition, using first energy position:" << firstEnergy;
+                return firstEnergy;
             }
         }
         // analyzer not ready or no beat — fall back to first-significant-energy

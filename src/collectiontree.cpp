@@ -198,7 +198,7 @@ void CollectionTree::asynchronTriggerRandomSelection()
 
 void CollectionTree::on_currentItemChanged(QTreeWidgetItem* item)
 {
-    QFuture<void> future = QtConcurrent::run([this, item]() { asynchronCurrentItemChanged(item); });
+    asynchronCurrentItemChanged(item);
 }
 
 void CollectionTree::asynchronCurrentItemChanged(QTreeWidgetItem* item)

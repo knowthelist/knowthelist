@@ -283,7 +283,7 @@ void SettingsDialog::loadDjList(int count)
         p->ui.listDjNames->addItem(itm);
         djs = new DjSettings(p->ui.listDjNames);
         djs->setID(d + 1);
-        djs->setName(settings.value("Name", "Dj%1").toString().arg(d + 1));
+        djs->setName(settings.value("Name", QString("Dj%1").arg(d + 1)).toString());
         djs->setFilterCount(settings.value("FilterCount", "2").toInt());
         p->ui.listDjNames->setItemWidget(itm, djs);
         settings.endGroup();

@@ -418,15 +418,19 @@ void FancyTabBar::paintTab(QPainter *painter, int tabIndex) const
 
     const QFontMetrics fm = painter->fontMetrics();
     const int textHeight = fm.height();
-
-    // Icon: 24×24, centered horizontally, 4px from top
     const int iconSize = 24;
-    const int iconLeft = rect.left() + (rect.width() - iconSize) / 2;
-    const int iconTop = rect.top() + 4;
-    const QRect tabIconRect(iconLeft, iconTop, iconSize, iconSize);
+    const int iconTextSpacing = 4;
+    const int contentHeight = iconSize + iconTextSpacing + textHeight;
+    const int contentTop = rect.top() + qMax(2, (rect.height() - contentHeight) / 2);
 
-    // Text: full width, at the bottom, leaving 3px margin
-    const QRect tabTextRect(rect.left(), rect.bottom() - textHeight - 3, rect.width(), textHeight + 3);
+    const int iconLeft = rect.left() + (rect.width() - iconSize) / 2;
+    const QRect tabIconRect(iconLeft, contentTop, iconSize, iconSize);
+
+    const QRect tabTextRect(
+        rect.left() + 2,
+        tabIconRect.bottom() + 1 + iconTextSpacing,
+        rect.width() - 4,
+        textHeight);
 
     // Shadow text (slightly darker / lighter to create depth)
     painter->setPen(selected ? QColor(255, 255, 255, 160) : QColor(0, 0, 0, 110));
