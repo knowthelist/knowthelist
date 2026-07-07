@@ -17,6 +17,7 @@
 
 #include "knowthelist.h"
 
+#include <juce_events/juce_events.h>
 #include <QApplication>
 #include <QDateTime>
 #include <QFile>
@@ -79,6 +80,13 @@ int main(int argc, char* argv[])
         }
     }
     qInstallMessageHandler(messageHandler);
+
+    // Initialise JUCE's internal subsystems (MessageManager, timers, MIDI scanner,
+    // etc.) before any JUCE audio objects are created.  The destructor of this
+    // scoped object shuts everything down cleanly after a.exec() returns, which
+    // prevents the assertions in juce_MidiDeviceListConnectionBroadcaster,
+    // juce_Timer and juce_Singleton that were previously seen on shutdown.
+    juce::ScopedJuceInitialiser_GUI juceInit;
 
     QApplication a(argc, argv);
 

@@ -176,7 +176,7 @@ void Knowthelist::createUI()
     //Add player
     player1 = ui->player_L;
     player2 = ui->player_R;
-    monitorPlayer = new MonitorPlayer(this);
+    // monitorPlayer is created later in initMonitorPlayer()
 
     timerAutoFader = new QTimer(this);
     connect(timerAutoFader, SIGNAL(timeout()), SLOT(timerAutoFader_timerOut()));
