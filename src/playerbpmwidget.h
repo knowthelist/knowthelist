@@ -35,7 +35,7 @@ public:
     void setState(int bpm, const QTime& position, const QTime& beatReference, bool running, bool analyzed = true);
     void setState(int bpm, double exactBpm, const QTime& position, const QTime& beatReference, bool running, bool analyzed = true);
     void setExactBpm(double exactBpm);
-    void setTempoInfo(double tempoRate, bool syncAdjusting);
+    void setTempoInfo(double tempoRate, bool syncAdjusting, qint64 syncCompleted = 0);
     void appendEnvelopeSample(float value);
     void appendEnvelopeSampleAt(int positionMs, float value);
     void clearEnvelope();
@@ -68,6 +68,7 @@ private:
     bool m_analyzed;
     double m_tempoRate;
     bool m_syncAdjusting;
+    qint64 m_syncCompleted;  // Timestamp of last sync completion (0 if none)
     QVector<float> m_timelineEnvelope;
     QVector<quint8> m_timelineKnown;
     QVector<float> m_envelope;

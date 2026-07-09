@@ -93,6 +93,7 @@ PlayerWidget::PlayerWidget(QWidget* parent)
     , m_monitorRouteButton(nullptr)
     , m_pitchSlider(nullptr)
     , m_pitchResetButton(nullptr)
+    , m_syncButton(nullptr)
     , m_lastControlsPanelWidth(-1)
     , m_monitorRouteAvailable(false)
     , m_monitorRouteEnabled(false)
@@ -303,9 +304,9 @@ void PlayerWidget::setTempoRate(double rate)
         if (m_pitchResetButton) {
             const int v = m_pitchSlider->value();
             m_pitchResetButton->setText(
-                  v == 0 ? QStringLiteral("0.00%")
+                  v == 0 ? QStringLiteral("0.0%")
                        : QString("%1%2%").arg(v > 0 ? "+" : "")
-                                 .arg(v / 20.0, 0, 'f', 2));
+                                 .arg(v / 20.0, 0, 'f', 1));
         }
     }
 
@@ -617,7 +618,7 @@ void PlayerWidget::createPerformanceControls()
     m_pitchSlider->setToolTip(tr("Tempo fader +/-12 % (0.05 % per step). Arrow keys: fine adjust; click % to reset"));
     connect(m_pitchSlider, SIGNAL(valueChanged(int)), this, SLOT(on_pitchSlider_valueChanged(int)));
 
-    m_pitchResetButton = new QPushButton("0.00%", pitchFrame);
+    m_pitchResetButton = new QPushButton("0.0%", pitchFrame);
     m_pitchResetButton->setObjectName("butPitchReset");
     m_pitchResetButton->setToolTip(tr("Current tempo offset — click to reset to 0 %"));
     QFont smallFont = m_pitchResetButton->font();
@@ -625,15 +626,29 @@ void PlayerWidget::createPerformanceControls()
     m_pitchResetButton->setFont(smallFont);
     m_pitchResetButton->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
     const QFontMetrics pitchResetMetrics(m_pitchResetButton->font());
-    const int pitchResetWidth = pitchResetMetrics.horizontalAdvance(QStringLiteral("+12.00%")) + 14;
+    const int pitchResetWidth = pitchResetMetrics.horizontalAdvance(QStringLiteral("+12.0%")) + 14;
     m_pitchResetButton->setFixedWidth(pitchResetWidth);
     connect(m_pitchResetButton, &QPushButton::clicked, this, [this]() {
         if (m_pitchSlider)
             m_pitchSlider->setValue(0);
     });
 
+    // Sync button — minimal "S" button right of pitch reset
+    m_syncButton = new QPushButton("S", pitchFrame);
+    m_syncButton->setObjectName("butSync");
+    m_syncButton->setCheckable(true);
+    m_syncButton->setChecked(false);
+    m_syncButton->setToolTip(tr("Sync to master deck"));
+    m_syncButton->setFont(smallFont);
+    m_syncButton->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
+    const QFontMetrics syncMetrics(m_syncButton->font());
+    const int syncWidth = syncMetrics.horizontalAdvance(QStringLiteral("S")) + 8;
+    m_syncButton->setFixedWidth(syncWidth);
+    connect(m_syncButton, &QPushButton::toggled, this, &PlayerWidget::on_butSync_toggled);
+
     pitchLayout->addWidget(m_pitchSlider, 1);
     pitchLayout->addWidget(m_pitchResetButton);
+    pitchLayout->addWidget(m_syncButton);
     controls->addWidget(pitchFrame);
 }
 
@@ -1400,7 +1415,7 @@ void PlayerWidget::loadTrack(Track* track)
     // All cache reads/writes are centralized in Player::analyze().
     QSettings settings;
     const bool analyzeTempo = settings.value("beatSyncAnalyzeTempo", true).toBool();
-    if (m_beatSyncEnabled && analyzeTempo || m_skipSilentBegin || m_skipSilentEnd ||
+    if ((m_beatSyncEnabled && analyzeTempo) || m_skipSilentBegin || m_skipSilentEnd ||
         (m_beatVisualMode && !bpmWidget->isEnvelopePreloaded())) {
         qDebug() << Q_FUNC_INFO << "Starting TrackAnalyzer for:" << url;
         trackanalyzer->open(url);
@@ -1749,7 +1764,7 @@ double PlayerWidget::exactBpmForSync() const
 }
 
 void PlayerWidget::alignCueToReferenceBeat(double referenceBpm, const QTime& referencePosition,
-                                            const QTime& referenceBeatAnchor)
+                                            const QTime& referenceBeatAnchor, bool alignToBar)
 {
     const double ownBpm = normalizeSyncBpm(exactBpmForSync());
     const double refBpm = normalizeSyncBpm(referenceBpm);
@@ -1796,7 +1811,7 @@ void PlayerWidget::alignCueToReferenceBeat(double referenceBpm, const QTime& ref
 }
 
 void PlayerWidget::syncNowToReferenceBeat(double referenceBpm, const QTime& referencePosition,
-                                          const QTime& referenceBeatAnchor)
+                                          const QTime& referenceBeatAnchor, bool alignToBar)
 {
     // Works while playing: seeks to the nearest bar-aligned position that puts
     // this deck on the same beat-of-the-bar as the reference deck, so both
@@ -1852,10 +1867,16 @@ void PlayerWidget::on_butSync_toggled(bool checked)
 {
     updateSyncButtonState(checked);
     if (checked) {
+        m_syncAdopting = true;
         Q_EMIT syncRequested();
-    } else if (!m_syncAdopting && std::fabs(m_tempoRate - 1.0) >= 0.001) {
+    } else {
+        // When sync is turned off, clear all sync state to stop blinking
+        m_syncAdopting = false;
         setTempoRate(1.0);
     }
+    
+    // Emit custom signal for sync button changes
+    Q_EMIT syncButtonToggled(checked);
 }
 
 void PlayerWidget::on_monitorRoute_toggled(bool checked)
@@ -1881,9 +1902,9 @@ void PlayerWidget::on_pitchSlider_valueChanged(int value)
 
     if (m_pitchResetButton) {
         m_pitchResetButton->setText(
-            value == 0 ? QStringLiteral("0.00%")
+            value == 0 ? QStringLiteral("0.0%")
                        : QString("%1%2%").arg(value > 0 ? "+" : "")
-                                        .arg(value / 20.0, 0, 'f', 2));
+                                        .arg(value / 20.0, 0, 'f', 1));
     }
 
     if (std::fabs(m_tempoRate - 1.0) < 0.001 && !m_syncAdopting)

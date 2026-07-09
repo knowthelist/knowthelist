@@ -82,6 +82,7 @@ private Q_SLOTS:
     void player2_tempoChanged(int bpm, QTime beatPosition);
     void player1_syncRequested();
     void player2_syncRequested();
+    void on_playerSyncButtonToggled(bool checked);
     void player1_monitorRouteToggled(bool enabled);
     void player2_monitorRouteToggled(bool enabled);
     void playlist1_currentTrackChanged(Track* track);
@@ -116,6 +117,10 @@ private Q_SLOTS:
     void on_sliMonitor_actionTriggered(int action);
 
     void on_sliMonitorVolume_valueChanged(int value);
+
+    // New methods to handle synchronized beat sync
+    void setPlayer1BeatSyncEnabled(bool enabled);
+    void setPlayer2BeatSyncEnabled(bool enabled);
 
 private:
     enum FadeSyncPhase {

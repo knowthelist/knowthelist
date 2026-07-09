@@ -59,6 +59,12 @@ class PlayerWidget;
 
 class PlayerWidget : public QWidget {
     Q_OBJECT
+
+public slots:
+    void on_butSync_toggled(bool checked);
+
+signals:
+    void syncButtonToggled(bool checked);
 public:
     explicit PlayerWidget(QWidget* parent = 0);
     ~PlayerWidget();
@@ -92,9 +98,11 @@ public:
     void setSyncAdopting(bool active);
     bool supportsSmoothTempo() const;
     void syncNowToReferenceBeat(double referenceBpm, const QTime& referencePosition,
-                                const QTime& referenceBeatAnchor = QTime());
+                                const QTime& referenceBeatAnchor = QTime(),
+                                bool alignToBar = true);
     void alignCueToReferenceBeat(double referenceBpm, const QTime& referencePosition,
-                                   const QTime& referenceBeatAnchor = QTime());
+                                   const QTime& referenceBeatAnchor = QTime(), bool alignToBar = true);
+    QPushButton* getSyncButton() { return m_syncButton; }
     void setBeatSyncEnabled(bool enabled) { m_beatSyncEnabled = enabled; }
     void setBeatCueEnabled(bool enabled) { m_beatCueEnabled = enabled; }
     void setBeatVisualMode(bool enabled);
@@ -143,7 +151,6 @@ Q_SIGNALS:
     void monitorRouteToggled(bool enabled);
 
 private Q_SLOTS:
-
     void on_butCue_clicked();
     void on_sliPosition_actionTriggered(int action);
     void updateTimeAndPositionDisplay(bool isPassive = true);
@@ -162,7 +169,6 @@ private Q_SLOTS:
     void on_butPlay_clicked();
     void on_butRew_clicked();
     void on_butFwd_clicked();
-    void on_butSync_toggled(bool checked);
     void on_monitorRoute_toggled(bool checked);
     void on_pitchSlider_valueChanged(int value);
 
@@ -259,6 +265,7 @@ protected:
     QPushButton* m_monitorRouteButton;
     QSlider*     m_pitchSlider;
     QPushButton* m_pitchResetButton;
+    QPushButton* m_syncButton;
     int m_lastControlsPanelWidth;
     QString m_monitorOutputDeviceId;
     bool m_monitorRouteAvailable;

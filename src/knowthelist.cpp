@@ -532,6 +532,22 @@ void Knowthelist::loadStartSettings()
     ui->sliMonitorVolume->setValue(settings.value("VolumeMonitor", 70).toInt());
 }
 
+void Knowthelist::setPlayer1BeatSyncEnabled(bool enabled)
+{
+    player1->setBeatSyncEnabled(enabled);
+    if (enabled) {
+        player2->setBeatSyncEnabled(false);
+    }
+}
+
+void Knowthelist::setPlayer2BeatSyncEnabled(bool enabled)
+{
+    player2->setBeatSyncEnabled(enabled);
+    if (enabled) {
+        player1->setBeatSyncEnabled(false);
+    }
+}
+
 void Knowthelist::loadCurrentSettings()
 {
     QSettings settings;
@@ -808,21 +824,35 @@ void Knowthelist::player2_tempoChanged(int bpm, QTime beatPosition)
 
 void Knowthelist::player1_syncRequested()
 {
+    // If player2 is already sync active, turn it off
+    if (player2->getSyncButton()->isChecked()) {
+        // Turn off player2's sync by toggling the sync button
+        player2->getSyncButton()->setChecked(false);
+    }
+
     // SYNC pressed on deck A: snap deck A's beat phase to deck B (the master).
     if (m_Player2Bpm <= 0 || !player2->isStarted()) {
         player1->setSyncActive(false);
         return;
     }
+    
     player1->syncNowToReferenceBeat(m_Player2Bpm, player2->currentPosition(), m_Player2BeatPosition);
 }
 
 void Knowthelist::player2_syncRequested()
-{
+{    
+    // If player1 is already sync active, turn it off
+    if (player1->getSyncButton()->isChecked()) {
+        // Turn off player1's sync by toggling the sync button
+        player1->getSyncButton()->setChecked(false);
+    }
+
     // SYNC pressed on deck B: snap deck B's beat phase to deck A (the master).
     if (m_Player1Bpm <= 0 || !player1->isStarted()) {
         player2->setSyncActive(false);
         return;
     }
+    
     player2->syncNowToReferenceBeat(m_Player1Bpm, player1->currentPosition(), m_Player1BeatPosition);
 }
 
@@ -830,6 +860,24 @@ void Knowthelist::player_aboutTrackFinished()
 {
     if (ui->toggleAutoFade->isChecked())
         fadeNow();
+}
+
+void Knowthelist::on_playerSyncButtonToggled(bool checked)
+{
+    // Handle mutual exclusion between player sync buttons
+    // Only one player should be in sync mode at a time
+    QObject* sender = QObject::sender();
+    if (sender == player1) {
+        // If player1 sync is activated, deactivate player2 sync
+        if (checked && player2->getSyncButton()->isChecked()) {
+            player2->setSyncActive(false);
+        }
+    } else if (sender == player2) {
+        // If player2 sync is activated, deactivate player1 sync
+        if (checked && player1->getSyncButton()->isChecked()) {
+            player1->setSyncActive(false);
+        }
+    }
 }
 
 void Knowthelist::player1_trackFinished()

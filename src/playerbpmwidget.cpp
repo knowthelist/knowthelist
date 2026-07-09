@@ -261,10 +261,11 @@ void PlayerBpmWidget::setExactBpm(double exactBpm)
     }
 }
 
-void PlayerBpmWidget::setTempoInfo(double tempoRate, bool syncAdjusting)
+void PlayerBpmWidget::setTempoInfo(double tempoRate, bool syncAdjusting, qint64 syncCompleted)
 {
     m_tempoRate = tempoRate;
     m_syncAdjusting = syncAdjusting;
+    m_syncCompleted = syncCompleted;
     update();
 }
 
@@ -693,11 +694,21 @@ void PlayerBpmWidget::paintEvent(QPaintEvent* event)
     painter.setRenderHint(QPainter::Antialiasing, false); // off again
 
     // ── Sync dot ─────────────────────────────────────────────────────────────
-    if (m_syncAdjusting) {
-        const int blink = (QTime::currentTime().msecsSinceStartOfDay() / 300) % 2;
-        painter.setPen(QPen(QColor(255, 190, 64), 1.0));
-        painter.setBrush(blink == 0 ? QColor(255, 190, 64) : QColor(66, 78, 94));
-        painter.drawEllipse(QRect(outer.right() - 20, outer.top() + 6, 10, 10));
+    if (m_syncAdjusting || m_syncCompleted != 0) {
+        const qint64 now = QTime::currentTime().msecsSinceStartOfDay();
+        const int blink = (now / 300) % 2;
+        
+        // If sync completed recently, show solid color for 1 second
+        if (m_syncCompleted != 0 && (now - m_syncCompleted) < 1000) {
+            painter.setPen(QPen(QColor(255, 190, 64), 1.0));
+            painter.setBrush(QColor(255, 190, 64));
+            painter.drawEllipse(QRect(outer.right() - 20, outer.top() + 6, 10, 10));
+        } else if (m_syncAdjusting) {
+            // While adjusting, blink every 300ms
+            painter.setPen(QPen(QColor(255, 190, 64), 1.0));
+            painter.setBrush(blink == 0 ? QColor(255, 190, 64) : QColor(66, 78, 94));
+            painter.drawEllipse(QRect(outer.right() - 20, outer.top() + 6, 10, 10));
+        }
     }
 
     // ── Phase band ────────────────────────────────────────────────────────────
