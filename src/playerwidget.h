@@ -178,7 +178,7 @@ protected:
 
     long songTime;
 
-private:
+public:
     // ToDo: move privates to struct Private
     Ui::PlayerWidget* ui;
     QToolButton* initButton(QStyle::StandardPixmap icon, const QString& tip,
@@ -190,6 +190,7 @@ private:
     void drawTitle();
     void applyBeatVisualLayout(bool enabled);
     void updateSyncButtonState(bool active);
+    void resetSyncState();
     void updateResponsiveLayout();
     void enforcePanelSplit();
     void syncDisplayHeightToControls();

@@ -141,6 +141,7 @@ private:
     double autoFadeSharedTempoForStep(int step) const;
     void clearAutoFadeSyncState();
     void resetWaitingDeckTempoPreviews();
+    void resetAllDecksSyncState();
     void applyBeatVisualMode(bool enabled);
     void applyAutoSyncEnabled(bool enabled);
     void updatePlayerMonitorRouting();

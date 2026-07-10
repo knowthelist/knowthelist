@@ -1031,8 +1031,7 @@ void Knowthelist::applyAutoFadeSharedTempo(double sharedTempoBpm)
 {
     if (m_fadeSyncOutgoingPlayer && m_fadeSyncOutgoingBpm > 0)
         m_fadeSyncOutgoingPlayer->setTempoRate(sharedTempoBpm / static_cast<double>(m_fadeSyncOutgoingBpm));
-
-    if (m_fadeSyncPhase != FadeSyncPreRoll && m_fadeSyncIncomingPlayer && m_fadeSyncIncomingBpm > 0)
+    if (m_fadeSyncIncomingPlayer && m_fadeSyncIncomingBpm > 0)
         m_fadeSyncIncomingPlayer->setTempoRate(sharedTempoBpm / static_cast<double>(m_fadeSyncIncomingBpm));
 
     if (m_fadeSyncOutgoingPlayer)
@@ -1068,13 +1067,17 @@ void Knowthelist::clearAutoFadeSyncState()
 void Knowthelist::resetWaitingDeckTempoPreviews()
 {
     if (!player1->isStarted()) {
-        player1->setTempoRate(1.0);
-        player1->setSyncAdopting(false);
+        player1->resetSyncState();
     }
     if (!player2->isStarted()) {
-        player2->setTempoRate(1.0);
-        player2->setSyncAdopting(false);
+        player2->resetSyncState();
     }
+}
+
+void Knowthelist::resetAllDecksSyncState()
+{
+    player1->resetSyncState();
+    player2->resetSyncState();
 }
 
 void Knowthelist::applyBeatVisualMode(bool enabled)
@@ -1330,26 +1333,27 @@ void Knowthelist::timerAutoFader_timerOut()
         if (ui->toggleAutoDJ->isChecked())
             djSession->updatePlaylists();
 
-        resetWaitingDeckTempoPreviews();
+        resetAllDecksSyncState();
     }
     if (ui->sliFader->value() >= ui->sliFader->maximum()) {
         timerAutoFader->stop();
         isFading = false;
         ui->ledFadeRight->off();
-
+   
         if (player1->isStarted())
             player1->stop();
         playList1->skipForward();
         if (ui->toggleAutoDJ->isChecked())
             djSession->updatePlaylists();
 
-        resetWaitingDeckTempoPreviews();
+        resetAllDecksSyncState();
     }
     changeVolumes();
 }
 
 void Knowthelist::timerRateRestore_timeOut()
 {
+    qDebug() << Q_FUNC_INFO << "timerRateRestore_timeOut()";
     if (!m_rateRestorePlayer) {
         m_rateRestoreTimer->stop();
         return;

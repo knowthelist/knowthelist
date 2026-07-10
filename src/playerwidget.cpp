@@ -336,6 +336,14 @@ void PlayerWidget::updateSyncButtonState(bool active)
     Q_EMIT syncStateChanged(active);
 }
 
+void PlayerWidget::resetSyncState()
+{
+    // Reset sync state: turn off sync adopting and set tempo rate to 1.0
+    m_syncAdopting = false;
+    setTempoRate(1.0);
+    updateSyncButtonState(false);
+}
+
 bool PlayerWidget::supportsSmoothTempo() const
 {
     return player->supportsSmoothTempo();
