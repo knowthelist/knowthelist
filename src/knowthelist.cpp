@@ -1076,8 +1076,26 @@ void Knowthelist::resetWaitingDeckTempoPreviews()
 
 void Knowthelist::resetAllDecksSyncState()
 {
-    player1->resetSyncState();
-    player2->resetSyncState();
+    // Use timer-based gradual tempo restoration instead of immediate tempo change
+    // to provide smoother listening experience during sync resets
+    
+    // For player1 - set up for gradual tempo restoration if player is running
+    if (player1 && player1->isStarted()) {
+        m_rateRestorePlayer = player1;
+        m_rateRestoreTimer->start();
+    } else if (player1) {
+        // Player not started, reset immediately 
+        player1->resetSyncState();
+    }
+    
+    // For player2 - set up for gradual tempo restoration if player is running
+    if (player2 && player2->isStarted()) {
+        m_rateRestorePlayer = player2;
+        m_rateRestoreTimer->start();
+    } else if (player2) {
+        // Player not started, reset immediately
+        player2->resetSyncState();
+    }
 }
 
 void Knowthelist::applyBeatVisualMode(bool enabled)
@@ -1372,6 +1390,8 @@ void Knowthelist::timerRateRestore_timeOut()
     if (delta <= step) {
         m_rateRestorePlayer->setTempoRate(1.0);
         m_rateRestoreTimer->stop();
+        // Reset the sync state after successful tempo restoration to properly turn off UI elements
+        m_rateRestorePlayer->resetSyncState();
         m_rateRestorePlayer = nullptr;
     } else {
         m_rateRestorePlayer->setTempoRate(current + (current < 1.0 ? step : -step));
