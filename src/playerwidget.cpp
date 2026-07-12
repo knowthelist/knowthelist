@@ -316,11 +316,13 @@ void PlayerWidget::setTempoRate(double rate)
 
 void PlayerWidget::setSyncActive(bool active)
 {
+    qDebug() << Q_FUNC_INFO << "Setting sync active to" << active;
     updateSyncButtonState(active);
 }
 
 void PlayerWidget::setSyncAdopting(bool active)
-{
+{   
+    qDebug() << Q_FUNC_INFO << "Setting sync adopting to" << active;
     m_syncAdopting = active;
     bpmWidget->setTempoInfo(m_tempoRate, m_syncAdopting);
 }
@@ -734,6 +736,8 @@ void PlayerWidget::onBeatJumpButtonClicked()
     if (beats == 0)
         return;
     jumpByBeats(beats);
+    
+    Q_EMIT syncRequested();
 }
 
 void PlayerWidget::onEnvelopeScrubStarted()
@@ -1052,7 +1056,6 @@ void PlayerWidget::pause()
     m_isStarted = false;
     m_pendingPlay = false;
     player->pause();
-    m_syncAdopting = false;
     timerLevel->stop();
     timerPosition->stop();
     timerVisual->stop();
@@ -1093,8 +1096,14 @@ void PlayerWidget::on_butPlay_clicked()
 {
     if (m_isStarted) {
         this->pause();
+        // When pausing with sync adopting active, we don't completely reset
+        // to maintain the timing relationship. The sync will resume properly.
     } else {
         this->play();
+        // When resuming from pause with sync adopting active, ensure it re-initializes properly
+        if (m_syncAdopting) {
+            Q_EMIT syncRequested();
+        }
     }
 }
 
@@ -1641,11 +1650,15 @@ void PlayerWidget::on_butRew_clicked()
         suppressAboutFinishForMs(1000);
         player->setPosition(QTime(0, 0, 0));
     }
+    
+    Q_EMIT syncRequested();
 }
 
 void PlayerWidget::on_butFwd_clicked()
 {
     Q_EMIT forwardPressed();
+    
+    Q_EMIT syncRequested();
 }
 
 void PlayerWidget::setTrackFinishEmitTime(const int sec)
@@ -1686,6 +1699,8 @@ void PlayerWidget::on_sliPosition_sliderMoved(int value)
     ui->lblTimeRemain->setText("-" + QTime(0, 0).addMSecs(remainMs).toString("mm:ss"));
     ui->lblTimeRemainMs->setText("." + QTime(0, 0).addMSecs(remainMs).toString("zzz").left(1));
     ui->butCue->setChecked(false);
+    
+    Q_EMIT syncRequested();
 }
 
 void PlayerWidget::on_sliPosition_actionTriggered(int action)
@@ -1883,6 +1898,8 @@ void PlayerWidget::on_butSync_toggled(bool checked)
         setTempoRate(1.0);
     }
     
+    // set player audio delay
+    player->setDelayCompensation(checked ? player->outputLatencyMs() * 1.5 : 0);
     // Emit custom signal for sync button changes
     Q_EMIT syncButtonToggled(checked);
 }

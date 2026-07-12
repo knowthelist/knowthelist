@@ -21,6 +21,7 @@
 #include <QtCore>
 #include <memory>
 
+#include "juce_audio_backend.h"
 class JuceAudioBackend;
 
 class Player : public QWidget {
@@ -51,6 +52,10 @@ public:
     bool useMonitorOutput() const;
     void setMonitorVolume(double v);
     int outputLatencyMs() const;
+    void setDelayCompensation(int milliseconds) {
+        audioBackend->setInterPlayerDelayCompensation(milliseconds);
+        qDebug() << Q_FUNC_INFO << "Set inter-player delay compensation to" << milliseconds << "ms, backend value now:" << audioBackend->getInterPlayerDelayCompensation()<< " outputLatencyMs: "  << audioBackend->outputLatencyMs(); 
+    }
 
     QTime length();
     bool isPlaying();

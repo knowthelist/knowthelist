@@ -77,7 +77,6 @@ CollectionTree::~CollectionTree()
 
 void CollectionTree::createTrunk()
 {
-    //qDebug() << Q_FUNC_INFO;
     CollectionTreeItem* item = nullptr;
 
     clear();
@@ -130,7 +129,6 @@ void CollectionTree::createTrunk()
 
 void CollectionTree::on_itemExpanded(QTreeWidgetItem* item)
 {
-    qDebug() << Q_FUNC_INFO ;
     if (!item)
         return;
 

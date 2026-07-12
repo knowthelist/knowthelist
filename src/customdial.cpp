@@ -25,8 +25,6 @@
 CustomDial::CustomDial(QWidget* parent)
     : QDial(parent)
 {
-    qDebug() << Q_FUNC_INFO << "START";
-    // Defaults
     QDial::setRange(0, 360);
 }
 

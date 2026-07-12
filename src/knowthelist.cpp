@@ -840,7 +840,7 @@ void Knowthelist::player1_syncRequested()
 }
 
 void Knowthelist::player2_syncRequested()
-{    
+{
     // If player1 is already sync active, turn it off
     if (player1->getSyncButton()->isChecked()) {
         // Turn off player1's sync by toggling the sync button

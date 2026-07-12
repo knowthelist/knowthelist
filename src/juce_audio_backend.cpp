@@ -130,7 +130,21 @@ public:
     {
         targetRate.store(juce::jlimit(0.5, 2.0, ratio), std::memory_order_relaxed);
 #if !defined(KNOWTHELIST_HAVE_SOUNDTOUCH) || !KNOWTHELIST_HAVE_SOUNDTOUCH
-        resampler.setResamplingRatio(targetRate.load(std::memory_order_relaxed));
+        // For immediate tempo change without waiting for current buffer to flush,
+        // we need to immediately apply the rate change and flush buffers
+        double currentRate = targetRate.load(std::memory_order_relaxed);
+        
+        // Flush any currently buffered audio before changing the resampling ratio
+        resampler.flushBuffers();
+        
+        // Apply new rate immediately 
+        resampler.setResamplingRatio(currentRate);
+        
+        // Pre-fill the resampler with some audio data to eliminate initial latency
+        const int prefillSize = 2048; // Use larger buffer for better initialization
+        juce::AudioBuffer<float> prefillBuffer(2, prefillSize);
+        juce::AudioSourceChannelInfo info(&prefillBuffer);
+        resampler.getNextAudioBlock(info);
 #endif
     }
 
@@ -432,6 +446,16 @@ void JuceAudioBackend::seek(const QTime& position)
 {
     int ms = QTime(0, 0).msecsTo(position);
     double seconds = ms / 1000.0;
+    qDebug() << Q_FUNC_INFO << "Seeking to" << seconds << "seconds (from" << position.toString() << ")"<< "with inter-player delay compensation of" << m_interPlayerDelayCompensation << "ms";
+    
+    // Apply inter-player delay compensation when seeking
+    // This helps maintain synchronization between players by compensating
+    // for latency differences that could cause time gaps
+    if (m_interPlayerDelayCompensation != 0) {
+        seconds -= m_interPlayerDelayCompensation / 1000.0;
+        qDebug() << "Applying inter-player delay compensation of" << m_interPlayerDelayCompensation << "ms, adjusted seek position:" << seconds << "seconds";
+    }
+    
     transportSource->setPosition(seconds);
 }
 

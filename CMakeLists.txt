@@ -88,6 +88,14 @@ unset(_KTL_CACHE_ROOT)
 # Avoid large re-downloads on reconfigure and reduce clone size.
 set(FETCHCONTENT_UPDATES_DISCONNECTED ON)
 
+# Fix for parallel build issues with JUCE
+set(CMAKE_BUILD_PARALLEL_LEVEL 1)
+
+# Additional workaround for JUCE parallel compilation issues
+if(NOT DEFINED CMAKE_JOB_POOL_COMPILE)
+    set(CMAKE_JOB_POOL_COMPILE "compile")
+endif()
+
 # Try to find JUCE installed system-wide first
 find_package(JUCE QUIET CONFIG)
 

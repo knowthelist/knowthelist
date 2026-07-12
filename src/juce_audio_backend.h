@@ -75,6 +75,13 @@ public:
     // Monitor output level metering
     double getMonitorLevelLeft() const;
     double getMonitorLevelRight() const;
+    
+    // Added method for inter-player delay compensation
+    void setInterPlayerDelayCompensation(int delayMs) { m_interPlayerDelayCompensation = delayMs; }
+    int getInterPlayerDelayCompensation() const { return m_interPlayerDelayCompensation; }
+
+    // Inter-player delay compensation
+    int m_interPlayerDelayCompensation{0};
 
 private:
     // JUCE audio callback (main output)
