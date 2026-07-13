@@ -478,14 +478,12 @@ void JuceAudioBackend::seek(const QTime& position)
 {
     int ms = QTime(0, 0).msecsTo(position);
     double seconds = ms / 1000.0;
-    qDebug() << Q_FUNC_INFO << "Seeking to" << seconds << "seconds (from" << position.toString() << ")"<< "with inter-player delay compensation of" << m_interPlayerDelayCompensation << "ms";
-    
+
     // Apply inter-player delay compensation when seeking
     // This helps maintain synchronization between players by compensating
     // for latency differences that could cause time gaps
     if (m_interPlayerDelayCompensation != 0) {
         seconds -= m_interPlayerDelayCompensation / 1000.0;
-        qDebug() << "Applying inter-player delay compensation of" << m_interPlayerDelayCompensation << "ms, adjusted seek position:" << seconds << "seconds";
     }
     
     transportSource->setPosition(seconds);
@@ -691,10 +689,19 @@ int JuceAudioBackend::outputLatencyMs() const
     if (sr <= 0.0)
         return 0;
 
-    // Include device-reported output latency and one callback buffer of scheduling lead time.
-    const int latencySamples = qMax(0, device->getOutputLatencyInSamples())
-                             + qMax(0, device->getCurrentBufferSizeSamples());
-    return qMax(0, qRound(1000.0 * static_cast<double>(latencySamples) / sr));
+    const int deviceLatencySamples = qMax(0, device->getOutputLatencyInSamples());
+    const int callbackBufferSamples = qMax(0, device->getCurrentBufferSizeSamples());
+
+    // The transport position is advanced when a callback fills a block, while
+    // that block still has to pass through the device output queue. Account for
+    // the current block and the following scheduling block in addition to the
+    // latency reported by the driver. A half-block is the midpoint of the
+    // callback scheduling window: a seek can arrive anywhere within a block.
+    const int latencySamples = deviceLatencySamples
+                             + 2 * callbackBufferSamples
+                             + callbackBufferSamples / 2;
+    const int latencyMs = qMax(0, qRound(1000.0 * static_cast<double>(latencySamples) / sr));
+    return latencyMs;
 }
 
 QString JuceAudioBackend::getLastError()

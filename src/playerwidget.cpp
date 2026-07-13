@@ -319,9 +319,9 @@ void PlayerWidget::setSyncActive(bool active)
     qDebug() << Q_FUNC_INFO << "Setting sync active to" << active;
     setSyncAdopting(active);
 
-    // Keep transport compensation and tempo reset behavior identical no matter
-    // whether sync is changed by UI toggle or by controller logic.
-    player->setDelayCompensation(active ? player->outputLatencyMs() * 1.5 : 0);
+    // Keep tempo reset behavior identical no matter whether sync is changed by
+    // UI toggle or by controller logic. Latency compensation is configured by
+    // Knowthelist from both output paths.
     if (!active)
         setTempoRate(1.0);
 }
@@ -402,6 +402,16 @@ void PlayerWidget::setMonitorOutputDeviceId(const QString& deviceId)
 void PlayerWidget::setMonitorVolume(double v)
 {
     player->setMonitorVolume(v);
+}
+
+int PlayerWidget::outputLatencyMs() const
+{
+    return player->outputLatencyMs();
+}
+
+void PlayerWidget::setInterPlayerDelayCompensation(int milliseconds)
+{
+    player->setDelayCompensation(milliseconds);
 }
 
 void PlayerWidget::setMonitorRouteAvailable(bool available)
@@ -1904,8 +1914,6 @@ void PlayerWidget::on_butSync_toggled(bool checked)
         setTempoRate(1.0);
     }
     
-    // set player audio delay
-    player->setDelayCompensation(checked ? player->outputLatencyMs() * 1.5 : 0);
     // Emit custom signal for sync button changes
     Q_EMIT syncButtonToggled(checked);
 }

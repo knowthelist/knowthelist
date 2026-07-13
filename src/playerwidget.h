@@ -115,6 +115,8 @@ public:
     void setMonitorRouteEnabled(bool enabled);
     bool isMonitorRouteEnabled() const { return m_monitorRouteEnabled; }
     void setMonitorVolume(double v);
+    int outputLatencyMs() const;
+    void setInterPlayerDelayCompensation(int milliseconds);
     void setSkipSilentEnd(bool checked)
     {
         m_skipSilentEnd = checked;

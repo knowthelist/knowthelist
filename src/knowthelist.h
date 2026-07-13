@@ -139,9 +139,13 @@ private:
                            const QTime& outgoingBeatPosition);
     void applyAutoFadeSharedTempo(double sharedTempoBpm);
     double autoFadeSharedTempoForStep(int step) const;
+    void cancelAutoFadeAtCurrentPosition();
     void clearAutoFadeSyncState();
     void resetWaitingDeckTempoPreviews();
     void resetAllDecksSyncState();
+    void configureInterPlayerLatencyCompensation(PlayerWidget* target,
+                                                  PlayerWidget* reference,
+                                                  bool enabled);
     void applyBeatVisualMode(bool enabled);
     void applyAutoSyncEnabled(bool enabled);
     void updatePlayerMonitorRouting();

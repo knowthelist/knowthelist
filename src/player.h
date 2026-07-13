@@ -54,7 +54,6 @@ public:
     int outputLatencyMs() const;
     void setDelayCompensation(int milliseconds) {
         audioBackend->setInterPlayerDelayCompensation(milliseconds);
-        qDebug() << Q_FUNC_INFO << "Set inter-player delay compensation to" << milliseconds << "ms, backend value now:" << audioBackend->getInterPlayerDelayCompensation()<< " outputLatencyMs: "  << audioBackend->outputLatencyMs(); 
     }
 
     QTime length();

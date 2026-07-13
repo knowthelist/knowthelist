@@ -826,46 +826,30 @@ void Knowthelist::player2_tempoChanged(int bpm, QTime beatPosition)
 
 void Knowthelist::player1_syncRequested(bool adoptTempo)
 {
-    const bool player1SyncChecked = player1->getSyncButton() && player1->getSyncButton()->isChecked();
-    const bool player2SyncChecked = player2->getSyncButton() && player2->getSyncButton()->isChecked();
+    configureInterPlayerLatencyCompensation(player1, player2, true);
 
-    // If deck A is adopting, sync A to running deck B (classic slave request).
-    if (player1SyncChecked) {
-        if (m_Player2Bpm <= 0 || !player2->isStarted()) {
+    // The deck that performed the phase-changing action is always the deck
+    // that gets corrected. Sync-adopting ownership does not change this.
+    if (m_Player2Bpm <= 0 || (!player2->isStarted() && adoptTempo)) {
+        if (adoptTempo)
             player1->setSyncActive(false);
-            return;
-        }
-        player1->syncNowToReferenceBeat(m_Player2Bpm, player2->currentPosition(), m_Player2BeatPosition, true, adoptTempo);
         return;
     }
-
-    // Deck A is master-like here. If deck B is adopting, snap B to A after
-    // master seek/jump/play changes without altering sync button ownership.
-    if (player2SyncChecked && m_Player1Bpm > 0 && player1->isStarted()) {
-        player2->syncNowToReferenceBeat(m_Player1Bpm, player1->currentPosition(), m_Player1BeatPosition, true, false);
-    }
+    player1->syncNowToReferenceBeat(m_Player2Bpm, player2->currentPosition(), m_Player2BeatPosition, true, adoptTempo);
 }
 
 void Knowthelist::player2_syncRequested(bool adoptTempo)
 {
-    const bool player2SyncChecked = player2->getSyncButton() && player2->getSyncButton()->isChecked();
-    const bool player1SyncChecked = player1->getSyncButton() && player1->getSyncButton()->isChecked();
+    configureInterPlayerLatencyCompensation(player2, player1, true);
 
-    // If deck B is adopting, sync B to running deck A (classic slave request).
-    if (player2SyncChecked) {
-        if (m_Player1Bpm <= 0 || !player1->isStarted()) {
+    // The deck that performed the phase-changing action is always the deck
+    // that gets corrected. Sync-adopting ownership does not change this.
+    if (m_Player1Bpm <= 0 || (!player1->isStarted() && adoptTempo)) {
+        if (adoptTempo)
             player2->setSyncActive(false);
-            return;
-        }
-        player2->syncNowToReferenceBeat(m_Player1Bpm, player1->currentPosition(), m_Player1BeatPosition, true, adoptTempo);
         return;
     }
-
-    // Deck B is master-like here. If deck A is adopting, snap A to B after
-    // master seek/jump/play changes without altering sync button ownership.
-    if (player1SyncChecked && m_Player2Bpm > 0 && player2->isStarted()) {
-        player1->syncNowToReferenceBeat(m_Player2Bpm, player2->currentPosition(), m_Player2BeatPosition, true, false);
-    }
+    player2->syncNowToReferenceBeat(m_Player1Bpm, player1->currentPosition(), m_Player1BeatPosition, true, adoptTempo);
 }
 
 void Knowthelist::player_aboutTrackFinished()
@@ -880,16 +864,37 @@ void Knowthelist::on_playerSyncButtonToggled(bool checked)
     // Only one player should be in sync mode at a time
     QObject* sender = QObject::sender();
     if (sender == player1) {
+        configureInterPlayerLatencyCompensation(player1, player2, checked);
         // If player1 sync is activated, deactivate player2 sync
         if (checked && player2->getSyncButton()->isChecked()) {
             player2->setSyncActive(false);
         }
     } else if (sender == player2) {
+        configureInterPlayerLatencyCompensation(player2, player1, checked);
         // If player2 sync is activated, deactivate player1 sync
         if (checked && player1->getSyncButton()->isChecked()) {
             player1->setSyncActive(false);
         }
     }
+}
+
+void Knowthelist::configureInterPlayerLatencyCompensation(PlayerWidget* target,
+                                                           PlayerWidget* reference,
+                                                           bool enabled)
+{
+    if (!target || !reference)
+        return;
+
+    // The backend position is the source timeline, while audible output is
+    // delayed by the device path. Apply the measured absolute delay to both
+    // decks so every seek uses the same audible reference.
+    const int targetLatencyMs = target->outputLatencyMs();
+    const int referenceLatencyMs = reference->outputLatencyMs();
+    const int targetCompensationMs = enabled ? targetLatencyMs : 0;
+    const int referenceCompensationMs = enabled ? referenceLatencyMs : 0;
+
+    target->setInterPlayerDelayCompensation(targetCompensationMs);
+    reference->setInterPlayerDelayCompensation(referenceCompensationMs);
 }
 
 void Knowthelist::player1_trackFinished()
@@ -1076,6 +1081,31 @@ void Knowthelist::clearAutoFadeSyncState()
     m_fadeSyncBeatWaitSteps = 0;
 }
 
+void Knowthelist::cancelAutoFadeAtCurrentPosition()
+{
+    timerAutoFader->stop();
+    ui->ledFadeLeft->off();
+    ui->ledFadeRight->off();
+
+    const bool reachedLeft = ui->sliFader->value() <= ui->sliFader->minimum();
+    const bool reachedRight = ui->sliFader->value() >= ui->sliFader->maximum();
+
+    if (reachedLeft || reachedRight) {
+        PlayerWidget* finishedPlayer = reachedLeft ? player2 : player1;
+        Playlist* finishedPlaylist = reachedLeft ? playList2 : playList1;
+        if (finishedPlayer->isStarted())
+            finishedPlayer->stop();
+        finishedPlaylist->skipForward();
+        if (ui->toggleAutoDJ->isChecked())
+            djSession->updatePlaylists();
+    }
+
+    isFading = false;
+    clearAutoFadeSyncState();
+    resetWaitingDeckTempoPreviews();
+    resetAllDecksSyncState();
+}
+
 void Knowthelist::resetWaitingDeckTempoPreviews()
 {
     if (!player1->isStarted()) {
@@ -1204,6 +1234,9 @@ void Knowthelist::slider2_valueChanged(int)
 
 void Knowthelist::sliFader_valueChanged(int)
 {
+    if (isFading)
+        cancelAutoFadeAtCurrentPosition();
+
     changeVolumes();
     if (ui->sliFader->value() == ui->sliFader->minimum()) {
         playList1->setIsCurrentList(true);
