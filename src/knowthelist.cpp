@@ -54,30 +54,32 @@ bool nearBeatBoundary(const QTime& position, const QTime& beatReference, int bpm
     return distanceToBeat <= toleranceMs;
 }
 
-double beatPhaseDistanceMs(const QTime& lhsPos, const QTime& lhsBeatRef,
-                           const QTime& rhsPos, const QTime& rhsBeatRef,
-                           int bpm)
+double beatPhaseDistanceMs(const QTime& lhsPos, const QTime& lhsBeatRef, int lhsBpm,
+                           const QTime& rhsPos, const QTime& rhsBeatRef, int rhsBpm,
+                           int comparisonBpm)
 {
-    if (bpm <= 0)
+    if (lhsBpm <= 0 || rhsBpm <= 0 || comparisonBpm <= 0)
         return 0.0;
 
-    const double beatMs = 60000.0 / static_cast<double>(bpm);
-    if (beatMs <= 0.0)
+    const double lhsBeatMs = 60000.0 / static_cast<double>(lhsBpm);
+    const double rhsBeatMs = 60000.0 / static_cast<double>(rhsBpm);
+    const double comparisonBeatMs = 60000.0 / static_cast<double>(comparisonBpm);
+    if (lhsBeatMs <= 0.0 || rhsBeatMs <= 0.0 || comparisonBeatMs <= 0.0)
         return 0.0;
 
-    auto phaseFor = [beatMs](const QTime& pos, const QTime& beatRef) {
+    auto phaseFor = [](const QTime& pos, const QTime& beatRef, double beatMs) {
         const qint64 posMs = QTime(0, 0).msecsTo(pos);
         const qint64 beatRefMs = beatRef.isValid() ? QTime(0, 0).msecsTo(beatRef) : 0;
         double phaseMs = std::fmod(static_cast<double>(posMs - beatRefMs), beatMs);
         if (phaseMs < 0.0)
             phaseMs += beatMs;
-        return phaseMs;
+        return phaseMs / beatMs;
     };
 
-    const double lhsPhase = phaseFor(lhsPos, lhsBeatRef);
-    const double rhsPhase = phaseFor(rhsPos, rhsBeatRef);
+    const double lhsPhase = phaseFor(lhsPos, lhsBeatRef, lhsBeatMs);
+    const double rhsPhase = phaseFor(rhsPos, rhsBeatRef, rhsBeatMs);
     const double rawDelta = qAbs(lhsPhase - rhsPhase);
-    return qMin(rawDelta, beatMs - rawDelta);
+    return qMin(rawDelta, 1.0 - rawDelta) * comparisonBeatMs;
 }
 }
 
@@ -1257,22 +1259,19 @@ void Knowthelist::timerAutoFader_timerOut()
 
         if (m_fadeSyncStep >= m_fadeSyncPreRollSteps && m_fadeSyncIncomingPlayer) {
             const int sharedTempoBpm = qMax(1, qRound(autoFadeSharedTempoForStep(m_fadeSyncStep)));
-            m_fadeSyncIncomingPlayer->alignCueToReferenceBeat(sharedTempoBpm,
-                                                              m_fadeSyncOutgoingPlayer->currentPosition(),
-                                                              m_fadeSyncOutgoingBeatPosition);
             m_fadeSyncIncomingPlayer->setTempoRate(sharedTempoBpm / static_cast<double>(m_fadeSyncIncomingBpm));
 
-            const double beatMs = 60000.0 / static_cast<double>(sharedTempoBpm);
+            const double beatMs = 60000.0 / static_cast<double>(m_fadeSyncOutgoingBpm);
             const double toleranceMs = qMin(60.0, beatMs * 0.12);
             const bool onBeat = nearBeatBoundary(m_fadeSyncOutgoingPlayer->currentPosition(),
                                                  m_fadeSyncOutgoingBeatPosition,
-                                                 sharedTempoBpm,
+                                                 m_fadeSyncOutgoingBpm,
                                                  toleranceMs);
 
             if (onBeat || !m_fadeSyncWaitingBeatStart) {
                 if (!m_fadeSyncIncomingPlayer->isStarted())
                     m_fadeSyncIncomingPlayer->play();
-                m_fadeSyncIncomingPlayer->syncNowToReferenceBeat(sharedTempoBpm,
+                m_fadeSyncIncomingPlayer->syncNowToReferenceBeat(m_fadeSyncOutgoingBpm,
                                                                  m_fadeSyncOutgoingPlayer->currentPosition(),
                                                                  m_fadeSyncOutgoingBeatPosition);
                 m_fadeSyncPhase = FadeSyncCrossfade;
@@ -1301,11 +1300,13 @@ void Knowthelist::timerAutoFader_timerOut()
             const double toleranceMs = qMin(18.0, beatMs * 0.04);
             const double phaseDeltaMs = beatPhaseDistanceMs(m_fadeSyncIncomingPlayer->currentPosition(),
                                                             incomingBeatPosition,
+                                                            m_fadeSyncIncomingBpm,
                                                             m_fadeSyncOutgoingPlayer->currentPosition(),
                                                             m_fadeSyncOutgoingBeatPosition,
+                                                            m_fadeSyncOutgoingBpm,
                                                             sharedTempoBpm);
             if (phaseDeltaMs > toleranceMs) {
-                m_fadeSyncIncomingPlayer->syncNowToReferenceBeat(sharedTempoBpm,
+                m_fadeSyncIncomingPlayer->syncNowToReferenceBeat(m_fadeSyncOutgoingBpm,
                                                                  m_fadeSyncOutgoingPlayer->currentPosition(),
                                                                  m_fadeSyncOutgoingBeatPosition);
                 ++m_fadeSyncBeatWaitSteps;
