@@ -36,8 +36,9 @@ struct PlayerPrivate {
     QString error;
     int length = 0;
     int position = 0;
-    int playBasePosition = 0;
+        int playBasePosition = 0;
     QElapsedTimer playTimer;
+        QElapsedTimer seekTimer;
     double volume = 1.0;
     double rate = 1.0;
     double rms_l = 0.0;
@@ -222,15 +223,15 @@ void Player::setPosition(QTime position)
         return;
 
     int timeMs = QTime(0, 0).msecsTo(position);
-
-    if (kLogDebug)
-        qDebug() << Q_FUNC_INFO << "targetMs=" << timeMs << "isStarted=" << p->isStarted;
+    timeMs = qBound(0, timeMs, p->length > 0 ? p->length : timeMs);
+    position = QTime(0, 0).addMSecs(timeMs);
 
     audioBackend->seek(position);
 
     // Anchor position for timer-based fallback
     p->position = timeMs;
     p->playBasePosition = timeMs;
+    p->seekTimer.restart();
     if (p->playTimer.isValid())
         p->playTimer.restart();
 }
@@ -240,10 +241,16 @@ QTime Player::position()
     if (!audioBackend)
         return QTime(0, 0);
 
+    // While paused, the backend may not have published a seek to its source
+    // cursor yet. The Player state is authoritative until playback resumes.
+    if (!p->isStarted || (p->seekTimer.isValid() && p->seekTimer.elapsed() < 250))
+        return QTime(0, 0).addMSecs(p->position);
+
     // Always use backend clock so waveform cursor and heard audio stay aligned,
     // especially at non-1.0 tempo rates.
     QTime backendPos = audioBackend->getPosition();
     p->position = QTime(0, 0).msecsTo(backendPos);
+    p->position = qBound(0, p->position, p->length > 0 ? p->length : p->position);
 
     return QTime(0, 0).addMSecs(p->position);
 }

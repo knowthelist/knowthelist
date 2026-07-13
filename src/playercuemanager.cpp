@@ -99,11 +99,9 @@ QTime PlayerCueManager::calculateCuePosition(CueMode mode) const
             const QTime firstEnergy = m_owner.trackanalyzer->startPosition();
             if (firstBeat.isValid() && firstBeat > QTime(0, 0)
                     && (!firstEnergy.isValid() || firstEnergy <= QTime(0, 0) || firstBeat >= firstEnergy)) {
-                qDebug() << Q_FUNC_INFO << "Using first beat position:" << firstBeat;
                 return firstBeat;
             }
             if (firstEnergy.isValid() && firstEnergy > QTime(0, 0)) {
-                qDebug() << Q_FUNC_INFO << "Ignoring invalid beatStartPosition, using first energy position:" << firstEnergy;
                 return firstEnergy;
             }
         }

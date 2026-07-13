@@ -316,7 +316,6 @@ void PlayerWidget::setTempoRate(double rate)
 
 void PlayerWidget::setSyncActive(bool active)
 {
-    qDebug() << Q_FUNC_INFO << "Setting sync active to" << active;
     setSyncAdopting(active);
 
     // Keep tempo reset behavior identical no matter whether sync is changed by
@@ -328,7 +327,9 @@ void PlayerWidget::setSyncActive(bool active)
 
 void PlayerWidget::setSyncAdopting(bool active)
 {   
-    qDebug() << Q_FUNC_INFO << "Setting sync adopting to" << active;
+    if (m_syncAdopting == active)
+        return;
+
     m_syncAdopting = active;
     bpmWidget->setTempoInfo(m_tempoRate, m_syncAdopting);
     updateSyncButtonState(active);
@@ -1894,6 +1895,16 @@ void PlayerWidget::syncNowToReferenceBeat(double referenceBpm, const QTime& refe
     if (delta < -ownBarMs / 2.0) delta += ownBarMs;
 
     const qint64 newMs = qMax(anchorMs, currentMs + static_cast<qint64>(delta + 0.5));
+    const qint64 maxLocalCorrectionMs = qRound(ownBarMs / 2.0);
+    if (qAbs(newMs - currentMs) > maxLocalCorrectionMs) {
+        return;
+    }
+
+    const qint64 lengthMs = QTime(0, 0).msecsTo(player->length());
+    if (lengthMs > 0 && (newMs < 0 || newMs >= lengthMs)) {
+        return;
+    }
+
     player->setPosition(QTime(0, 0).addMSecs(static_cast<int>(newMs)));
     updateTimeAndPositionDisplay(false);
 
