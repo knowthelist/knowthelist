@@ -1741,7 +1741,9 @@ void Knowthelist::updatePlayerMonitorRouting()
     bool monitorAvailable = false;
 
     if (monitorPlayer && !monitorPlayer->isDisabled()) {
-        monitorDeviceId = monitorPlayer->outputDeviceID();
+        monitorDeviceId = monitorPlayer->outputDeviceName().trimmed();
+        if (monitorDeviceId.isEmpty())
+            monitorDeviceId = monitorPlayer->outputDeviceID().trimmed();
         monitorAvailable = !monitorDeviceId.isEmpty();
     }
 

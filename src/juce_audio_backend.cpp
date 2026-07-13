@@ -59,6 +59,38 @@ static QString coreAudioDeviceIdToName(const QString& deviceId)
 static QString coreAudioDeviceIdToName(const QString&) { return {}; }
 #endif
 
+static QString resolveMonitorDeviceName(const QString& deviceIdOrName)
+{
+    const QString candidate = deviceIdOrName.trimmed();
+    if (candidate.isEmpty())
+        return {};
+
+    const QString coreAudioName = coreAudioDeviceIdToName(candidate);
+    if (!coreAudioName.isEmpty())
+        return coreAudioName;
+
+    juce::AudioDeviceManager probeManager;
+    juce::OwnedArray<juce::AudioIODeviceType> types;
+    probeManager.createAudioDeviceTypes(types);
+
+    for (auto* type : types) {
+        if (type == nullptr)
+            continue;
+
+        type->scanForDevices();
+        const auto deviceNames = type->getDeviceNames();
+        for (const auto& deviceName : deviceNames) {
+            const QString resolvedName = QString::fromStdString(deviceName.toStdString()).trimmed();
+            if (resolvedName == candidate)
+                return resolvedName;
+        }
+    }
+
+    bool isNumericId = false;
+    candidate.toUInt(&isNumericId);
+    return isNumericId ? QString() : candidate;
+}
+
 // ---------------------------------------------------------------------------
 // Lock-free FIFO callback that plays deck audio through the monitor device.
 // The main output callback pushes processed samples; this callback pulls them.
@@ -566,10 +598,16 @@ bool JuceAudioBackend::supportsSmoothTempo()
 
 void JuceAudioBackend::setMonitorDeviceId(const QString& deviceId)
 {
-    monitorDeviceId = deviceId;
-    const QString name = coreAudioDeviceIdToName(deviceId);
-    if (!name.isEmpty())
-        openMonitorDevice(name);
+    monitorDeviceId = deviceId.trimmed();
+    const QString name = resolveMonitorDeviceName(monitorDeviceId);
+
+    if (name.isEmpty()) {
+        closeMonitorDevice();
+        qWarning() << Q_FUNC_INFO << "Unable to resolve monitor device:" << monitorDeviceId;
+        return;
+    }
+
+    openMonitorDevice(name);
 }
 
 void JuceAudioBackend::openMonitorDevice(const QString& deviceName)
@@ -582,30 +620,32 @@ void JuceAudioBackend::openMonitorDevice(const QString& deviceName)
     monitorTeeCallback = std::make_unique<MonitorTeeCallback>();
     monitorTeeCallback->volume.store(static_cast<float>(monitorVolume));
 
-    const auto error = monitorDeviceManager->initialise(
-        0, 2, nullptr, false,
-        juce::String(deviceName.toStdString()), nullptr);
-    if (!error.isEmpty()) {
-        qWarning() << "Failed to open monitor TEE device:" << deviceName
-                   << "error:" << QString::fromStdString(error.toStdString());
+    const auto initError = monitorDeviceManager->initialiseWithDefaultDevices(0, 2);
+    if (!initError.isEmpty()) {
+        qWarning() << "Failed to initialize monitor TEE device manager:" << deviceName
+                   << "error:" << QString::fromStdString(initError.toStdString());
         monitorTeeCallback.reset();
         return;
     }
 
+    juce::AudioDeviceManager::AudioDeviceSetup setup;
+    monitorDeviceManager->getAudioDeviceSetup(setup);
+    setup.outputDeviceName = juce::String(deviceName.toStdString());
+    setup.useDefaultOutputChannels = false;
+
     // Force the monitor device to run at the same sample rate as the main deck
     // device.  If the two devices run at different rates the FIFO will drift
     // continuously, causing stutter or silence on the monitor output.
-    if (currentSampleRate > 0.0) {
-        juce::AudioDeviceManager::AudioDeviceSetup setup;
-        monitorDeviceManager->getAudioDeviceSetup(setup);
-        if (setup.sampleRate != currentSampleRate) {
-            setup.sampleRate = currentSampleRate;
-            const auto setupError = monitorDeviceManager->setAudioDeviceSetup(setup, true);
-            if (!setupError.isEmpty()) {
-                qWarning() << "Could not match monitor TEE sample rate to main device:"
-                           << QString::fromStdString(setupError.toStdString());
-            }
-        }
+    if (currentSampleRate > 0.0)
+        setup.sampleRate = currentSampleRate;
+
+    const auto setupError = monitorDeviceManager->setAudioDeviceSetup(setup, true);
+    if (!setupError.isEmpty()) {
+        qWarning() << "Failed to switch monitor TEE device to:" << deviceName
+                   << "error:" << QString::fromStdString(setupError.toStdString());
+        monitorDeviceManager->closeAudioDevice();
+        monitorTeeCallback.reset();
+        return;
     }
 
     monitorDeviceManager->addAudioCallback(monitorTeeCallback.get());
