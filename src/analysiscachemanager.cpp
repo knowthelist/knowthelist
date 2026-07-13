@@ -48,6 +48,7 @@ static QSqlDatabase collectionDb()
 }
 
 static constexpr int kEnvelopeCacheVersion = 2;
+static constexpr int kTempoAnalysisVersion = 13;
 
 static AnalysisCacheManager::CachedTempo buildLegacyCachedTempo(const QSqlQuery& query)
 {
@@ -142,7 +143,7 @@ bool AnalysisCacheManager::ensureTempoCacheTable() const
         "beat_phase_position_ms INTEGER DEFAULT 0,"
         "beat_end_position_ms INTEGER DEFAULT 0,"
         "changedate INTEGER,"
-        "analysis_version INTEGER DEFAULT 12,"
+        "analysis_version INTEGER DEFAULT 13,"
         "envelope_version INTEGER DEFAULT 0,"
         "exact_bpm REAL DEFAULT 0.0,"
         "envelope_data BLOB,"
@@ -204,7 +205,7 @@ AnalysisCacheManager::CachedTempo AnalysisCacheManager::loadCachedTempo(const QU
         return cached;
 
     // Schema v12+: new position-based fields
-    if (version >= 12) {
+    if (version >= kTempoAnalysisVersion) {
         cached.valid         = true;
         cached.bpm           = storedBpm;
         cached.exactBpm      = q.value(1).toDouble() > 0.0 ? q.value(1).toDouble() : static_cast<double>(storedBpm);
@@ -251,8 +252,8 @@ bool AnalysisCacheManager::hasValidCache(const QUrl& url, const QString& current
     const QString storedKey = q.value(0).toString();
     const int version       = q.value(1).toInt();
 
-    // Must be v12+ schema AND key must match exactly
-    return version >= 12 && !storedKey.isEmpty() && (storedKey == currentKey);
+    // Must be current analysis version AND key must match exactly.
+    return version >= kTempoAnalysisVersion && !storedKey.isEmpty() && (storedKey == currentKey);
 }
 
 void AnalysisCacheManager::storeCachedTempo(const QUrl& url, int bpm, double exactBpm,
@@ -273,7 +274,7 @@ void AnalysisCacheManager::storeCachedTempo(const QUrl& url, int bpm, double exa
          "beat_start_position_ms, beat_phase_position_ms, beat_offset_ms, beat_end_position_ms, changedate, "
          "analysis_version, envelope_version) "
         "VALUES (:url, :bpm, :exact_bpm, :start_pos, :end_pos, "
-         ":beat_start, :beat_phase, :beat_phase, :beat_end, strftime('%s','now'), 12, "
+         ":beat_start, :beat_phase, :beat_phase, :beat_end, strftime('%s','now'), 13, "
          "COALESCE((SELECT envelope_version FROM analysis_cache WHERE url = :url), 0))"
     );
     q.bindValue(":url", url.toLocalFile());

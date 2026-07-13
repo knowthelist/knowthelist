@@ -329,6 +329,29 @@ static double strongestLagCorrelation(const QList<float>& env, double lagFrames,
     return best;
 }
 
+static double refinedOnsetTimeMs(int onsetFrame, const QList<float>& env, const QList<qint64>& times)
+{
+    if (onsetFrame < 0 || onsetFrame >= times.size())
+        return 0.0;
+
+    const double baseMs = static_cast<double>(times.at(onsetFrame)) / 1.0e6;
+    if (onsetFrame == 0 || onsetFrame + 1 >= env.size() || onsetFrame + 1 >= times.size())
+        return baseMs;
+
+    const double left = env.at(onsetFrame - 1);
+    const double center = env.at(onsetFrame);
+    const double right = env.at(onsetFrame + 1);
+    const double denominator = left - 2.0 * center + right;
+    if (qAbs(denominator) < 1.0e-9)
+        return baseMs;
+
+    // A parabola through the three neighboring samples estimates the peak between
+    // frame boundaries, avoiding a systematic 8 ms timing quantization error.
+    const double offset = qBound(-0.5, 0.5 * (left - right) / denominator, 0.5);
+    const double frameMs = static_cast<double>(times.at(onsetFrame + 1) - times.at(onsetFrame)) / 1.0e6;
+    return baseMs + offset * frameMs;
+}
+
 struct TrackAnalyzer_Private {
     QFutureWatcher<void> watcher;
     QMutex mutex;
@@ -1012,14 +1035,15 @@ void TrackAnalyzer::detectTempo()
         const int N = onsets.size();
         if (N >= 8) {
             const double estimatedPeriodS = 60.0 / static_cast<double>(finalBpm);
-            const qint64 t0ns = spectralFluxTimes.at(onsets.first());
+            const double t0ms = refinedOnsetTimeMs(onsets.first(), onsetsLow.isEmpty() ? fullEnv : lowEnv, spectralFluxTimes);
 
             // Assign beat number to each onset by rounding to nearest beat.
             QVector<double> beatNum(N), tSec(N);
             for (int k = 0; k < N; ++k) {
                 const int frame = onsets.at(k);
+                const double onsetMs = refinedOnsetTimeMs(frame, onsetsLow.isEmpty() ? fullEnv : lowEnv, spectralFluxTimes);
                 const double tS = (frame < spectralFluxTimes.size())
-                        ? (spectralFluxTimes.at(frame) - t0ns) * 1.0e-9
+                    ? (onsetMs - t0ms) * 1.0e-3
                         : static_cast<double>(frame) / actualFps;
                 tSec[k]    = tS;
                 beatNum[k] = qRound(tS / estimatedPeriodS);
@@ -1074,8 +1098,8 @@ void TrackAnalyzer::detectTempo()
                 for (int onsetIdx : phaseOnsets) {
                     if (onsetIdx < 0 || onsetIdx >= spectralFluxTimes.size())
                         continue;
-                    const qint64 tMs = spectralFluxTimes.at(onsetIdx) / 1000000LL;
-                    double wrap = std::fmod(static_cast<double>(tMs - candidatePhaseMs), beatMs);
+                    const double tMs = refinedOnsetTimeMs(onsetIdx, anchorEnv, spectralFluxTimes);
+                    double wrap = std::fmod(tMs - static_cast<double>(candidatePhaseMs), beatMs);
                     if (wrap < 0.0)
                         wrap += beatMs;
                     const double dist = qMin(wrap, beatMs - wrap);
