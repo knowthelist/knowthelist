@@ -80,8 +80,8 @@ private Q_SLOTS:
     void player2_levelChanged(double left, double right);
     void player1_tempoChanged(int bpm, QTime beatPosition);
     void player2_tempoChanged(int bpm, QTime beatPosition);
-    void player1_syncRequested();
-    void player2_syncRequested();
+    void player1_syncRequested(bool adoptTempo);
+    void player2_syncRequested(bool adoptTempo);
     void on_playerSyncButtonToggled(bool checked);
     void player1_monitorRouteToggled(bool enabled);
     void player2_monitorRouteToggled(bool enabled);

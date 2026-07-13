@@ -96,10 +96,12 @@ public:
     double tempoRate() const { return m_tempoRate; }
     void setSyncActive(bool active);
     void setSyncAdopting(bool active);
+    bool isSyncAdopting() const { return m_syncAdopting; }
     bool supportsSmoothTempo() const;
     void syncNowToReferenceBeat(double referenceBpm, const QTime& referencePosition,
                                 const QTime& referenceBeatAnchor = QTime(),
-                                bool alignToBar = true);
+                                bool alignToBar = true,
+                                bool matchTempo = false);
     void alignCueToReferenceBeat(double referenceBpm, const QTime& referencePosition,
                                    const QTime& referenceBeatAnchor = QTime(), bool alignToBar = true);
     QPushButton* getSyncButton() { return m_syncButton; }
@@ -146,7 +148,7 @@ Q_SIGNALS:
     void gainChanged(double);
     void tempoChanged(int bpm, QTime beatPosition);
     void levelChanged(double, double);
-    void syncRequested();
+    void syncRequested(bool adoptTempo);
     void syncStateChanged(bool active);
     void monitorRouteToggled(bool enabled);
 

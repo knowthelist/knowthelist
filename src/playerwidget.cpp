@@ -317,7 +317,13 @@ void PlayerWidget::setTempoRate(double rate)
 void PlayerWidget::setSyncActive(bool active)
 {
     qDebug() << Q_FUNC_INFO << "Setting sync active to" << active;
-    updateSyncButtonState(active);
+    setSyncAdopting(active);
+
+    // Keep transport compensation and tempo reset behavior identical no matter
+    // whether sync is changed by UI toggle or by controller logic.
+    player->setDelayCompensation(active ? player->outputLatencyMs() * 1.5 : 0);
+    if (!active)
+        setTempoRate(1.0);
 }
 
 void PlayerWidget::setSyncAdopting(bool active)
@@ -325,6 +331,7 @@ void PlayerWidget::setSyncAdopting(bool active)
     qDebug() << Q_FUNC_INFO << "Setting sync adopting to" << active;
     m_syncAdopting = active;
     bpmWidget->setTempoInfo(m_tempoRate, m_syncAdopting);
+    updateSyncButtonState(active);
 }
 
 void PlayerWidget::updateSyncButtonState(bool active)
@@ -737,7 +744,7 @@ void PlayerWidget::onBeatJumpButtonClicked()
         return;
     jumpByBeats(beats);
     
-    Q_EMIT syncRequested();
+    Q_EMIT syncRequested(false);
 }
 
 void PlayerWidget::onEnvelopeScrubStarted()
@@ -1096,15 +1103,13 @@ void PlayerWidget::on_butPlay_clicked()
 {
     if (m_isStarted) {
         this->pause();
-        // When pausing with sync adopting active, we don't completely reset
-        // to maintain the timing relationship. The sync will resume properly.
     } else {
         this->play();
-        // When resuming from pause with sync adopting active, ensure it re-initializes properly
-        if (m_syncAdopting) {
-            Q_EMIT syncRequested();
-        }
     }
+
+    // Transport changes (pause/play) can shift phase perception between decks.
+    // Let the central sync logic decide which deck should be snapped.
+    Q_EMIT syncRequested(false);
 }
 
 void PlayerWidget::analyzeGainFinished()
@@ -1651,14 +1656,14 @@ void PlayerWidget::on_butRew_clicked()
         player->setPosition(QTime(0, 0, 0));
     }
     
-    Q_EMIT syncRequested();
+    Q_EMIT syncRequested(false);
 }
 
 void PlayerWidget::on_butFwd_clicked()
 {
     Q_EMIT forwardPressed();
     
-    Q_EMIT syncRequested();
+    Q_EMIT syncRequested(false);
 }
 
 void PlayerWidget::setTrackFinishEmitTime(const int sec)
@@ -1700,7 +1705,7 @@ void PlayerWidget::on_sliPosition_sliderMoved(int value)
     ui->lblTimeRemainMs->setText("." + QTime(0, 0).addMSecs(remainMs).toString("zzz").left(1));
     ui->butCue->setChecked(false);
     
-    Q_EMIT syncRequested();
+    Q_EMIT syncRequested(false);
 }
 
 void PlayerWidget::on_sliPosition_actionTriggered(int action)
@@ -1834,7 +1839,8 @@ void PlayerWidget::alignCueToReferenceBeat(double referenceBpm, const QTime& ref
 }
 
 void PlayerWidget::syncNowToReferenceBeat(double referenceBpm, const QTime& referencePosition,
-                                          const QTime& referenceBeatAnchor, bool alignToBar)
+                                          const QTime& referenceBeatAnchor, bool alignToBar,
+                                          bool matchTempo)
 {
     // Works while playing: seeks to the nearest bar-aligned position that puts
     // this deck on the same beat-of-the-bar as the reference deck, so both
@@ -1881,8 +1887,8 @@ void PlayerWidget::syncNowToReferenceBeat(double referenceBpm, const QTime& refe
     player->setPosition(QTime(0, 0).addMSecs(static_cast<int>(newMs)));
     updateTimeAndPositionDisplay(false);
 
-    // If BPMs differ, also match the tempo rate
-    if (qAbs(referenceBpm - ownBpm) > 1.0e-6)
+    // Optional: also match tempo rate when requested by caller.
+    if (matchTempo && qAbs(referenceBpm - ownBpm) > 1.0e-6)
         setTempoRate(referenceBpm / ownBpm);
 }
 
@@ -1891,7 +1897,7 @@ void PlayerWidget::on_butSync_toggled(bool checked)
     updateSyncButtonState(checked);
     if (checked) {
         m_syncAdopting = true;
-        Q_EMIT syncRequested();
+        Q_EMIT syncRequested(true);
     } else {
         // When sync is turned off, clear all sync state to stop blinking
         m_syncAdopting = false;

@@ -318,6 +318,8 @@ void Knowthelist::createUI()
     connect(player2, SIGNAL(tempoChanged(int, QTime)), SLOT(player2_tempoChanged(int, QTime)));
     connect(player1, &PlayerWidget::syncRequested, this, &Knowthelist::player1_syncRequested);
     connect(player2, &PlayerWidget::syncRequested, this, &Knowthelist::player2_syncRequested);
+    connect(player1, &PlayerWidget::syncButtonToggled, this, &Knowthelist::on_playerSyncButtonToggled);
+    connect(player2, &PlayerWidget::syncButtonToggled, this, &Knowthelist::on_playerSyncButtonToggled);
     connect(player1, &PlayerWidget::monitorRouteToggled, this, &Knowthelist::player1_monitorRouteToggled);
     connect(player2, &PlayerWidget::monitorRouteToggled, this, &Knowthelist::player2_monitorRouteToggled);
 
@@ -822,38 +824,48 @@ void Knowthelist::player2_tempoChanged(int bpm, QTime beatPosition)
     }
 }
 
-void Knowthelist::player1_syncRequested()
+void Knowthelist::player1_syncRequested(bool adoptTempo)
 {
-    // If player2 is already sync active, turn it off
-    if (player2->getSyncButton()->isChecked()) {
-        // Turn off player2's sync by toggling the sync button
-        player2->getSyncButton()->setChecked(false);
-    }
+    const bool player1SyncChecked = player1->getSyncButton() && player1->getSyncButton()->isChecked();
+    const bool player2SyncChecked = player2->getSyncButton() && player2->getSyncButton()->isChecked();
 
-    // SYNC pressed on deck A: snap deck A's beat phase to deck B (the master).
-    if (m_Player2Bpm <= 0 || !player2->isStarted()) {
-        player1->setSyncActive(false);
+    // If deck A is adopting, sync A to running deck B (classic slave request).
+    if (player1SyncChecked) {
+        if (m_Player2Bpm <= 0 || !player2->isStarted()) {
+            player1->setSyncActive(false);
+            return;
+        }
+        player1->syncNowToReferenceBeat(m_Player2Bpm, player2->currentPosition(), m_Player2BeatPosition, true, adoptTempo);
         return;
     }
-    
-    player1->syncNowToReferenceBeat(m_Player2Bpm, player2->currentPosition(), m_Player2BeatPosition);
+
+    // Deck A is master-like here. If deck B is adopting, snap B to A after
+    // master seek/jump/play changes without altering sync button ownership.
+    if (player2SyncChecked && m_Player1Bpm > 0 && player1->isStarted()) {
+        player2->syncNowToReferenceBeat(m_Player1Bpm, player1->currentPosition(), m_Player1BeatPosition, true, false);
+    }
 }
 
-void Knowthelist::player2_syncRequested()
+void Knowthelist::player2_syncRequested(bool adoptTempo)
 {
-    // If player1 is already sync active, turn it off
-    if (player1->getSyncButton()->isChecked()) {
-        // Turn off player1's sync by toggling the sync button
-        player1->getSyncButton()->setChecked(false);
-    }
+    const bool player2SyncChecked = player2->getSyncButton() && player2->getSyncButton()->isChecked();
+    const bool player1SyncChecked = player1->getSyncButton() && player1->getSyncButton()->isChecked();
 
-    // SYNC pressed on deck B: snap deck B's beat phase to deck A (the master).
-    if (m_Player1Bpm <= 0 || !player1->isStarted()) {
-        player2->setSyncActive(false);
+    // If deck B is adopting, sync B to running deck A (classic slave request).
+    if (player2SyncChecked) {
+        if (m_Player1Bpm <= 0 || !player1->isStarted()) {
+            player2->setSyncActive(false);
+            return;
+        }
+        player2->syncNowToReferenceBeat(m_Player1Bpm, player1->currentPosition(), m_Player1BeatPosition, true, adoptTempo);
         return;
     }
-    
-    player2->syncNowToReferenceBeat(m_Player1Bpm, player1->currentPosition(), m_Player1BeatPosition);
+
+    // Deck B is master-like here. If deck A is adopting, snap A to B after
+    // master seek/jump/play changes without altering sync button ownership.
+    if (player1SyncChecked && m_Player2Bpm > 0 && player2->isStarted()) {
+        player1->syncNowToReferenceBeat(m_Player2Bpm, player2->currentPosition(), m_Player2BeatPosition, true, false);
+    }
 }
 
 void Knowthelist::player_aboutTrackFinished()
