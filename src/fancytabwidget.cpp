@@ -280,13 +280,14 @@ QSize FancyTab::sizeHint() const {
 
 QSize FancyTabBar::tabSizeHint(bool minimum) const
 {
+  Q_UNUSED(minimum)
   QFont boldFont(font());
   boldFont.setPointSizeF(Utils::StyleHelper::sidebarFontSize());
   boldFont.setBold(true);
   QFontMetrics fm(boldFont);
   int spacing = 8;
   int width = 60 + spacing + 2;
-  int iconHeight = minimum ? 0 : 32;
+  int iconHeight = 32;
   return QSize(width, iconHeight + spacing + fm.height());
 }
 
@@ -418,7 +419,7 @@ void FancyTabBar::paintTab(QPainter *painter, int tabIndex) const
 
     const QFontMetrics fm = painter->fontMetrics();
     const int textHeight = fm.height();
-    const int iconSize = 24;
+    const int iconSize = 32;
     const int iconTextSpacing = 4;
     const int contentHeight = iconSize + iconTextSpacing + textHeight;
     const int contentTop = rect.top() + qMax(2, (rect.height() - contentHeight) / 2);
@@ -428,13 +429,13 @@ void FancyTabBar::paintTab(QPainter *painter, int tabIndex) const
 
     const QRect tabTextRect(
         rect.left() + 2,
-        tabIconRect.bottom() + 1 + iconTextSpacing,
+        contentTop + iconSize + iconTextSpacing,
         rect.width() - 4,
         textHeight);
 
     // Shadow text (slightly darker / lighter to create depth)
     painter->setPen(selected ? QColor(255, 255, 255, 160) : QColor(0, 0, 0, 110));
-    painter->drawText(tabTextRect, Qt::AlignCenter | Qt::AlignVCenter, tabText);
+    painter->drawText(tabTextRect.translated(0, 1), Qt::AlignCenter | Qt::AlignVCenter, tabText);
 
     painter->setPen(selected ? QColor(60, 60, 60) : Utils::StyleHelper::panelTextColor());
 #ifndef Q_WS_MAC
@@ -455,9 +456,8 @@ void FancyTabBar::paintTab(QPainter *painter, int tabIndex) const
 
     Utils::StyleHelper::drawIconWithShadow(tabIcon(tabIndex), tabIconRect, painter, QIcon::Normal);
 
-    // Main text on top of shadow (1px higher for subtle depth)
+    // Main text on top of shadow.
     painter->setPen(selected ? QColor(60, 60, 60) : Utils::StyleHelper::panelTextColor());
-    painter->translate(0, -1);
     painter->drawText(tabTextRect, Qt::AlignCenter | Qt::AlignVCenter, tabText);
     painter->restore();
 }

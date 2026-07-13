@@ -151,8 +151,8 @@ void PlayerCueManager::applyAutoCueAfterAnalysis(bool preferBeatCue)
     if (!m_owner.m_CurrentTrack || !m_owner.trackanalyzer)
         return;
 
-    // Guard to match PlayerWidget::applyAutoCueAfterAnalysis: do not reposition while playing.
-    if (m_owner.m_isStarted && !preferBeatCue)
+    // Never reposition an actively playing track from background analysis.
+    if (m_owner.m_isStarted)
         return;
 
     // If analysis has not finished and we have no cached BPM, skip auto-cue.

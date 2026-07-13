@@ -19,7 +19,6 @@
 #define KNOWTHELIST_H
 
 #include "collectionwidget.h"
-#include "beatsyncwidget.h"
 #include "djbrowser.h"
 #include "djsession.h"
 #include "filebrowser.h"
@@ -102,7 +101,6 @@ private Q_SLOTS:
 
     void timerGain1_timeOut();
     void timerGain2_timeOut();
-    void timerBeatSyncVisual_timeOut();
     void timerRateRestore_timeOut();
     void Track_doubleClicked(Track*);
     void trackList_wantLoad(Track*, QString target);
@@ -158,13 +156,11 @@ private:
     bool isFading;
     VUMeter* vuMeter1;
     VUMeter* vuMeter2;
-    BeatSyncWidget* beatSyncWidget;
     VUMeter* monitorMeter;
     QTimer* timerMeter;
     QTimer* timerMonitor;
     QTimer* timerGain1;
     QTimer* timerGain2;
-    QTimer* timerBeatSyncVisual;
     Playlist* playList1;
     Playlist* playList2;
     Playlist* trackList;

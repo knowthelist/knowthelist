@@ -383,13 +383,11 @@ void PlayerWidget::setBeatVisualMode(bool enabled)
                 trackanalyzer->open(m_CurrentTrack->url());
             }
         }
-        applyAutoCueAfterAnalysis(true);
     } else {
         if (timerVisual->isActive())
             timerVisual->stop();
         bpmWidget->hide();
         vuMeter->show();
-        applyAutoCueAfterAnalysis(false);
     }
 }
 
@@ -1017,8 +1015,8 @@ void PlayerWidget::applyAutoCueAfterAnalysis(bool preferBeatCue)
     if (!m_CurrentTrack || !trackanalyzer)
         return;
 
-    // Guard: do not reposition while actively playing (prevents CUE button from pausing mid-song).
-    if (m_isStarted && !preferBeatCue)
+    // Never reposition an actively playing track from background analysis.
+    if (m_isStarted)
         return;
 
     // Delegate to CueManager but preserve PlayerWidget-specific UI state (bpmWidget/ui updates).

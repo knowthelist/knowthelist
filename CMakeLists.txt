@@ -160,7 +160,6 @@ endif()
 set(SOURCES
     src/main.cpp
     src/knowthelist.cpp
-    src/beatsyncwidget.cpp
     src/playerbpmwidget.cpp
     src/player.cpp
     src/audio_backend.h
@@ -204,7 +203,6 @@ set(SOURCES
 
 set(HEADERS
     src/knowthelist.h
-    src/beatsyncwidget.h
     src/playerbpmwidget.h
     src/vumeter.h
     src/playerwidget.h

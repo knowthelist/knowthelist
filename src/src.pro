@@ -20,7 +20,6 @@ TARGET = knowthelist
 TEMPLATE = app
 SOURCES += main.cpp \
     knowthelist.cpp \
-    beatsyncwidget.cpp \
     playerbpmwidget.cpp \
     player.cpp \
     vumeter.cpp \
@@ -56,7 +55,6 @@ SOURCES += main.cpp \
     ratingwidget.cpp \
     customdial.cpp
 HEADERS += knowthelist.h \
-    beatsyncwidget.h \
     playerbpmwidget.h \
     vumeter.h \
     playerwidget.h \

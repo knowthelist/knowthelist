@@ -88,8 +88,6 @@ Knowthelist::Knowthelist(QWidget* parent)
     , ui(new Ui::Knowthelist)
     , gain1Target(100)
     , gain2Target(100)
-    , beatSyncWidget(nullptr)
-    , timerBeatSyncVisual(nullptr)
     , m_Player1Bpm(0)
     , m_Player2Bpm(0)
     , m_rateRestoreTimer(nullptr)
@@ -133,8 +131,6 @@ Knowthelist::~Knowthelist()
     delete playList2;
     delete vuMeter1;
     delete vuMeter2;
-    delete beatSyncWidget;
-    beatSyncWidget = nullptr;
     delete monitorMeter;
     delete monitorPlayer;
     monitorPlayer = nullptr;
@@ -256,12 +252,6 @@ void Knowthelist::createUI()
     m_monitorSettingsButton->setAutoRaise(true);
     connect(m_monitorSettingsButton, &QToolButton::clicked, this, &Knowthelist::on_cmdMonitorSettings_clicked);
 
-    // Dedicated mixer beat-sync visualizer (switchable from settings).
-    beatSyncWidget = new BeatSyncWidget(ui->frameMixer);
-    const QRect beatRect = ui->phVU1->geometry().united(ui->phVU2->geometry()).adjusted(-2, -2, 2, 2);
-    beatSyncWidget->setGeometry(beatRect);
-    beatSyncWidget->hide();
-
     ui->potGain_1->setRange(1, 180);
     ui->potGain_1->setValue(100);
     ui->potGain_2->setRange(1, 180);
@@ -277,10 +267,6 @@ void Knowthelist::createUI()
     timerGain2->setInterval(100);
     connect(timerGain1, SIGNAL(timeout()), SLOT(timerGain1_timeOut()));
     connect(timerGain2, SIGNAL(timeout()), SLOT(timerGain2_timeOut()));
-
-    timerBeatSyncVisual = new QTimer(this);
-    timerBeatSyncVisual->setInterval(33);
-    connect(timerBeatSyncVisual, SIGNAL(timeout()), SLOT(timerBeatSyncVisual_timeOut()));
 
     qRegisterMetaType<QList<Track*>>("QList<Track*>");
 
@@ -606,9 +592,7 @@ void Knowthelist::loadCurrentSettings()
     else
         applyBeatVisualMode(beatVisualMode);
 
-    // Mixer VU is always visible. Beat visual mode now affects deck widgets only.
-    timerBeatSyncVisual->stop();
-    beatSyncWidget->hide();
+    // Beat visual mode affects deck widgets only.
     vuMeter1->show();
     vuMeter2->show();
 
@@ -758,26 +742,6 @@ void Knowthelist::player2_levelChanged(double left, double right)
 {
     vuMeter2->setValueLeft(left);
     vuMeter2->setValueRight(right);
-}
-
-void Knowthelist::timerBeatSyncVisual_timeOut()
-{
-    if (!beatSyncWidget)
-        return;
-
-    BeatSyncWidget::DeckState deck1;
-    deck1.bpm = m_Player1Bpm;
-    deck1.running = player1->isStarted();
-    deck1.position = player1->currentPosition();
-    deck1.beatReference = m_Player1BeatPosition;
-    beatSyncWidget->setDeck1(deck1);
-
-    BeatSyncWidget::DeckState deck2;
-    deck2.bpm = m_Player2Bpm;
-    deck2.running = player2->isStarted();
-    deck2.position = player2->currentPosition();
-    deck2.beatReference = m_Player2BeatPosition;
-    beatSyncWidget->setDeck2(deck2);
 }
 
 void Knowthelist::player1_tempoChanged(int bpm, QTime beatPosition)
