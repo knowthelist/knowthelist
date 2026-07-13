@@ -94,6 +94,7 @@ Knowthelist::Knowthelist(QWidget* parent)
     , m_rateRestorePlayer(nullptr)
     , m_toggleAutoSyncButton(nullptr)
     , m_toggleBeatVisualButton(nullptr)
+    , m_toggleBpmVisualButton(nullptr)
     , m_autoSyncLed(nullptr)
     , m_monitorSettingsButton(nullptr)
     , m_autoSyncEnabled(true)
@@ -190,8 +191,8 @@ void Knowthelist::createUI()
     m_toggleAutoSyncButton->setPalette(ui->toggleAutoFade->palette());
     m_toggleAutoSyncButton->setFont(ui->toggleAutoFade->font());
     m_toggleAutoSyncButton->setCheckable(true);
-    m_toggleAutoSyncButton->setText(tr("Sync"));
-    m_toggleAutoSyncButton->setToolTip(tr("Enable BPM sync for the next auto fade"));
+    m_toggleAutoSyncButton->setText(tr("Fade Sync"));
+    m_toggleAutoSyncButton->setToolTip(tr("Use tempo and beat sync during the next automatic fade, including Auto DJ fades"));
     connect(m_toggleAutoSyncButton, &QPushButton::toggled, this, &Knowthelist::on_toggleAutoSync_toggled);
 
     m_autoSyncLed = new QLed(ui->frameMixer);
@@ -203,15 +204,33 @@ void Knowthelist::createUI()
     m_autoSyncLed->setToolTip(tr("Sync LED: ON = next fade will be BPM synced"));
     m_autoSyncLed->off();
 
+    QButtonGroup* visualModeGroup = new QButtonGroup(this);
+    visualModeGroup->setExclusive(true);
+
     m_toggleBeatVisualButton = new QPushButton(ui->frameMixer);
     m_toggleBeatVisualButton->setObjectName("toggleBeatVisual");
-    m_toggleBeatVisualButton->setGeometry(QRect(125, 335, 40, 18));
+    m_toggleBeatVisualButton->setGeometry(QRect(103, 335, 36, 18));
     m_toggleBeatVisualButton->setMinimumSize(QSize(16, 16));
     m_toggleBeatVisualButton->setPalette(ui->toggleAutoFade->palette());
     m_toggleBeatVisualButton->setFont(ui->toggleAutoFade->font());
     m_toggleBeatVisualButton->setCheckable(true);
     m_toggleBeatVisualButton->setText(tr("VU"));
+    m_toggleBeatVisualButton->setToolTip(tr("Show VU meters in the deck display"));
+    m_toggleBeatVisualButton->setChecked(true);
+    visualModeGroup->addButton(m_toggleBeatVisualButton);
     connect(m_toggleBeatVisualButton, &QPushButton::toggled, this, &Knowthelist::on_toggleBeatVisual_toggled);
+
+    m_toggleBpmVisualButton = new QPushButton(ui->frameMixer);
+    m_toggleBpmVisualButton->setObjectName("toggleBpmVisual");
+    m_toggleBpmVisualButton->setGeometry(QRect(140, 335, 40, 18));
+    m_toggleBpmVisualButton->setMinimumSize(QSize(16, 16));
+    m_toggleBpmVisualButton->setPalette(ui->toggleAutoFade->palette());
+    m_toggleBpmVisualButton->setFont(ui->toggleAutoFade->font());
+    m_toggleBpmVisualButton->setCheckable(true);
+    m_toggleBpmVisualButton->setText(tr("BPM"));
+    m_toggleBpmVisualButton->setToolTip(tr("Show BPM and beat information in the deck display"));
+    visualModeGroup->addButton(m_toggleBpmVisualButton);
+    connect(m_toggleBpmVisualButton, &QPushButton::toggled, this, &Knowthelist::on_toggleBeatVisual_toggled);
 
     ui->cmdOptions->setGeometry(QRect(32, 335, 40, 18));
     ui->cmdOptions->setMinimumWidth(16);
@@ -587,8 +606,10 @@ void Knowthelist::loadCurrentSettings()
         m_toggleAutoSyncButton->setChecked(m_autoSyncEnabled);
     else
         applyAutoSyncEnabled(m_autoSyncEnabled);
-    if (m_toggleBeatVisualButton)
-        m_toggleBeatVisualButton->setChecked(beatVisualMode);
+    if (m_toggleBpmVisualButton)
+        m_toggleBpmVisualButton->setChecked(beatVisualMode);
+    else if (m_toggleBeatVisualButton)
+        m_toggleBeatVisualButton->setChecked(!beatVisualMode);
     else
         applyBeatVisualMode(beatVisualMode);
 
@@ -682,8 +703,8 @@ void Knowthelist::closeEvent(QCloseEvent* event)
     settings.setValue("Volume2", QString("%1").arg(ui->slider2->value()));
     settings.setValue("VolumeMonitor", QString("%1").arg(ui->sliMonitorVolume->value()));
     settings.setValue("autoSyncEnabled", m_autoSyncEnabled);
-    if (m_toggleBeatVisualButton)
-        settings.setValue("beatSyncVisualMode", m_toggleBeatVisualButton->isChecked());
+    if (m_toggleBpmVisualButton)
+        settings.setValue("beatSyncVisualMode", m_toggleBpmVisualButton->isChecked());
 
     savePlaylists();
 
@@ -1110,8 +1131,10 @@ void Knowthelist::applyBeatVisualMode(bool enabled)
 {
     player1->setBeatVisualMode(enabled);
     player2->setBeatVisualMode(enabled);
-    if (m_toggleBeatVisualButton)
-        m_toggleBeatVisualButton->setText(enabled ? tr("BPM") : tr("VU"));
+    if (m_toggleBeatVisualButton && m_toggleBeatVisualButton->isChecked() == enabled)
+        m_toggleBeatVisualButton->setChecked(!enabled);
+    if (m_toggleBpmVisualButton && m_toggleBpmVisualButton->isChecked() != enabled)
+        m_toggleBpmVisualButton->setChecked(enabled);
 }
 
 void Knowthelist::applyAutoSyncEnabled(bool enabled)
@@ -1722,11 +1745,13 @@ void Knowthelist::on_toggleAutoSync_toggled(bool checked)
 
 void Knowthelist::on_toggleBeatVisual_toggled(bool checked)
 {
+    if (!checked)
+        return;
+
+    const bool bpmVisualMode = sender() == m_toggleBpmVisualButton;
     QSettings settings;
-    settings.setValue("beatSyncVisualMode", checked);
-    applyBeatVisualMode(checked);
-    if (!checked && m_toggleAutoSyncButton && m_toggleAutoSyncButton->isChecked())
-        m_toggleAutoSyncButton->setChecked(false);
+    settings.setValue("beatSyncVisualMode", bpmVisualMode);
+    applyBeatVisualMode(bpmVisualMode);
 }
 
 void Knowthelist::player1_monitorRouteToggled(bool enabled)

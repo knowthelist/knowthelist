@@ -31,6 +31,7 @@
 #include "vumeter.h"
 
 #include <QMainWindow>
+#include <QButtonGroup>
 #include <QPushButton>
 #include <QSplitter>
 #include <QTime>
@@ -179,6 +180,7 @@ private:
     QToolButton* m_monitorSettingsButton;
     QPushButton* m_toggleAutoSyncButton;
     QPushButton* m_toggleBeatVisualButton;
+    QPushButton* m_toggleBpmVisualButton;
     QLed* m_autoSyncLed;
     FileBrowser* filetree;
     PlaylistBrowser* playlistBrowser;
