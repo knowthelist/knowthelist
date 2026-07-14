@@ -271,9 +271,9 @@ QSize FancyTab::sizeHint() const {
   boldFont.setPointSizeF(Utils::StyleHelper::sidebarFontSize());
   boldFont.setBold(true);
   QFontMetrics fm(boldFont);
-  int spacing = 8;
+  int spacing = 16;
   int width = 60 + spacing + 2;
-  int iconHeight = 32;
+  int iconHeight = 48;
   QSize ret(width, iconHeight + spacing + fm.height());
   return ret;
 }
@@ -285,9 +285,9 @@ QSize FancyTabBar::tabSizeHint(bool minimum) const
   boldFont.setPointSizeF(Utils::StyleHelper::sidebarFontSize());
   boldFont.setBold(true);
   QFontMetrics fm(boldFont);
-  int spacing = 8;
+  int spacing = 12; // Increased padding
   int width = 60 + spacing + 2;
-  int iconHeight = 32;
+  int iconHeight = 40; // Increased tab height  
   return QSize(width, iconHeight + spacing + fm.height());
 }
 

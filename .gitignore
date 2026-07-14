@@ -27,3 +27,4 @@ dist-*/
 .vscode/*
 .github/*
 .aider*
+.DS_Store
