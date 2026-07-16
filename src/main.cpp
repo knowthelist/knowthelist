@@ -21,6 +21,8 @@
 #include <QApplication>
 #include <QDateTime>
 #include <QFile>
+#include <QFontDatabase>
+#include <QFont>
 #include <QMessageBox>
 #include <QTranslator>
 #include <QtSql>
@@ -89,6 +91,20 @@ int main(int argc, char* argv[])
     juce::ScopedJuceInitialiser_GUI juceInit;
 
     QApplication a(argc, argv);
+
+    // Load bundled fonts from Qt resources (works without system installation)
+    int firaSansId = QFontDatabase::addApplicationFont(":/fonts/FiraSans-Regular.ttf");
+    int firaMonoId = QFontDatabase::addApplicationFont(":/fonts/FiraMono-Regular.ttf");
+
+    if (firaSansId != -1 && firaMonoId != -1) {
+        QStringList sansFamilies = QFontDatabase::applicationFontFamilies(firaSansId);
+        if (!sansFamilies.isEmpty()) {
+            a.setFont(QFont(sansFamilies.at(0)));
+            qDebug() << "Loaded bundled fonts:" << sansFamilies.first() << "and" << QFontDatabase::applicationFontFamilies(firaMonoId).first();
+        }
+    } else {
+        qWarning() << "Failed to load bundled Fira Sans or Fira Mono font!";
+    }
 
     a.setQuitOnLastWindowClosed(true);
 

@@ -254,6 +254,7 @@ set(FORMS
 set(RESOURCES
     images/icons.qrc
     locale/locale.qrc
+    fonts/fonts.qrc
 )
 
 qt_add_executable(knowthelist
