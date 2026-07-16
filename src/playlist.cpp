@@ -436,9 +436,9 @@ void Playlist::startTempoScan()
     m_tempoScanUrl = m_tempoScanQueue.dequeue();
     m_tempoScanActive = true;
 
-    // Beat-sync scan window (`beatSyncScanSeconds`) was tied to the removed TEMPO-only mode; BPM
-    // detection now unconditionally runs on a much longer full-file analysis window. The
-    // finishTempo() signal is connected in the Playlist ctor — just open and start here.
+    // BPM detection now runs on a full-file analysis window rather than the removed TEMPO-only
+    // scan window. The finishTempo() signal is connected in the Playlist ctor; just open and
+    // start here.
     m_tempoAnalyzer->open(QUrl(m_tempoScanUrl));
 }
 
