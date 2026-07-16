@@ -1,140 +1,158 @@
-knowthelist
-===========
+# knowthelist
 
-Knowthelist - the awesome party music player
+![Knowthelist Logo](images/knowthelist.png)
 
-- Easy to use for all party guests
-- Fast collection search while tracks are playing
-- Two players with separate playlists
-- Mixer with crossfader, 3-band EQ and gain per deck
-- Auto fade and auto gain control (AGC)
-- Track analysis for cue points, loudness and BPM
-- Beat-synced transitions with visual sync support
-- Auto DJ with multiple filters and smart random play
-- Monitor player for pre-listening on a second sound device
-- ... more details can be found on the [Wiki](https://github.com/knowthelist/knowthelist/wiki)
+---
 
-Runs under Linux, MacOS and Windows
+### The Ultimate Party DJ Mixer — Know Your List, Own the Night
 
-![](https://github.com/knowthelist/knowthelist/blob/gh-pages/images/knowthelist_2.4_mac_s.png)
+**Knowthelist** is a feature-packed, cross-platform DJ mixer and music player built for DJs and party hosts who need to **react instantly** while mixing. Queue up your crowd's requests in real-time, beat-sync two decks, set auto-DJ filters, and deliver flawless transitions — all with a beautiful, responsive interface.
 
-Needed packages for building:
-------------------
-Linux (Debian/Ubuntu):
+---
 
-                 $ sudo apt install build-essential cmake qt6-base-dev qt6-base-dev-tools qmake6 \
-             libtag1-dev libasound2-dev libjack-jackd2-dev libsndfile1-dev ladspa-sdk
+## Features
 
-        libtag1-dev libasound2-dev libjack-jackd2-dev libsndfile1-dev ladspa-sdk
-----------
-- cd ~/src
-- git clone https://github.com/knowthelist/knowthelist.git
-- cd knowthelist
+| What | Why It Rocks |
+|------|-------------|
+| **Dual Decks** | Two independent players with separate playlists for seamless mixing |
+| **Live Collection Search** | Find any track instantly while music plays — guests can type requests too |
+| **Full Mixer** | Crossfader, 3-band EQ per deck, and per-channel gain control |
+| **Beat Sync** | Visual sync support with gradual tempo restoration and latency compensation |
+| **Auto DJ** | Smart random play with powerful filters — set it and forget it |
+| **Track Analysis** | Automatic BPM detection, loudness mapping, cue points & beat phase visualization |
+| **Monitor Player** | Pre-listen on a secondary audio device before dropping tracks |
+| **Pitch-Preserving Time Stretch** | DJ-style tempo changes with pitch preservation |
+| **Auto Gain Control (AGC)** | Keep energy levels consistent across your set |
+| **Modern UI** | Fancy tabs, custom VU meters, progress bars, rating widgets — all with Fira Sans typography |
 
-qmake build:
+---
 
-    $ qmake6
-    $ make
-    $ ./knowthelist
+## Screenshot
 
-cmake build:
+![Knowthelist UI](images/Knowthelist_UI.png)
 
-    $ cmake -S . -B build
-    $ cmake --build build -j
-    $ ./build/knowthelist
+> Runs natively on **Linux**, **macOS** and **Windows**.
 
-Note: JUCE is cached outside `build/` (default: `~/.cache/knowthelist/fetchcontent` on macOS/Linux),
-so `rm -rf build` will not re-download JUCE every time.
-You can override this path with:
+---
 
-    $ cmake -S . -B build -DKNOWTHELIST_FETCHCONTENT_DIR=/path/to/cache
+## Building from Source
 
-Recreate ui_*.h after .ui changes:
-----------------------------------
-`ui_*.h` files are generated from Qt Designer `.ui` files. Do not edit generated headers manually.
+### Prerequisites
 
-For CMake builds (recommended):
+| Dependency | Purpose |
+|------------|---------|
+| [Qt 6](https://www.qt.io/) (Core + GUI + SVG) | UI framework |
+| [CMake ≥ 3.16](https://cmake.org/) | Build system |
+| [taglib](http://taglib.github.io) | Audio metadata |
+| **JUCE** (auto-fetched by CMake) | Pure JUCE audio backend |
+| **soundtouch** | Pitch-preserving tempo |
 
-    $ cmake -S . -B build
-    $ cmake --build build --target knowthelist_autogen
+---
 
-If needed, force a full regenerate:
+### Linux (Debian / Ubuntu)
 
-    $ rm -rf build
-    $ cmake -S . -B build
-    $ cmake --build build -j
+```bash
+# 1. Install system dependencies
+sudo apt install build-essential cmake qt6-base-dev qt6-base-dev-tools \
+    libtag1-dev libasound2-dev ladspa-sdk soundtouch-devel
 
-Generated headers are placed under:
+# 2. Get the source
+git clone https://github.com/knowthelist/knowthelist.git
+cd knowthelist
 
-    build/knowthelist_autogen/include/ui_*.h
-
-For qmake builds:
-
-    $ qmake6 knowthelist.pro
-    $ make clean
-    $ make -j
-
-macOS:
-----------
-Knowthelist works well on macOS.
-
-It can be compiled to a .app bundle, suitable for placing in /Applications.
-Install the required dependencies using [Homebrew](https://brew.sh):
-
-```
-brew install qt taglib
-qmake6
-make
-
-# or with CMake:
-
+# 3. Build with CMake (recommended)
 cmake -S . -B build
-cmake --build build -j
+cmake --build build -j$(nproc)
 
-# Optional: DJ-style pitch-preserving tempo changes (time-stretch)
-brew install sound-touch
-
-# clean before
-cmake --build build --target clean
-cmake --build build -j
-
-# or
-
-rm -rf build && cmake -B build && cmake --build build -j
-
+# 4. Run
+./build/knowthelist
 ```
-JUCE download is reused from the persistent fetch cache, so clean builds stay fast.
 
-An icon for "knowthelist" should now be in your main macOS Applications list, ready to launch.
+> **JUCE cache:** JUCE is cached outside `build/` (default: `~/.cache/knowthelist/fetchcontent` on Linux/macOS). Running `rm -rf build` won't re-download it. Override with `-DKNOWTHELIST_FETCHCONTENT_DIR=/path/to/cache`.
 
-Windows:
-----------
-A prebuilt package for Windows is available in the release section on this page. But if you want to build Knowthelist on Windows yourself, you can do this as follows:
+---
 
-Build dynamic version to debug project:
-- Install [Qt6 incl. QtCreator](https://www.qt.io/download)
-- Get [CMake](https://cmake.org) and install
-- Get [taglib](http://taglib.github.io) and build it with CMake
-- Add the taglib bin path (e.g. `C:\Program Files\taglib\bin`) to the PATH variable in the QtCreator project build environment settings
-- Build and run the knowthelist project within QtCreator (Ctrl-R)
+### macOS
 
-Build for release:
-- Build knowthelist via QtCreator (qmake, build release)
-- Run knowthelist.exe
+```bash
+# 1. Install dependencies via Homebrew
+brew install qt taglib soundtouch
 
-Install packages:
------------------
-Prebuilt packages for Linux can be found on the [releases page](https://github.com/knowthelist/knowthelist/releases).
+# 2. Get the source
+git clone https://github.com/knowthelist/knowthelist.git
+cd knowthelist
 
-**Debian/Ubuntu:**
+# 3a. qmake build
+qmake6 && make -j$(sysctl -n hw.ncpu)
 
-    $ sudo apt install knowthelist
+# 3b. Or CMake (recommended)
+cmake -S . -B build && cmake --build build -j$(sysctl -n hw.ncpu)
 
-Versions:
-----------
-- 2.4 (2026)   :  Qt6 compatibility, BPM mode, and pure JUCE audio backend
-- 2.3 (2014-09):	Qt5 compatibility and usage of GStreamer 1.x
-- 2.2 (2014-08):	Support for stored lists
-- 2.1 (2014-05):	First public version; removed qt3support
-- 2.0 (2011)   :	Qt-only + gstreamer version for multiple OS support
-- 1.x (2005)   :  Only for KDE Linux with arts sound framework
+# 4. Run
+./build/knowthelist
+```
+
+The app compiles to a `.app` bundle — drop it into `/Applications`. An icon will appear in Spotlight.
+
+---
+
+### Windows
+
+1. Install [Qt 6+](https://www.qt.io/download) (incl. Qt Creator) and [CMake](https://cmake.org).
+2. Build [taglib](http://taglib.github.io) with CMake, then add its `bin` path to your Qt Creator build environment.
+3. Open the project in **Qt Creator** → Build & Run (Ctrl+R).
+
+> A prebuilt Windows package is also available on the [Releases page](https://github.com/knowthelist/knowthelist/releases).
+
+---
+
+## Installing Packages
+
+### Linux (via `apt`)
+
+```bash
+sudo apt install knowthelist
+```
+
+Pre-built Linux packages are also available on the [Releases page](https://github.com/knowthelist/knowthelist/releases).
+
+### macOS & Windows
+
+Download the latest installer from the [Releases page](https://github.com/knowthelist/knowthelist/releases).
+
+---
+
+## Regenerating UI Headers
+
+UI headers are generated by Qt Designer — **do not edit them manually**.
+
+```bash
+# CMake (recommended):
+cmake -S . -B build && cmake --build build --target knowthelist_autogen
+
+# Force full regenerate:
+rm -rf build && cmake -S . -B build && cmake --build build -j
+
+# qmake:
+qmake6 knowthelist.pro && make clean && make -j
+```
+
+---
+
+## Version History
+
+| Version | Date | Highlights |
+|---------|------|------------|
+| 2.4 | 2026 | Qt 6, BPM mode detection, pure JUCE audio backend, beat-phase visualizer |
+| 2.3 | 2014-09 | Qt 5 compatibility, GStreamer 1.x |
+| 2.2 | 2014-08 | Stored playlists support |
+| 2.1 | 2014-05 | First public release; qt3support removal |
+| 2.0 | 2011 | Qt-only + GStreamer for multi-platform |
+| 1.x | 2005 | KDE/Linux only (Arts sound framework) |
+
+---
+
+[![License](https://img.shields.io/badge/License-LGPL--3.0-brightgreen.svg)](LICENSE)
+[![CMake](https://img.shields.io/badge/Built%20with-CMake-064FE8.svg)](https://cmake.org/)
+[![Qt 6](https://img.shields.io/badge/Framework-Qt%206-41CD52.svg)](https://www.qt.io/)
+[![Platforms](https://img.shields.io/badge/Platforms-Linux_%7C_macOS_%7C_Windows-555555.svg)]()
