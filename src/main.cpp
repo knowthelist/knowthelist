@@ -93,17 +93,37 @@ int main(int argc, char* argv[])
     QApplication a(argc, argv);
 
     // Load bundled fonts from Qt resources (works without system installation)
-    int firaSansId = QFontDatabase::addApplicationFont(":/fonts/FiraSans-Regular.ttf");
+    int firaSansLightId = QFontDatabase::addApplicationFont(":/fonts/FiraSans-Light.ttf");
+    int firaSansRegularId = QFontDatabase::addApplicationFont(":/fonts/FiraSans-Regular.ttf");
     int firaMonoId = QFontDatabase::addApplicationFont(":/fonts/FiraMono-Regular.ttf");
 
-    if (firaSansId != -1 && firaMonoId != -1) {
-        QStringList sansFamilies = QFontDatabase::applicationFontFamilies(firaSansId);
-        if (!sansFamilies.isEmpty()) {
-            a.setFont(QFont(sansFamilies.at(0)));
-            qDebug() << "Loaded bundled fonts:" << sansFamilies.first() << "and" << QFontDatabase::applicationFontFamilies(firaMonoId).first();
+    if (firaSansLightId != -1) {
+        QStringList families = QFontDatabase::applicationFontFamilies(firaSansLightId);
+        if (!families.isEmpty()) {
+            QFont f(families.at(0));
+            f.setWeight(QFont::Light);
+            a.setFont(f);
+            qDebug() << "Global font set to:" << families.first();
+        } else {
+            qWarning() << "Failed to get Fira Sans Light family name";
         }
     } else {
-        qWarning() << "Failed to load bundled Fira Sans or Fira Mono font!";
+        qWarning() << "Fira Sans Light not found — checking Regular as fallback...";
+        if (firaSansRegularId != -1) {
+            QStringList families = QFontDatabase::applicationFontFamilies(firaSansRegularId);
+            if (!families.isEmpty()) {
+                QFont f(families.at(0));
+                a.setFont(f);
+                qDebug() << "Global font set to:" << families.first();
+            }
+        }
+    }
+
+    if (firaMonoId != -1) {
+        QStringList monoFamilies = QFontDatabase::applicationFontFamilies(firaMonoId);
+        qDebug() << "Loaded Fira Mono:" << monoFamilies.first();
+    } else {
+        qWarning() << "Failed to load bundled Fira Mono font!";
     }
 
     a.setQuitOnLastWindowClosed(true);

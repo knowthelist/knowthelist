@@ -937,7 +937,7 @@ QPushButton#butMon:pressed {
                  </property>
                  <property name="minimumSize">
                   <size>
-                   <width>0</width>
+                   <width>40</width>
                    <height>18</height>
                   </size>
                  </property>
@@ -1392,7 +1392,7 @@ QPushButton#butMon:pressed {
                  <property name="font">
                   <font>
                    <family>Monospace</family>
-                   <pointsize>15</pointsize>
+                   <pointsize>18</pointsize>
                    <bold>false</bold>
                    <kerning>false</kerning>
                   </font>
@@ -1427,7 +1427,7 @@ QPushButton#butMon:pressed {
                  </property>
                  <property name="minimumSize">
                   <size>
-                   <width>0</width>
+                   <width>40</width>
                    <height>18</height>
                   </size>
                  </property>
@@ -2449,7 +2449,7 @@ QPushButton#butMon:pressed {
                  </property>
                  <property name="minimumSize">
                   <size>
-                   <width>0</width>
+                   <width>40</width>
                    <height>18</height>
                   </size>
                  </property>

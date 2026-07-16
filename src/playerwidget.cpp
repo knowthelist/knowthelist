@@ -213,19 +213,38 @@ PlayerWidget::PlayerWidget(QWidget* parent)
     ui->lblInfo->setText("");
 
     QFont font = ui->lblInfo->font();
+    
+    // Force concrete monospace fonts to prevent digit width jitter on time labels.
+    // Fira Mono is bundled via Qt resources and loaded in main.cpp, so it's always available.
     QFont fonttime = ui->lblTime->font();
+    static const char *monoCandidates[] = { "Fira Mono", "Menlo", "Courier New" };
+    for (const char *candidate : monoCandidates) {
+        QFont testFont(candidate);
+        if (QFontInfo(testFont).family() == candidate) {
+            fonttime.setFamily(candidate);
+            break; // Found a valid monospace font
+        }
+    }
+    
+    // Force monospace family on all time labels to prevent digit width jitter.
 #if defined(Q_OS_DARWIN)
-    int newSize = font.pointSize() - 4;
-    fonttime.setPointSize(fonttime.pointSize() + 2);
+    int newSize = font.pointSize() - 4 + 1; // +1pt for global increase
+    fonttime.setPointSize(fonttime.pointSize() + 6); // time: +2 relative to current (+4), total +4 from default
+    fonttime.setWeight(QFont::Light); // thinner
 #else
     int newSize = font.pointSize() - 1;
+    fonttime.setPointSize(fonttime.pointSize() + 4); // Make time labels bigger
 #endif
     font.setPointSize(newSize);
     ui->lblInfo->setFont(font);
     ui->lblTime->setFont(fonttime);
     ui->lblTimeRemain->setFont(fonttime);
-    ui->lblTimeMs->setFont(fonttime);
-    ui->lblTimeRemainMs->setFont(fonttime);
+
+    //.ms labels use a smaller font, aligned bottom with time labels
+    QFont fonttimems = fonttime;
+    fonttimems.setPointSize(fonttimems.pointSize() - 3);
+    ui->lblTimeMs->setFont(fonttimems);
+    ui->lblTimeRemainMs->setFont(fonttimems);
 
     // Keep these labels width-elastic so changing text never expands layouts.
     ui->lblTitle->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Preferred);
@@ -249,7 +268,7 @@ PlayerWidget::PlayerWidget(QWidget* parent)
         label->setMinimumHeight(metrics.height() + 4);
     };
 
-    fixTimeLabelGeometry(ui->lblTime, "00:00");
+    fixTimeLabelGeometry(ui->lblTime, "00:00"); // This will be bigger now
     fixTimeLabelGeometry(ui->lblTimeMs, ".8");
     fixTimeLabelGeometry(ui->lblTimeRemain, "-00:00");
     fixTimeLabelGeometry(ui->lblTimeRemainMs, ".8");
@@ -652,7 +671,7 @@ void PlayerWidget::createPerformanceControls()
     m_pitchResetButton->setFont(smallFont);
     m_pitchResetButton->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
     const QFontMetrics pitchResetMetrics(m_pitchResetButton->font());
-    const int pitchResetWidth = pitchResetMetrics.horizontalAdvance(QStringLiteral("+12.0%")) + 14;
+    const int pitchResetWidth = pitchResetMetrics.horizontalAdvance(QStringLiteral("+12.0%"));
     m_pitchResetButton->setFixedWidth(pitchResetWidth);
     connect(m_pitchResetButton, &QPushButton::clicked, this, [this]() {
         if (m_pitchSlider)
@@ -1542,9 +1561,9 @@ void PlayerWidget::updateTimeAndPositionDisplay(bool isPassive)
     //qDebug()<<remainMs << " :" <<remain;
 
     ui->lblTime->setText(curpos.toString("mm:ss"));
-    ui->lblTimeMs->setText("." + curpos.toString("zzz").left(1));
+    ui->lblTimeMs->setText("." + QString::number(QTime(0, 0).msecsTo(curpos) % 10));
     ui->lblTimeRemain->setText("-" + remain.toString("mm:ss"));
-    ui->lblTimeRemainMs->setText("." + remain.toString("zzz").left(1));
+    ui->lblTimeRemainMs->setText("." + QString::number((remainMs < 0 ? -remainMs : remainMs) % 10));
 
     bool nearEndByTime = false;
     if (trackanalyzer->finished() && (m_skipSilentEnd || m_beatCueEnabled)) {

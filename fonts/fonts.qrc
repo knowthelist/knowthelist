@@ -1,5 +1,6 @@
 <RCC>
     <qresource prefix="/fonts">
+        <file>FiraSans-Light.ttf</file>
         <file>FiraSans-Regular.ttf</file>
         <file>FiraMono-Regular.ttf</file>
     </qresource>
