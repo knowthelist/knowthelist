@@ -1,5 +1,5 @@
 /*
-    Copyright (C) 2005-2019 Mario Stephan <mstephan@shared-files.de>
+    Copyright (C) 2005-2026 Mario Stephan <mstephan@shared-files.de>
 
     This library is free software; you can redistribute it and/or modify
     it under the terms of the GNU Lesser General Public License as published
@@ -67,6 +67,7 @@ protected:
 private:
     struct VUMeterPrivate* p;
     void drawMeter();
+    void updateMeterGeometry();
 };
 
 #endif

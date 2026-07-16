@@ -1,5 +1,5 @@
 /*
-    Copyright (C) 2011-2019 Mario Stephan <mstephan@shared-files.de>
+    Copyright (C) 2011-2026 Mario Stephan <mstephan@shared-files.de>
 
     This library is free software; you can redistribute it and/or modify
     it under the terms of the GNU Lesser General Public License as published
@@ -19,12 +19,10 @@
 
 #include <QWidget>
 #include <QtCore>
+#include <memory>
 
-#define GST_DISABLE_LOADSAVE 1
-#define GST_DISABLE_REGISTRY 1
-#define GST_DISABLE_DEPRECATED 1
-
-#include <gst/gst.h>
+#include "juce_audio_backend.h"
+class JuceAudioBackend;
 
 class Player : public QWidget {
     Q_OBJECT
@@ -46,10 +44,22 @@ public:
     void setVolume(double);
     void setGain(double);
     void setEqualizer(QString, double);
+    void setRate(double rate);
+    double rate() const;
+    bool supportsSmoothTempo() const;
+    void setMonitorDeviceId(const QString& deviceId);
+    void setUseMonitorOutput(bool enabled);
+    bool useMonitorOutput() const;
+    void setMonitorVolume(double v);
+    int outputLatencyMs() const;
+    void setDelayCompensation(int milliseconds) {
+        audioBackend->setInterPlayerDelayCompensation(milliseconds);
+    }
 
     QTime length();
     bool isPlaying();
     bool mediaPlayable();
+    bool isLoaded() const;
     QString lastError;
 
     double levelLeft();
@@ -57,8 +67,6 @@ public:
     double levelOutLeft();
     double levelOutRight();
 
-    void newpad(GstElement* decodebin, GstPad* pad, gpointer data);
-    static GstBusSyncReply bus_cb(GstBus* bus, GstMessage* msg, gpointer data);
 Q_SIGNALS:
     void finish();
     void error();
@@ -68,18 +76,14 @@ Q_SIGNALS:
 
 private slots:
     void loadThreadFinished();
-    void messageReceived(GstMessage* message);
 
 private:
     struct PlayerPrivate* p;
+    std::unique_ptr<JuceAudioBackend> audioBackend;
 
-    GstElement* pipeline;
-    GstBus* bus;
-    gint64 Gstart, Glength;
-    void setLink(int, QUrl&);
     void asyncOpen(QUrl url);
     void cleanup();
-    void sync_set_state(GstElement*, GstState);
+    void applyOutputRouting();
 };
 
 #endif

@@ -1,5 +1,5 @@
 /*
-    Copyright (C) 2005-2014 Mario Stephan <mstephan@shared-files.de>
+    Copyright (C) 2005-2026 Mario Stephan <mstephan@shared-files.de>
 
     This library is free software; you can redistribute it and/or modify
     it under the terms of the GNU Lesser General Public License as published
@@ -46,7 +46,7 @@ DjFilterWidget::DjFilterWidget(QWidget* parent)
     ui->cmbGenres->setAttribute(Qt::WA_MacShowFocusRect, false);
     ui->cmbArtists->setAttribute(Qt::WA_MacShowFocusRect, false);
 
-    ui->lblFilterValue->setText(QString::null);
+    ui->lblFilterValue->setText(QString());
     ui->stackDisplay->setCount(0);
 
     ui->stackDisplay->setBarColor(QColor(196, 196, 210));
@@ -215,7 +215,7 @@ void DjFilterWidget::onFilterUsageChanged()
 void DjFilterWidget::on_lbl1_linkActivated(const QString& link)
 {
     QFileDialog dialog(this);
-    dialog.setFileMode(QFileDialog::DirectoryOnly);
+    dialog.setFileMode(QFileDialog::Directory);
     if (dialog.exec())
         ui->txtPath->setText(dialog.selectedFiles().first());
 }

@@ -1,5 +1,5 @@
 /*
-    Copyright (C) 2005-2014 Mario Stephan <mstephan@shared-files.de>
+    Copyright (C) 2005-2026 Mario Stephan <mstephan@shared-files.de>
 
     This library is free software; you can redistribute it and/or modify
     it under the terms of the GNU Lesser General Public License as published
@@ -19,13 +19,13 @@
 #define COLLECTIONSETUPMODEL_H
 
 #include <QTreeView>
-#include <QDirModel>
+#include <QFileSystemModel>
 
-class CollectionSetupModel : public QDirModel
+class CollectionSetupModel : public QFileSystemModel
 {
   Q_OBJECT
 public:
-    CollectionSetupModel();
+    CollectionSetupModel(QObject* parent = nullptr);
     QStringList dirsChecked();
     void setDirsChecked(QStringList list);
 

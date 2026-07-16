@@ -1,0 +1,5 @@
+#!/bin/sh
+# Wrapper for Qt6 host tools inside a Flatpak sandbox.
+# The tools live on the host but need host Qt libraries at runtime.
+exec env LD_LIBRARY_PATH="/run/host/usr/lib/x86_64-linux-gnu${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}" \
+    /run/host/usr/lib/qt6/libexec/uic "$@"

@@ -1,5 +1,5 @@
 /*
-    Copyright (C) 2005-2014 Mario Stephan <mstephan@shared-files.de>
+    Copyright (C) 2005-2026 Mario Stephan <mstephan@shared-files.de>
 
     This library is free software; you can redistribute it and/or modify
     it under the terms of the GNU Lesser General Public License as published
@@ -37,7 +37,7 @@ public:
     modeType treeMode;
     
 Q_SIGNALS:
-    void selectionChanged(QList<Track*>);
+    void tracksSelected(QList<Track*>);
     void wantLoad(QList<Track*>, QString);
     void rescan();
     

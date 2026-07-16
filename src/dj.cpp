@@ -1,5 +1,5 @@
 /*
-    Copyright (C) 2005-2014 Mario Stephan <mstephan@shared-files.de>
+    Copyright (C) 2005-2026 Mario Stephan <mstephan@shared-files.de>
 
     This library is free software; you can redistribute it and/or modify
     it under the terms of the GNU Lesser General Public License as published
@@ -35,7 +35,7 @@ Dj::Dj()
 {
     p->rotation = 0;
     p->filter = nullptr;
-    p->description = QString::null;
+    p->description = QString();
     p->countTracks = 0;
     p->lengthTracks = 0;
 }
@@ -47,7 +47,6 @@ Dj::~Dj()
 
 void Dj::addFilter(Filter* filter)
 {
-    //qDebug() << Q_FUNC_INFO;
     p->filters.append(filter);
     connect(filter, SIGNAL(activated()),
         this, SLOT(on_filter_activated()));
@@ -82,7 +81,6 @@ int Dj::activeFilterIdx()
 
 void Dj::on_filter_filterChanged()
 {
-    qDebug() << Q_FUNC_INFO;
     Filter* f = qobject_cast<Filter*>(QObject::sender());
     Q_EMIT filterChanged(f);
 }

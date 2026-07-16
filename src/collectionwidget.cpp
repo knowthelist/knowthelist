@@ -1,5 +1,5 @@
 /*
-    Copyright (C) 2005-2019 Mario Stephan <mstephan@shared-files.de>
+    Copyright (C) 2005-2026 Mario Stephan <mstephan@shared-files.de>
 
     This library is free software; you can redistribute it and/or modify
     it under the terms of the GNU Lesser General Public License as published
@@ -29,7 +29,7 @@
 #include <QPushButton>
 #include <QTimerEvent>
 #include <QVBoxLayout>
-#include <QtGui>
+#include <QWidget>
 
 class CollectionWidgetPrivate {
 public:
@@ -68,7 +68,7 @@ CollectionWidget::CollectionWidget(QWidget* parent)
     headWidget->setMaximumHeight(38);
 
     QHBoxLayout* headWidgetLayout = new QHBoxLayout;
-    headWidgetLayout->setMargin(0);
+    headWidgetLayout->setContentsMargins(0, 0, 0, 0);
     headWidgetLayout->setSpacing(1);
 
     headWidgetLayout->addSpacerItem(
@@ -89,7 +89,7 @@ CollectionWidget::CollectionWidget(QWidget* parent)
     headWidget->raise();
     mainLayout->addWidget(headWidget);
 
-    mainLayout->setMargin(0);
+    mainLayout->setContentsMargins(0, 0, 0, 0);
     mainLayout->setSpacing(0);
 
     connect(pushRandom, SIGNAL(clicked()), p->collectiontree,
@@ -104,8 +104,8 @@ CollectionWidget::CollectionWidget(QWidget* parent)
     connect(p->searchEdit, SIGNAL(trackDropped(QString)), this,
         SIGNAL(trackDropped(QString)));
 
-    connect(p->collectiontree, SIGNAL(selectionChanged(QList<Track*>)), this,
-        SIGNAL(selectionChanged(QList<Track*>)));
+    connect(p->collectiontree, SIGNAL(tracksSelected(QList<Track*>)), this,
+        SLOT(onTracksSelected(QList<Track*>)));
 
     connect(p->collectiontree, SIGNAL(wantLoad(QList<Track*>, QString)), this,
         SIGNAL(wantLoad(QList<Track*>, QString)));
@@ -131,7 +131,9 @@ CollectionWidget::CollectionWidget(QWidget* parent)
     p->modeSelect->setMode(static_cast<ModeSelector::modeType>(
         settings.value("TreeMode", ModeSelector::MODENONE).toUInt()));
 
-    p->collectiontree->createTrunk();
+    // Defer initial tree population so external listeners can connect first
+    // (e.g. Knowthelist connects tracksSelected after constructing this widget).
+    QTimer::singleShot(0, p->collectiontree, SLOT(createTrunk()));
     setLayout(mainLayout);
 
     connect(p->updater, SIGNAL(progressChanged(int)), p->progress,
@@ -215,13 +217,29 @@ void CollectionWidget::resizeEvent(QResizeEvent*)
 SearchEdit::SearchEdit(QWidget* parent)
     : QLineEdit(parent)
 {
+    setStyleSheet("QLineEdit { "
+                  "background-color: #2a2a2a; "
+                  "color: #CCCCCC; "
+                  "border: 1px solid #555555; "
+                  "border-radius: 3px; "
+                  "padding: 4px 18px; "
+                  "}"
+                  "QLineEdit:focus { "
+                  "background-color: #2a2a2a; "
+                  "color: #EEEEEE; "
+                  "border: 1px solid #666666; "
+                  "}"
+                  "QLineEdit::placeholder { "
+                  "color: #999999; "
+                  "}");
+
     QPixmap searchIcon(":search.png");
     QLabel* lbl = new QLabel(this);
     lbl->setScaledContents(true);
     lbl->setPixmap(searchIcon);
     lbl->setFixedSize(QSize(23, 23));
     lbl->setStyleSheet("QLabel { border: none; padding: 0px; margin-left: 9px; "
-                       "margin-top: 11px; margin-right: 3px}");
+                       "margin-top: 11px; margin-right: 3px; color: #CCCCCC; }");
     clearButton = new QToolButton(this);
     QPixmap pixmap(":clear_left.png");
     clearButton->setIcon(QIcon(pixmap));

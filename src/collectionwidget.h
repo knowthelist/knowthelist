@@ -1,5 +1,5 @@
 /*
-    Copyright (C) 2005-2014 Mario Stephan <mstephan@shared-files.de>
+    Copyright (C) 2005-2026 Mario Stephan <mstephan@shared-files.de>
 
     This library is free software; you can redistribute it and/or modify
     it under the terms of the GNU Lesser General Public License as published
@@ -79,14 +79,15 @@ class CollectionWidget: public QWidget
        signals:
          void trackDropped(QString);
          void randomClicked();
-         void selectionChanged(QList<Track*>);
+         void tracksSelected(QList<Track*>);
          void wantLoad (QList<Track*>,QString);
          void filterChanged(QString);
          void setupDirs();
     
 
     private slots:
-        void onSetFilterTimeout();
+        void onTracksSelected(QList<Track*> tracks) { emit tracksSelected(tracks); }
+     void onSetFilterTimeout();
         void onSetClicked();
         void onSetFilter();
         void onModeSelected(ModeSelector::modeType value);

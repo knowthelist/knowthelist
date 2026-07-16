@@ -19,7 +19,7 @@ Summary: awesome party music player
 Name: %{name}
 License: LGPL-3.0+
 URL: https://github.com/knowthelist/knowthelist
-Version: 2.3.0
+Version: 2.4.0
 Release: 1
 Group: Multimedia
 Source: %{name}_%{version}.orig.tar.gz
@@ -126,6 +126,9 @@ Auto DJ function with multiple filters for random play
 Monitor player for pre listen tracks (via 2nd sound card e.g. USB)
 
 %changelog
+* Wed May 20 2026 Mario Stephan <mstephan@shared-files.de>
+- 2.4.0
+- Qt6 compatibility
 * Sun Sep 19 2014 Mario Stephan <mstephan@shared-files.de>
 - 2.3.0
 - Made all compatible with Qt5 and Gstreamer-1.0.

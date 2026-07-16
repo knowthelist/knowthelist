@@ -1,5 +1,5 @@
 /*
-    Copyright (C) 2005-2019 Mario Stephan <mstephan@shared-files.de>
+    Copyright (C) 2005-2026 Mario Stephan <mstephan@shared-files.de>
 
     This library is free software; you can redistribute it and/or modify
     it under the terms of the GNU Lesser General Public License as published
@@ -20,81 +20,62 @@
 
 #include <QtCore>
 #include <QWidget>
+#include <memory>
 
-#if defined(Q_OS_WIN32)
-    #include <windows.h>
-    #include <dsound.h>
-#endif
+class MonitorAudioBackend;
 
-#define GST_DISABLE_LOADSAVE 1
-#define GST_DISABLE_REGISTRY 1
-#define GST_DISABLE_DEPRECATED 1
-#include <gst/gst.h>
-
-typedef QPair<QString, QUuid> dsDevice;
-
-
-class MonitorPlayer: public QWidget
+class MonitorPlayer : public QWidget
 {
-   Q_OBJECT
+    Q_OBJECT
 public:
-    MonitorPlayer(QWidget *parent = nullptr);
+    MonitorPlayer(QWidget* parent = nullptr);
     ~MonitorPlayer();
 
+    bool prepare();
+    bool ready();
+    bool canOpen(QString mime);
+    void open(QUrl url);
+    void play();
+    void stop();
+    void pause();
+    bool close();
+    void setPosition(QTime);
+    QTime position();
+    double volume();
+    void setVolume(double);
+    void disable();
+    void enable();
+    bool isDisabled();
 
-     bool prepare();
-     bool ready();
-     bool canOpen(QString mime);
-     void open(QUrl url);
-     void play();
-     void stop();
-     void pause();
-     bool close();
-     void setPosition(QTime);
-     QTime position();
-     double  volume();
-     void setVolume(double);
-     void disable();
-     void enable();
-     bool isDisabled();
+    QTime length();
+    bool isPlaying();
+    bool mediaPlayable();
+    QStringList outputDevices();
+    QString outputDeviceName();
+    QString outputDeviceID();
+    void setOutputDevice(QString deviceName);
+    void readDevices();
+    QString defaultDeviceID();
 
-     QTime length();
-     bool isPlaying();
-     bool mediaPlayable();
-     QStringList outputDevices();
-     QString outputDeviceName();
-     QString outputDeviceID();
-     void setOutputDevice(QString deviceName);
-     void readDevices();
-     QString defaultDeviceID();
+    double levelLeft();
+    double levelRight();
 
-     double levelLeft();
-     double levelRight();
+Q_SIGNALS:
+    void finish();
+    void error();
+    void levelChanged();
+    void positionChanged();
+    void loadFinished();
 
-        void newpad (GstElement *decodebin, GstPad *pad, gpointer data);
-        static GstBusSyncReply  bus_cb (GstBus *bus, GstMessage *msg, gpointer data);
- Q_SIGNALS:
-        void finish();
-        void error();
-        void levelChanged();
-        void positionChanged();
-        void loadFinished();
- private slots:
-        void loadThreadFinished();
-        void messageReceived(GstMessage* message);
+private slots:
+    void loadThreadFinished();
 
- private:
-    struct MonitorPlayerPrivate *p;
+private:
+    struct MonitorPlayerPrivate* p;
+    std::unique_ptr<MonitorAudioBackend> audioBackend;
 
-        GstElement *pipeline;
-        GstBus *bus;
-        gint64 Gstart;
-        gint64 Glength;
-        void setLink(int, QUrl&);
-        void asyncOpen(QUrl url);
-        void cleanup();
-        void sync_set_state(GstElement*, GstState);
-
+    void asyncOpen(QUrl url);
+    void cleanup();
 };
 
 #endif // MONITORPLAYER_H

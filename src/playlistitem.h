@@ -1,5 +1,5 @@
 /*
-    Copyright (C) 2005-2014 Mario Stephan <mstephan@shared-files.de>
+    Copyright (C) 2005-2026 Mario Stephan <mstephan@shared-files.de>
 
     This library is free software; you can redistribute it and/or modify
     it under the terms of the GNU Lesser General Public License as published
@@ -63,7 +63,8 @@ public:
                       Column_Genre = 7,
                       Column_Tracknumber = 8,
                       Column_Length = 9,
-                      Column_Rate = 10};
+                      Column_BPM = 10,
+                      Column_Rate = 11};
 signals:
 
     private:

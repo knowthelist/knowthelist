@@ -1,5 +1,5 @@
 /*
-    Copyright (C) 2005-2014 Mario Stephan <mstephan@shared-files.de>
+    Copyright (C) 2005-2026 Mario Stephan <mstephan@shared-files.de>
 
     This library is free software; you can redistribute it and/or modify
     it under the terms of the GNU Lesser General Public License as published
@@ -56,6 +56,7 @@ void PlaylistItem::setTexts(Track* track)
     setText(Column_Length, track->prettyLength());
     setText(Column_Tracknumber, track->tracknumber());
     setText(Column_Played, QString::number(track->counter()));
+    setText(Column_BPM, (track->bpm() > 0) ? QString::number(track->bpm()) : QString());
 
     const QString body = "<tr><td><b>%1</b></td><td>%2</td></tr>";
 
@@ -99,6 +100,9 @@ void PlaylistItem::setText(int c, QString text)
         break;
     case Column_Length:
         m_track->setLength(text);
+        break;
+    case Column_BPM:
+        m_track->setBpm(text.toInt());
         break;
     }
 }

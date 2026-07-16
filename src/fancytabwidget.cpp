@@ -32,6 +32,7 @@
 
 #include <QDebug>
 
+#include <QActionGroup>
 #include <QAnimationGroup>
 #include <QColorDialog>
 #include <QHBoxLayout>
@@ -42,7 +43,7 @@
 #include <QSignalMapper>
 #include <QSplitter>
 #include <QStackedLayout>
-#include <QStyleOptionTabV3>
+#include <QStyleOptionTab>
 #include <QToolButton>
 #include <QToolTip>
 #include <QVBoxLayout>
@@ -58,7 +59,7 @@ void FancyTabProxyStyle::drawControl(
     ControlElement element, const QStyleOption* option,
     QPainter* p, const QWidget* widget) const {
 
-  const QStyleOptionTabV3* v_opt = qstyleoption_cast<const QStyleOptionTabV3*>(option);
+  const QStyleOptionTab* v_opt = qstyleoption_cast<const QStyleOptionTab*>(option);
 
   if (element != CE_TabBarTab || !v_opt) {
     QProxyStyle::drawControl(element, option, p, widget);
@@ -270,22 +271,23 @@ QSize FancyTab::sizeHint() const {
   boldFont.setPointSizeF(Utils::StyleHelper::sidebarFontSize());
   boldFont.setBold(true);
   QFontMetrics fm(boldFont);
-  int spacing = 8;
+  int spacing = 16;
   int width = 60 + spacing + 2;
-  int iconHeight = 32;
+  int iconHeight = 48;
   QSize ret(width, iconHeight + spacing + fm.height());
   return ret;
 }
 
 QSize FancyTabBar::tabSizeHint(bool minimum) const
 {
+  Q_UNUSED(minimum)
   QFont boldFont(font());
   boldFont.setPointSizeF(Utils::StyleHelper::sidebarFontSize());
   boldFont.setBold(true);
   QFontMetrics fm(boldFont);
-  int spacing = 8;
+  int spacing = 12; // Increased padding
   int width = 60 + spacing + 2;
-  int iconHeight = minimum ? 0 : 32;
+  int iconHeight = 40; // Increased tab height  
   return QSize(width, iconHeight + spacing + fm.height());
 }
 
@@ -410,17 +412,31 @@ void FancyTabBar::paintTab(QPainter *painter, int tabIndex) const
     }
 
     QString tabText(painter->fontMetrics().elidedText(this->tabText(tabIndex), Qt::ElideRight, width()));
-    QRect tabTextRect(tabRect(tabIndex));
-    QRect tabIconRect(tabTextRect);
-    tabIconRect.adjust(+4, +4, -4, -4);
-    tabTextRect.translate(0, -2);
     QFont boldFont(painter->font());
     boldFont.setPointSizeF(Utils::StyleHelper::sidebarFontSize());
     boldFont.setBold(true);
     painter->setFont(boldFont);
+
+    const QFontMetrics fm = painter->fontMetrics();
+    const int textHeight = fm.height();
+    const int iconSize = 32;
+    const int iconTextSpacing = 4;
+    const int contentHeight = iconSize + iconTextSpacing + textHeight;
+    const int contentTop = rect.top() + qMax(2, (rect.height() - contentHeight) / 2);
+
+    const int iconLeft = rect.left() + (rect.width() - iconSize) / 2;
+    const QRect tabIconRect(iconLeft, contentTop, iconSize, iconSize);
+
+    const QRect tabTextRect(
+        rect.left() + 2,
+        contentTop + iconSize + iconTextSpacing,
+        rect.width() - 4,
+        textHeight);
+
+    // Shadow text (slightly darker / lighter to create depth)
     painter->setPen(selected ? QColor(255, 255, 255, 160) : QColor(0, 0, 0, 110));
-    int textFlags = Qt::AlignCenter | Qt::AlignBottom;
-    painter->drawText(tabTextRect, textFlags, tabText);
+    painter->drawText(tabTextRect.translated(0, 1), Qt::AlignCenter | Qt::AlignVCenter, tabText);
+
     painter->setPen(selected ? QColor(60, 60, 60) : Utils::StyleHelper::panelTextColor());
 #ifndef Q_WS_MAC
     if (!selected) {
@@ -438,12 +454,11 @@ void FancyTabBar::paintTab(QPainter *painter, int tabIndex) const
     }
 #endif
 
-    const int textHeight = painter->fontMetrics().height();
-    tabIconRect.adjust(0, 4, 0, -textHeight);
     Utils::StyleHelper::drawIconWithShadow(tabIcon(tabIndex), tabIconRect, painter, QIcon::Normal);
 
-    painter->translate(0, -1);
-    painter->drawText(tabTextRect, textFlags, tabText);
+    // Main text on top of shadow.
+    painter->setPen(selected ? QColor(60, 60, 60) : Utils::StyleHelper::panelTextColor());
+    painter->drawText(tabTextRect, Qt::AlignCenter | Qt::AlignVCenter, tabText);
     painter->restore();
 }
 
@@ -493,18 +508,18 @@ FancyTabWidget::FancyTabWidget(QWidget* parent)
     proxy_style_(new FancyTabProxyStyle)
 {
   side_layout_->setSpacing(0);
-  side_layout_->setMargin(0);
+  side_layout_->setContentsMargins(0, 0, 0, 0);
   side_layout_->addSpacerItem(new QSpacerItem(0, 0, QSizePolicy::Fixed, QSizePolicy::Expanding));
 
   side_widget_->setLayout(side_layout_);
   side_widget_->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Expanding);
 
-  top_layout_->setMargin(0);
+  top_layout_->setContentsMargins(0, 0, 0, 0);
   top_layout_->setSpacing(0);
   top_layout_->addLayout(stack_);
 
   QHBoxLayout* main_layout = new QHBoxLayout;
-  main_layout->setMargin(0);
+  main_layout->setContentsMargins(0, 0, 0, 0);
   main_layout->setSpacing(1);
   main_layout->addWidget(side_widget_);
   main_layout->addLayout(top_layout_);
@@ -597,7 +612,7 @@ void FancyTabWidget::SetMode(Mode mode) {
       side_layout_->insertWidget(0, bar);
       tab_bar_ = bar;
 
-      foreach (const Item& item, items_) {
+      for (const Item& item : items_) {
         if (item.type_ == Item::Type_Spacer)
           bar->addSpacer(item.spacer_size_);
         else
@@ -687,7 +702,7 @@ void FancyTabWidget::MakeTabBar(QTabBar::Shape shape, bool text, bool icons,
   else
     side_layout_->insertWidget(0, bar);
 
-  foreach (const Item& item, items_) {
+  for (const Item& item : items_) {
     if (item.type_ != Item::Type_Tab)
       continue;
 

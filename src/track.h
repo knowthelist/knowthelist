@@ -1,5 +1,5 @@
 /*
-    Copyright (C) 2005-2014 Mario Stephan <mstephan@shared-files.de>
+    Copyright (C) 2005-2026 Mario Stephan <mstephan@shared-files.de>
 
     This library is free software; you can redistribute it and/or modify
     it under the terms of the GNU Lesser General Public License as published
@@ -67,6 +67,7 @@ public:
     QString genre();
     int length();
     int counter();
+    int bpm();
     int rate();
     QString tracknumber();
     QString prettyLength();
@@ -87,6 +88,7 @@ public:
     void setLength(QString);
     void setLengthFromPretty(QString);
     void setCounter(QString);
+    void setBpm(int);
     void setRate(int);
     void setFlags(Track::Options flags);
 

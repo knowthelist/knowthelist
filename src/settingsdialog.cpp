@@ -1,5 +1,5 @@
 /*
-    Copyright (C) 2005-2014 Mario Stephan <mstephan@shared-files.de>
+    Copyright (C) 2005-2026 Mario Stephan <mstephan@shared-files.de>
 
     This library is free software; you can redistribute it and/or modify
     it under the terms of the GNU Lesser General Public License as published
@@ -21,9 +21,12 @@
 #include "ui_settingsdialog.h"
 
 #include <QFileDialog>
+#include <QGroupBox>
+#include <QCheckBox>
+#include <QLabel>
 #include <QMessageBox>
 #include <QtDebug>
-#include <QtGui>
+#include <QWidget>
 #include <QtSql>
 
 class SettingsDialogPrivate {
@@ -31,6 +34,10 @@ public:
     Ui::SettingsDialog ui;
     QWidget* parent;
     CollectionSetupModel* model;
+    QGroupBox* beatSyncGroup;
+    QCheckBox* checkBeatSyncEnabled;
+    QCheckBox* checkBeatCueEnabled;
+    QCheckBox* checkBeatAnalyzeTempo;
 };
 
 SettingsDialog::SettingsDialog(QWidget* parent)
@@ -90,7 +97,7 @@ SettingsDialog::SettingsDialog(QWidget* parent)
     p->ui.pages->setCurrentIndex(0);
 
     //Collection folder setup
-    p->model = new CollectionSetupModel();
+    p->model = new CollectionSetupModel(this);
 
     p->ui.collectionsTreeView->setModel(p->model);
     p->ui.collectionsTreeView->setColumnHidden(1, true);
@@ -110,6 +117,19 @@ SettingsDialog::SettingsDialog(QWidget* parent)
     connect(p->ui.pushResetStats, SIGNAL(clicked()), this, SIGNAL(resetStatsPressed()));
 
     connect(p->ui.countDJ, SIGNAL(valueChanged(int)), this, SLOT(loadDjList(int)));
+
+    // Beat sync options are shown in the Fader page to keep transition settings in one place.
+    p->beatSyncGroup = new QGroupBox(tr("Beat Sync"), p->ui.page);
+    p->beatSyncGroup->setGeometry(QRect(10, 270, 380, 100));
+
+    p->checkBeatSyncEnabled = new QCheckBox(tr("Enable BPM analysis and beat sync cue"), p->beatSyncGroup);
+    p->checkBeatSyncEnabled->setGeometry(QRect(10, 20, 360, 20));
+
+    p->checkBeatCueEnabled = new QCheckBox(tr("Cue on detected beat"), p->beatSyncGroup);
+    p->checkBeatCueEnabled->setGeometry(QRect(10, 42, 250, 20));
+
+    p->checkBeatAnalyzeTempo = new QCheckBox(tr("Analyze BPM automatically on load"), p->beatSyncGroup);
+    p->checkBeatAnalyzeTempo->setGeometry(QRect(10, 64, 280, 20));
 }
 
 SettingsDialog::~SettingsDialog()
@@ -151,6 +171,9 @@ void SettingsDialog::accept()
     //Silent settings
     settings.setValue("checkAutoCue", p->ui.checkAutoCue->isChecked());
     settings.setValue("checkSkipSilentEnd", p->ui.checkSkipSilentEnd->isChecked());
+    settings.setValue("beatSyncEnabled", p->checkBeatSyncEnabled->isChecked());
+    settings.setValue("beatSyncCueEnabled", p->checkBeatCueEnabled->isChecked());
+    settings.setValue("beatSyncAnalyzeTempo", p->checkBeatAnalyzeTempo->isChecked());
 
     //AutoDJ
     settings.setValue("minTracks", p->ui.minTracks->value());
@@ -204,6 +227,9 @@ bool SettingsDialog::loadSettings()
     //Silent setting
     p->ui.checkSkipSilentEnd->setChecked(settings.value("checkSkipSilentEnd", true).toBool());
     p->ui.checkAutoCue->setChecked(settings.value("checkAutoCue", true).toBool());
+    p->checkBeatSyncEnabled->setChecked(settings.value("beatSyncEnabled", true).toBool());
+    p->checkBeatCueEnabled->setChecked(settings.value("beatSyncCueEnabled", true).toBool());
+    p->checkBeatAnalyzeTempo->setChecked(settings.value("beatSyncAnalyzeTempo", true).toBool());
 
     //AutoDJ
     p->ui.minTracks->setValue(settings.value("minTracks", "6").toInt());
@@ -238,7 +264,7 @@ void SettingsDialog::loadDjList(int count)
         p->ui.listDjNames->addItem(itm);
         djs = new DjSettings(p->ui.listDjNames);
         djs->setID(d + 1);
-        djs->setName(settings.value("Name", "Dj%1").toString().arg(d + 1));
+        djs->setName(settings.value("Name", QString("Dj%1").arg(d + 1)).toString());
         djs->setFilterCount(settings.value("FilterCount", "2").toInt());
         p->ui.listDjNames->setItemWidget(itm, djs);
         settings.endGroup();
@@ -249,7 +275,7 @@ void SettingsDialog::loadDjList(int count)
 void SettingsDialog::on_pushButton_clicked()
 {
     QFileDialog dialog(this);
-    dialog.setFileMode(QFileDialog::DirectoryOnly);
+    dialog.setFileMode(QFileDialog::Directory);
     if (dialog.exec())
         p->ui.txtBrowserRoot->setText(dialog.selectedFiles().first());
 }
@@ -260,7 +286,7 @@ void SettingsDialog::on_pushAbout_clicked()
     msgBox.setIconPixmap(QIcon(":knowthelist.png").pixmap(65, 65));
     msgBox.setText(QString("%1").arg("<h3>Knowthelist</h3>"
                                      "         Version "
-        + QApplication::applicationVersion() + "<br />Copyright (C) 2005-2014 Mario Stephan "
+        + QApplication::applicationVersion() + "<br />Copyright (C) 2005-2026 Mario Stephan "
                                                "<br /><a href='mailto:mstephan@shared-files.de'>mstephan@shared-files.de</a>"
                                                "<br /><br /><a href='http://knowthelist.github.io/knowthelist'>"
                                                "http://knowthelist.github.io/knowthelist</a>"
@@ -278,6 +304,22 @@ void SettingsDialog::onScanNow()
     QSettings settings;
     settings.setValue("Dirs", p->model->dirsChecked());
     Q_EMIT scanNowPressed();
+}
+
+void SettingsDialog::on_pushResetAnalysisCache_clicked()
+{
+    qDebug() << Q_FUNC_INFO << "Reset analysis cache prompt opened";
+    const auto result = QMessageBox::warning(this,
+                                             tr("Reset analysis cache"),
+                                             tr("Delete all BPM and waveform analysis cache data?"),
+                                             QMessageBox::Yes | QMessageBox::No,
+                                             QMessageBox::No);
+    if (result == QMessageBox::Yes) {
+        qDebug() << Q_FUNC_INFO << "Reset analysis cache confirmed";
+        Q_EMIT resetAnalysisCachePressed();
+    } else {
+        qDebug() << Q_FUNC_INFO << "Reset analysis cache canceled";
+    }
 }
 
 void SettingsDialog::on_faderEndSlider_sliderMoved(int position)

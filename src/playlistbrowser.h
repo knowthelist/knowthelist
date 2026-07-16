@@ -2,12 +2,12 @@
 #define PLAYLISTBROWSER_H
 
 #include "playlistwidget.h"
+#include "track.h"
 
 #include <QWidget>
 #include <QtGui>
 
 class QPushButton;
-class Track;
 
 class PlaylistBrowser : public QWidget
 {

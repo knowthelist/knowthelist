@@ -1,5 +1,5 @@
 /*
-    Copyright (C) 2005-2019 Mario Stephan <mstephan@shared-files.de>
+    Copyright (C) 2005-2026 Mario Stephan <mstephan@shared-files.de>
 
     This library is free software; you can redistribute it and/or modify
     it under the terms of the GNU Lesser General Public License as published
@@ -16,6 +16,7 @@
 */
 
 #include "vumeter.h"
+#include <QElapsedTimer>
 #include <QPainter>
 #include <QStyleOption>
 #include <QWidget>
@@ -26,7 +27,7 @@ struct VUMeterPrivate {
     double peakLeft;
     double peakRight;
     Qt::Orientation orientation;
-    QTime peakTime;
+    QElapsedTimer peakTime;
     int linesPerSegment;
     int ledSize;
     int spacesInSegments;
@@ -44,6 +45,7 @@ VUMeter::VUMeter(QWidget* parent)
     : QWidget(parent)
     , p(new VUMeterPrivate)
 {
+    p->orientation = Qt::Vertical;
     setOrientation(Qt::Vertical);
 
     BackgroundColor.setRgb(40, 40, 40);
@@ -62,6 +64,7 @@ VUMeter::VUMeter(QWidget* parent)
     p->segmentsPerPeak = 1;
     p->colBack = QColor(60, 60, 60);
     p->colValue = Qt::white;
+    updateMeterGeometry();
 }
 
 VUMeter::~VUMeter()
@@ -70,7 +73,11 @@ VUMeter::~VUMeter()
 
 void VUMeter::setOrientation(Qt::Orientation o)
 {
+    if (p->orientation == o)
+        return;
     p->orientation = o;
+    updateMeterGeometry();
+    update();
 }
 
 Qt::Orientation VUMeter::orientation() const
@@ -89,13 +96,19 @@ void VUMeter::resizeEvent(QResizeEvent* e)
 {
     Q_UNUSED(e);
 
-    int size = (orientation() == Qt::Vertical) ? width() : height();
-    p->ledSize = ((size - p->margin) / 2);
+    updateMeterGeometry();
+}
 
-    p->maxLevel = (((orientation() == Qt::Vertical) ? height() : width())
-                      / (p->linesPerSegment + p->step))
-            * (p->linesPerSegment + p->step)
-        + p->margin;
+void VUMeter::updateMeterGeometry()
+{
+    if (p->step <= 0)
+        p->step = 1;
+
+    int size = (orientation() == Qt::Vertical) ? width() : height();
+    p->ledSize = qMax(1, (size - p->margin) / 2);
+
+    const int axis = (orientation() == Qt::Vertical) ? height() : width();
+    p->maxLevel = qMax(1, ((axis - p->margin) / p->step) * p->step + p->margin);
     p->highLevel = static_cast<int>(0.75 * p->maxLevel);
 }
 
@@ -104,7 +117,7 @@ void VUMeter::checkPeakTime()
     if (p->peakTime.elapsed() >= 1000) {
         p->peakLeft = 0;
         p->peakRight = 0;
-        p->peakTime.restart();
+        p->peakTime.start();
         update();
     }
 }
@@ -161,12 +174,16 @@ void VUMeter::setLinesPerSegment(int i)
 {
     p->linesPerSegment = i;
     p->step = p->linesPerSegment + p->spacesBetweenSegments;
+    updateMeterGeometry();
+    update();
 }
 
 void VUMeter::setSpacesBetweenSegments(int i)
 {
     p->spacesBetweenSegments = i;
     p->step = p->linesPerSegment + p->spacesBetweenSegments;
+    updateMeterGeometry();
+    update();
 }
 
 void VUMeter::setSegmentsPerPeak(int i)
@@ -177,15 +194,17 @@ void VUMeter::setSegmentsPerPeak(int i)
 void VUMeter::setMargin(int i)
 {
     p->margin = i;
+    updateMeterGeometry();
+    update();
 }
 
 void VUMeter::paintEvent(QPaintEvent*)
 {
-    drawMeter();
     QStyleOption opt;
-    opt.init(this);
+    opt.initFrom(this);
     QPainter p(this);
     style()->drawPrimitive(QStyle::PE_Widget, &opt, &p, this);
+    drawMeter();
 }
 
 void VUMeter::drawMeter()

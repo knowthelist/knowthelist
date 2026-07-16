@@ -1,5 +1,5 @@
 /*
-    Copyright (C) 2005-2019 Mario Stephan <mstephan@shared-files.de>
+    Copyright (C) 2005-2026 Mario Stephan <mstephan@shared-files.de>
 
     This library is free software; you can redistribute it and/or modify
     it under the terms of the GNU Lesser General Public License as published
@@ -17,21 +17,30 @@
 
 #include "playlist.h"
 #include "playlistitem.h"
+#include "trackanalyzer.h"
 
 #include <QMenu>
 #include <Qt>
 #include <qdebug.h>
 
-#include <QtGui>
+#include <QDrag>
+#include <QDragEnterEvent>
+#include <QDropEvent>
+#include <QMouseEvent>
+#include <QDesktopServices>
+#include <QWidget>
 #include <QtXml>
 #include <qprogressdialog.h>
 #include <qscrollbar.h>
+#include <QFileDialog>
+#include <QDir>
 
 #include <QApplication>
 #include <QHeaderView>
 #include <QMessageBox>
 #include <QPainter>
 #include <qfile.h>
+#include <QSettings>
 
 Playlist::Playlist(QWidget* parent)
     : QTreeWidget(parent)
@@ -50,6 +59,9 @@ Playlist::Playlist(QWidget* parent)
     , m_isInternDrop(false)
     , m_dragLocked(false)
     , isChangeSignalEnabled(true)
+    , m_tempoAnalyzer(new TrackAnalyzer(this))
+    , m_tempoRescanCursor(0)
+    , m_tempoScanActive(false)
 {
 
     setSortingEnabled(false);
@@ -69,7 +81,7 @@ Playlist::Playlist(QWidget* parent)
     headers << tr("Url") << tr("No") << tr("Played") << tr("Artist")
             << tr("Title");
     headers << tr("Album") << tr("Year") << tr("Genre") << tr("Track");
-    headers << tr("Length") << tr("Rate");
+        headers << tr("Length") << tr("BPM") << tr("Rate");
 
     QTreeWidgetItem* headeritem = new QTreeWidgetItem(headers);
     setHeaderItem(headeritem);
@@ -94,6 +106,8 @@ Playlist::Playlist(QWidget* parent)
     connect(this,
         SIGNAL(currentItemChanged(QTreeWidgetItem*, QTreeWidgetItem*)),
         this, SLOT(slotItemChanged(QTreeWidgetItem*, QTreeWidgetItem*)));
+
+    connect(m_tempoAnalyzer, SIGNAL(finishTempo()), this, SLOT(analyzeTempoFinished()));
 }
 
 Playlist::~Playlist()
@@ -123,6 +137,9 @@ void Playlist::addTrack(Track* track, PlaylistItem* after)
     QObject::connect(rating, SIGNAL(RatingChanged(float)),
         SLOT(onRatingChanged(float)));
     setItemWidget(item, PlaylistItem::Column_Rate, rating);
+
+    if (m_PlaylistMode != Playlist::Tracklist && track->bpm() <= 0)
+        queueTempoScan(track);
 }
 
 /** Add a track and set it as current item */
@@ -206,6 +223,9 @@ void Playlist::appendList(const QList<QUrl> urls, PlaylistItem* after)
 
 void Playlist::changeTracks(const QList<Track*> tracks)
 {
+    m_tempoScanQueue.clear();
+    m_tempoRescanDone.clear();
+    m_tempoRescanCursor = 0;
     clear();
     appendTracks(tracks);
 }
@@ -227,7 +247,12 @@ void Playlist::appendTracks(const QList<Track*> tracks)
 
 void Playlist::appendTracks(QList<Track*> tracks, PlaylistItem* after)
 {
-    foreach (Track* track, tracks) {
+    if (topLevelItemCount() == 0) {
+        m_tempoRescanDone.clear();
+        m_tempoRescanCursor = 0;
+    }
+
+    for (Track* track : tracks) {
         if (track != nullptr) {
             addTrack(new Track(*track), after);
             after = this->newTrack();
@@ -236,59 +261,210 @@ void Playlist::appendTracks(QList<Track*> tracks, PlaylistItem* after)
     checkCurrentItem();
 }
 
-void Playlist::setPlaylistMode(Mode newMode)
+void Playlist::applyModeColumnLayout()
 {
-    m_PlaylistMode = newMode;
+    const int width = viewport()->width();
+    const double percent = qMax(1, width) / 100.0;
 
-    double percent = this->size().width() / 100.0;
-
-    switch (m_PlaylistMode) {
-    case Playlist::Tracklist:
+    if (m_PlaylistMode == Playlist::Tracklist) {
         header()->hideSection(PlaylistItem::Column_No);
         header()->showSection(PlaylistItem::Column_Played);
         header()->showSection(PlaylistItem::Column_Year);
         header()->showSection(PlaylistItem::Column_Genre);
         header()->showSection(PlaylistItem::Column_Tracknumber);
         header()->showSection(PlaylistItem::Column_Album);
+        header()->showSection(PlaylistItem::Column_BPM);
         header()->showSection(PlaylistItem::Column_Rate);
         header()->resizeSection(PlaylistItem::Column_Artist, 22 * percent);
         header()->resizeSection(PlaylistItem::Column_Title, 22 * percent);
         header()->resizeSection(PlaylistItem::Column_Album, 20 * percent);
         header()->resizeSection(PlaylistItem::Column_Length, 7 * percent);
+        header()->resizeSection(PlaylistItem::Column_BPM, qMax(48, static_cast<int>(6 * percent)));
         header()->resizeSection(PlaylistItem::Column_Genre, 10 * percent);
         header()->resizeSection(PlaylistItem::Column_Year, 8 * percent);
         header()->resizeSection(PlaylistItem::Column_Tracknumber, 5 * percent);
         header()->resizeSection(PlaylistItem::Column_Played, 5 * percent);
         header()->resizeSection(PlaylistItem::Column_Rate, 75);
-        setSortingEnabled(true);
-        sortByColumn(PlaylistItem::Column_Played, Qt::DescendingOrder);
-        m_CurrentTrackColor = Qt::white;
-        m_NextTrackColor = Qt::white;
-        break;
-    default:
+    } else {
+        const int viewWidth = qMax(1, width);
+
         header()->showSection(PlaylistItem::Column_No);
+        header()->showSection(PlaylistItem::Column_Artist);
+        header()->showSection(PlaylistItem::Column_Title);
+        header()->showSection(PlaylistItem::Column_Length);
+        header()->showSection(PlaylistItem::Column_BPM);
         header()->hideSection(PlaylistItem::Column_Played);
         header()->hideSection(PlaylistItem::Column_Year);
         header()->hideSection(PlaylistItem::Column_Genre);
         header()->hideSection(PlaylistItem::Column_Tracknumber);
         header()->hideSection(PlaylistItem::Column_Album);
         header()->hideSection(PlaylistItem::Column_Rate);
-        header()->resizeSection(PlaylistItem::Column_No, 6 * percent);
-        header()->resizeSection(PlaylistItem::Column_Artist, 40 * percent);
-        header()->resizeSection(PlaylistItem::Column_Title, 40 * percent);
-        header()->resizeSection(PlaylistItem::Column_Length, 10 * percent);
+
+        int noW = qMax(32, static_cast<int>(0.07 * viewWidth));
+        int lenW = qMax(52, static_cast<int>(0.10 * viewWidth));
+        int bpmW = qMax(44, static_cast<int>(0.08 * viewWidth));
+
+        int fixed = noW + lenW + bpmW;
+        const int gutter = 6;
+        if (fixed + gutter > viewWidth) {
+            const double scale = static_cast<double>(qMax(1, viewWidth - gutter)) / static_cast<double>(fixed);
+            noW = qMax(26, static_cast<int>(noW * scale));
+            lenW = qMax(40, static_cast<int>(lenW * scale));
+            bpmW = qMax(36, static_cast<int>(bpmW * scale));
+            fixed = noW + lenW + bpmW;
+        }
+
+        int variable = qMax(80, viewWidth - fixed - gutter);
+        int artistW = qMax(40, variable / 2);
+        int titleW = qMax(40, variable - artistW);
+
+        header()->resizeSection(PlaylistItem::Column_No, noW);
+        header()->resizeSection(PlaylistItem::Column_Artist, artistW);
+        header()->resizeSection(PlaylistItem::Column_Title, titleW);
+        header()->resizeSection(PlaylistItem::Column_Length, lenW);
+        header()->resizeSection(PlaylistItem::Column_BPM, bpmW);
         header()->resizeSection(PlaylistItem::Column_Rate, 0);
+    }
+}
+
+void Playlist::setPlaylistMode(Mode newMode)
+{
+    m_PlaylistMode = newMode;
+
+    switch (m_PlaylistMode) {
+    case Playlist::Tracklist:
+        setHorizontalScrollBarPolicy(Qt::ScrollBarAsNeeded);
+        applyModeColumnLayout();
+        setSortingEnabled(true);
+        sortByColumn(PlaylistItem::Column_Played, Qt::DescendingOrder);
+        m_CurrentTrackColor = Qt::white;
+        m_NextTrackColor = Qt::white;
+        break;
+    default:
+        setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+        applyModeColumnLayout();
         setSortingEnabled(false);
         m_CurrentTrackColor = QColor(255, 100, 100);
         m_NextTrackColor = QColor(200, 200, 255);
     }
 
     QSettings settings;
-    if (settings.contains("playlist_" + objectName()))
+    if (m_PlaylistMode == Playlist::Tracklist
+        && settings.contains("playlist_" + objectName())) {
         header()->restoreState(
             settings.value("playlist_" + objectName()).toByteArray());
+    }
+
+    // Re-apply mode constraints after restoring user state so required columns
+    // stay visible and widths adapt to current widget width.
+    applyModeColumnLayout();
+
+    // Defer once to run after layouts settle. This avoids tiny initial widths
+    // from startup geometry causing collapsed columns.
+    QTimer::singleShot(0, this, [this]() { applyModeColumnLayout(); });
 
     handleChanges();
+}
+
+void Playlist::resizeEvent(QResizeEvent* event)
+{
+    QTreeWidget::resizeEvent(event);
+    applyModeColumnLayout();
+}
+
+void Playlist::queueTempoScan(Track* track)
+{
+    if (!track)
+        return;
+
+    if (track->bpm() > 0)
+        return;
+
+    const QString url = track->url().toString();
+    if (url.isEmpty() || m_tempoScanQueue.contains(url) || url == m_tempoScanUrl)
+        return;
+
+    m_tempoScanQueue.enqueue(url);
+    if (!m_tempoScanActive)
+        startTempoScan();
+}
+
+bool Playlist::queueIdleTempoRescanCandidate()
+{
+    if (m_PlaylistMode == Playlist::Tracklist)
+        return false;
+
+    const int count = topLevelItemCount();
+    if (count <= 0)
+        return false;
+
+    for (int offset = 0; offset < count; ++offset) {
+        const int index = (m_tempoRescanCursor + offset) % count;
+        PlaylistItem* item = dynamic_cast<PlaylistItem*>(topLevelItem(index));
+        if (!item || !item->track())
+            continue;
+
+        Track* track = item->track();
+        if (track->bpm() <= 0)
+            continue;
+
+        const QString url = track->url().toString();
+        if (url.isEmpty())
+            continue;
+        if (url == m_tempoScanUrl || m_tempoScanQueue.contains(url))
+            continue;
+        if (m_tempoRescanDone.contains(url))
+            continue;
+
+        m_tempoScanQueue.enqueue(url);
+        m_tempoRescanDone.insert(url);
+        m_tempoRescanCursor = (index + 1) % qMax(1, count);
+        return true;
+    }
+
+    return false;
+}
+
+void Playlist::startTempoScan()
+{
+    if (m_tempoScanActive)
+        return;
+
+    if (m_tempoScanQueue.isEmpty() && !queueIdleTempoRescanCandidate())
+        return;
+
+    m_tempoScanUrl = m_tempoScanQueue.dequeue();
+    m_tempoScanActive = true;
+
+    // BPM detection now runs on a full-file analysis window rather than the removed TEMPO-only
+    // scan window. The finishTempo() signal is connected in the Playlist ctor; just open and
+    // start here.
+    m_tempoAnalyzer->open(QUrl(m_tempoScanUrl));
+}
+
+void Playlist::analyzeTempoFinished()
+{
+    const int bpm = m_tempoAnalyzer->bpm();
+    if (!m_tempoScanUrl.isEmpty() && bpm > 0) {
+        QList<QTreeWidgetItem*> matches = findItems(m_tempoScanUrl, Qt::MatchExactly, PlaylistItem::Column_Url);
+        for (QTreeWidgetItem* match : matches) {
+            PlaylistItem* item = dynamic_cast<PlaylistItem*>(match);
+            if (!item)
+                continue;
+
+            Track* track = item->track();
+            if (!track)
+                continue;
+
+            track->setBpm(bpm);
+            item->setText(PlaylistItem::Column_BPM, QString::number(bpm));
+            emit trackPropertyChanged(track);
+        }
+    }
+
+    m_tempoScanUrl.clear();
+    m_tempoScanActive = false;
+    startTempoScan();
 }
 
 void Playlist::checkCurrentItem()
@@ -445,11 +621,7 @@ void Playlist::skipRewind()
 
 QString Playlist::defaultPlaylistPath()
 {
-#if QT_VERSION >= 0x050000
-    QString pathName = QStandardPaths::standardLocations(QStandardPaths::DataLocation).at(0);
-#else
-    QString pathName = QDesktopServices::storageLocation(QDesktopServices::DataLocation);
-#endif
+    QString pathName = QStandardPaths::standardLocations(QStandardPaths::AppDataLocation).at(0);
     QDir path(pathName);
 
     if (!path.exists())
@@ -517,7 +689,7 @@ void Playlist::saveXML(const QString& path) const
     playlistElem.appendChild(listElem);
 
     QTextStream stream(&file);
-    stream.setCodec("UTF-8");
+    stream.setEncoding(QStringConverter::Utf8);
     stream << "<?xml version=\"1.0\" encoding=\"utf8\"?>\n";
     stream << newdoc.toString();
     file.close();
@@ -531,7 +703,7 @@ void Playlist::loadXML(const QString& path)
     if (file.open(QFile::ReadOnly)) {
         QTextStream stream(&file);
 
-        stream.setCodec(QTextCodec::codecForName("utf8"));
+        stream.setEncoding(QStringConverter::Utf8);
         QDomDocument d;
         if (!d.setContent(stream.readAll())) {
             qDebug() << "Could not load XML\n";
@@ -642,7 +814,6 @@ void Playlist::onRatingChanged(float rate)
     if (RatingWidget* rateWidget = dynamic_cast<RatingWidget*>(QObject::sender())) {
 
         QModelIndex modidx = indexAt(QPoint(0, rateWidget->pos().y()));
-        (PlaylistItem*)this->itemFromIndex(modidx);
         if (PlaylistItem* item = (PlaylistItem*)this->itemFromIndex(modidx)) {
             Track* track = item->track();
             if (track) {
@@ -817,7 +988,7 @@ void Playlist::dropEvent(QDropEvent* event)
         stream >> tags;
 
         // add Tracks to this playlist
-        foreach (QStringList tag, tags) {
+        for (const QStringList& tag : tags) {
             qDebug() << Q_FUNC_INFO << ": is playlistitem; tags:" << tags;
             addTrack(new Track(tag), m_marker);
             m_marker = this->newTrack();
@@ -921,8 +1092,8 @@ void Playlist::keyPressEvent(QKeyEvent* e)
         Q_EMIT wantLoad(item->track(), "Right");
     else if (e->key() == Qt::Key_P)
         Q_EMIT trackDoubleClicked(item->track());
-    else if (e->key() == Qt::CTRL + Qt::Key_S)
-        Q_EMIT wantSearch(QString::null);
+    else if (e->key() == (Qt::CTRL | Qt::Key_S).toCombined())
+        Q_EMIT wantSearch(QString());
     else
         QTreeWidget::keyPressEvent(e);
 }
@@ -940,7 +1111,9 @@ void Playlist::showContextMenu(PlaylistItem* item, int col)
         LISTEN,
         FILTER,
         LOAD1,
-        LOAD2 };
+        LOAD2,
+        SAVE_XML,
+        LOAD_XML };
 
     if (item == nullptr)
         return;
@@ -948,43 +1121,59 @@ void Playlist::showContextMenu(PlaylistItem* item, int col)
     const bool isCurrentPlaylistItem = (item == currentPlaylistItem);
 
     QMenu popup(this);
+    QAction* a = nullptr;
 
     popup.setTitle(item->track()->prettyTitle(50));
     if (m_PlaylistMode == Playlist::Tracklist) {
-        popup.addAction(style()->standardPixmap(QStyle::SP_MediaPlay),
-            tr("Add to PlayList&1"), this, SLOT(dummySlot()),
-            Qt::Key_1); //, LOAD1
-        popup.addAction(style()->standardPixmap(QStyle::SP_MediaPlay),
-            tr("Add to PlayList&2"), this, SLOT(dummySlot()),
-            Qt::Key_2); //, LOAD2
+        a = popup.addAction(tr("Add to PlayList&1"), this, SLOT(dummySlot()));
+        a->setIcon(QIcon(style()->standardPixmap(QStyle::SP_MediaPlay)));
+        a->setShortcut(Qt::Key_1);
+        a = popup.addAction(tr("Add to PlayList&2"), this, SLOT(dummySlot()));
+        a->setIcon(QIcon(style()->standardPixmap(QStyle::SP_MediaPlay)));
+        a->setShortcut(Qt::Key_2);
     }
-    if (!m_isPlaying && !isCurrentPlaylistItem && m_PlaylistMode != Playlist::Tracklist)
-        popup.addAction(style()->standardPixmap(QStyle::SP_MediaPlay), tr("&Load"),
-            this, SLOT(dummySlot()), Qt::Key_L);
-    if (!isCurrentPlaylistItem && m_PlaylistMode != Playlist::Tracklist)
-        popup.addAction(style()->standardPixmap(QStyle::SP_ArrowRight),
-            tr("Load as &Next"), this, SLOT(dummySlot()), Qt::Key_N);
+    if (!m_isPlaying && !isCurrentPlaylistItem && m_PlaylistMode != Playlist::Tracklist) {
+        a = popup.addAction(tr("&Load"), this, SLOT(dummySlot()));
+        a->setIcon(QIcon(style()->standardPixmap(QStyle::SP_MediaPlay)));
+        a->setShortcut(Qt::Key_L);
+    }
+    if (!isCurrentPlaylistItem && m_PlaylistMode != Playlist::Tracklist) {
+        a = popup.addAction(tr("Load as &Next"), this, SLOT(dummySlot()));
+        a->setIcon(QIcon(style()->standardPixmap(QStyle::SP_ArrowRight)));
+        a->setShortcut(Qt::Key_N);
+    }
     popup.addSeparator();
-    popup.addAction(style()->standardPixmap(QStyle::SP_DriveCDIcon),
-        tr("&Prelisten Track"), this, SLOT(dummySlot()), Qt::Key_P);
+    a = popup.addAction(tr("&Prelisten Track"), this, SLOT(dummySlot()));
+    a->setIcon(QIcon(style()->standardPixmap(QStyle::SP_DriveCDIcon)));
+    a->setShortcut(Qt::Key_P);
     popup.addSeparator();
-    popup.addAction(style()->standardPixmap(QStyle::SP_ArrowRight),
-        tr("&Search for: '%1'").arg(item->text(col)), this,
-        SLOT(dummySlot()), Qt::Key_S);
+    a = popup.addAction(tr("&Search for: '%1'").arg(item->text(col)), this, SLOT(dummySlot()));
+    a->setIcon(QIcon(style()->standardPixmap(QStyle::SP_ArrowRight)));
+    a->setShortcut(Qt::Key_S);
     popup.addSeparator();
-    if (!isCurrentPlaylistItem && m_PlaylistMode != Playlist::Tracklist)
-        popup.addAction(style()->standardPixmap(QStyle::SP_TrashIcon),
-            tr("&Remove Selected"), this, SLOT(removeSelectedItems()),
-            Qt::Key_Delete);
+    if (!isCurrentPlaylistItem && m_PlaylistMode != Playlist::Tracklist) {
+        a = popup.addAction(tr("&Remove Selected"), this, SLOT(removeSelectedItems()));
+        a->setIcon(QIcon(style()->standardPixmap(QStyle::SP_TrashIcon)));
+        a->setShortcut(Qt::Key_Delete);
+    }
     popup.addSeparator();
-    popup.addAction(style()->standardPixmap(QStyle::SP_DirOpenIcon),
-        tr("&Open File Location"), this, SLOT(dummySlot()),
-        Qt::Key_O);
-    popup.addAction(style()->standardPixmap(QStyle::SP_MessageBoxInformation),
-        tr("&View Tag Information"), this, SLOT(dummySlot()),
-        Qt::Key_V);
+    a = popup.addAction(tr("&Open File Location"), this, SLOT(dummySlot()));
+    a->setIcon(QIcon(style()->standardPixmap(QStyle::SP_DirOpenIcon)));
+    a->setShortcut(Qt::Key_O);
+    a = popup.addAction(tr("&View Tag Information"), this, SLOT(dummySlot()));
+    a->setIcon(QIcon(style()->standardPixmap(QStyle::SP_MessageBoxInformation)));
+    a->setShortcut(Qt::Key_V);
+    
+    // Add XML save/load actions
+    popup.addSeparator();
+    a = popup.addAction(tr("&Save Playlist as XSPF"), this, SLOT(dummySlot()));
+    a->setIcon(QIcon(style()->standardPixmap(QStyle::SP_DesktopIcon)));
+    a->setShortcut(Qt::Key_X);
+    a = popup.addAction(tr("&Load Playlist from XSPF"), this, SLOT(dummySlot()));
+    a->setIcon(QIcon(style()->standardPixmap(QStyle::SP_FileIcon)));
+    a->setShortcut(Qt::Key_Z);
 
-    QAction* a = popup.exec(QCursor::pos());
+    a = popup.exec(QCursor::pos());
     if (!a)
         return;
     QKeySequence shortcut = a->shortcut();
@@ -1010,6 +1199,22 @@ void Playlist::showContextMenu(PlaylistItem* item, int col)
                 QUrl(QString("file://%1").arg(item->track()->dirPath())));
     } else if (shortcut == QKeySequence(Qt::Key_Delete)) {
         item = nullptr;
+    } else if (shortcut == QKeySequence(Qt::Key_X)) {
+        // Save playlist as XML
+        QString fileName = QFileDialog::getSaveFileName(this, tr("Save Playlist"), 
+                                                        QDir::homePath() + "/playlist.xspf",
+                                                        tr("XSPF Files (*.xspf)"));
+        if (!fileName.isEmpty()) {
+            saveXML(fileName);
+        }
+    } else if (shortcut == QKeySequence(Qt::Key_Z)) {
+        // Load playlist from XML
+        QString fileName = QFileDialog::getOpenFileName(this, tr("Load Playlist"), 
+                                                        QDir::homePath(),
+                                                        tr("XSPF Files (*.xspf)"));
+        if (!fileName.isEmpty()) {
+            loadXML(fileName);
+        }
     }
 }
 

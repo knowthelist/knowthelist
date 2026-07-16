@@ -1,27 +1,26 @@
 #
 # Knowthelist
-# Copyright (C) 2011-2019 Mario Stephan <mstephan@shared-files.de>
+# Copyright (C) 2011-2026 Mario Stephan <mstephan@shared-files.de>
 # License: LGPL-3.0+
 #
 
-DEFINES += APP_VERSION="\\\"2.3.1\\\""
+DEFINES += APP_VERSION="\\\"2.4.0\\\""
 
 QT += core \
     gui \
     xml \
-    sql
+    sql \
+    widgets \
+    concurrent
 
-greaterThan(QT_MAJOR_VERSION, 4){
-     #use qt5 and gstreamer 1.x
-     QT += widgets
-     DEFINES += GST_API_VERSION_1
-}
-#else use qt4 and gstreamer 0.10
+CONFIG += c++17
+DEFINES += JUCE_GLOBAL_MODULE_SETTINGS_INCLUDED=1
 
 TARGET = knowthelist
 TEMPLATE = app
 SOURCES += main.cpp \
     knowthelist.cpp \
+    playerbpmwidget.cpp \
     player.cpp \
     vumeter.cpp \
     playerwidget.cpp \
@@ -32,7 +31,7 @@ SOURCES += main.cpp \
     collectiondb.cpp \
     settingsdialog.cpp \
     track.cpp \
-    trackanalyser.cpp \
+    trackanalyzer.cpp \
     djsession.cpp \
     dj.cpp \
     filter.cpp \
@@ -56,6 +55,7 @@ SOURCES += main.cpp \
     ratingwidget.cpp \
     customdial.cpp
 HEADERS += knowthelist.h \
+    playerbpmwidget.h \
     vumeter.h \
     playerwidget.h \
     qled.h \
@@ -66,7 +66,7 @@ HEADERS += knowthelist.h \
     collectiondb.h \
     settingsdialog.h \
     track.h \
-    trackanalyser.h \
+    trackanalyzer.h \
     djsession.h \
     dj.h \
     filter.h \
@@ -156,18 +156,17 @@ win32 {
     QMAKE_POST_LINK = $$QMAKE_COPY \"$${DESTDIR}\libgstdirectsoundsink.dll\" \"$${GST_HOME}lib\gstreamer-1.0\" $$escape_expand(\\n\\t)
 }
 macx { 
-    DEFINES += GST_API_VERSION_1
-    INCLUDEPATH += /usr/local/include/gstreamer-1.0 \
-        /usr/local/include/glib-2.0 \
-        /usr/local/lib/glib-2.0/include \
-        /usr/local/include
-    LIBS += -L/usr/local/lib \
-        -lgstreamer-1.0 \
-        -lglib-2.0 \
-        -lgobject-2.0 \
-        -ltag \
-        -framework CoreAudio \
-        -framework CoreFoundation
+    BREW_TAGLIB = $$system(brew --prefix taglib 2>/dev/null)
+    isEmpty(BREW_TAGLIB): BREW_TAGLIB = /opt/homebrew/opt/taglib
+
+    LIBS += -L$${BREW_TAGLIB}/lib -ltag -lz
+
+    INCLUDEPATH += $${BREW_TAGLIB}/include \
+                   $${BREW_TAGLIB}/opt/taglib/include
+
+    # Note: this project's build path is CMake-based, see CMakeLists.txt.
+    # JUCE is linked via FetchContent (pre-built .a files in $JUCE_PATH/build/Release).
+    # The qmake src.pro below works only if you have a pre-built JUCE or use CMake.
 
 }
 unix:!macx {
@@ -181,27 +180,26 @@ unix:!macx {
             desktop.files += ../dist/Knowthelist.desktop
             INSTALLS += target icon desktop
 
-contains(DEFINES, GST_API_VERSION_1) {
-    CONFIG += link_pkgconfig \
-        gstreamer-1.0
-    PKGCONFIG += gstreamer-1.0 \
-        taglib alsa
-}
-else {
-    CONFIG += link_pkgconfig \
-        gstreamer
-    PKGCONFIG += gstreamer-0.10 \
-        taglib alsa
-}
+    CONFIG += link_pkgconfig
+    PKGCONFIG += gstreamer-1.0 taglib alsa
 
 }
 RESOURCES += ../images/icons.qrc \
     ../locale/locale.qrc
 ICON = ../dist/headset.icns
 
-isEmpty(QMAKE_LRELEASE) {
-win32:QMAKE_LRELEASE = $$[QT_INSTALL_BINS]\lrelease.exe
-else:QMAKE_LRELEASE = $$[QT_INSTALL_BINS]/lrelease
+win32 {
+    QMAKE_LRELEASE = $$[QT_INSTALL_BINS]\\lrelease.exe
+}
+macx {
+    QMAKE_LRELEASE = $$[QT_INSTALL_BINS]/lrelease
+}
+unix:!macx {
+    exists(/usr/bin/lrelease) {
+        QMAKE_LRELEASE = /usr/bin/lrelease
+    } else {
+        QMAKE_LRELEASE = $$[QT_INSTALL_BINS]/lrelease
+    }
 }
 
 lrelease.commands = $$QMAKE_LRELEASE ${QMAKE_FILE_IN}

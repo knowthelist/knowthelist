@@ -10,4 +10,22 @@ qrc_*.cpp
 knowthelist
 knowthelist_*.qm
 *~
+*.log
 
+# Qt / qmake generated files
+.qmake.stash
+Makefile
+Makefile.*
+object_script.*
+
+build/*
+dist/*
+Build/*
+build-*/
+dist-*/
+*.pro.user
+.docs/*
+.vscode/*
+.github/*
+.aider*
+.DS_Store

@@ -2,26 +2,38 @@ Source: knowthelist
 Section: sound
 Priority: optional
 Maintainer: Mario Stephan <mstephan@shared-files.de>
-Build-Depends: cdbs, qtbase5-dev|libqt4-dev, debhelper (>= 8),
- qttools5-dev-tools|qt4-linguist-tools,
+Build-Depends: debhelper-compat (= 13),
+ cmake,
+ pkgconf,
+ qt6-base-dev,
+ qt6-base-dev-tools,
+ qt6-tools-dev-tools,
  libgstreamer1.0-dev,
+ libgstreamer-plugins-base1.0-dev,
  libtag1-dev, libasound2-dev
-Standards-Version: 3.9.6
-Homepage: http://knowthelist.github.io/knowthelist
-Vcs-Git: git://github.com/knowthelist/knowthelist.git
+Standards-Version: 4.7.0
+Homepage: https://knowthelist.github.io/knowthelist
+Vcs-Git: https://github.com/knowthelist/knowthelist.git
 Vcs-Browser: https://github.com/knowthelist/knowthelist
 
 Package: knowthelist
 Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}, ${runtime:Depends}
+Depends: ${shlibs:Depends}, ${misc:Depends},
+ libqt6sql6-sqlite,
+ gstreamer1.0-plugins-base,
+ gstreamer1.0-plugins-good,
+ gstreamer1.0-plugins-bad,
+ gstreamer1.0-plugins-ugly,
+ gstreamer1.0-pulseaudio
 Description: awesome party music player
  Easy to use for all party guests.
  .
  Featuring:
-  - Quick search for tracks in collection.
+    - Fast collection search while tracks are playing.
   - Two players with separate playlists.
-  - Mixer with fader, 3 channel EQ and gain.
-  - Auto fader and auto gain.
-  - Track analyser search for song start/end and gain setting.
-  - Auto DJ function with multiple filters for random play.
-  - Monitor player for pre listen tracks (via 2nd sound card e.g. USB).
+    - Mixer with crossfader, 3-band EQ and gain per deck.
+    - Auto fade and auto gain control.
+    - Track analysis for cue points, loudness and BPM.
+    - Beat-synced transitions with visual sync support.
+    - Auto DJ with multiple filters and smart random play.
+    - Monitor player for pre-listening on a second sound device.

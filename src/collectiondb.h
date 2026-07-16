@@ -1,5 +1,5 @@
 /*
-    Copyright (C) 2005-2014 Mario Stephan <mstephan@shared-files.de>
+    Copyright (C) 2005-2026 Mario Stephan <mstephan@shared-files.de>
 
     This library is free software; you can redistribute it and/or modify
     it under the terms of the GNU Lesser General Public License as published
@@ -38,6 +38,7 @@ public:
 
     void incSongCounter(const QString url);
     void setSongRate(const QString url, int rate);
+    void setSongBpm(const QString url, int bpm);
     void updateDirStats(QString path, const long datetime);
     void removeSongsInDir(QString path);
     bool isDirInCollection(QString path);
@@ -85,6 +86,8 @@ public:
     QList<QStringList> selectPlaylistData();
     QList<QStringList> selectPlaylistTracks(QString name);
 
+    static bool ensureCollectionDatabase();
+
 signals:
     void scanDone(bool changed);
 
@@ -92,10 +95,10 @@ private slots:
 
 private:
     struct CollectionDbPrivate* p;
-    QSqlDatabase db;
     ProgressBar* m_progress;
     bool m_monitor;
     int m_lastInsertId;
+
 };
 
 #endif /* COLLECTIONDB_H */

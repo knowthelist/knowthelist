@@ -1,5 +1,5 @@
 /*
-    Copyright (C) 2005-2014 Mario Stephan <mstephan@shared-files.de>
+    Copyright (C) 2005-2026 Mario Stephan <mstephan@shared-files.de>
 
     This library is free software; you can redistribute it and/or modify
     it under the terms of the GNU Lesser General Public License as published
@@ -16,16 +16,19 @@
 */
 
 #include "collectionsetupmodel.h"
-#include <QDirModel>
+#include <QFileSystemModel>
 #include <QTreeView>
 
-CollectionSetupModel::CollectionSetupModel()
+CollectionSetupModel::CollectionSetupModel(QObject* parent)
+    : QFileSystemModel(parent)
 {
+    setRootPath("");
+    setFilter(QDir::AllDirs | QDir::NoDotAndDotDot);
 }
 
 Qt::ItemFlags CollectionSetupModel::flags(const QModelIndex& index) const
 {
-    Qt::ItemFlags f = QDirModel::flags(index);
+    Qt::ItemFlags f = QFileSystemModel::flags(index);
     if (index.column() == 0) // make the first column checkable
         f |= Qt::ItemIsUserCheckable;
     return f;
@@ -40,13 +43,15 @@ QVariant CollectionSetupModel::data(const QModelIndex& index, int role) const
         } else
             return (checked.contains(filePath(index)) ? Qt::Checked : Qt::Unchecked);
     }
-    return QDirModel::data(index, role);
+    return QFileSystemModel::data(index, role);
 }
 
 bool CollectionSetupModel::setData(const QModelIndex& index, const QVariant& value, int role)
 {
     if (index.isValid() && index.column() == 0 && role == Qt::CheckStateRole) {
         // store checked paths, remove unchecked paths
+        QList<QModelIndex> changedIndexes;
+        changedIndexes << index;
         QModelIndex idx = parent(index);
         if (value.toInt() == Qt::Checked) {
             checked.insert(filePath(index));
@@ -54,6 +59,7 @@ bool CollectionSetupModel::setData(const QModelIndex& index, const QVariant& val
             while (idx.isValid()) {
                 checkedPartially.insert(filePath(idx));
                 checked.remove(filePath(idx));
+                changedIndexes << idx;
                 idx = idx.parent();
             }
         } else {
@@ -61,20 +67,22 @@ bool CollectionSetupModel::setData(const QModelIndex& index, const QVariant& val
             // make parent unchecked if index was his only child
             while (idx.isValid()) {
                 bool hasChildren = false;
-                foreach (const QString& value, checked)
+                for (const QString& value : checked)
                     if (value.contains(filePath(idx)))
                         hasChildren = true;
                 if (!hasChildren) {
                     checkedPartially.remove(filePath(idx));
-                    checked.insert(filePath(idx));
+                    checked.remove(filePath(idx));
                 }
+                changedIndexes << idx;
                 idx = idx.parent();
             }
         }
-        emit dataChanged(parent(index), index);
+        for (const QModelIndex& changedIndex : changedIndexes)
+            Q_EMIT dataChanged(changedIndex, changedIndex, {Qt::CheckStateRole});
         return true;
     }
-    return QDirModel::setData(index, value, role);
+    return QFileSystemModel::setData(index, value, role);
 }
 
 QVariant CollectionSetupModel::headerData(int section, Qt::Orientation orientation, int role) const
@@ -89,13 +97,13 @@ QVariant CollectionSetupModel::headerData(int section, Qt::Orientation orientati
             return QVariant();
         }
     }
-    return QAbstractItemModel::headerData(section, orientation, role);
+    return QFileSystemModel::headerData(section, orientation, role);
 }
 
 QStringList CollectionSetupModel::dirsChecked()
 {
     QStringList list;
-    foreach (const QString& value, checked)
+    for (const QString& value : checked)
         list << value;
     return list;
 }
@@ -104,7 +112,7 @@ void CollectionSetupModel::setDirsChecked(QStringList list)
 {
     checked.clear();
     checkedPartially.clear();
-    foreach (const QString& value, list) {
+    for (const QString& value : list) {
         /* index parents Qt::PartiallyChecked */
         QModelIndex idx = parent(index(value));
         while (idx.isValid()) {

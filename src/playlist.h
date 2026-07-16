@@ -1,5 +1,5 @@
 /*
-    Copyright (C) 2005-2014 Mario Stephan <mstephan@shared-files.de>
+    Copyright (C) 2005-2026 Mario Stephan <mstephan@shared-files.de>
 
     This library is free software; you can redistribute it and/or modify
     it under the terms of the GNU Lesser General Public License as published
@@ -20,7 +20,11 @@
 
 #include "track.h"
 
+#include <QQueue>
+#include <QSet>
 #include <QTreeWidget>
+
+class TrackAnalyzer;
 
 class Playlist : public QTreeWidget {
     Q_OBJECT
@@ -74,6 +78,7 @@ public:
     //ToDo: what is for private only? Sort!
 
 protected:
+    void resizeEvent(QResizeEvent* event);
     void keyPressEvent(QKeyEvent* event);
     void mousePressEvent(QMouseEvent* event);
     void mouseMoveEvent(QMouseEvent* event);
@@ -120,6 +125,7 @@ Q_SIGNALS:
     void countChanged(QList<Track*>);
 
 private:
+    void applyModeColumnLayout();
     void setCurrentPlaylistItem(PlaylistItem*);
     void setNextPlaylistItem(PlaylistItem*);
     void removePlaylistItem(PlaylistItem*);
@@ -172,6 +178,19 @@ private Q_SLOTS:
     void handleChanges();
     void slotItemChanged(QTreeWidgetItem* current, QTreeWidgetItem* previous);
     void dummySlot();
+    void analyzeTempoFinished();
+
+private:
+    void queueTempoScan(Track* track);
+    bool queueIdleTempoRescanCandidate();
+    void startTempoScan();
+
+    TrackAnalyzer* m_tempoAnalyzer;
+    QQueue<QString> m_tempoScanQueue;
+    QSet<QString> m_tempoRescanDone;
+    QString m_tempoScanUrl;
+    int m_tempoRescanCursor;
+    bool m_tempoScanActive;
 };
 
 #endif

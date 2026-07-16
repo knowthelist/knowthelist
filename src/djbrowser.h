@@ -1,5 +1,5 @@
 /*
-    Copyright (C) 2005-2014 Mario Stephan <mstephan@shared-files.de>
+    Copyright (C) 2005-2026 Mario Stephan <mstephan@shared-files.de>
 
     This library is free software; you can redistribute it and/or modify
     it under the terms of the GNU Lesser General Public License as published
@@ -29,7 +29,6 @@ public:
     explicit DjBrowser(QWidget* parent = nullptr);
     ~DjBrowser();
     void updateList();
-    void saveSettings();
 
 signals:
     void selectionChanged(Dj*);
@@ -42,6 +41,7 @@ public slots:
     void startDj();
     void addFilter();
     void removeFilter();
+    void saveSettings();
 
 private:
     class DjBrowserPrivate* p;

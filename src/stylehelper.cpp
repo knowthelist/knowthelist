@@ -122,7 +122,7 @@ void StyleHelper::setBaseColor(const QColor& newcolor)
 
     if (color.isValid() && color != m_baseColor) {
         m_baseColor = color;
-        foreach (QWidget* w, QApplication::topLevelWidgets())
+        for (QWidget* w : QApplication::topLevelWidgets())
             w->update();
     }
 }
@@ -149,13 +149,12 @@ void StyleHelper::verticalGradient(QPainter* painter, const QRect& spanRect, con
     if (StyleHelper::usePixmapCache()) {
         QString key;
         QColor keyColor = baseColor(lightColored);
-        key.sprintf("mh_vertical %d %d %d %d %d",
+        key = QString::asprintf("mh_vertical %d %d %d %d %d",
             spanRect.width(), spanRect.height(), clipRect.width(),
             clipRect.height(), keyColor.rgb());
-        ;
 
         QPixmap pixmap;
-        if (!QPixmapCache::find(key, pixmap)) {
+        if (!QPixmapCache::find(key, &pixmap)) {
             pixmap = QPixmap(clipRect.size());
             QPainter p(&pixmap);
             QRect rect(0, 0, clipRect.width(), clipRect.height());
@@ -177,7 +176,7 @@ void StyleHelper::drawIconWithShadow(const QIcon& icon, const QRect& rect,
     QPixmap cache;
     QString pixmapName = QString("icon %0 %1 %2").arg(icon.cacheKey()).arg(iconMode).arg(rect.height());
 
-    if (!QPixmapCache::find(pixmapName, cache)) {
+    if (!QPixmapCache::find(pixmapName, &cache)) {
         QPixmap px = icon.pixmap(rect.size());
         cache = QPixmap(px.size() + QSize(radius * 2, radius * 2));
         cache.fill(Qt::transparent);

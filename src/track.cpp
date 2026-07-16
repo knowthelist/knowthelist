@@ -1,6 +1,6 @@
 /*
     Copyright (C) 2004 Max Howell <max.howell@methylblue.com>
-    Copyright (C) 2005-2014 Mario Stephan <mstephan@shared-files.de>
+    Copyright (C) 2005-2026 Mario Stephan <mstephan@shared-files.de>
 
     This library is free software; you can redistribute it and/or modify
     it under the terms of the GNU Lesser General Public License as published
@@ -44,6 +44,7 @@ QStringList Track::tagNameList = QStringList() << "location"
                                                << "trackNum"
                                                << "duration"
                                                << "counter"
+                                               << "bpm"
                                                << "rate";
 
 struct TrackPrivate {
@@ -56,6 +57,7 @@ struct TrackPrivate {
     QString genre;
     QString tracknumber;
     int counter;
+    int bpm;
     int length;
     int rate;
     Track::Options flags;
@@ -65,6 +67,7 @@ Track::Track()
     : p(new TrackPrivate)
 {
     p->counter = -1;
+    p->bpm = 0;
     p->rate = 0;
 }
 
@@ -76,6 +79,7 @@ Track::~Track()
 Track::Track(const QUrl& u)
     : p(new TrackPrivate)
 {
+    p->bpm = 0;
     p->url = u;
     readTags();
 }
@@ -83,6 +87,9 @@ Track::Track(const QUrl& u)
 Track::Track(const QStringList& list)
     : p(new TrackPrivate)
 {
+    p->bpm = 0;
+    p->rate = 0;
+    p->flags = QFlag(0);
     if (list.count() > 9) {
         p->url = QUrl::fromLocalFile(list.at(0));
         p->artist = list.at(1);
@@ -93,24 +100,31 @@ Track::Track(const QStringList& list)
         p->tracknumber = list.at(6);
         p->length = QString(list.at(7)).toInt();
         p->counter = QString(list.at(8)).toInt();
-        p->rate = QString(list.at(9)).toInt();
     }
-    if (list.count() > 10)
-        p->flags = QFlag(list.at(10).toInt());
+    if (list.count() == 10) {
+        p->rate = QString(list.at(9)).toInt();
+    } else if (list.count() >= 11) {
+        p->bpm = QString(list.at(9)).toInt();
+        p->rate = QString(list.at(10)).toInt();
+        if (list.count() > 11)
+            p->flags = QFlag(list.at(11).toInt());
+    }
 }
 
 Track::Track(const PlaylistItem* item)
     : p(new TrackPrivate)
 {
+    p->bpm = 0;
     p->url = QUrl::fromLocalFile(item->urlString());
     p->title = item->title();
-    p->artist = item->exactText(2);
-    p->album = item->exactText(4);
-    p->year = item->exactText(5);
-    p->comment = item->exactText(6);
-    p->genre = item->exactText(7);
-    p->tracknumber = item->exactText(8);
-    p->counter = item->exactText(9).toInt();
+    p->artist = item->exactText(PlaylistItem::Column_Artist);
+    p->album = item->exactText(PlaylistItem::Column_Album);
+    p->year = item->exactText(PlaylistItem::Column_Year);
+    p->comment = item->exactText(PlaylistItem::Column_Year);
+    p->genre = item->exactText(PlaylistItem::Column_Genre);
+    p->tracknumber = item->exactText(PlaylistItem::Column_Tracknumber);
+    p->counter = item->exactText(PlaylistItem::Column_Played).toInt();
+    p->bpm = item->exactText(PlaylistItem::Column_BPM).toInt();
     // p->rate = item->rate();
 }
 
@@ -129,15 +143,16 @@ void Track::readTags()
         if (fileref.tag()) {
             TagLib::Tag* tag = fileref.tag();
 
-            p->title = !tag->title().isNull() ? TStringToQString(tag->title()).trimmed() : QObject::tr("Unknown");
-            p->artist = !tag->artist().isNull() ? TStringToQString(tag->artist()).trimmed() : QObject::tr("Unknown");
-            p->album = !tag->album().isNull() ? TStringToQString(tag->album()).trimmed() : QObject::tr("Unknown");
+            p->title = !tag->title().isEmpty() ? TStringToQString(tag->title()).trimmed() : QObject::tr("Unknown");
+            p->artist = !tag->artist().isEmpty() ? TStringToQString(tag->artist()).trimmed() : QObject::tr("Unknown");
+            p->album = !tag->album().isEmpty() ? TStringToQString(tag->album()).trimmed() : QObject::tr("Unknown");
             p->comment = TStringToQString(tag->comment()).trimmed();
-            p->genre = !tag->genre().isNull() ? TStringToQString(tag->genre()).trimmed() : QObject::tr("Unknown");
-            p->year = tag->year() ? QString::number(tag->year()) : QString::null;
-            p->tracknumber = tag->track() ? QString::number(tag->track()) : QString::null;
-            p->length = fileref.audioProperties()->length();
+            p->genre = !tag->genre().isEmpty() ? TStringToQString(tag->genre()).trimmed() : QObject::tr("Unknown");
+            p->year = tag->year() ? QString::number(tag->year()) : QString();
+            p->tracknumber = tag->track() ? QString::number(tag->track()) : QString();
+            p->length = fileref.audioProperties()->lengthInSeconds();
             p->counter = 0;
+            p->bpm = 0;
             p->rate = 0;
 
             //polish up empty tags
@@ -160,7 +175,7 @@ bool Track::operator==(Track* track)
 
 bool Track::containIn(QList<Track*> list)
 {
-    foreach (Track* i, list) {
+    for (Track* i : list) {
         if (*i == this) {
             return true;
         }
@@ -235,7 +250,7 @@ QImage Track::defaultImage()
 QString Track::prettyTitle() const
 {
 
-    QString s = QString::null;
+    QString s = QString();
     if (p->artist != QObject::tr("Unknown"))
         s += p->artist + " - ";
     s += p->title;
@@ -349,6 +364,7 @@ QStringList Track::tagList() { return (QStringList() << p->url.toLocalFile()
                                                      << p->tracknumber
                                                      << QString().setNum(p->length)
                                                      << QString().setNum(p->counter)
+                                                     << QString().setNum(p->bpm)
                                                      << QString().setNum(p->rate)); }
 
 int Track::length() { return p->length > 0 ? p->length : 0; }
@@ -356,11 +372,12 @@ QUrl Track::url() { return p->url; }
 QString Track::title() { return p->title; }
 QString Track::artist() { return p->artist; }
 QString Track::album() { return p->album; }
+int Track::bpm() { return p->bpm; }
 int Track::rate() { return p->rate; }
 QString Track::year() { return p->year; }
 QString Track::comment() { return p->comment; }
 QString Track::genre() { return p->genre; }
-QString Track::tracknumber() { return p->tracknumber > 0 ? p->tracknumber : "0"; }
+QString Track::tracknumber() { return !p->tracknumber.isEmpty() ? p->tracknumber : "0"; }
 int Track::counter() { return p->counter; }
 QString Track::prettyLength() { return prettyLength(p->length); }
 Track::Options Track::flags() { return p->flags; }
@@ -369,6 +386,7 @@ void Track::setUrl(QUrl url) { p->url = url; }
 void Track::setTitle(QString s) { p->title = s; }
 void Track::setArtist(QString s) { p->artist = s; }
 void Track::setAlbum(QString s) { p->album = s; }
+void Track::setBpm(int s) { p->bpm = s; }
 void Track::setRate(int s) { p->rate = s; }
 void Track::setYear(QString s) { p->year = s; }
 void Track::setComment(QString s) { p->comment = s; }

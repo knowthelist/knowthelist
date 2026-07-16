@@ -1,5 +1,5 @@
 /*
-    Copyright (C) 2005-2014 Mario Stephan <mstephan@shared-files.de>
+    Copyright (C) 2005-2026 Mario Stephan <mstephan@shared-files.de>
 
     This library is free software; you can redistribute it and/or modify
     it under the terms of the GNU Lesser General Public License as published
@@ -45,13 +45,13 @@ DjBrowser::DjBrowser(QWidget* parent)
     p->database = new CollectionDB();
 
     QList<QStringList> tags = p->database->selectArtists();
-    p->allArtists.append(QString::null);
-    foreach (QStringList tag, tags)
+    p->allArtists.append(QString());
+    for (const QStringList& tag : tags)
         p->allArtists.append(tag[0]);
 
     tags = p->database->selectGenres();
-    p->allGenres.append(QString::null);
-    foreach (QStringList tag, tags)
+    p->allGenres.append(QString());
+    for (const QStringList& tag : tags)
         p->allGenres.append(tag[0]);
 
     QPushButton* pushAddDj = new QPushButton();
@@ -94,12 +94,12 @@ DjBrowser::DjBrowser(QWidget* parent)
     p->listDjs = new QListWidget();
     p->listDjFilters->setAttribute(Qt::WA_MacShowFocusRect, false);
     p->listDjs->setAttribute(Qt::WA_MacShowFocusRect, false);
-    p->listDjs->setItemSelected(p->listDjs->currentItem(), false);
+    if (p->listDjs->currentItem()) p->listDjs->currentItem()->setSelected(false);
 
     QVBoxLayout* mainLayout = new QVBoxLayout;
 
     QVBoxLayout* headWidgetLeftLayout = new QVBoxLayout;
-    headWidgetLeftLayout->setMargin(0);
+    headWidgetLeftLayout->setContentsMargins(0, 0, 0, 0);
     headWidgetLeftLayout->setSpacing(1);
     headWidgetLeftLayout->setAlignment(Qt::AlignRight);
     headWidgetLeftLayout->addWidget(pushAddDj);
@@ -110,7 +110,7 @@ DjBrowser::DjBrowser(QWidget* parent)
     headWidgetLeft->setLayout(headWidgetLeftLayout);
 
     QHBoxLayout* headWidgetRightLayout = new QHBoxLayout;
-    headWidgetRightLayout->setMargin(0);
+    headWidgetRightLayout->setContentsMargins(0, 0, 0, 0);
     headWidgetRightLayout->setSpacing(1);
     headWidgetRightLayout->setAlignment(Qt::AlignRight);
     headWidgetRightLayout->addWidget(pushAddFilter);
@@ -122,14 +122,14 @@ DjBrowser::DjBrowser(QWidget* parent)
     headWidgetRight->setLayout(headWidgetRightLayout);
 
     QVBoxLayout* widgetLeftLayout = new QVBoxLayout;
-    widgetLeftLayout->setMargin(0);
+    widgetLeftLayout->setContentsMargins(0, 0, 0, 0);
     widgetLeftLayout->setSpacing(1);
     widgetLeftLayout->setAlignment(Qt::AlignRight);
     widgetLeftLayout->addWidget(headWidgetLeft);
     widgetLeftLayout->addWidget(p->listDjs);
 
     QVBoxLayout* widgetRightLayout = new QVBoxLayout;
-    widgetRightLayout->setMargin(0);
+    widgetRightLayout->setContentsMargins(0, 0, 0, 0);
     widgetRightLayout->setSpacing(1);
     widgetRightLayout->setAlignment(Qt::AlignRight);
     widgetRightLayout->addWidget(headWidgetRight);
@@ -147,7 +147,7 @@ DjBrowser::DjBrowser(QWidget* parent)
 
     mainLayout->addWidget(p->splitter);
 
-    mainLayout->setMargin(0);
+    mainLayout->setContentsMargins(0, 0, 0, 0);
     mainLayout->setSpacing(0);
 
     setLayout(mainLayout);
@@ -266,7 +266,7 @@ void DjBrowser::updateList()
     DjWidget* djWidget = static_cast<DjWidget*>(p->listDjs->itemWidget(p->listDjs->currentItem()));
     djWidget->activateDJ();
     djWidget->clicked();
-    p->listDjs->setItemSelected(p->listDjs->currentItem(), false);
+    if (p->listDjs->currentItem()) p->listDjs->currentItem()->setSelected(false);
     p->listDjs->setSelectionMode(QAbstractItemView::NoSelection);
 }
 

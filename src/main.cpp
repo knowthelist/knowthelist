@@ -1,5 +1,5 @@
 /*
-    Copyright (C) 2005-2014 Mario Stephan <mstephan@shared-files.de>
+    Copyright (C) 2005-2026 Mario Stephan <mstephan@shared-files.de>
 
     This library is free software; you can redistribute it and/or modify
     it under the terms of the GNU Lesser General Public License as published
@@ -17,20 +17,115 @@
 
 #include "knowthelist.h"
 
+#include <juce_events/juce_events.h>
 #include <QApplication>
+#include <QDateTime>
+#include <QFile>
+#include <QFontDatabase>
+#include <QFont>
 #include <QMessageBox>
-#include <QTextCodec>
 #include <QTranslator>
 #include <QtSql>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+
+// Global debug level: 0 = errors only, 1-5 increasingly verbose.
+static int g_debugLevel = 0;
+
+static void messageHandler(QtMsgType type, const QMessageLogContext& ctx, const QString& msg)
+{
+    // 0: Critical+Fatal only
+    // 1: Warning+
+    // 2: Info+
+    // 3+: Debug+
+    switch (type) {
+    case QtDebugMsg:    if (g_debugLevel < 3) return; break;
+    case QtInfoMsg:     if (g_debugLevel < 2) return; break;
+    case QtWarningMsg:  if (g_debugLevel < 1) return; break;
+    case QtCriticalMsg: break;
+    case QtFatalMsg:    break;
+    }
+
+    QString prefix;
+    if (g_debugLevel >= 5 && ctx.file) {
+        prefix = QString("[%1:%2] ").arg(ctx.file).arg(ctx.line);
+    } else if (g_debugLevel >= 4 && ctx.function) {
+        prefix = QString("[%1] ").arg(ctx.function);
+    }
+
+    FILE* out = (type == QtCriticalMsg || type == QtFatalMsg) ? stderr : stdout;
+    fprintf(out, "%s%s\n", prefix.toUtf8().constData(), msg.toUtf8().constData());
+
+    if (type == QtFatalMsg)
+        abort();
+}
 
 int main(int argc, char* argv[])
 {
+    // Parse -d <level> before QApplication so logging is set up from the start.
+    for (int i = 1; i < argc; ++i) {
+        if (std::strcmp(argv[i], "-d") == 0) {
+            if (i + 1 < argc) {
+                char* end = nullptr;
+                long level = std::strtol(argv[i + 1], &end, 10);
+                if (end != argv[i + 1] && level >= 1 && level <= 5) {
+                    g_debugLevel = static_cast<int>(level);
+                    ++i;
+                } else {
+                    g_debugLevel = 3; // -d without a valid number → full debug
+                }
+            } else {
+                g_debugLevel = 3;
+            }
+            break;
+        }
+    }
+    qInstallMessageHandler(messageHandler);
+
+    // Initialise JUCE's internal subsystems (MessageManager, timers, MIDI scanner,
+    // etc.) before any JUCE audio objects are created.  The destructor of this
+    // scoped object shuts everything down cleanly after a.exec() returns, which
+    // prevents the assertions in juce_MidiDeviceListConnectionBroadcaster,
+    // juce_Timer and juce_Singleton that were previously seen on shutdown.
+    juce::ScopedJuceInitialiser_GUI juceInit;
+
     QApplication a(argc, argv);
 
-    // init rand
-    qsrand(QDateTime::currentMSecsSinceEpoch() / 1000);
+    // Load bundled fonts from Qt resources (works without system installation)
+    int firaSansLightId = QFontDatabase::addApplicationFont(":/fonts/FiraSans-Light.ttf");
+    int firaSansRegularId = QFontDatabase::addApplicationFont(":/fonts/FiraSans-Regular.ttf");
+    int firaMonoId = QFontDatabase::addApplicationFont(":/fonts/FiraMono-Regular.ttf");
 
-    QTextCodec::setCodecForLocale(QTextCodec::codecForName("UTF-8"));
+    if (firaSansLightId != -1) {
+        QStringList families = QFontDatabase::applicationFontFamilies(firaSansLightId);
+        if (!families.isEmpty()) {
+            QFont f(families.at(0));
+            f.setWeight(QFont::Light);
+            a.setFont(f);
+            qDebug() << "Global font set to:" << families.first();
+        } else {
+            qWarning() << "Failed to get Fira Sans Light family name";
+        }
+    } else {
+        qWarning() << "Fira Sans Light not found — checking Regular as fallback...";
+        if (firaSansRegularId != -1) {
+            QStringList families = QFontDatabase::applicationFontFamilies(firaSansRegularId);
+            if (!families.isEmpty()) {
+                QFont f(families.at(0));
+                a.setFont(f);
+                qDebug() << "Global font set to:" << families.first();
+            }
+        }
+    }
+
+    if (firaMonoId != -1) {
+        QStringList monoFamilies = QFontDatabase::applicationFontFamilies(firaMonoId);
+        qDebug() << "Loaded Fira Mono:" << monoFamilies.first();
+    } else {
+        qWarning() << "Failed to load bundled Fira Mono font!";
+    }
+
     a.setQuitOnLastWindowClosed(true);
 
     QCoreApplication::setOrganizationName("knowthelist-org");
@@ -51,8 +146,7 @@ int main(int argc, char* argv[])
         lang = QLocale::system().name();
 
     QTranslator qtTranslator;
-    qtTranslator.load("qt_" + lang,
-        QLibraryInfo::location(QLibraryInfo::TranslationsPath));
+    (void)qtTranslator.load("qt_" + lang);
     a.installTranslator(&qtTranslator);
 
     QTranslator localization;
@@ -62,38 +156,98 @@ int main(int argc, char* argv[])
     a.installTranslator(&localization);
 
     if (!QSqlDatabase::drivers().contains("QSQLITE")) {
-#if QT_VERSION >= 0x050000
         QMessageBox::critical(nullptr, QObject::tr("Unable to load database"),
-            QObject::tr("This application needs the QT5 SQLITE "
-                        "driver (libqt5-sql-sqlite)"));
-#else
-        QMessageBox::critical(0, QObject::tr("Unable to load database"),
-            QObject::tr("This application needs the QT4 SQLITE "
-                        "driver (libqt4-sql-sqlite)"));
-#endif
-
+            QObject::tr("This application needs the Qt SQLITE "
+                        "driver (libqt6-sql-sqlite)"));
         return 1;
     }
 
-#if QT_VERSION >= 0x050000
-    QString pathName = QStandardPaths::standardLocations(QStandardPaths::DataLocation).at(0);
-#else
-    QString pathName = QDesktopServices::storageLocation(QDesktopServices::DataLocation);
-#endif
+    QString pathName = QStandardPaths::standardLocations(QStandardPaths::AppDataLocation).at(0);
     QDir path(pathName);
 
     if (!path.exists())
         path.mkpath(pathName);
 
-    QSqlDatabase db = QSqlDatabase::addDatabase("QSQLITE");
-    db.setDatabaseName(path.absolutePath() + "/collection.db");
+    const QString dbName = path.absolutePath() + "/collection.db";
+    bool integrityCorrupt = false;
+    auto openAndVerifyDb = [&](QSqlDatabase& db) -> bool {
+        integrityCorrupt = false;
+        db.setDatabaseName(dbName);
+        db.setHostName("localhost");
+        if (!db.open()) {
+            QMessageBox::critical(nullptr, "fatal database error",
+                db.lastError().text() + QString("\n\nMake sure '%1' is writable.").arg(pathName));
+            return false;
+        }
 
-    if (!db.open()) {
+        QSqlQuery journalModeQuery(db);
+        if (!journalModeQuery.exec("PRAGMA journal_mode=WAL")) {
+            QMessageBox::critical(nullptr, "Database initialization error",
+                QString("Failed to set WAL mode: %1").arg(journalModeQuery.lastError().text()));
+            return false;
+        }
+
+        const QString journalMode = (journalModeQuery.next() ? journalModeQuery.value(0).toString() : QString());
+
+        QSqlQuery integrityQuery(db);
+        if (!integrityQuery.exec("PRAGMA integrity_check") || !integrityQuery.next()
+            || integrityQuery.value(0).toString().compare("ok", Qt::CaseInsensitive) != 0) {
+            integrityCorrupt = true;
+            return false;
+        }
+
+        QSqlQuery testQuery(db);
+        if (!testQuery.exec("SELECT COUNT(*) FROM sqlite_master;")) {
+            QMessageBox::critical(nullptr, "Database verification error",
+                QString("Failed to verify database connection: %1").arg(testQuery.lastError().text()));
+            return false;
+        }
+
+        qDebug() << "load database:" << dbName << "journal_mode" << journalMode;
+        return true;
+    };
+
+    if (!QSqlDatabase::contains("CollectionDB")) {
+        QSqlDatabase db = QSqlDatabase::addDatabase("QSQLITE", "CollectionDB");
+        if (!openAndVerifyDb(db)) {
+            if (!integrityCorrupt) {
+                return 1;
+            }
+
+            const QString backupName = dbName + ".corrupt."
+                + QDateTime::currentDateTimeUtc().toString("yyyyMMddHHmmss");
+            db.close();
+
+            bool movedCorruptDb = true;
+            if (QFile::exists(dbName)) {
+                movedCorruptDb = QFile::rename(dbName, backupName);
+                if (!movedCorruptDb) {
+                    movedCorruptDb = QFile::remove(dbName);
+                }
+            }
+
+            if (!movedCorruptDb) {
+                QMessageBox::critical(nullptr, "fatal database error",
+                    QString("Database is corrupted and could not be moved: %1").arg(dbName));
+                return 1;
+            }
+
+            if (!openAndVerifyDb(db)) {
+                return 1;
+            }
+        }
+    } else {
+        qDebug() << "load database:" << dbName << "(connection already exists on this thread)";
+    }
+
+    // Ensure we have a valid CollectionDB connection for later use
+    QSqlDatabase db = QSqlDatabase::database("CollectionDB");
+    if (!db.isValid()) {
         QMessageBox::critical(nullptr, "fatal database error",
-            db.lastError().text());
+            QString("Failed to get CollectionDB connection"));
         return 1;
     }
-    qDebug() << "load database: " << db.databaseName();
+
     Knowthelist w;
     w.show();
 
