@@ -275,16 +275,16 @@ void Playlist::applyModeColumnLayout()
         header()->showSection(PlaylistItem::Column_Album);
         header()->showSection(PlaylistItem::Column_BPM);
         header()->showSection(PlaylistItem::Column_Rate);
-        header()->resizeSection(PlaylistItem::Column_Artist, 22 * percent);
-        header()->resizeSection(PlaylistItem::Column_Title, 22 * percent);
-        header()->resizeSection(PlaylistItem::Column_Album, 20 * percent);
-        header()->resizeSection(PlaylistItem::Column_Length, 7 * percent);
-        header()->resizeSection(PlaylistItem::Column_BPM, qMax(48, static_cast<int>(6 * percent)));
-        header()->resizeSection(PlaylistItem::Column_Genre, 10 * percent);
-        header()->resizeSection(PlaylistItem::Column_Year, 8 * percent);
-        header()->resizeSection(PlaylistItem::Column_Tracknumber, 5 * percent);
-        header()->resizeSection(PlaylistItem::Column_Played, 5 * percent);
-        header()->resizeSection(PlaylistItem::Column_Rate, 75);
+        header()->resizeSection(PlaylistItem::Column_Artist, qMax(50, static_cast<int>(20 * percent)));
+        header()->resizeSection(PlaylistItem::Column_Title, qMax(60, static_cast<int>(20 * percent)));
+        header()->resizeSection(PlaylistItem::Column_Album, qMax(50, static_cast<int>(18 * percent)));
+        header()->resizeSection(PlaylistItem::Column_Length, qMax(40, static_cast<int>(6 * percent)));
+        header()->resizeSection(PlaylistItem::Column_BPM, qMax(44, static_cast<int>(6 * percent)));
+        header()->resizeSection(PlaylistItem::Column_Genre, qMax(35, static_cast<int>(7 * percent)));
+        header()->resizeSection(PlaylistItem::Column_Year, qMax(30, static_cast<int>(5 * percent)));
+        header()->resizeSection(PlaylistItem::Column_Tracknumber, qMax(26, static_cast<int>(4 * percent)));
+        header()->resizeSection(PlaylistItem::Column_Played, qMax(30, static_cast<int>(4 * percent)));
+        header()->resizeSection(PlaylistItem::Column_Rate, qMax(40, static_cast<int>(10 * percent)));
     } else {
         const int viewWidth = qMax(1, width);
 
@@ -333,7 +333,7 @@ void Playlist::setPlaylistMode(Mode newMode)
 
     switch (m_PlaylistMode) {
     case Playlist::Tracklist:
-        setHorizontalScrollBarPolicy(Qt::ScrollBarAsNeeded);
+        setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
         applyModeColumnLayout();
         setSortingEnabled(true);
         sortByColumn(PlaylistItem::Column_Played, Qt::DescendingOrder);
