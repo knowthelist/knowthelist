@@ -198,7 +198,7 @@ set(SOURCES
     src/djbrowser.cpp
     src/ratingwidget.cpp
     src/customdial.cpp
-    src/AnalysisCacheManager.cpp
+    src/analysiscachemanager.cpp
 )
 
 set(HEADERS
