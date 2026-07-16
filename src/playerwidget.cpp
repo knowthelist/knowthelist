@@ -153,9 +153,6 @@ PlayerWidget::PlayerWidget(QWidget* parent)
     ui->butFwd->setSizePolicy(QSizePolicy::MinimumExpanding, QSizePolicy::Fixed);
     if (QAbstractButton* beatModeButton = findChild<QAbstractButton*>("butBeatMode"))
         beatModeButton->setSizePolicy(QSizePolicy::MinimumExpanding, QSizePolicy::Fixed);
-    // Track fraVuMeter for resize (keeps bpmWidget geometry correct)
-    // and frame_3 for mouse clicks (toggle BPM/VU mode)
-    ui->frame_3->installEventFilter(this);
     ui->butPlay->setMaximumWidth(QWIDGETSIZE_MAX);
     ui->butCue->setMaximumWidth(QWIDGETSIZE_MAX);
     ui->butRew->setMaximumWidth(QWIDGETSIZE_MAX);
@@ -1494,11 +1491,6 @@ bool PlayerWidget::eventFilter(QObject* obj, QEvent* event)
         // fraVuMeter has its final geometry now — fill it exactly
         bpmWidget->setGeometry(ui->fraVuMeter->rect());
         return false;
-    }
-    if (obj == ui->frame_3 && event->type() == QEvent::MouseButtonPress) {
-        // Click on the display panel toggles BPM/VU mode
-        setBeatVisualMode(!m_beatVisualMode);
-        return true;
     }
     return QWidget::eventFilter(obj, event);
 }
