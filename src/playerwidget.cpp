@@ -246,8 +246,18 @@ PlayerWidget::PlayerWidget(QWidget* parent)
     // Keep these labels width-elastic so changing text never expands layouts.
     ui->lblTitle->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Preferred);
     ui->lblTitle->setMinimumWidth(0);
-    ui->lblInfo->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
-    ui->lblInfo->setMinimumWidth(0);
+    // Constrain lblInfo so it adapts proportionally but never dominates the layout.
+    // This prevents size jumps when track info text varies significantly (e.g. "0 Hours" vs "365 Days").
+    ui->lblInfo->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Preferred);
+    ui->lblInfo->setMinimumWidth(120);
+    ui->lblInfo->setMaximumWidth(400);
+
+    // Cap fraDigits too — its UI sizePolicy has Expanding + applyBeatVisualLayout sets QWIDGETSIZE_MAX.
+    // A reasonable max keeps the frame from growing beyond its useful content width.
+    // Also set Preferred policy + minimum width so fraDigits never forces size jumps on the parent.
+    ui->fraDigits->setMinimumWidth(320);
+    ui->fraDigits->setMaximumWidth(420);
+    ui->fraDigits->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
 
     // Keep time labels fixed-width/height to avoid jitter and clipping on macOS.
     // Note: The original code had redundant calls here, but they are kept for context.
@@ -462,7 +472,7 @@ void PlayerWidget::applyBeatVisualLayout(bool enabled)
     ui->fraDisplay->setMaximumWidth(QWIDGETSIZE_MAX);
     ui->fraVuMeter->setMaximumWidth(QWIDGETSIZE_MAX);
     ui->fraVuMeter->setMinimumHeight(100);
-    ui->fraDigits->setMaximumWidth(QWIDGETSIZE_MAX);
+    ui->fraDigits->setMaximumWidth(420);
     ui->vuMeter->setMaximumWidth(QWIDGETSIZE_MAX);
     if (enabled) {
         // BPM mode: vuMeter is hidden behind bpmWidget — no height restriction needed

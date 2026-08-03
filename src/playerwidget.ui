@@ -225,7 +225,7 @@ QPushButton#butMon:pressed {
        <number>0</number>
       </property>
       <property name="rightMargin">
-       <number>2</number>
+       <number>0</number>
       </property>
       <property name="bottomMargin">
        <number>2</number>
@@ -258,13 +258,13 @@ QPushButton#butMon:pressed {
         </property>
         <layout class="QGridLayout" name="gridLayout_3" rowstretch="1,0">
          <property name="leftMargin">
-          <number>4</number>
+          <number>0</number>
          </property>
          <property name="topMargin">
           <number>1</number>
          </property>
          <property name="rightMargin">
-          <number>7</number>
+          <number>0</number>
          </property>
          <property name="bottomMargin">
           <number>1</number>
@@ -330,13 +330,13 @@ QPushButton#butMon:pressed {
              <number>4</number>
             </property>
             <property name="leftMargin">
-             <number>4</number>
+             <number>0</number>
             </property>
             <property name="topMargin">
              <number>2</number>
             </property>
             <property name="rightMargin">
-             <number>4</number>
+             <number>0</number>
             </property>
             <property name="bottomMargin">
              <number>2</number>
@@ -888,7 +888,7 @@ QPushButton#butMon:pressed {
             <item>
              <widget class="QFrame" name="fraDigits">
               <property name="sizePolicy">
-               <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
+                            <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
                 <horstretch>0</horstretch>
                 <verstretch>0</verstretch>
                </sizepolicy>
@@ -916,10 +916,13 @@ QPushButton#butMon:pressed {
                 <number>1</number>
                </property>
                <property name="leftMargin">
-                <number>2</number>
+                <number>0</number>
                </property>
                <property name="topMargin">
                 <number>1</number>
+               </property>
+               <property name="rightMargin">
+                <number>0</number>
                </property>
                <property name="bottomMargin">
                 <number>5</number>
@@ -1404,7 +1407,7 @@ QPushButton#butMon:pressed {
                   <bool>false</bool>
                  </property>
                  <property name="alignment">
-                  <set>Qt::AlignmentFlag::AlignBottom|Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing</set>
+                  <set>Qt::AlignmentFlag::AlignBottom|Qt::AlignmentFlag::AlignLeft|Qt::AlignmentFlag::AlignLeading</set>
                  </property>
                  <property name="margin">
                   <number>0</number>
@@ -1909,7 +1912,7 @@ QPushButton#butMon:pressed {
                <item>
                 <widget class="QLabel" name="lblInfo">
                  <property name="sizePolicy">
-                  <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
+                                 <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
                    <horstretch>0</horstretch>
                    <verstretch>0</verstretch>
                   </sizepolicy>
@@ -3008,13 +3011,13 @@ QPushButton#butMon:pressed {
           <enum>QLayout::SizeConstraint::SetDefaultConstraint</enum>
          </property>
          <property name="leftMargin">
-          <number>8</number>
+                   <number>0</number>
          </property>
          <property name="topMargin">
           <number>6</number>
          </property>
          <property name="rightMargin">
-          <number>16</number>
+                   <number>0</number>
          </property>
          <property name="bottomMargin">
           <number>6</number>
@@ -3040,12 +3043,18 @@ QPushButton#butMon:pressed {
             <enum>QFrame::Shadow::Raised</enum>
            </property>
            <layout class="QHBoxLayout" name="horizontalLayout_4">
-            <property name="topMargin">
+                       <property name="leftMargin">
              <number>0</number>
             </property>
-            <property name="bottomMargin">
+                       <property name="topMargin">
              <number>0</number>
             </property>
+                       <property name="rightMargin">
+                        <number>0</number>
+                       </property>
+                       <property name="bottomMargin">
+                        <number>0</number>
+                       </property>
             <item>
              <widget class="QPushButton" name="butCue">
               <property name="minimumSize">
