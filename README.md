@@ -46,6 +46,7 @@
 | [taglib](http://taglib.github.io) | Audio metadata |
 | **JUCE** (auto-fetched by CMake) | Pure JUCE audio backend |
 | **soundtouch** | Pitch-preserving tempo |
+| **FreeType** and **Fontconfig** development files | JUCE graphics and font support |
 
 ---
 
@@ -54,7 +55,8 @@
 ```bash
 # 1. Install system dependencies
 sudo apt install build-essential cmake qt6-base-dev qt6-base-dev-tools \
-    libtag1-dev libasound2-dev ladspa-sdk soundtouch-devel
+    libtag1-dev libasound2-dev ladspa-sdk soundtouch-devel \
+    libfreetype-dev libfontconfig-dev libcurl4-openssl-dev
 
 # 2. Get the source
 git clone https://github.com/knowthelist/knowthelist.git

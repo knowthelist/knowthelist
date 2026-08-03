@@ -172,11 +172,8 @@ public:
         // Apply new rate immediately 
         resampler.setResamplingRatio(currentRate);
         
-        // Pre-fill the resampler with some audio data to eliminate initial latency
-        const int prefillSize = 2048; // Use larger buffer for better initialization
-        juce::AudioBuffer<float> prefillBuffer(2, prefillSize);
-        juce::AudioSourceChannelInfo info(&prefillBuffer);
-        resampler.getNextAudioBlock(info);
+        // The source is attached after this method returns. Prefilling here would
+        // read from an unattached source during load and can divide by zero.
 #endif
     }
 

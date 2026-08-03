@@ -149,6 +149,17 @@ CollectionDB::CollectionDB()
 
     createTables(false);
     createStatsTable();
+    repairNullMetadata();
+}
+
+void CollectionDB::repairNullMetadata()
+{
+    const QStringList tables = { "artist", "album", "year", "genre" };
+    for (const QString& table : tables) {
+        executeSql("INSERT OR IGNORE INTO " + table + " (name) VALUES ('');");
+        executeSql("UPDATE tags SET " + table + " = (SELECT id FROM " + table
+                   + " WHERE name = '' LIMIT 1) WHERE " + table + " IS NULL;");
+    }
 }
 
 CollectionDB::~CollectionDB()
@@ -272,7 +283,11 @@ QList<QStringList> CollectionDB::selectSql(const QString& statement)
     QList<QStringList> result;
     
     QSqlQuery query(currentThreadCollectionDb());
-    query.prepare(statement);
+    if (!query.prepare(statement)) {
+        qWarning() << Q_FUNC_INFO << "prepare failed:" << query.lastError().text()
+                   << statement;
+        return result;
+    }
     
     if (query.exec()) {
         while (query.next()) {
@@ -282,6 +297,9 @@ QList<QStringList> CollectionDB::selectSql(const QString& statement)
             }
             result << row;
         }
+    } else {
+        qWarning() << Q_FUNC_INFO << "exec failed:" << query.lastError().text()
+               << statement;
     }
     
     return result;
@@ -318,6 +336,8 @@ QString CollectionDB::escapeString(QString string)
 ulong CollectionDB::getValueID(QString name, QString value, bool autocreate, bool useTempTables)
 {
     QSqlQuery query(currentThreadCollectionDb());
+    if (value.isNull())
+        value = QString();
     QString table = name.simplified();
     if (useTempTables)
         table += "_temp";
@@ -402,10 +422,10 @@ QList<QStringList> CollectionDB::selectRandomEntry(QString rownum, QString path,
                   "tags.track, tags.length, COALESCE(statistics.playcounter, 0), "
                   "COALESCE(analysis_cache.bpm, 0), COALESCE(statistics.rating, 0) "
                   "FROM tags "
-                  " INNER JOIN artist ON tags.artist = artist.id "
-                  " INNER JOIN album ON tags.album = album.id "
-                  " INNER JOIN year ON tags.year = year.id "
-                  " INNER JOIN genre ON tags.genre = genre.id "
+                  " LEFT JOIN artist ON tags.artist = artist.id "
+                  " LEFT JOIN album ON tags.album = album.id "
+                  " LEFT JOIN year ON tags.year = year.id "
+                  " LEFT JOIN genre ON tags.genre = genre.id "
                   " LEFT OUTER JOIN statistics ON tags.url = statistics.url "
                   " LEFT OUTER JOIN analysis_cache ON tags.url = analysis_cache.url "
                   " WHERE 1=1 ";
@@ -518,16 +538,33 @@ void CollectionDB::moveTempTables()
                "LEFT JOIN album_temp alt ON alt.id = tt.album "
                "LEFT JOIN year_temp yt ON yt.id = tt.year "
                "LEFT JOIN genre_temp gt ON gt.id = tt.genre "
-               "LEFT JOIN artist a ON a.name = at.name "
-               "LEFT JOIN album al ON al.name = alt.name "
-               "LEFT JOIN year y ON y.name = yt.name "
-               "LEFT JOIN genre g ON g.name = gt.name;");
+               "LEFT JOIN artist a ON a.name IS at.name "
+               "LEFT JOIN album al ON al.name IS alt.name "
+               "LEFT JOIN year y ON y.name IS yt.name "
+               "LEFT JOIN genre g ON g.name IS gt.name;");
 }
 
 void CollectionDB::createStatsTable()
 {
-    // Placeholder implementation
     executeSql("CREATE TABLE IF NOT EXISTS statistics (url VARCHAR(255) PRIMARY KEY, playcounter INTEGER, rating INTEGER, lastplayed INTEGER);");
+
+    const QList<QPair<QString, QString>> columns = {
+        { "playcounter", "INTEGER DEFAULT 0" },
+        { "rating", "INTEGER DEFAULT 0" },
+        { "lastplayed", "INTEGER DEFAULT 0" }
+    };
+    const QList<QStringList> existingColumns = selectSql("PRAGMA table_info(statistics)");
+    for (const auto& column : columns) {
+        bool exists = false;
+        for (const QStringList& existingColumn : existingColumns) {
+            if (existingColumn.value(1) == column.first) {
+                exists = true;
+                break;
+            }
+        }
+        if (!exists)
+            executeSql("ALTER TABLE statistics ADD COLUMN " + column.first + " " + column.second);
+    }
 }
 
 void CollectionDB::dropStatsTable()
@@ -567,10 +604,10 @@ QList<QStringList> CollectionDB::selectTracks(QString year, QString genre, QStri
                   "tags.track, tags.length, COALESCE(statistics.playcounter, 0), "
                   "COALESCE(analysis_cache.bpm, 0), COALESCE(statistics.rating, 0) "
                   "FROM tags "
-                  " INNER JOIN artist ON tags.artist = artist.id "
-                  " INNER JOIN album ON tags.album = album.id "
-                  " INNER JOIN year ON tags.year = year.id "
-                  " INNER JOIN genre ON tags.genre = genre.id "
+                  " LEFT JOIN artist ON tags.artist = artist.id "
+                  " LEFT JOIN album ON tags.album = album.id "
+                  " LEFT JOIN year ON tags.year = year.id "
+                  " LEFT JOIN genre ON tags.genre = genre.id "
                   " LEFT OUTER JOIN statistics ON tags.url = statistics.url "
                   " LEFT OUTER JOIN analysis_cache ON tags.url = analysis_cache.url WHERE 1=1 ";
     sql += p->sqlQuickFilter;

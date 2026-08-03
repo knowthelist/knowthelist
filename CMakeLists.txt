@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.16)
 
-project(knowthelist VERSION 2.4.0 LANGUAGES CXX)
+project(knowthelist VERSION 2.4.0 LANGUAGES C CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -304,6 +304,7 @@ endif()
 
 target_compile_definitions(knowthelist PRIVATE
     KNOWTHELIST_HAVE_SOUNDTOUCH=${KNOWTHELIST_HAVE_SOUNDTOUCH}
+    JUCE_USE_MP3AUDIOFORMAT=1
 )
 
 target_include_directories(knowthelist PRIVATE
@@ -340,8 +341,12 @@ target_link_options(knowthelist PRIVATE
 # Linux-specific: ALSA
 if(UNIX AND NOT APPLE)
     pkg_check_modules(ALSA REQUIRED alsa)
+    find_package(CURL REQUIRED)
     target_include_directories(knowthelist PRIVATE ${ALSA_INCLUDE_DIRS})
-    target_link_libraries(knowthelist PRIVATE ${ALSA_LIBRARIES})
+    target_link_libraries(knowthelist PRIVATE
+        ${ALSA_LIBRARIES}
+        CURL::libcurl
+    )
 endif()
 
 # macOS-specific

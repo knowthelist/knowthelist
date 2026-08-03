@@ -94,6 +94,8 @@ signals:
 private slots:
 
 private:
+    void repairNullMetadata();
+
     struct CollectionDbPrivate* p;
     ProgressBar* m_progress;
     bool m_monitor;
