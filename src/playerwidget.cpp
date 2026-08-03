@@ -230,7 +230,7 @@ PlayerWidget::PlayerWidget(QWidget* parent)
     fonttime.setWeight(QFont::Light); // thinner
 #else
     int newSize = font.pointSize() - 1;
-    fonttime.setPointSize(fonttime.pointSize() + 4); // Make time labels bigger
+    fonttime.setPointSize(fonttime.pointSize() + 2); // Keep time readable without making the display taller
 #endif
     font.setPointSize(newSize);
     ui->lblInfo->setFont(font);
@@ -248,9 +248,18 @@ PlayerWidget::PlayerWidget(QWidget* parent)
     ui->lblTitle->setMinimumWidth(0);
     // Constrain lblInfo so it adapts proportionally but never dominates the layout.
     // This prevents size jumps when track info text varies significantly (e.g. "0 Hours" vs "365 Days").
-    ui->lblInfo->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Preferred);
-    ui->lblInfo->setMinimumWidth(120);
-    ui->lblInfo->setMaximumWidth(400);
+    ui->lblInfo->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
+    ui->lblInfo->setMinimumWidth(0);
+    ui->lblInfo->setMaximumWidth(80);
+    ui->lblInfo->setAlignment(Qt::AlignBottom | Qt::AlignHCenter);
+    ui->lblTimeRemain->setAlignment(Qt::AlignBottom | Qt::AlignRight);
+    ui->lblTimeRemainMs->setAlignment(Qt::AlignBottom | Qt::AlignRight);
+    if (QHBoxLayout* digitsLayout = qobject_cast<QHBoxLayout*>(ui->fraDigits->layout())) {
+        digitsLayout->setContentsMargins(0, 1, 0, 1);
+        digitsLayout->setSpacing(0);
+        digitsLayout->insertStretch(2, 1);
+        digitsLayout->insertStretch(4, 1);
+    }
 
     // Cap fraDigits too — its UI sizePolicy has Expanding + applyBeatVisualLayout sets QWIDGETSIZE_MAX.
     // A reasonable max keeps the frame from growing beyond its useful content width.
@@ -287,7 +296,6 @@ PlayerWidget::PlayerWidget(QWidget* parent)
     enforcePanelSplit();
     QTimer::singleShot(0, this, [this]() {
         enforcePanelSplit();
-        //syncDisplayHeightToControls();
     });
     this->stop();
 
@@ -467,7 +475,7 @@ void PlayerWidget::setMonitorRouteEnabled(bool enabled)
 void PlayerWidget::applyBeatVisualLayout(bool enabled)
 {
     // Keep the same outer dimensions in both modes so the player never resizes on toggle
-    setMinimumHeight(182);
+    setMinimumHeight(0);
 
     ui->fraDisplay->setMaximumWidth(QWIDGETSIZE_MAX);
     ui->fraVuMeter->setMaximumWidth(QWIDGETSIZE_MAX);
@@ -508,6 +516,15 @@ void PlayerWidget::updateResponsiveLayout()
         displayLayout->setContentsMargins(horizontalMargin, 2, horizontalMargin, 2);
         displayLayout->setSpacing(compact ? 1 : 2);
     }
+    if (QVBoxLayout* controlsLayout = qobject_cast<QVBoxLayout*>(ui->frame_2->layout())) {
+        const int controlsMargin = compact ? 1 : 2;
+        controlsLayout->setContentsMargins(0, controlsMargin, 0, controlsMargin);
+        controlsLayout->setSpacing(compact ? 2 : 4);
+    }
+
+    ui->fraVuMeter->setMinimumHeight(100);
+    ui->fraDigits->setMinimumHeight(25);
+    ui->fraDisplay->setMinimumHeight(0);
 
     if (QLayout* layout = ui->horizontalLayout_2)
         layout->setSpacing(veryCompact ? 0 : (compact ? 1 : 4));
