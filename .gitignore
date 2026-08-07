@@ -27,6 +27,10 @@ dist-*/
 .docs/*
 .vscode/*
 .github/*
+!.github/
+!.github/copilot-instructions.md
+!.github/workflows/
+!.github/workflows/release.yml
 .aider*
 .DS_Store
 .nanocoder/

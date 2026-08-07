@@ -135,6 +135,10 @@ Pre-built Linux packages are also available on the [Releases page](https://githu
 
 Download the latest installer from the [Releases page](https://github.com/knowthelist/knowthelist/releases).
 
+## Creating a Release
+
+Pushing a version tag such as `v2.4.0` starts the GitHub Actions release workflow. It builds the macOS application bundle and Linux `.deb`/`.rpm` packages on clean runners, and uploads source `.zip` and `.tar.gz` archives. Release artifacts are currently unsigned; macOS may require allowing the downloaded app in **System Settings > Privacy & Security**.
+
 ---
 
 ## Regenerating UI Headers

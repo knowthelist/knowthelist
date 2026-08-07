@@ -1,0 +1,123 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+permissions:
+  contents: write
+
+jobs:
+  linux:
+    name: Linux packages
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes \
+            cmake ninja-build pkg-config \
+            qt6-base-dev qt6-base-dev-tools \
+            libtag1-dev libasound2-dev libcurl4-openssl-dev \
+            rpm
+
+      - name: Configure
+        run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr
+
+      - name: Build
+        run: cmake --build build --parallel 2
+
+      - name: Package DEB and RPM
+        run: |
+          cpack --config build/CPackConfig.cmake -G DEB
+          cpack --config build/CPackConfig.cmake -G RPM
+          mkdir -p release-assets
+          mv build/*.deb build/*.rpm release-assets/
+
+      - name: Upload Linux packages
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-packages
+          path: release-assets/*
+
+  macos:
+    name: macOS application
+    runs-on: macos-14
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Install build dependencies
+        run: brew install qt taglib
+
+      - name: Configure
+        run: |
+          cmake -S . -B build -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_PREFIX_PATH="$(brew --prefix qt)"
+
+      - name: Build
+        run: cmake --build build --parallel 2
+
+      - name: Bundle application dependencies
+        run: |
+          APP="build/knowthelist.app"
+          "$(brew --prefix qt)/bin/macdeployqt" "$APP"
+          mkdir -p "$APP/Contents/Frameworks"
+          TAGLIB_LIB="$(otool -L "$APP/Contents/MacOS/knowthelist" | awk '/libtag/ {print $1; exit}')"
+          if [ -n "$TAGLIB_LIB" ] && [ -f "$TAGLIB_LIB" ]; then
+            cp "$TAGLIB_LIB" "$APP/Contents/Frameworks/"
+            install_name_tool -change "$TAGLIB_LIB" \
+              "@loader_path/../Frameworks/$(basename "$TAGLIB_LIB")" \
+              "$APP/Contents/MacOS/knowthelist"
+          fi
+          ditto -c -k --sequesterRsrc --keepParent "$APP" \
+            "knowthelist-${GITHUB_REF_NAME}-macOS.zip"
+
+      - name: Upload macOS bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-bundle
+          path: knowthelist-*.zip
+
+  release:
+    name: Publish GitHub release
+    needs: [linux, macos]
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Download Linux packages
+        uses: actions/download-artifact@v4
+        with:
+          name: linux-packages
+          path: release-assets
+
+      - name: Download macOS bundle
+        uses: actions/download-artifact@v4
+        with:
+          name: macos-bundle
+          path: release-assets
+
+      - name: Create source archives
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          git archive --format=zip --prefix="knowthelist-${VERSION}/" \
+            -o "release-assets/knowthelist-${VERSION}-source.zip" "$GITHUB_REF_NAME"
+          git archive --format=tar.gz --prefix="knowthelist-${VERSION}/" \
+            -o "release-assets/knowthelist-${VERSION}-source.tar.gz" "$GITHUB_REF_NAME"
+
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" release-assets/* \
+            --title "Knowthelist ${GITHUB_REF_NAME#v}" \
+            --generate-notes
