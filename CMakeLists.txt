@@ -95,6 +95,7 @@ set(CMAKE_BUILD_PARALLEL_LEVEL 1)
 if(NOT DEFINED CMAKE_JOB_POOL_COMPILE)
     set(CMAKE_JOB_POOL_COMPILE "compile")
 endif()
+set_property(GLOBAL PROPERTY JOB_POOLS compile=1)
 
 # Try to find JUCE installed system-wide first
 find_package(JUCE QUIET CONFIG)
