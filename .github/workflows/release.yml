@@ -15,6 +15,8 @@ jobs:
     steps:
       - name: Check out source
         uses: actions/checkout@v4
+        with:
+          submodules: recursive
 
       - name: Install build dependencies
         run: |
@@ -22,6 +24,7 @@ jobs:
           sudo apt-get install --yes \
             cmake ninja-build pkg-config \
             qt6-base-dev qt6-base-dev-tools \
+            libfreetype6-dev libfontconfig1-dev libegl1-mesa-dev libxkbcommon-dev \
             libtag1-dev libasound2-dev libcurl4-openssl-dev \
             libfreetype-dev libfontconfig-dev \
             rpm
@@ -51,6 +54,8 @@ jobs:
     steps:
       - name: Check out source
         uses: actions/checkout@v4
+        with:
+          submodules: recursive
 
       - name: Install build dependencies
         run: brew install qt taglib

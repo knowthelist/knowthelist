@@ -100,16 +100,21 @@ endif()
 find_package(JUCE QUIET CONFIG)
 
 if(NOT JUCE_FOUND)
-    # Fetch JUCE from GitHub (master branch for macOS 15 / ScreenCaptureKit support)
-    message(STATUS "JUCE not found locally; fetching from GitHub...")
-    FetchContent_Declare(
-        JUCE
-        GIT_REPOSITORY https://github.com/juce-framework/JUCE.git
-        GIT_TAG master
-        GIT_SHALLOW TRUE
-        GIT_PROGRESS ON
-    )
-    FetchContent_MakeAvailable(JUCE)
+    if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/external/JUCE/CMakeLists.txt")
+        message(STATUS "Using JUCE from the repository submodule")
+        add_subdirectory(external/JUCE "${CMAKE_BINARY_DIR}/juce" EXCLUDE_FROM_ALL)
+    else()
+        # Fetch JUCE from GitHub when the repository submodule is unavailable.
+        message(STATUS "JUCE submodule not found; fetching from GitHub...")
+        FetchContent_Declare(
+            JUCE
+            GIT_REPOSITORY https://github.com/juce-framework/JUCE.git
+            GIT_TAG 8.0.14
+            GIT_SHALLOW TRUE
+            GIT_PROGRESS ON
+        )
+        FetchContent_MakeAvailable(JUCE)
+    endif()
 endif()
 
 # Flatpak-specific setup: the Qt6 host tools and pkg-config cannot run
