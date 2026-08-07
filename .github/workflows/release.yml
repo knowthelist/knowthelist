@@ -4,6 +4,12 @@ on:
   push:
     tags:
       - "v*.*.*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing release tag to update
+        required: true
+        type: string
 
 permissions:
   contents: write
@@ -81,8 +87,9 @@ jobs:
               "@loader_path/../Frameworks/$(basename "$TAGLIB_LIB")" \
               "$APP/Contents/MacOS/knowthelist"
           fi
+          VERSION="${{ inputs.tag || github.ref_name }}"
           ditto -c -k --sequesterRsrc --keepParent "$APP" \
-            "knowthelist-${GITHUB_REF_NAME}-macOS.zip"
+            "knowthelist-${VERSION}-macOS.zip"
 
       - name: Upload macOS bundle
         uses: actions/upload-artifact@v4
@@ -114,16 +121,22 @@ jobs:
 
       - name: Create source archives
         run: |
-          VERSION="${GITHUB_REF_NAME#v}"
+          TAG="${{ inputs.tag || github.ref_name }}"
+          VERSION="${TAG#v}"
           git archive --format=zip --prefix="knowthelist-${VERSION}/" \
-            -o "release-assets/knowthelist-${VERSION}-source.zip" "$GITHUB_REF_NAME"
+            -o "release-assets/knowthelist-${VERSION}-source.zip" HEAD
           git archive --format=tar.gz --prefix="knowthelist-${VERSION}/" \
-            -o "release-assets/knowthelist-${VERSION}-source.tar.gz" "$GITHUB_REF_NAME"
+            -o "release-assets/knowthelist-${VERSION}-source.tar.gz" HEAD
 
       - name: Publish release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "$GITHUB_REF_NAME" release-assets/* \
-            --title "Knowthelist ${GITHUB_REF_NAME#v}" \
-            --generate-notes
+          TAG="${{ inputs.tag || github.ref_name }}"
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" release-assets/* --clobber
+          else
+            gh release create "$TAG" release-assets/* \
+              --title "Knowthelist ${TAG#v}" \
+              --generate-notes
+          fi
