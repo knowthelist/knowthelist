@@ -199,6 +199,7 @@ set(SOURCES
     src/ratingwidget.cpp
     src/customdial.cpp
     src/analysiscachemanager.cpp
+    src/transitionplanner.cpp
 )
 
 set(HEADERS
@@ -238,6 +239,7 @@ set(HEADERS
     src/ratingwidget.h
     src/customdial.h
     src/analysiscachemanager.h
+    src/transitionplanner.h
 )
 
 set(FORMS

@@ -17,6 +17,7 @@
 | **Dual Decks** | Two independent players with separate playlists for seamless mixing |
 | **Live Collection Search** | Find any track instantly while music plays — guests can type requests too |
 | **Full Mixer** | Crossfader, 3-band EQ per deck, and per-channel gain control |
+| **Adaptive Transition Planner** | **Automatically chooses the best transition for each song pair** — beat/phrase blend, bass swap, vocal handoff, equal-power blend, or hard cut |
 | **Beat Sync** | Visual sync support with gradual tempo restoration and latency compensation |
 | **Auto DJ** | Smart random play with powerful filters — set it and forget it |
 | **Track Analysis** | Automatic BPM detection, loudness mapping, cue points & beat phase visualization |
@@ -24,6 +25,18 @@
 | **Pitch-Preserving Time Stretch** | DJ-style tempo changes with pitch preservation |
 | **Auto Gain Control (AGC)** | Keep energy levels consistent across your set |
 | **Modern UI** | Fancy tabs, custom VU meters, progress bars, rating widgets — all with Fira Sans typography |
+
+### Adaptive Auto DJ transitions
+
+The Auto DJ does more than apply one fixed crossfade. Its transition planner reevaluates the upcoming pair whenever the current or waiting track changes, then selects an explainable transition profile based on BPM and musical style hints. Matching BPMs prioritize beat and phrase alignment by default, even when genre metadata is missing or inconsistent. All transition modes are enabled by default and can be adjusted under **Settings → Transitions**:
+
+- **Beat / phrase blend** for compatible dance tracks
+- **Bass swap** to prevent kick and bass masking
+- **Vocal / mid handoff** so the incoming lead remains dominant
+- **Equal-power blend** as the neutral, perceptually smooth fallback
+- **Hard cut** for large tempo or style changes
+
+The planner also respects duration limits, maximum tempo correction, and the selected style bias. Beat matching remains an automatic capability rather than a separate manual mixer toggle.
 
 ---
 

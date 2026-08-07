@@ -23,8 +23,11 @@
 #include <QFileDialog>
 #include <QGroupBox>
 #include <QCheckBox>
+#include <QComboBox>
+#include <QFormLayout>
 #include <QLabel>
 #include <QMessageBox>
+#include <QSpinBox>
 #include <QtDebug>
 #include <QWidget>
 #include <QtSql>
@@ -38,6 +41,16 @@ public:
     QCheckBox* checkBeatSyncEnabled;
     QCheckBox* checkBeatCueEnabled;
     QCheckBox* checkBeatAnalyzeTempo;
+    QGroupBox* transitionGroup;
+    QCheckBox* checkBeatBlend;
+    QCheckBox* checkBassSwap;
+    QCheckBox* checkVocalHandoff;
+    QCheckBox* checkEqualPower;
+    QCheckBox* checkHardCut;
+    QComboBox* transitionStyle;
+    QSpinBox* minimumTransitionDuration;
+    QSpinBox* maximumTransitionDuration;
+    QSpinBox* maximumTempoCorrection;
 };
 
 SettingsDialog::SettingsDialog(QWidget* parent)
@@ -46,6 +59,11 @@ SettingsDialog::SettingsDialog(QWidget* parent)
     p = new SettingsDialogPrivate;
     p->ui.setupUi(this);
     p->parent = parent;
+    p->ui.settingsGroupsTable->item(0, 0)->setText(tr("Transitions"));
+    p->ui.label->setText(tr("Transition timing and analysis"));
+    p->ui.label_5->setText(tr("Start transition before cue end"));
+    p->ui.label_7->setText(tr("Fallback transition duration"));
+    p->ui.pages->setMinimumHeight(690);
 
     // set icons in the settings list
 
@@ -118,9 +136,43 @@ SettingsDialog::SettingsDialog(QWidget* parent)
 
     connect(p->ui.countDJ, SIGNAL(valueChanged(int)), this, SLOT(loadDjList(int)));
 
-    // Beat sync options are shown in the Fader page to keep transition settings in one place.
+    p->transitionGroup = new QGroupBox(tr("Automatic transition modes"), p->ui.page);
+    p->transitionGroup->setGeometry(QRect(10, 245, 380, 295));
+    auto* transitionLayout = new QVBoxLayout(p->transitionGroup);
+    transitionLayout->setContentsMargins(8, 6, 8, 6);
+
+    p->checkBeatBlend = new QCheckBox(tr("Beat / phrase blend"), p->transitionGroup);
+    p->checkBassSwap = new QCheckBox(tr("Bass swap"), p->transitionGroup);
+    p->checkVocalHandoff = new QCheckBox(tr("Vocal / mid handoff"), p->transitionGroup);
+    p->checkEqualPower = new QCheckBox(tr("Equal-power blend"), p->transitionGroup);
+    p->checkHardCut = new QCheckBox(tr("Hard cut"), p->transitionGroup);
+    transitionLayout->addWidget(p->checkBeatBlend);
+    transitionLayout->addWidget(p->checkBassSwap);
+    transitionLayout->addWidget(p->checkVocalHandoff);
+    transitionLayout->addWidget(p->checkEqualPower);
+    transitionLayout->addWidget(p->checkHardCut);
+
+    auto* transitionForm = new QFormLayout;
+    p->transitionStyle = new QComboBox(p->transitionGroup);
+    p->transitionStyle->addItem(tr("Balanced"), "balanced");
+    p->transitionStyle->addItem(tr("Dance-focused"), "dance");
+    p->transitionStyle->addItem(tr("Vocal-focused"), "vocal");
+    p->minimumTransitionDuration = new QSpinBox(p->transitionGroup);
+    p->minimumTransitionDuration->setRange(1, 30);
+    p->maximumTransitionDuration = new QSpinBox(p->transitionGroup);
+    p->maximumTransitionDuration->setRange(1, 30);
+    p->maximumTempoCorrection = new QSpinBox(p->transitionGroup);
+    p->maximumTempoCorrection->setRange(0, 50);
+    p->maximumTempoCorrection->setSuffix("%");
+    transitionForm->addRow(tr("Style bias"), p->transitionStyle);
+    transitionForm->addRow(tr("Minimum duration"), p->minimumTransitionDuration);
+    transitionForm->addRow(tr("Maximum duration"), p->maximumTransitionDuration);
+    transitionForm->addRow(tr("Maximum tempo correction"), p->maximumTempoCorrection);
+    transitionLayout->addLayout(transitionForm);
+
+    // Beat analysis and cue options remain separate from transition selection.
     p->beatSyncGroup = new QGroupBox(tr("Beat Sync"), p->ui.page);
-    p->beatSyncGroup->setGeometry(QRect(10, 270, 380, 100));
+    p->beatSyncGroup->setGeometry(QRect(10, 550, 380, 100));
 
     p->checkBeatSyncEnabled = new QCheckBox(tr("Enable BPM analysis and beat sync cue"), p->beatSyncGroup);
     p->checkBeatSyncEnabled->setGeometry(QRect(10, 20, 360, 20));
@@ -164,6 +216,17 @@ void SettingsDialog::accept()
     //save fade slider
     settings.setValue("faderTimeSlider", p->ui.faderTimeSlider->value());
     settings.setValue("faderEndSlider", p->ui.faderEndSlider->value());
+    settings.setValue("Transition/DefaultDurationSeconds", p->ui.faderTimeSlider->value());
+    settings.setValue("Transition/LeadInSeconds", p->ui.faderEndSlider->value());
+    settings.setValue("Transition/BeatBlendEnabled", p->checkBeatBlend->isChecked());
+    settings.setValue("Transition/BassSwapEnabled", p->checkBassSwap->isChecked());
+    settings.setValue("Transition/VocalHandoffEnabled", p->checkVocalHandoff->isChecked());
+    settings.setValue("Transition/EqualPowerEnabled", p->checkEqualPower->isChecked());
+    settings.setValue("Transition/HardCutEnabled", p->checkHardCut->isChecked());
+    settings.setValue("Transition/Style", p->transitionStyle->currentData());
+    settings.setValue("Transition/MinimumDurationSeconds", p->minimumTransitionDuration->value());
+    settings.setValue("Transition/MaximumDurationSeconds", p->maximumTransitionDuration->value());
+    settings.setValue("Transition/MaximumTempoCorrectionPercent", p->maximumTempoCorrection->value());
 
     //Playlist settings
     settings.setValue("checkAutoRemove", p->ui.checkAutoRemove->isChecked());
@@ -216,10 +279,28 @@ bool SettingsDialog::loadSettings()
     p->ui.comboLanguage->setCurrentIndex(settings.value("language", 0).toInt());
 
     //fade slider
-    p->ui.faderTimeSlider->setValue(settings.value("faderTimeSlider", "12").toInt());
-    p->ui.faderTimeLabel->setText(settings.value("faderTimeSlider", "12").toString() + "s");
-    p->ui.faderEndSlider->setValue(settings.value("faderEndSlider", "12").toInt());
-    p->ui.faderEndLabel->setText(settings.value("faderEndSlider", "12").toString() + "s");
+    const QVariant defaultDuration = settings.value(
+        "Transition/DefaultDurationSeconds", settings.value("faderTimeSlider", 12));
+    const QVariant leadIn = settings.value(
+        "Transition/LeadInSeconds", settings.value("faderEndSlider", 12));
+    p->ui.faderTimeSlider->setValue(defaultDuration.toInt());
+    p->ui.faderTimeLabel->setText(defaultDuration.toString() + "s");
+    p->ui.faderEndSlider->setValue(leadIn.toInt());
+    p->ui.faderEndLabel->setText(leadIn.toString() + "s");
+    p->checkBeatBlend->setChecked(settings.value("Transition/BeatBlendEnabled", true).toBool());
+    p->checkBassSwap->setChecked(settings.value("Transition/BassSwapEnabled", true).toBool());
+    p->checkVocalHandoff->setChecked(settings.value("Transition/VocalHandoffEnabled", true).toBool());
+    p->checkEqualPower->setChecked(settings.value("Transition/EqualPowerEnabled", true).toBool());
+    p->checkHardCut->setChecked(settings.value("Transition/HardCutEnabled", true).toBool());
+    const QString style = settings.value("Transition/Style", "balanced").toString();
+    const int styleIndex = p->transitionStyle->findData(style);
+    p->transitionStyle->setCurrentIndex(styleIndex >= 0 ? styleIndex : 0);
+    p->minimumTransitionDuration->setValue(
+        settings.value("Transition/MinimumDurationSeconds", 1).toInt());
+    p->maximumTransitionDuration->setValue(
+        settings.value("Transition/MaximumDurationSeconds", 30).toInt());
+    p->maximumTempoCorrection->setValue(
+        settings.value("Transition/MaximumTempoCorrectionPercent", 12).toInt());
 
     //Playlist setting
     p->ui.checkAutoRemove->setChecked(settings.value("checkAutoRemove", true).toBool());

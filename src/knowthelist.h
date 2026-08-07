@@ -29,6 +29,7 @@
 #include "playlistbrowser.h"
 #include "settingsdialog.h"
 #include "vumeter.h"
+#include "transitionplanner.h"
 
 #include <QMainWindow>
 #include <QButtonGroup>
@@ -87,7 +88,7 @@ private Q_SLOTS:
     void player2_monitorRouteToggled(bool enabled);
     void playlist1_currentTrackChanged(Track* track);
     void playlist2_currentTrackChanged(Track* track);
-    void on_toggleAutoSync_toggled(bool checked);
+    void refreshTransitionPlan();
     void on_toggleBeatVisual_toggled(bool checked);
 
     void slider1_valueChanged(int);
@@ -148,6 +149,9 @@ private:
     void applyBeatVisualMode(bool enabled);
     void applyAutoSyncEnabled(bool enabled);
     void updatePlayerMonitorRouting();
+    void applyTransitionAutomation();
+    void restoreTransitionEqualizers();
+    double transitionProgress() const;
     double selectAutoFadeTargetTempo(double startTempoBpm, int outgoingBpm, int incomingBpm) const;
     void setFaderModeToPlayer();
     QTimer* timerAutoFader;
@@ -178,16 +182,19 @@ private:
     PlayerWidget* player1;
     PlayerWidget* player2;
     QToolButton* m_monitorSettingsButton;
-    QPushButton* m_toggleAutoSyncButton;
     QPushButton* m_toggleBeatVisualButton;
     QPushButton* m_toggleBpmVisualButton;
-    QLed* m_autoSyncLed;
+    QLed* m_vuModeLed;
+    QLed* m_bpmModeLed;
     FileBrowser* filetree;
     PlaylistBrowser* playlistBrowser;
 
     SettingsDialog* preferences;
 
     bool autoFadeOn;
+    TransitionPlan m_transitionPlan;
+    bool m_transitionActive{false};
+    int m_transitionStartFaderValue{100};
 
     QString m_AutoDJGenre;
     int mAutofadeLength;
