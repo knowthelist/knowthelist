@@ -59,7 +59,7 @@ if(DEFINED ENV{FLATPAK_ID} AND IS_DIRECTORY /run/host/usr)
     endif()
 endif()
 
-find_package(Qt6 REQUIRED COMPONENTS Core Gui Widgets Xml Sql Concurrent)
+find_package(Qt6 REQUIRED COMPONENTS Core Gui Widgets Xml Sql Concurrent LinguistTools)
 
 if(COMMAND qt_standard_project_setup)
     qt_standard_project_setup()
@@ -259,10 +259,41 @@ set(FORMS
     src/playlistwidget.ui
 )
 
+set(TRANSLATION_TS_FILES
+    locale/knowthelist_cs.ts
+    locale/knowthelist_de.ts
+    locale/knowthelist_es.ts
+    locale/knowthelist_fr.ts
+    locale/knowthelist_hu.ts
+    locale/knowthelist_it.ts
+    locale/knowthelist_nl.ts
+    locale/knowthelist_ru.ts
+    locale/knowthelist_tr.ts
+)
+set(TRANSLATION_QM_FILES)
+set(TRANSLATION_QRC_CONTENT "<RCC><qresource prefix=\"/\">")
+foreach(translation_ts IN LISTS TRANSLATION_TS_FILES)
+    get_filename_component(translation_name "${translation_ts}" NAME_WE)
+    set(translation_qm "${CMAKE_CURRENT_BINARY_DIR}/locale/${translation_name}.qm")
+    add_custom_command(
+        OUTPUT "${translation_qm}"
+        COMMAND "${CMAKE_COMMAND}" -E make_directory "${CMAKE_CURRENT_BINARY_DIR}/locale"
+        COMMAND Qt6::lrelease "${CMAKE_CURRENT_SOURCE_DIR}/${translation_ts}" -qm "${translation_qm}"
+        DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/${translation_ts}"
+        VERBATIM
+    )
+    list(APPEND TRANSLATION_QM_FILES "${translation_qm}")
+    string(APPEND TRANSLATION_QRC_CONTENT
+           "<file alias=\"${translation_name}.qm\">${translation_qm}</file>")
+endforeach()
+string(APPEND TRANSLATION_QRC_CONTENT "</qresource></RCC>")
+file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/locale.qrc" "${TRANSLATION_QRC_CONTENT}")
+add_custom_target(knowthelist_translations DEPENDS ${TRANSLATION_QM_FILES})
+
 set(RESOURCES
     images/icons.qrc
-    locale/locale.qrc
     fonts/fonts.qrc
+    "${CMAKE_CURRENT_BINARY_DIR}/locale.qrc"
 )
 
 qt_add_executable(knowthelist
@@ -271,6 +302,7 @@ qt_add_executable(knowthelist
     ${FORMS}
     ${RESOURCES}
 )
+add_dependencies(knowthelist knowthelist_translations)
 
 # In Flatpak: redirect moc/uic/rcc to wrapper scripts that set LD_LIBRARY_PATH
 if(DEFINED ENV{FLATPAK_ID} AND IS_DIRECTORY /run/host/usr)

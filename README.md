@@ -67,7 +67,7 @@ The planner also respects duration limits, maximum tempo correction, and the sel
 
 ```bash
 # 1. Install system dependencies
-sudo apt install build-essential cmake qt6-base-dev qt6-base-dev-tools \
+sudo apt install build-essential cmake qt6-base-dev qt6-base-dev-tools qt6-l10n-tools \
     libtag1-dev libasound2-dev libsoundtouch-dev \
     libfreetype6-dev libfontconfig1-dev libegl1-mesa-dev libxkbcommon-dev \
     libgl1-mesa-dev libx11-dev libxext-dev libxrandr-dev libxinerama-dev \
