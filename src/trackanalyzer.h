@@ -35,7 +35,6 @@ public:
 
     bool prepare();
     void open(QUrl url);
-    void start();
     bool close();
 
     double gainDB();
@@ -62,7 +61,6 @@ Q_SIGNALS:
     void finishEnvelope();
 
 private slots:
-    void loadThreadFinished();
     void finalizeAnalysis();
 
 private:

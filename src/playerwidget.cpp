@@ -246,11 +246,9 @@ PlayerWidget::PlayerWidget(QWidget* parent)
     // Keep these labels width-elastic so changing text never expands layouts.
     ui->lblTitle->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Preferred);
     ui->lblTitle->setMinimumWidth(0);
-    // Constrain lblInfo so it adapts proportionally but never dominates the layout.
-    // This prevents size jumps when track info text varies significantly (e.g. "0 Hours" vs "365 Days").
+    // Let the playlist summary use the space left between the two time displays.
     ui->lblInfo->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
     ui->lblInfo->setMinimumWidth(0);
-    ui->lblInfo->setMaximumWidth(80);
     ui->lblInfo->setAlignment(Qt::AlignBottom | Qt::AlignHCenter);
     ui->lblTimeRemain->setAlignment(Qt::AlignBottom | Qt::AlignRight);
     ui->lblTimeRemainMs->setAlignment(Qt::AlignBottom | Qt::AlignRight);
@@ -261,12 +259,11 @@ PlayerWidget::PlayerWidget(QWidget* parent)
         digitsLayout->insertStretch(4, 1);
     }
 
-    // Cap fraDigits too — its UI sizePolicy has Expanding + applyBeatVisualLayout sets QWIDGETSIZE_MAX.
-    // A reasonable max keeps the frame from growing beyond its useful content width.
-    // Also set Preferred policy + minimum width so fraDigits never forces size jumps on the parent.
+    // Allow the time strip to fill the player width so the remaining-time display
+    // stays aligned with the right edge instead of leaving unused space.
     ui->fraDigits->setMinimumWidth(320);
-    ui->fraDigits->setMaximumWidth(420);
-    ui->fraDigits->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
+    ui->fraDigits->setMaximumWidth(QWIDGETSIZE_MAX);
+    ui->fraDigits->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
 
     // Keep time labels fixed-width/height to avoid jitter and clipping on macOS.
     // Note: The original code had redundant calls here, but they are kept for context.
@@ -480,7 +477,7 @@ void PlayerWidget::applyBeatVisualLayout(bool enabled)
     ui->fraDisplay->setMaximumWidth(QWIDGETSIZE_MAX);
     ui->fraVuMeter->setMaximumWidth(QWIDGETSIZE_MAX);
     ui->fraVuMeter->setMinimumHeight(100);
-    ui->fraDigits->setMaximumWidth(420);
+    ui->fraDigits->setMaximumWidth(QWIDGETSIZE_MAX);
     ui->vuMeter->setMaximumWidth(QWIDGETSIZE_MAX);
     if (enabled) {
         // BPM mode: vuMeter is hidden behind bpmWidget — no height restriction needed

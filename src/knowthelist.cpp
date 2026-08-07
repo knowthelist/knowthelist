@@ -153,10 +153,17 @@ Knowthelist::~Knowthelist()
 void Knowthelist::createUI()
 {
 
-    // Allow top deck layouts to expand freely (ui file uses SetMaximumSize).
-    if (QLayout* l = findChild<QLayout*>("horizontalLayout_2"))
+    // The two decks must share the available width equally. Do not let a
+    // content-driven size hint from one player resize the main window.
+    if (QHBoxLayout* l = qobject_cast<QHBoxLayout*>(findChild<QLayout*>("horizontalLayout_2"))) {
         l->setSizeConstraint(QLayout::SetDefaultConstraint);
+        l->setStretch(0, 1);
+        l->setStretch(1, 0);
+        l->setStretch(2, 1);
+    }
     if (QLayout* l = findChild<QLayout*>("verticalLayout"))
+        l->setSizeConstraint(QLayout::SetDefaultConstraint);
+    if (QLayout* l = findChild<QLayout*>("verticalLayout_R"))
         l->setSizeConstraint(QLayout::SetDefaultConstraint);
     if (QLayout* l = findChild<QLayout*>("verticalLayout_3"))
         l->setSizeConstraint(QLayout::SetDefaultConstraint);

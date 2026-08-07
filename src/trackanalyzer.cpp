@@ -24,6 +24,7 @@
 #include <QWaitCondition>
 #include <QTimer>
 #include <QThread>
+#include <QThreadPool>
 #include <QtConcurrent/QtConcurrent>
 #include <QVector>
 #include <QMetaObject>
@@ -70,6 +71,14 @@ static QWaitCondition g_scanComplete;
 static QMutex g_tempoCacheMutex;
 static QHash<QString, TempoCacheEntry> g_tempoCache;
 static std::atomic<std::uint64_t> g_cacheEpoch {1};
+
+static QThreadPool* analyzerThreadPool()
+{
+    static QThreadPool pool;
+    pool.setMaxThreadCount(1);
+    pool.setThreadPriority(QThread::LowestPriority);
+    return &pool;
+}
 
 static float lowPassStep(float input, float& lowState, float alpha)
 {
@@ -153,8 +162,10 @@ static TrackAnalysisData scanAudioFile(const QUrl& url)
             lastActiveFrame = static_cast<int>(data.frameRms.size()) - 1;
         }
 
-        if ((data.frameRms.size() & 127) == 0)
+        if ((data.frameRms.size() & 31) == 0) {
             QThread::yieldCurrentThread();
+            QThread::msleep(1);
+        }
     }
 
     data.peakRms = peakRms;
@@ -383,7 +394,6 @@ TrackAnalyzer::TrackAnalyzer(QWidget* parent)
         audioBackend->initialize();
     }
 
-    connect(&p->watcher, SIGNAL(finished()), this, SLOT(loadThreadFinished()));
 }
 
 TrackAnalyzer::~TrackAnalyzer()
@@ -432,7 +442,8 @@ void TrackAnalyzer::open(QUrl url)
     p->bpmDetected = false;
     m_ExactBpm = 0.0;
     locker.unlock();
-    QFuture<void> future = QtConcurrent::run([this, url]() { asyncOpen(url); });
+    QFuture<void> future = QtConcurrent::run(analyzerThreadPool(),
+                                             [this, url]() { asyncOpen(url); });
     p->watcher.setFuture(future);
 }
 
@@ -563,11 +574,9 @@ void TrackAnalyzer::asyncOpen(QUrl url)
              << "effectiveEnd=" << m_trackEffectiveEnd
              << "beatStop=" << m_beatStopPosition
              << "trackDuration=" << duration << "gainDb=" << analysis.gainDb;
-}
 
-void TrackAnalyzer::start()
-{
-    qDebug() << Q_FUNC_INFO << "Starting unified analysis";
+    // Keep autocorrelation and cache preparation off the GUI thread. The
+    // queued finalizeAnalysis() call below is the only GUI-thread handoff.
     detectTempo();
     need_finish();
 }
@@ -1244,22 +1253,6 @@ void TrackAnalyzer::cleanup()
     if (audioBackend) {
         audioBackend->stop();
     }
-}
-
-void TrackAnalyzer::loadThreadFinished()
-{
-    bool inProgress;
-    {
-        QMutexLocker locker(&p->mutex);
-        inProgress = p->inProgress;
-    }
-
-    // If asyncOpen() failed early and already called need_finish(), finalizeAnalysis()
-    // may have already run and set inProgress=false. Guard against double-finalization.
-    if (!inProgress)
-        return;
-
-    start();
 }
 
 // ── Cache lifecycle (Steps C/E): owned by TrackAnalyzer ──
