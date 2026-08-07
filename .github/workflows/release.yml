@@ -23,6 +23,7 @@ jobs:
             cmake ninja-build pkg-config \
             qt6-base-dev qt6-base-dev-tools \
             libtag1-dev libasound2-dev libcurl4-openssl-dev \
+            libfreetype-dev libfontconfig-dev \
             rpm
 
       - name: Configure
