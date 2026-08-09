@@ -100,9 +100,68 @@ jobs:
           name: macos-bundle
           path: knowthelist-*.zip
 
+  windows:
+    name: Windows application
+    runs-on: windows-2022
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install Qt
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: 6.8.3
+          host: windows
+          target: desktop
+          arch: win64_msvc2022_64
+          modules: qttools
+          cache: true
+
+      - name: Install TagLib
+        shell: pwsh
+        run: vcpkg install taglib:x64-windows
+
+      - name: Configure
+        shell: pwsh
+        run: >
+          cmake -S . -B build
+          -DCMAKE_BUILD_TYPE=Release
+          -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake"
+
+      - name: Build
+        run: cmake --build build --config Release --parallel 2
+
+      - name: Bundle application dependencies
+        shell: pwsh
+        run: |
+          $version = "${{ inputs.tag || github.ref_name }}"
+          $version = $version.TrimStart("v")
+          $bundle = "knowthelist-$version-Windows"
+          $exe = "build/Release/knowthelist.exe"
+
+          New-Item -ItemType Directory -Path $bundle | Out-Null
+          Copy-Item $exe $bundle
+          & "$env:QT_ROOT_DIR/bin/windeployqt.exe" `
+            --release `
+            --no-translations `
+            "$bundle/knowthelist.exe"
+
+          Copy-Item `
+            "$env:VCPKG_INSTALLATION_ROOT/installed/x64-windows/bin/tag.dll" `
+            $bundle
+          Compress-Archive -Path "$bundle/*" -DestinationPath "$bundle.zip"
+
+      - name: Upload Windows bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-bundle
+          path: knowthelist-*-Windows.zip
+
   release:
     name: Publish GitHub release
-    needs: [linux, macos]
+    needs: [linux, macos, windows]
     runs-on: ubuntu-24.04
     steps:
       - name: Check out source
@@ -120,6 +179,12 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: macos-bundle
+          path: release-assets
+
+      - name: Download Windows bundle
+        uses: actions/download-artifact@v4
+        with:
+          name: windows-bundle
           path: release-assets
 
       - name: Create source archives
