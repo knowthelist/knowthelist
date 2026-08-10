@@ -48,7 +48,7 @@ static QSqlDatabase collectionDb()
 }
 
 static constexpr int kEnvelopeCacheVersion = 2;
-static constexpr int kTempoAnalysisVersion = 13;
+static constexpr int kTempoAnalysisVersion = 15;
 
 static AnalysisCacheManager::CachedTempo buildLegacyCachedTempo(const QSqlQuery& query)
 {
@@ -143,7 +143,7 @@ bool AnalysisCacheManager::ensureTempoCacheTable() const
         "beat_phase_position_ms INTEGER DEFAULT 0,"
         "beat_end_position_ms INTEGER DEFAULT 0,"
         "changedate INTEGER,"
-        "analysis_version INTEGER DEFAULT 13,"
+        "analysis_version INTEGER DEFAULT 15,"
         "envelope_version INTEGER DEFAULT 0,"
         "exact_bpm REAL DEFAULT 0.0,"
         "envelope_data BLOB,"
@@ -257,6 +257,17 @@ bool AnalysisCacheManager::hasValidCache(const QUrl& url, const QString& current
     return version >= kTempoAnalysisVersion && !storedKey.isEmpty() && (storedKey == currentKey);
 }
 
+bool AnalysisCacheManager::removeCachedAnalysis(const QUrl& url)
+{
+    if (!ensureTempoCacheTable())
+        return false;
+
+    QSqlQuery q(collectionDb());
+    q.prepare("DELETE FROM analysis_cache WHERE url = :url");
+    q.bindValue(":url", url.toLocalFile());
+    return q.exec();
+}
+
 void AnalysisCacheManager::storeCachedTempo(const QUrl& url, int bpm, double exactBpm,
                                             int startPositionMs, int endPositionMs,
                                             int beatStartPosMs, int beatPhasePosMs, int beatEndPosMs)
@@ -275,7 +286,7 @@ void AnalysisCacheManager::storeCachedTempo(const QUrl& url, int bpm, double exa
          "beat_start_position_ms, beat_phase_position_ms, beat_offset_ms, beat_end_position_ms, changedate, "
          "analysis_version, envelope_version) "
         "VALUES (:url, :bpm, :exact_bpm, :start_pos, :end_pos, "
-         ":beat_start, :beat_phase, :beat_phase, :beat_end, strftime('%s','now'), 13, "
+         ":beat_start, :beat_phase, :beat_phase, :beat_end, strftime('%s','now'), 15, "
          "COALESCE((SELECT envelope_version FROM analysis_cache WHERE url = :url), 0))"
     );
     q.bindValue(":url", url.toLocalFile());

@@ -188,6 +188,7 @@ private:
     TrackAnalyzer* m_tempoAnalyzer;
     QQueue<QString> m_tempoScanQueue;
     QSet<QString> m_tempoRescanDone;
+    QSet<QString> m_tempoRescanRequested;
     QString m_tempoScanUrl;
     int m_tempoRescanCursor;
     bool m_tempoScanActive;

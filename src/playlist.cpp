@@ -17,6 +17,7 @@
 
 #include "playlist.h"
 #include "playlistitem.h"
+#include "analysiscachemanager.h"
 #include "trackanalyzer.h"
 
 #include <QMenu>
@@ -430,7 +431,10 @@ void Playlist::startTempoScan()
     if (m_tempoScanActive)
         return;
 
-    if (m_tempoScanQueue.isEmpty() && !queueIdleTempoRescanCandidate())
+    // Only scan tracks that were explicitly queued because their BPM is missing.
+    // Do not use the old idle-rescan path: it re-analyzes every populated playlist
+    // in the background even when analysis_cache already contains a valid BPM.
+    if (m_tempoScanQueue.isEmpty())
         return;
 
     m_tempoScanUrl = m_tempoScanQueue.dequeue();
@@ -445,8 +449,10 @@ void Playlist::startTempoScan()
 void Playlist::analyzeTempoFinished()
 {
     const int bpm = m_tempoAnalyzer->bpm();
-    if (!m_tempoScanUrl.isEmpty() && bpm > 0) {
-        QList<QTreeWidgetItem*> matches = findItems(m_tempoScanUrl, Qt::MatchExactly, PlaylistItem::Column_Url);
+    const QString completedUrl = m_tempoScanUrl;
+    const bool rescanRequested = m_tempoRescanRequested.remove(completedUrl) > 0;
+    if (!completedUrl.isEmpty() && !rescanRequested && bpm > 0) {
+        QList<QTreeWidgetItem*> matches = findItems(completedUrl, Qt::MatchExactly, PlaylistItem::Column_Url);
         for (QTreeWidgetItem* match : matches) {
             PlaylistItem* item = dynamic_cast<PlaylistItem*>(match);
             if (!item)
@@ -462,6 +468,8 @@ void Playlist::analyzeTempoFinished()
         }
     }
 
+    if (rescanRequested)
+        m_tempoScanQueue.enqueue(completedUrl);
     m_tempoScanUrl.clear();
     m_tempoScanActive = false;
     startTempoScan();
@@ -1113,7 +1121,8 @@ void Playlist::showContextMenu(PlaylistItem* item, int col)
         LOAD1,
         LOAD2,
         SAVE_XML,
-        LOAD_XML };
+        LOAD_XML,
+        RESCAN };
 
     if (item == nullptr)
         return;
@@ -1146,6 +1155,9 @@ void Playlist::showContextMenu(PlaylistItem* item, int col)
     a = popup.addAction(tr("&Prelisten Track"), this, SLOT(dummySlot()));
     a->setIcon(QIcon(style()->standardPixmap(QStyle::SP_DriveCDIcon)));
     a->setShortcut(Qt::Key_P);
+    popup.addSeparator();
+    QAction* rescanAction = popup.addAction(tr("&Rescan Song"), this, SLOT(dummySlot()));
+    rescanAction->setIcon(QIcon(style()->standardPixmap(QStyle::SP_BrowserReload)));
     popup.addSeparator();
     a = popup.addAction(tr("&Search for: '%1'").arg(item->text(col)), this, SLOT(dummySlot()));
     a->setIcon(QIcon(style()->standardPixmap(QStyle::SP_ArrowRight)));
@@ -1214,6 +1226,27 @@ void Playlist::showContextMenu(PlaylistItem* item, int col)
                                                         tr("XSPF Files (*.xspf)"));
         if (!fileName.isEmpty()) {
             loadXML(fileName);
+        }
+    } else if (a == rescanAction) {
+        const QUrl url = item->track() ? item->track()->url() : QUrl();
+        if (url.isEmpty())
+            return;
+
+        AnalysisCacheManager cache;
+        if (!cache.removeCachedAnalysis(url))
+            return;
+
+        TrackAnalyzer::clearRuntimeCaches();
+        const QString urlString = url.toString();
+        if (urlString == m_tempoScanUrl) {
+            m_tempoRescanRequested.insert(urlString);
+        } else {
+            Track* track = item->track();
+            track->setBpm(0);
+            item->setText(PlaylistItem::Column_BPM, QString());
+            m_tempoRescanDone.remove(urlString);
+            queueTempoScan(track);
+            emit trackPropertyChanged(track);
         }
     }
 }

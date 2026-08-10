@@ -65,13 +65,44 @@ void setElidedLabelText(QLabel* label, const QString& text)
     if (!label)
         return;
 
-    const int availableWidth = qMax(0, label->width() - 2 * label->margin());
+    // Use the label's actual layout allocation. QLabel margins are already part
+    // of contentsRect(), so subtracting them again would under-report the slot.
+    const int availableWidth = label->contentsRect().width();
     if (availableWidth <= 0) {
-        label->setText(text);
+        label->clear();
         return;
     }
 
-    label->setText(QFontMetrics(label->font()).elidedText(text, Qt::ElideRight, availableWidth));
+    const QFontMetrics metrics(label->font());
+    const QString fittedText = metrics.horizontalAdvance(text) <= availableWidth
+        ? text
+        : metrics.elidedText(text, Qt::ElideRight, availableWidth);
+    label->setText(fittedText);
+}
+
+void setInfoLabelText(QLabel* label, const QString& baseText, const QString& highlight)
+{
+    if (!label)
+        return;
+
+    const int availableWidth = label->contentsRect().width();
+    if (availableWidth <= 0) {
+        label->clear();
+        return;
+    }
+
+    const QFontMetrics metrics(label->font());
+    const QString suffix = highlight.isEmpty() ? QString() : QString("   [ %1 ]").arg(highlight);
+    const QString combined = baseText + suffix;
+
+    // The playlist summary is the useful persistent part. Do not shorten it
+    // just because a transient BPM or mix-out status is also being displayed.
+    if (!baseText.isEmpty() && metrics.horizontalAdvance(combined) > availableWidth) {
+        setElidedLabelText(label, baseText);
+        return;
+    }
+
+    setElidedLabelText(label, combined.isEmpty() ? highlight : combined);
 }
 }
 
@@ -274,14 +305,22 @@ PlayerWidget::PlayerWidget(QWidget* parent)
     ui->lblInfo->setMinimumWidth(0);
     ui->lblInfo->setMinimumHeight(12);
     ui->lblInfo->setMargin(0);
-    ui->lblInfo->setAlignment(Qt::AlignBottom | Qt::AlignLeft);
+    ui->lblInfo->setAlignment(Qt::AlignBottom | Qt::AlignHCenter);
     ui->lblTimeRemain->setAlignment(Qt::AlignBottom | Qt::AlignRight);
     ui->lblTimeRemainMs->setAlignment(Qt::AlignBottom | Qt::AlignRight);
     if (QHBoxLayout* digitsLayout = qobject_cast<QHBoxLayout*>(ui->fraDigits->layout())) {
         digitsLayout->setContentsMargins(0, 1, 0, 1);
-        digitsLayout->setSpacing(0);
-        digitsLayout->insertStretch(2, 1);
-        digitsLayout->insertStretch(4, 1);
+        digitsLayout->setSpacing(4);
+        // Keep the summary in the existing middle slot. Set stretch on the
+        // actual widgets instead of inserting index-based spacer items, whose
+        // indices shift as the layout is modified.
+        for (int i = 0; i < digitsLayout->count(); ++i) {
+            QLayoutItem* layoutItem = digitsLayout->itemAt(i);
+            if (layoutItem && layoutItem->widget() == ui->lblInfo)
+                digitsLayout->setStretch(i, 1);
+            else
+                digitsLayout->setStretch(i, 0);
+        }
     }
 
     // Allow the time strip to fill the player width so the remaining-time display
@@ -1097,11 +1136,10 @@ void PlayerWidget::armImmediateAboutFinish()
 void PlayerWidget::setInfo(QPair<int, int> info)
 {
     QString strTrack = (info.first > 1) ? tr("Tracks") : tr("Track");
-    m_infoBaseText = QString("%1 %2  |  %3 %4")
+    m_infoBaseText = QString("%1 %2 | %3h")
                          .arg(info.first)
                          .arg(strTrack)
-                         .arg(Track::prettyTime(info.second))
-                         .arg(tr("Hours"));
+                         .arg(Track::prettyTime(info.second, false));
     setElidedLabelText(ui->lblInfo, m_infoBaseText);
 }
 
@@ -1576,10 +1614,10 @@ void PlayerWidget::loadTrack(Track* track)
     player->stop();
 
     // Playlist items already carry the integer BPM from analysis_cache. Reuse it
-    // immediately for display and tempo setup while other analysis work continues.
+    // immediately for display, but let TrackAnalyzer still calculate the beat
+    // phase so the waveform grid is anchored to the analyzed audio.
     m_bpm = track->bpm();
     m_bpmAnalyzed = m_bpm > 0;
-    trackanalyzer->setCachedBpm(m_bpm);
     bpmWidget->setState(m_bpm, player->position(), m_beatPosition, false, m_bpmAnalyzed);
 
     QUrl url = track->url();
@@ -1610,6 +1648,12 @@ void PlayerWidget::resizeEvent(QResizeEvent* e)
     enforcePanelSplit();
     syncDisplayHeightToControls();
     drawTitle();
+    // setInfo() can run before the time strip has its final width. Rebuild the
+    // displayed text now so an earlier narrow elision does not remain stale.
+    updateTimeAndPositionDisplay(false);
+    QTimer::singleShot(0, this, [this]() {
+        updateTimeAndPositionDisplay(false);
+    });
     // bpmWidget geometry is updated via eventFilter on fraVuMeter
 }
 
@@ -1737,14 +1781,7 @@ void PlayerWidget::updateTimeAndPositionDisplay(bool isPassive)
         highlight += tr("MIX OUT");
     }
 
-    if (!highlight.isEmpty()) {
-        if (!m_infoBaseText.isEmpty())
-            setElidedLabelText(ui->lblInfo, m_infoBaseText + "   [ " + highlight + " ]");
-        else
-            setElidedLabelText(ui->lblInfo, highlight);
-    } else if (!m_infoBaseText.isEmpty()) {
-        setElidedLabelText(ui->lblInfo, m_infoBaseText);
-    }
+    setInfoLabelText(ui->lblInfo, m_infoBaseText, highlight);
 
     //update position slider only if triggered by timer
     if (isPassive) {

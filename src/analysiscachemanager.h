@@ -51,6 +51,9 @@ public:
     // Check cache validity: DB row exists AND file key matches (no stale cache on file replacement).
     bool hasValidCache(const QUrl& url, const QString& currentKey) const;
 
+    // Remove all persisted analysis for one file so it can be analyzed again.
+    bool removeCachedAnalysis(const QUrl& url);
+
     // Envelope caching methods
     void storeCachedEnvelope(const QUrl& url, const QVector<float>& samples, int durationMs);
 

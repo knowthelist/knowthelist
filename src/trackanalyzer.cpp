@@ -112,7 +112,10 @@ static TrackAnalysisData scanAudioFile(const QUrl& url)
     juce::AudioBuffer<float> buffer(channels, frameSize);
     buffer.clear();
 
-    const float lowAlpha = 0.12f;
+    // Keep the phase detector focused on kick and bass transients. At 44.1 kHz
+    // alpha 0.12 reaches far into the midrange, where piano and percussion
+    // attacks can pull the grid away from the rhythmic pulse.
+    const float lowAlpha = 0.02f;
     float lowState = 0.0f;
     float prevRms = 0.0f;
     float prevLowRms = 0.0f;
@@ -796,6 +799,31 @@ void TrackAnalyzer::detectTempo()
     const QVector<int> onsetsFull = pickOnsets(fullEnv, minDistance);
     const QVector<int> onsetsLow = pickOnsets(lowEnv, minDistance + 2);
 
+    // Tempo evidence must come from a stable rhythmic section. Intro synths,
+    // breakdowns, and outro effects can contain strong but intentionally
+    // off-grid transients. Keep the complete envelope for display, but exclude
+    // the first 45 seconds and final 20 seconds from BPM estimation when the
+    // track is long enough to leave a substantial middle section.
+    const int stableStartFrame = (spectralFlux.size() > static_cast<int>(actualFps * 120.0))
+        ? qRound(actualFps * 45.0) : 0;
+    const int stableEndFrame = (spectralFlux.size() > static_cast<int>(actualFps * 120.0))
+        ? spectralFlux.size() - qRound(actualFps * 20.0) : spectralFlux.size();
+
+    auto stableOnsetsOnly = [&](const QVector<int>& onsets) {
+        QVector<int> stable;
+        stable.reserve(onsets.size());
+        for (const int onset : onsets) {
+            if (onset >= stableStartFrame && onset < stableEndFrame)
+                stable.append(onset);
+        }
+        return stable;
+    };
+
+    const QVector<int> tempoOnsetsFull = stableOnsetsOnly(onsetsFull);
+    const QVector<int> tempoOnsetsLow = stableOnsetsOnly(onsetsLow);
+    const QVector<int>& selectedTempoOnsets = tempoOnsetsLow.isEmpty() ? tempoOnsetsFull : tempoOnsetsLow;
+    const QList<float>& selectedTempoEnv = tempoOnsetsLow.isEmpty() ? fullEnv : lowEnv;
+
     QVector<double> score(kMaxBpm + 1, 0.0);
     QVector<double> exactBpmSum(kMaxBpm + 1, 0.0);
     QVector<double> exactBpmWeight(kMaxBpm + 1, 0.0);
@@ -835,8 +863,8 @@ void TrackAnalyzer::detectTempo()
         }
     };
 
-    voteTempo(onsetsFull, fullEnv, 1.0, false);
-    voteTempo(onsetsLow, lowEnv, 2.25, true);
+    voteTempo(tempoOnsetsFull, fullEnv, 1.0, false);
+    voteTempo(tempoOnsetsLow, lowEnv, 2.25, true);
 
     QVector<double> smoothedScore = score;
     for (int bpmBin = kMinBpm; bpmBin <= kMaxBpm; ++bpmBin) {
@@ -893,16 +921,23 @@ void TrackAnalyzer::detectTempo()
     for (int i = 0; i < fullEnv.size(); ++i)
         combinedEnv.append(0.6f * fullEnv.at(i) + 0.4f * lowEnv.at(i));
 
+    const int stableEnvStart = qBound(0, stableStartFrame, combinedEnv.size());
+    const int stableEnvEnd = qBound(stableEnvStart, stableEndFrame, combinedEnv.size());
+    const QList<float> stableCombinedEnv = combinedEnv.mid(stableEnvStart, stableEnvEnd - stableEnvStart);
+    const QList<float> stableLowEnv = lowEnv.mid(stableEnvStart, stableEnvEnd - stableEnvStart);
+    const QList<float>& tempoCombinedEnv = stableCombinedEnv.isEmpty() ? combinedEnv : stableCombinedEnv;
+    const QList<float>& tempoLowEnv = stableLowEnv.isEmpty() ? lowEnv : stableLowEnv;
+
     QVector<double> lagStrength(kMaxBpm + 1, 0.0);
     double maxLagStrength = 0.0;
     for (int bpmBin = kMinBpm; bpmBin <= kMaxBpm; ++bpmBin) {
         const double lag = (actualFps * 60.0) / bpmBin;
-        const double combinedBase = strongestLagCorrelation(combinedEnv, lag, 1);
-        const double lowBase = strongestLagCorrelation(lowEnv, lag, 1);
-        const double combinedDouble = strongestLagCorrelation(combinedEnv, lag * 2.0, 2);
-        const double lowDouble = strongestLagCorrelation(lowEnv, lag * 2.0, 2);
-        const double combinedHalf = strongestLagCorrelation(combinedEnv, lag * 0.5, 1);
-        const double lowHalf = strongestLagCorrelation(lowEnv, lag * 0.5, 1);
+        const double combinedBase = strongestLagCorrelation(tempoCombinedEnv, lag, 1);
+        const double lowBase = strongestLagCorrelation(tempoLowEnv, lag, 1);
+        const double combinedDouble = strongestLagCorrelation(tempoCombinedEnv, lag * 2.0, 2);
+        const double lowDouble = strongestLagCorrelation(tempoLowEnv, lag * 2.0, 2);
+        const double combinedHalf = strongestLagCorrelation(tempoCombinedEnv, lag * 0.5, 1);
+        const double lowHalf = strongestLagCorrelation(tempoLowEnv, lag * 0.5, 1);
 
         double strength = 0.55 * combinedBase + 1.00 * lowBase;
         if (bpmBin >= 118)
@@ -920,8 +955,8 @@ void TrackAnalyzer::detectTempo()
     }
 
     const double bestSupportOverall = qMax(0.0001, supportFor(bestBpm));
-    const int autoCorrBpm = qRound(AutoCorrelation(combinedEnv, combinedEnv.count(), kMinBpm, kMaxBpm, actualFps));
-    const int autoCorrLowBpm = qRound(AutoCorrelation(lowEnv, lowEnv.count(), kMinBpm, kMaxBpm, actualFps));
+    const int autoCorrBpm = qRound(AutoCorrelation(tempoCombinedEnv, tempoCombinedEnv.count(), kMinBpm, kMaxBpm, actualFps));
+    const int autoCorrLowBpm = qRound(AutoCorrelation(tempoLowEnv, tempoLowEnv.count(), kMinBpm, kMaxBpm, actualFps));
 
     int autoCorrConsensus = autoCorrBpm;
     if (autoCorrLowBpm >= kMinBpm && autoCorrLowBpm <= kMaxBpm) {
@@ -1060,17 +1095,17 @@ void TrackAnalyzer::detectTempo()
     //   Solve for T using OLS over all N onsets -> precision ~T^2 / (track_duration * sqrt(N))
     // For 128 BPM over 5 min with ~500 onsets: precision < 0.001 BPM (vs 0.26 BPM from frame voting).
     if (finalBpm > 0 && !spectralFluxTimes.isEmpty()) {
-        const QVector<int>& onsets = onsetsLow.isEmpty() ? onsetsFull : onsetsLow;
+        const QVector<int>& onsets = selectedTempoOnsets;
         const int N = onsets.size();
         if (N >= 8) {
             const double estimatedPeriodS = 60.0 / static_cast<double>(finalBpm);
-            const double t0ms = refinedOnsetTimeMs(onsets.first(), onsetsLow.isEmpty() ? fullEnv : lowEnv, spectralFluxTimes);
+            const double t0ms = refinedOnsetTimeMs(onsets.first(), selectedTempoEnv, spectralFluxTimes);
 
             // Assign beat number to each onset by rounding to nearest beat.
             QVector<double> beatNum(N), tSec(N);
             for (int k = 0; k < N; ++k) {
                 const int frame = onsets.at(k);
-                const double onsetMs = refinedOnsetTimeMs(frame, onsetsLow.isEmpty() ? fullEnv : lowEnv, spectralFluxTimes);
+                const double onsetMs = refinedOnsetTimeMs(frame, selectedTempoEnv, spectralFluxTimes);
                 const double tS = (frame < spectralFluxTimes.size())
                     ? (onsetMs - t0ms) * 1.0e-3
                         : static_cast<double>(frame) / actualFps;
