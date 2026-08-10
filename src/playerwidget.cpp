@@ -1065,7 +1065,9 @@ void PlayerWidget::applyCuePoints(const CuePoints& cue, bool isManual)
     bpmWidget->setCuePosition(cue.start);
     bpmWidget->setState(m_bpm, cue.start, m_beatPosition, m_isStarted, m_bpmAnalyzed);
 
-    if (isManual)
+    // A valid cue applied to a waiting deck is the active cue, regardless of
+    // whether it came from manual input or transition planning.
+    if (isManual || !m_isStarted)
         ui->butCue->setChecked(true);
 
     updateTimeAndPositionDisplay(false);
