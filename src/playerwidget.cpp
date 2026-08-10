@@ -1253,7 +1253,8 @@ void PlayerWidget::analyzeEnvelopeFinished()
 
     qDebug() << "ENVELOPE analysis finished:" << objectName() << "samples=" << env.size();
     bpmWidget->setTrackLength(trackanalyzer->length());
-    bpmWidget->setPreloadedEnvelope(env, kEnvelopeAnalysisIntervalMs);
+    const int envelopeDurationMs = QTime(0, 0).msecsTo(trackanalyzer->length());
+    bpmWidget->setPreloadedEnvelope(env, kEnvelopeAnalysisIntervalMs, envelopeDurationMs);
 
     // Use beat-stop (beatActivityEnd) from the same analysis pass already done in TrackAnalyzer.
     // Skip CueManager::computeFadePoint() here — it would redo identical work that's already in

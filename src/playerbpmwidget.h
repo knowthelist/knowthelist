@@ -39,7 +39,8 @@ public:
     void appendEnvelopeSample(float value);
     void appendEnvelopeSampleAt(int positionMs, float value);
     void clearEnvelope();
-    void setPreloadedEnvelope(const QVector<float>& samples, int sourceIntervalMs = 0);
+    void setPreloadedEnvelope(const QVector<float>& samples, int sourceIntervalMs = 0,
+                              int sourceDurationMs = 0);
     void setWindowMilliseconds(int windowMs);
     void setTrackLength(const QTime& length);
     int windowMilliseconds() const { return m_windowMs; }

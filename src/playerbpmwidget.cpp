@@ -372,7 +372,8 @@ void PlayerBpmWidget::clearEnvelope()
     update();
 }
 
-void PlayerBpmWidget::setPreloadedEnvelope(const QVector<float>& samples, int sourceIntervalMs)
+void PlayerBpmWidget::setPreloadedEnvelope(const QVector<float>& samples, int sourceIntervalMs,
+                                            int sourceDurationMs)
 {
     if (samples.isEmpty())
         return;
@@ -387,8 +388,8 @@ void PlayerBpmWidget::setPreloadedEnvelope(const QVector<float>& samples, int so
 
     // Guard against stale track length (e.g. previous song) when cached envelope
     // arrives before the new player length is known.
-    qint64 totalMs = fallbackMs;
-    if (trackMs > 0) {
+    qint64 totalMs = sourceDurationMs > 0 ? sourceDurationMs : fallbackMs;
+    if (sourceDurationMs <= 0 && trackMs > 0) {
         const double ratio = fallbackMs > 0 ? static_cast<double>(trackMs) / static_cast<double>(fallbackMs) : 1.0;
         if (ratio > 0.9 && ratio < 1.1)
             totalMs = trackMs;
