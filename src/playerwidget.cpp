@@ -59,6 +59,20 @@ double normalizeSyncBpm(double bpm)
         bpm *= 0.5;
     return bpm;
 }
+
+void setElidedLabelText(QLabel* label, const QString& text)
+{
+    if (!label)
+        return;
+
+    const int availableWidth = qMax(0, label->width() - 2 * label->margin());
+    if (availableWidth <= 0) {
+        label->setText(text);
+        return;
+    }
+
+    label->setText(QFontMetrics(label->font()).elidedText(text, Qt::ElideRight, availableWidth));
+}
 }
 
 PlayerWidget::PlayerWidget(QWidget* parent)
@@ -82,6 +96,7 @@ PlayerWidget::PlayerWidget(QWidget* parent)
     , m_liveEnvelopeSmoothed(0.0f)
     , m_bpmAnalyzed(false)
     , m_bpm(0)
+    , m_cuePosition()
     , m_infoBaseText("")
     , m_envelopeScrubbing(false)
     , m_envelopeScrubAnchorMs(0)
@@ -115,6 +130,9 @@ PlayerWidget::PlayerWidget(QWidget* parent)
         displayLayout->setContentsMargins(6, 2, 6, 2);
         displayLayout->setSpacing(2);
     }
+    // The legacy generated UI can carry a 124 px cap; the display should fill
+    // the available height alongside the controls panel.
+    ui->fraDisplay->setMaximumHeight(QWIDGETSIZE_MAX);
 
     p->isEndAnnounced = false;
     m_sessionTimer.start();
@@ -210,7 +228,9 @@ PlayerWidget::PlayerWidget(QWidget* parent)
     ui->lblInfo->setText("");
 
     QFont font = ui->lblInfo->font();
-    
+    font.setPointSize(std::max(8, font.pointSize() - 2));
+    font.setLetterSpacing(QFont::PercentageSpacing, 95);
+
     // Force concrete monospace fonts to prevent digit width jitter on time labels.
     // Fira Mono is bundled via Qt resources and loaded in main.cpp, so it's always available.
     QFont fonttime = ui->lblTime->font();
@@ -225,31 +245,36 @@ PlayerWidget::PlayerWidget(QWidget* parent)
     
     // Force monospace family on all time labels to prevent digit width jitter.
 #if defined(Q_OS_DARWIN)
-    int newSize = font.pointSize() - 4 + 1; // +1pt for global increase
-    fonttime.setPointSize(fonttime.pointSize() + 6); // time: +2 relative to current (+4), total +4 from default
+    int newSize = font.pointSize();
+    fonttime.setPointSize(std::max(14, fonttime.pointSize() - 2));
     fonttime.setWeight(QFont::Light); // thinner
 #else
-    int newSize = font.pointSize() - 1;
-    fonttime.setPointSize(fonttime.pointSize() + 2); // Keep time readable without making the display taller
+    int newSize = font.pointSize();
+    fonttime.setPointSize(std::max(14, fonttime.pointSize() - 2));
 #endif
     font.setPointSize(newSize);
+    fonttime.setLetterSpacing(QFont::PercentageSpacing, 96);
     ui->lblInfo->setFont(font);
     ui->lblTime->setFont(fonttime);
     ui->lblTimeRemain->setFont(fonttime);
 
     //.ms labels use a smaller font, aligned bottom with time labels
     QFont fonttimems = fonttime;
-    fonttimems.setPointSize(fonttimems.pointSize() - 3);
+    fonttimems.setPointSize(std::max(10, fonttimems.pointSize() - 3));
     ui->lblTimeMs->setFont(fonttimems);
     ui->lblTimeRemainMs->setFont(fonttimems);
 
     // Keep these labels width-elastic so changing text never expands layouts.
     ui->lblTitle->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Preferred);
     ui->lblTitle->setMinimumWidth(0);
+    ui->lblTitle->setMinimumHeight(20);
+    ui->lblTitle->setWordWrap(false);
     // Let the playlist summary use the space left between the two time displays.
-    ui->lblInfo->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
+    ui->lblInfo->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Preferred);
     ui->lblInfo->setMinimumWidth(0);
-    ui->lblInfo->setAlignment(Qt::AlignBottom | Qt::AlignHCenter);
+    ui->lblInfo->setMinimumHeight(12);
+    ui->lblInfo->setMargin(0);
+    ui->lblInfo->setAlignment(Qt::AlignBottom | Qt::AlignLeft);
     ui->lblTimeRemain->setAlignment(Qt::AlignBottom | Qt::AlignRight);
     ui->lblTimeRemainMs->setAlignment(Qt::AlignBottom | Qt::AlignRight);
     if (QHBoxLayout* digitsLayout = qobject_cast<QHBoxLayout*>(ui->fraDigits->layout())) {
@@ -261,7 +286,7 @@ PlayerWidget::PlayerWidget(QWidget* parent)
 
     // Allow the time strip to fill the player width so the remaining-time display
     // stays aligned with the right edge instead of leaving unused space.
-    ui->fraDigits->setMinimumWidth(320);
+    ui->fraDigits->setMinimumWidth(0);
     ui->fraDigits->setMaximumWidth(QWIDGETSIZE_MAX);
     ui->fraDigits->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
 
@@ -277,11 +302,11 @@ PlayerWidget::PlayerWidget(QWidget* parent)
             return;
         label->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Preferred);
         const QFontMetrics metrics(label->font());
-        label->setFixedWidth(metrics.horizontalAdvance(sampleText) + 8);
-        label->setMinimumHeight(metrics.height() + 4);
+        label->setFixedWidth(metrics.horizontalAdvance(sampleText) + 4);
+        label->setMinimumHeight(metrics.height() + 2);
     };
 
-    fixTimeLabelGeometry(ui->lblTime, "00:00"); // This will be bigger now
+    fixTimeLabelGeometry(ui->lblTime, "00:00");
     fixTimeLabelGeometry(ui->lblTimeMs, ".8");
     fixTimeLabelGeometry(ui->lblTimeRemain, "-00:00");
     fixTimeLabelGeometry(ui->lblTimeRemainMs, ".8");
@@ -292,7 +317,9 @@ PlayerWidget::PlayerWidget(QWidget* parent)
     updateResponsiveLayout();
     enforcePanelSplit();
     QTimer::singleShot(0, this, [this]() {
+        updateResponsiveLayout();
         enforcePanelSplit();
+        syncDisplayHeightToControls();
     });
     this->stop();
 
@@ -520,7 +547,8 @@ void PlayerWidget::updateResponsiveLayout()
     }
 
     ui->fraVuMeter->setMinimumHeight(100);
-    ui->fraDigits->setMinimumHeight(25);
+    ui->fraDigits->setMinimumHeight(20);
+    ui->fraDisplay->setMaximumHeight(QWIDGETSIZE_MAX);
     ui->fraDisplay->setMinimumHeight(0);
 
     if (QLayout* layout = ui->horizontalLayout_2)
@@ -571,23 +599,59 @@ void PlayerWidget::updateResponsiveLayout()
         m_pitchResetButton->setMaximumHeight(smallButtonHeight);
     }
 
-    //syncDisplayHeightToControls();
+    syncDisplayHeightToControls();
 }
 
 void PlayerWidget::syncDisplayHeightToControls()
 {
-    if (!ui || !ui->frame_2 || !ui->frame_3)
-        return;
+    qDebug() << Q_FUNC_INFO << "begin"
+             << "widget=" << this
+             << "playerSize=" << size()
+             << "frame3Size=" << (ui && ui->frame_3 ? ui->frame_3->size() : QSize())
+             << "displaySize=" << (ui && ui->fraDisplay ? ui->fraDisplay->size() : QSize())
+             << "scrollbarSize=" << (ui && ui->sliPosition ? ui->sliPosition->size() : QSize());
 
-    const int controlsHeight = qMax(ui->frame_2->sizeHint().height(), ui->frame_2->minimumSizeHint().height());
-    if (controlsHeight <= 0)
+    if (!ui || !ui->frame || !ui->frame_3 || !ui->fraDisplay || !ui->sliPosition) {
+        qDebug() << Q_FUNC_INFO << "return: missing UI object";
         return;
+    }
 
-    if (ui->frame_3->minimumHeight() == controlsHeight && ui->frame_3->maximumHeight() == controlsHeight)
+    QGridLayout* displayGrid = qobject_cast<QGridLayout*>(ui->frame_3->layout());
+    QLayout* outerLayout = ui->frame->layout();
+    if (!displayGrid || !outerLayout || ui->frame->height() <= 0) {
+        qDebug() << Q_FUNC_INFO << "return: invalid grid or frame height"
+                 << "grid=" << displayGrid
+                 << "outerLayout=" << outerLayout
+                 << "frameHeight=" << ui->frame->height()
+                 << "frame3Height=" << ui->frame_3->height();
         return;
+    }
 
-    ui->frame_3->setMinimumHeight(controlsHeight);
-    ui->frame_3->setMaximumHeight(controlsHeight);
+    const QMargins outerMargins = outerLayout->contentsMargins();
+    ui->frame_3->setMinimumHeight(0);
+    ui->frame_3->setMaximumHeight(QWIDGETSIZE_MAX);
+    ui->frame_3->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+    displayGrid->setRowStretch(0, 1);
+    displayGrid->setRowStretch(1, 0);
+    displayGrid->activate();
+
+    const QMargins margins = displayGrid->contentsMargins();
+    const int availableHeight = ui->frame_3->height() - margins.top() - margins.bottom();
+    const int scrollbarHintHeight = ui->sliPosition->sizeHint().height();
+    const int displayHeight = availableHeight - displayGrid->verticalSpacing() - scrollbarHintHeight;
+    if (displayHeight <= 0) {
+        qDebug() << Q_FUNC_INFO << "return: calculated height is non-positive";
+        return;
+    }
+
+    ui->fraDisplay->setMinimumHeight(0);
+    ui->fraDisplay->setMaximumHeight(QWIDGETSIZE_MAX);
+    displayGrid->activate();
+    qDebug() << Q_FUNC_INFO << "released fixed constraints"
+             << "calculatedAvailableDisplayHeight=" << displayHeight
+             << "newConstraints=" << ui->fraDisplay->minimumHeight() << ui->fraDisplay->maximumHeight()
+             << "displayGeometry=" << ui->fraDisplay->geometry()
+             << "gridItemGeometry=" << displayGrid->cellRect(0, 0);
 }
 
 void PlayerWidget::enforcePanelSplit()
@@ -925,6 +989,12 @@ QTime PlayerWidget::computeFadePoint(CueMode mode) const {
 
 void PlayerWidget::setTransitionCueMode(CueMode mode) {
     m_transitionCueMode = mode;
+    const CuePoints cue = computeCuePoints(mode);
+    if (cue.valid) {
+        m_transitionCuePlanned = true;
+        m_cuePosition = cue.start;
+        bpmWidget->setCuePosition(cue.start);
+    }
 }
 
 /**
@@ -952,6 +1022,8 @@ void PlayerWidget::applyCuePoints(const CuePoints& cue, bool isManual)
     }
 
     bpmWidget->setTrackLength(player->length());
+    m_cuePosition = cue.start;
+    bpmWidget->setCuePosition(cue.start);
     bpmWidget->setState(m_bpm, cue.start, m_beatPosition, m_isStarted, m_bpmAnalyzed);
 
     if (isManual)
@@ -1025,12 +1097,12 @@ void PlayerWidget::armImmediateAboutFinish()
 void PlayerWidget::setInfo(QPair<int, int> info)
 {
     QString strTrack = (info.first > 1) ? tr("Tracks") : tr("Track");
-    m_infoBaseText = QString("%1 %2       %3 %4")
+    m_infoBaseText = QString("%1 %2  |  %3 %4")
                          .arg(info.first)
                          .arg(strTrack)
                          .arg(Track::prettyTime(info.second))
                          .arg(tr("Hours"));
-    ui->lblInfo->setText(m_infoBaseText);
+    setElidedLabelText(ui->lblInfo, m_infoBaseText);
 }
 
 void PlayerWidget::setEqualizer(EqBand band, int value)
@@ -1068,6 +1140,16 @@ void PlayerWidget::applyAutoCueAfterAnalysis(bool preferBeatCue)
     if (m_isStarted)
         return;
 
+    // Once the transition planner has a valid result, it owns the cue for
+    // this track. Do not let generic analyzer auto-cueing replace it.
+    if (m_transitionCuePlanned) {
+        const CuePoints plannedCue = computeCuePoints(m_transitionCueMode);
+        if (plannedCue.valid) {
+            applyCuePoints(plannedCue, false);
+            return;
+        }
+    }
+
     // Delegate to CueManager but preserve PlayerWidget-specific UI state (bpmWidget/ui updates).
     m_cueManager->applyAutoCueAfterAnalysis(preferBeatCue);
 
@@ -1082,6 +1164,8 @@ void PlayerWidget::applyAutoCueAfterAnalysis(bool preferBeatCue)
              << " appliedCuePosition=" << cuePosition;
 
     bpmWidget->setTrackLength(player->length());
+    m_cuePosition = cuePosition;
+    bpmWidget->setCuePosition(cuePosition);
     ui->butCue->setChecked(true);
     bpmWidget->setState(m_bpm, cuePosition, m_beatPosition, m_isStarted, m_bpmAnalyzed);
     updateTimeAndPositionDisplay(false);
@@ -1456,6 +1540,8 @@ void PlayerWidget::loadTrack(Track* track)
     m_pendingPlay = false;
     m_bpmAnalyzed = false;
     m_bpm = 0;
+    m_cuePosition = QTime();
+    m_transitionCuePlanned = false;
     m_tempoRate = 1.0;
     m_syncAdopting = false;
     m_visualLatencyMs = 0;
@@ -1464,6 +1550,7 @@ void PlayerWidget::loadTrack(Track* track)
     m_liveEnvelopeSmoothed = 0.0f;
     m_beatPosition = QTime();
     bpmWidget->setState(m_bpm, QTime(0, 0), m_beatPosition, false, track == nullptr);
+    bpmWidget->setCuePosition(QTime());
     bpmWidget->setTempoInfo(m_tempoRate, m_syncAdopting);
     bpmWidget->setTrackLength(QTime(0, 0));
     bpmWidget->clearEnvelope();
@@ -1487,6 +1574,13 @@ void PlayerWidget::loadTrack(Track* track)
 
     bool doPlay = m_isStarted;
     player->stop();
+
+    // Playlist items already carry the integer BPM from analysis_cache. Reuse it
+    // immediately for display and tempo setup while other analysis work continues.
+    m_bpm = track->bpm();
+    m_bpmAnalyzed = m_bpm > 0;
+    trackanalyzer->setCachedBpm(m_bpm);
+    bpmWidget->setState(m_bpm, player->position(), m_beatPosition, false, m_bpmAnalyzed);
 
     QUrl url = track->url();
     player->open(url);
@@ -1514,6 +1608,7 @@ void PlayerWidget::resizeEvent(QResizeEvent* e)
     QWidget::resizeEvent(e);
     updateResponsiveLayout();
     enforcePanelSplit();
+    syncDisplayHeightToControls();
     drawTitle();
     // bpmWidget geometry is updated via eventFilter on fraVuMeter
 }
@@ -1644,11 +1739,11 @@ void PlayerWidget::updateTimeAndPositionDisplay(bool isPassive)
 
     if (!highlight.isEmpty()) {
         if (!m_infoBaseText.isEmpty())
-            ui->lblInfo->setText(m_infoBaseText + "   [ " + highlight + " ]");
+            setElidedLabelText(ui->lblInfo, m_infoBaseText + "   [ " + highlight + " ]");
         else
-            ui->lblInfo->setText(highlight);
+            setElidedLabelText(ui->lblInfo, highlight);
     } else if (!m_infoBaseText.isEmpty()) {
-        ui->lblInfo->setText(m_infoBaseText);
+        setElidedLabelText(ui->lblInfo, m_infoBaseText);
     }
 
     //update position slider only if triggered by timer
@@ -1795,8 +1890,11 @@ void PlayerWidget::on_butCue_clicked()
         return;
     }
 
-    // Calculate cue position based on current mode/analysis results.
-    const QTime cuePosition = calculateCuePosition();
+    // Recall the last cue defined for this track. Only use analysis as a
+    // fallback when no cue has been established yet.
+    QTime cuePosition = m_cuePosition;
+    if (!cuePosition.isValid() || cuePosition <= QTime(0, 0))
+        cuePosition = calculateCuePosition();
 
     if (!cuePosition.isValid() || cuePosition <= QTime(0, 0)) {
         qWarning() << Q_FUNC_INFO << "no valid cue position available";
@@ -1814,6 +1912,7 @@ void PlayerWidget::on_butCue_clicked()
     suppressAboutFinishForMs(1000);
 
     player->setPosition(cuePosition);
+    m_cuePosition = cuePosition;
 
     // Apply remainCueTime from the fade point so the text label updates.
     const QTime fadePoint = computeFadePoint();
@@ -1825,6 +1924,7 @@ void PlayerWidget::on_butCue_clicked()
     }
 
     bpmWidget->setTrackLength(player->length());
+    bpmWidget->setCuePosition(cuePosition);
     bpmWidget->setState(m_bpm, cuePosition, m_beatPosition, m_isStarted, m_bpmAnalyzed);
     updateTimeAndPositionDisplay();
 }
@@ -1888,6 +1988,7 @@ void PlayerWidget::alignCueToReferenceBeat(double referenceBpm, const QTime& ref
         newMs = qBound<qint64>(0LL, newMs, lengthMs);
 
     player->setPosition(QTime(0, 0).addMSecs(static_cast<int>(newMs)));
+    bpmWidget->setState(m_bpm, player->position(), m_beatPosition, m_isStarted, m_bpmAnalyzed);
     updateTimeAndPositionDisplay(false);
 }
 
@@ -1948,6 +2049,7 @@ void PlayerWidget::syncNowToReferenceBeat(double referenceBpm, const QTime& refe
     }
 
     player->setPosition(QTime(0, 0).addMSecs(static_cast<int>(newMs)));
+    bpmWidget->setState(m_bpm, player->position(), m_beatPosition, m_isStarted, m_bpmAnalyzed);
     updateTimeAndPositionDisplay(false);
 
     // Optional: also match tempo rate when requested by caller.

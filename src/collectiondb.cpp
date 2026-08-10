@@ -69,6 +69,7 @@ public:
 };
 
 static constexpr const char* kDbConnName = "CollectionDB";
+static constexpr int kCollectionDbSchemaVersion = 1;
 
 static QString collectionDbPath()
 {
@@ -497,9 +498,49 @@ void CollectionDB::createTables(const bool temporary)
     executeSql("CREATE TABLE IF NOT EXISTS directories (dir VARCHAR(1024) PRIMARY KEY, changedate INTEGER);");
     executeSql("CREATE TABLE IF NOT EXISTS statistics (url VARCHAR(1024) PRIMARY KEY, playcounter INTEGER DEFAULT 0, rating INTEGER DEFAULT 0, lastplayed INTEGER DEFAULT 0);");
     executeSql("CREATE TABLE IF NOT EXISTS favorites (url VARCHAR(1024) PRIMARY KEY);");
-    executeSql("CREATE TABLE IF NOT EXISTS analysis_cache (url VARCHAR(1024) PRIMARY KEY, bpm INTEGER DEFAULT 0, beat_offset_ms INTEGER DEFAULT 0, changedate INTEGER DEFAULT 0, analysis_version INTEGER DEFAULT 0, envelope_version INTEGER DEFAULT 0, envelope_data BLOB, envelope_duration_ms INTEGER DEFAULT 0, start_position_ms INTEGER DEFAULT 0, end_position_ms INTEGER DEFAULT 0, beat_start_position_ms INTEGER DEFAULT 0, beat_end_position_ms INTEGER DEFAULT 0, analysis_cache_key VARCHAR(360) DEFAULT '');");
+    executeSql("CREATE TABLE IF NOT EXISTS analysis_cache (url VARCHAR(1024) PRIMARY KEY, bpm INTEGER DEFAULT 0, beat_offset_ms INTEGER DEFAULT 0, changedate INTEGER DEFAULT 0, analysis_version INTEGER DEFAULT 0, envelope_version INTEGER DEFAULT 0, envelope_data BLOB, envelope_duration_ms INTEGER DEFAULT 0, start_position_ms INTEGER DEFAULT 0, end_position_ms INTEGER DEFAULT 0, beat_start_position_ms INTEGER DEFAULT 0, beat_phase_position_ms INTEGER DEFAULT 0, beat_end_position_ms INTEGER DEFAULT 0, exact_bpm REAL DEFAULT 0.0, analysis_cache_key VARCHAR(360) DEFAULT '');");
+    migrateAnalysisCache();
     executeSql("CREATE TABLE IF NOT EXISTS playlists (url VARCHAR(1024), name VARCHAR(255), length INTEGER DEFAULT 0, flags INTEGER DEFAULT 0, norder INTEGER DEFAULT 0, changedate INTEGER DEFAULT 0);");
     executeSql("CREATE TABLE IF NOT EXISTS playlisttracks (id INTEGER PRIMARY KEY AUTOINCREMENT, playlist VARCHAR(255), url VARCHAR(1024));");
+}
+
+bool CollectionDB::migrateAnalysisCache()
+{
+    QSqlDatabase db = currentThreadCollectionDb();
+    if (!db.isValid() || !db.isOpen())
+        return false;
+
+    QSqlQuery versionQuery(db);
+    if (!versionQuery.exec(QStringLiteral("PRAGMA user_version")) || !versionQuery.next())
+        return false;
+
+    const int currentVersion = versionQuery.value(0).toInt();
+    if (currentVersion >= kCollectionDbSchemaVersion)
+        return true;
+
+    QSqlQuery columnsQuery(db);
+    if (!columnsQuery.exec(QStringLiteral("PRAGMA table_info(analysis_cache)")))
+        return false;
+
+    QSet<QString> columns;
+    while (columnsQuery.next())
+        columns.insert(columnsQuery.value(1).toString());
+
+    const QList<QPair<QString, QString>> migrations = {
+        {QStringLiteral("beat_phase_position_ms"), QStringLiteral("ALTER TABLE analysis_cache ADD COLUMN beat_phase_position_ms INTEGER DEFAULT 0")},
+        {QStringLiteral("exact_bpm"), QStringLiteral("ALTER TABLE analysis_cache ADD COLUMN exact_bpm REAL DEFAULT 0.0")}
+    };
+    for (const auto& migration : migrations) {
+        if (columns.contains(migration.first))
+            continue;
+
+        QSqlQuery alterQuery(db);
+        if (!alterQuery.exec(migration.second))
+            return false;
+    }
+
+    QSqlQuery setVersionQuery(db);
+    return setVersionQuery.exec(QStringLiteral("PRAGMA user_version = %1").arg(kCollectionDbSchemaVersion));
 }
 
 void CollectionDB::dropTables(const bool temporary)

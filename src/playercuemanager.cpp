@@ -193,6 +193,7 @@ void PlayerCueManager::applyAutoCueAfterAnalysis(bool preferBeatCue)
 
     if (cuePosition.isValid() && cuePosition > QTime(0, 0)) {
         m_owner.player->setPosition(cuePosition);
+        m_owner.m_cuePosition = cuePosition;
 
         if (mode == CUE_SKIP_SILENT) {
             const QTime fade = computeFadePoint();

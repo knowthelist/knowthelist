@@ -120,7 +120,7 @@ TransitionPlan TransitionPlanner::choose(Track* outgoing, Track* incoming,
     }
 
     if ((vocalPair || preferVocal)
-        && setMode(TransitionMode::VocalHandoff, qBound(4, defaultDurationSeconds, 16), 0.62,
+        && setMode(TransitionMode::VocalHandoff, qBound(10, defaultDurationSeconds, 20), 0.62,
                    QStringLiteral("Vocal-oriented material; make the incoming lead dominant."))) {
         return plan;
     }

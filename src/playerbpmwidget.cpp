@@ -261,6 +261,12 @@ void PlayerBpmWidget::setExactBpm(double exactBpm)
     }
 }
 
+void PlayerBpmWidget::setCuePosition(const QTime& position)
+{
+    m_cuePosition = position;
+    update();
+}
+
 void PlayerBpmWidget::setTempoInfo(double tempoRate, bool syncAdjusting, qint64 syncCompleted)
 {
     m_tempoRate = tempoRate;
@@ -807,6 +813,20 @@ void PlayerBpmWidget::paintEvent(QPaintEvent* event)
                 painter.drawPath(m_topEdgePath);
                 painter.drawPath(m_bottomEdgePath);
             }
+        }
+    }
+
+    // Keep the planned cue visible while the playhead continues through the track.
+    if (m_cuePosition.isValid() && m_windowMs > 0) {
+        const qint64 cueMs = QTime(0, 0).msecsTo(m_cuePosition);
+        const qint64 leftMs = visibleWindowLeftMs();
+        const qint64 rightMs = leftMs + m_windowMs;
+        if (cueMs >= leftMs && cueMs <= rightMs) {
+            const double norm = static_cast<double>(cueMs - leftMs)
+                / static_cast<double>(m_windowMs);
+            const int x = phaseBand.left() + qRound(norm * phaseBand.width());
+            painter.setPen(QPen(QColor(255, 190, 64, 220), 2));
+            painter.drawLine(x, phaseBand.top() + 1, x, phaseBand.bottom() - 1);
         }
     }
 

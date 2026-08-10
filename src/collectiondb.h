@@ -95,6 +95,7 @@ private slots:
 
 private:
     void repairNullMetadata();
+    bool migrateAnalysisCache();
 
     struct CollectionDbPrivate* p;
     ProgressBar* m_progress;

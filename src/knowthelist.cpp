@@ -807,6 +807,10 @@ void Knowthelist::player1_tempoChanged(int bpm, QTime beatPosition)
     m_Player1Bpm = bpm;
     m_Player1BeatPosition = beatPosition;
 
+    // Analysis can change the transition mode and therefore the incoming cue.
+    // Recompute before any waiting deck is started.
+    refreshTransitionPlan();
+
     if (!m_autoSyncEnabled || bpm <= 0)
         return;
 
@@ -829,6 +833,10 @@ void Knowthelist::player2_tempoChanged(int bpm, QTime beatPosition)
 {
     m_Player2Bpm = bpm;
     m_Player2BeatPosition = beatPosition;
+
+    // Analysis can change the transition mode and therefore the incoming cue.
+    // Recompute before any waiting deck is started.
+    refreshTransitionPlan();
 
     if (!m_autoSyncEnabled || bpm <= 0)
         return;
@@ -1131,10 +1139,12 @@ void Knowthelist::applyTransitionAutomation()
         incoming->setEqualizer(PlayerWidget::EQ_Low,
                                qRound(60.0 + 180.0 * progress));
     } else if (m_transitionPlan.mode == TransitionMode::VocalHandoff) {
+        // Keep the incoming vocal path neutral and move the mid-band reduction
+        // onto the outgoing deck so both voices do not occupy the same space.
         outgoing->setEqualizer(PlayerWidget::EQ_Mid,
-                               qRound(240.0 - 120.0 * progress));
+                               qRound(120.0 - 60.0 * progress));
         incoming->setEqualizer(PlayerWidget::EQ_Mid,
-                               qRound(180.0 + 60.0 * progress));
+                               240);
     }
 }
 
@@ -1967,10 +1977,18 @@ void Knowthelist::refreshTransitionPlan()
         outgoingTrack, incomingTrack, outgoingBpm, incomingTrack->bpm(), mAutofadeLength,
         TransitionPreferences::fromSettings(QSettings()));
     const CueMode transitionCueMode = cueModeForTransition(m_transitionPlan.cueMode);
-    outgoingPlaylist == playList1 ? player1->setTransitionCueMode(transitionCueMode)
-                                  : player2->setTransitionCueMode(transitionCueMode);
-    incomingPlaylist == playList1 ? player1->setTransitionCueMode(transitionCueMode)
-                                  : player2->setTransitionCueMode(transitionCueMode);
+    PlayerWidget* outgoingPlayer = outgoingPlaylist == playList1 ? player1 : player2;
+    PlayerWidget* incomingPlayer = incomingPlaylist == playList1 ? player1 : player2;
+    outgoingPlayer->setTransitionCueMode(transitionCueMode);
+    incomingPlayer->setTransitionCueMode(transitionCueMode);
+
+    // The planner is authoritative for a waiting deck. Generic analysis
+    // auto-cueing may have positioned it earlier with a different strategy.
+    if (!incomingPlayer->isStarted()) {
+        const CuePoints plannedCue = incomingPlayer->computeCuePoints(transitionCueMode);
+        if (plannedCue.valid)
+            incomingPlayer->applyCuePoints(plannedCue, false);
+    }
 
     qDebug() << "Transition preview updated:" << static_cast<int>(m_transitionPlan.mode)
              << "duration=" << m_transitionPlan.durationSeconds

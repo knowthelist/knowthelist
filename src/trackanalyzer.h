@@ -35,6 +35,7 @@ public:
 
     bool prepare();
     void open(QUrl url);
+    void setCachedBpm(int bpm);
     bool close();
 
     double gainDB();

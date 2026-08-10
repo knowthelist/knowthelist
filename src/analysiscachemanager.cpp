@@ -162,6 +162,7 @@ bool AnalysisCacheManager::ensureTempoCacheTable() const
         {"beat_phase_position_ms",  "ALTER TABLE analysis_cache ADD COLUMN beat_phase_position_ms INTEGER DEFAULT 0"},
         {"beat_end_position_ms",    "ALTER TABLE analysis_cache ADD COLUMN beat_end_position_ms INTEGER DEFAULT 0"},
         {"envelope_duration_ms",    "ALTER TABLE analysis_cache ADD COLUMN envelope_duration_ms INTEGER DEFAULT 0"},
+        {"exact_bpm",               "ALTER TABLE analysis_cache ADD COLUMN exact_bpm REAL DEFAULT 0.0"},
         {"analysis_cache_key",      "ALTER TABLE analysis_cache ADD COLUMN analysis_cache_key VARCHAR(360) DEFAULT ''"},
     };
     for (const auto &pair : colsToAdd) {

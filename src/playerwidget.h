@@ -249,6 +249,7 @@ protected:
     bool m_beatSyncEnabled;
     bool m_beatCueEnabled;
     CueMode m_transitionCueMode{CUE_SKIP_SILENT_OCCURRENCE};
+    bool m_transitionCuePlanned{false};
     bool m_beatVisualMode;
     double m_tempoRate;
     bool m_syncAdopting;
@@ -259,6 +260,7 @@ protected:
     float m_liveEnvelopeSmoothed;
     bool m_bpmAnalyzed;
     int m_bpm;
+    QTime m_cuePosition;
     QTime m_beatPosition;
     QString m_infoBaseText;
     bool m_envelopeScrubbing;

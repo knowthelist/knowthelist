@@ -36,6 +36,7 @@ public:
     void setState(int bpm, double exactBpm, const QTime& position, const QTime& beatReference, bool running, bool analyzed = true);
     void setExactBpm(double exactBpm);
     void setTempoInfo(double tempoRate, bool syncAdjusting, qint64 syncCompleted = 0);
+    void setCuePosition(const QTime& position);
     void appendEnvelopeSample(float value);
     void appendEnvelopeSampleAt(int positionMs, float value);
     void clearEnvelope();
@@ -63,6 +64,7 @@ Q_SIGNALS:
 private:
     int m_bpm;
     QTime m_position;
+    QTime m_cuePosition;
     QTime m_beatReference;
     QTime m_trackLength;
     bool m_running;

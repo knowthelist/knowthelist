@@ -367,6 +367,7 @@ struct TrackAnalyzer_Private {
     QFutureWatcher<void> watcher;
     QMutex mutex;
     int bpm = 0;
+    int preferredBpm = 0;
     bool bpmDetected = false;
     bool finishQueued = false;
     bool shuttingDown = false;
@@ -407,6 +408,12 @@ TrackAnalyzer::~TrackAnalyzer()
     cleanup();
     delete p;
     p = nullptr;
+}
+
+void TrackAnalyzer::setCachedBpm(int bpm)
+{
+    QMutexLocker locker(&p->mutex);
+    p->preferredBpm = qMax(0, bpm);
 }
 
 void TrackAnalyzer::clearRuntimeCaches()
@@ -712,6 +719,7 @@ void TrackAnalyzer::detectTempo()
     QList<float> frameRms;
     double averageRms = 0.0;
     QUrl currentUrl;
+    int preferredBpm = 0;
     {
         QMutexLocker locker(&p->mutex);
         // Skip if BPM already detected for this session
@@ -723,6 +731,18 @@ void TrackAnalyzer::detectTempo()
         frameRms = p->frameRms;
         averageRms = p->averageRms;
         currentUrl = p->currentUrl;
+        preferredBpm = p->preferredBpm;
+    }
+
+    if (preferredBpm > 0) {
+        QMutexLocker locker(&p->mutex);
+        p->bpm = preferredBpm;
+        m_ExactBpm = static_cast<double>(preferredBpm);
+        m_BeatPosition = m_trackEffectiveStart;
+        m_beatStartPosition = m_trackEffectiveStart;
+        p->bpmDetected = true;
+        qDebug() << Q_FUNC_INFO << "Using supplied cached BPM:" << preferredBpm;
+        return;
     }
 
     const QString cacheKey = analysisCacheKey(currentUrl);
