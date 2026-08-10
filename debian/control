@@ -8,9 +8,22 @@ Build-Depends: debhelper-compat (= 13),
  qt6-base-dev,
  qt6-base-dev-tools,
  qt6-tools-dev-tools,
- libgstreamer1.0-dev,
- libgstreamer-plugins-base1.0-dev,
- libtag1-dev, libasound2-dev
+ libtag1-dev,
+ libasound2-dev,
+ libfreetype6-dev,
+ libfontconfig1-dev,
+ libegl1-mesa-dev,
+ libxkbcommon-dev,
+ libgl1-mesa-dev,
+ libx11-dev,
+ libxext-dev,
+ libxrandr-dev,
+ libxinerama-dev,
+ libxcursor-dev,
+ libxi-dev,
+ libxcomposite-dev,
+ libx11-xcb-dev,
+ libcurl4-openssl-dev
 Standards-Version: 4.7.0
 Homepage: https://knowthelist.github.io/knowthelist
 Vcs-Git: https://github.com/knowthelist/knowthelist.git
@@ -20,11 +33,7 @@ Package: knowthelist
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends},
  libqt6sql6-sqlite,
- gstreamer1.0-plugins-base,
- gstreamer1.0-plugins-good,
- gstreamer1.0-plugins-bad,
- gstreamer1.0-plugins-ugly,
- gstreamer1.0-pulseaudio
+ libasound2
 Description: awesome party music player
  Easy to use for all party guests.
  .

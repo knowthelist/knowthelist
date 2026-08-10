@@ -1,16 +1,9 @@
-knowthelist (2.4.0-2) unstable; urgency=medium
-
-  * Refresh feature description text in README and Debian metadata.
-  * Update Debian packaging to Qt6/CMake toolchain.
-  * Modernize Build-Depends and runtime package dependencies.
-
- -- Mario Stephan <mstephan@shared-files.de>  Wed, 27 May 2026 12:00:00 +0200
-
 knowthelist (2.4.0-1) unstable; urgency=medium
 
-  * Qt6 compatibility.
+  * New release with QT6, JUCE audio backend, BPM
+    snchronization and UI improvements.
 
- -- Mario Stephan <mstephan@shared-files.de>  Wed, 20 May 2026 00:00:00 +0200
+ -- Mario Stephan <mstephan@shared-files.de>  Mon, 10 Aug 2026 22:16:28 +0200
 
 knowthelist (2.3.1-1) unstable; urgency=medium
 

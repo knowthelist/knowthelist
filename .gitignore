@@ -35,4 +35,4 @@ dist-*/
 .DS_Store
 .nanocoder/
 AGENTS.md
-collectiondb_fix_plan.md
+obj-*
