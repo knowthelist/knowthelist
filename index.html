@@ -19,13 +19,12 @@
           <a id="forkme_banner" href="https://github.com/knowthelist/knowthelist">View on GitHub</a>
 
           <h1 id="project_title">Knowthelist</h1>
-          <h2 id="project_tagline">Knowthelist - the awesome party music player</h2>
+          <h2 id="project_tagline">Knowthelist - the awesome party music player (v2.4.0)</h2>
 
             <section id="binaries">
-	      <a class="btn btn-primary btn-large" href="https://github.com/knowthelist/knowthelist/releases/download/v2.3.0/Knowthelist-Setup-2.3.0.msi">Download for Win32</a>
-	      <a class="btn btn-primary btn-large" href="https://github.com/knowthelist/knowthelist/releases/download/v2.2.3/knowthelist_2.2.3_Trusty_amd64.deb">Download for Ubuntu</a>
-          <a class="btn btn-primary btn-large" href="http://ftp.uni-erlangen.de/mirrors/Mageia/distrib/cauldron/x86_64/media/core/release/knowthelist-2.2.4-2.mga5.x86_64.rpm">Download for Mageia5</a>
-          <a class="btn btn-primary btn-large" href="https://github.com/knowthelist/knowthelist/releases/download/v2.3.0/knowthelist-2.3.0_Suse13_x86_64.rpm">Download for Suse13</a>
+	      <a class="btn btn-primary btn-large" href="https://github.com/knowthelist/knowthelist/releases/download/v2.4.0/knowthelist-2.4.0-Windows.zip">Download for Windows</a>
+	      <a class="btn btn-primary btn-large" href="https://github.com/knowthelist/knowthelist/releases/download/v2.4.0/knowthelist-v2.4.0-macOS.zip">Download for macOS</a>
+          <a class="btn btn-primary btn-large" href="https://github.com/knowthelist/knowthelist/releases/download/v2.4.0/knowthelist-2.4.0-Linux-x86_64.deb">Download for Linux</a>
 
             </section>
 
@@ -48,31 +47,51 @@
     <div id="main_content_wrap" class="outer">
       <section id="main_content" class="inner">
         <h1>
-<a name="knowthelist" class="anchor" href="#knowthelist"><span class="octicon octicon-link"></span></a>knowthelist</h1>
+<a name="knowthelist" class="anchor" href="#knowthelist"></a>knowthelist</h1>
 
-<p>Knowthelist - the awesome party music player</p>
+<h2>The Ultimate Party DJ Mixer</h2>
+
+<p><strong>Knowthelist</strong> is a feature-packed, cross-platform DJ mixer and music player built for DJs and party hosts who need to react instantly while mixing. Queue up requests in real time, beat-sync two decks, set Auto DJ filters, and deliver smooth transitions.</p>
+
+<h2>Features</h2>
 
 <ul>
-<li>Easy to use for all party guests</li>
-<li>Quick search for tracks in collection</li>
-<li>Two players with separate playlists</li>
-<li>Mixer with fader, 3 channel EQ and gain</li>
-<li>Auto fader and auto gain</li>
-<li>Trackanalyser search for song start/end and gain setting</li>
-<li>Auto DJ function with multiple filters for random play </li>
-<li>Monitor player for pre listen tracks (via 2nd sound card e.g. USB)</li>
-<li>... more <a href="https://github.com/knowthelist/knowthelist/wiki">https://github.com/knowthelist/knowthelist/wiki</a>
-</li>
-</ul><p>Runs under Linux, MacOS and Windows</p>
+<li><strong>Dual Decks:</strong> Two independent players with separate playlists for seamless mixing</li>
+<li><strong>Live Collection Search:</strong> Find tracks instantly while music plays</li>
+<li><strong>Full Mixer:</strong> Crossfader, 3-band EQ per deck, and per-channel gain control</li>
+<li><strong>Adaptive Transition Planner:</strong> Automatically chooses the best transition for each song pair</li>
+<li><strong>Beat Sync:</strong> Visual sync support with gradual tempo restoration and latency compensation</li>
+<li><strong>Auto DJ:</strong> Smart random play with powerful filters</li>
+<li><strong>Track Analysis:</strong> Automatic BPM detection, loudness mapping, cue points and beat-phase visualization</li>
+<li><strong>Monitor Player:</strong> Pre-listen on a secondary audio device</li>
+<li><strong>Pitch-Preserving Time Stretch:</strong> DJ-style tempo changes with pitch preservation</li>
+<li><strong>Auto Gain Control:</strong> Keep energy levels consistent across a set</li>
+<li><strong>Modern UI:</strong> Fancy tabs, custom VU meters, progress bars and rating widgets</li>
+</ul>
 
-<hr><h2>
-<a name="what-is-knowthelist" class="anchor" href="#what-is-knowthelist"><span class="octicon octicon-link"></span></a>What is Knowthelist?</h2>
+<h2>Adaptive Auto DJ transitions</h2>
 
-<p>Knowthelist is an easy to use music player for DJing. Two separate players with their own playlists. A mixer with volume fader, 3 channel equalizer and cross fader. Newly to the player added tracks will be analyzed automatically in the background by a track analyzer to detecting silence and volume of the track. The retrieved start and end timestamps enable gapless playing and the determined volume value can be used to sustain a constant loudness over all songs. Tracks are added from a music collection or directly from the filesystem. The music collection has a quick find function by just typing key words into the search field. Collection tree, found tracks and the playlists remain always clearly structured in one view. No unnecessary clicks to switch between views.</p>
+<p>The Auto DJ transition planner reevaluates the upcoming pair whenever the current or waiting track changes, then selects an explainable transition profile based on BPM and musical style hints. Matching BPMs prioritize beat and phrase alignment, even when genre metadata is missing or inconsistent.</p>
 
-<p><img src="images/knowthelist_2.2_mac_s.png" alt=""></p>
+<ul>
+<li>Beat and phrase blend for compatible dance tracks</li>
+<li>Bass swap to prevent kick and bass masking</li>
+<li>Vocal and mid handoff so the incoming lead remains dominant</li>
+<li>Equal-power blend as the neutral, smooth fallback</li>
+<li>Hard cut for large tempo or style changes</li>
+</ul>
 
-<p>Get install packages for Linux <a href="http://opendesktop.org/content/show.php/Knowthelist?content=165440">here</a></p>
+<p>Transitions respect duration limits, maximum tempo correction and the selected style bias. All transition modes are enabled by default and can be adjusted under Settings and Transitions.</p>
+
+<h2>Platforms</h2>
+
+<p>Runs natively on Linux, macOS and Windows.</p>
+
+<h2>Screenshot</h2>
+
+<p><img src="images/Knowthelist_UI.png" alt="Knowthelist user interface"></p>
+
+<p>Get the latest Windows, macOS and Linux packages from the <a href="https://github.com/knowthelist/knowthelist/releases/tag/v2.4.0">v2.4.0 GitHub release</a>.</p>
       </section>
     </div>
 
