@@ -128,6 +128,10 @@ Knowthelist::Knowthelist(QWidget* parent)
     , m_fadeSyncBeatWaitSteps(0)
 {
     ui->setupUi(this);
+    ui->verticalLayout->setStretch(0, 1);
+    ui->verticalLayout->setStretch(1, 1);
+    ui->verticalLayout_R->setStretch(0, 1);
+    ui->verticalLayout_R->setStretch(1, 1);
 
     //create the UI
     createUI();
