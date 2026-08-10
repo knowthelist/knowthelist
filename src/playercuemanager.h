@@ -56,6 +56,8 @@ public:
         CUE_SKIP_SILENT_OCCURRENCE        // combined: skip-silent start + occurrence-style end
     };
 
+    QTime computeFadePoint(CueMode mode) const;
+
     CuePoints computeCuePoints(CueMode mode) const;
     QTime calculateCuePosition() const;
     QTime calculateCuePosition(CueMode mode) const;

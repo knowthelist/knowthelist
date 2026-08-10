@@ -36,11 +36,22 @@ bool PlayerCueManager::skipSilentEnd() const { return m_skipSilentEnd; }
 
 QTime PlayerCueManager::computeFadePoint() const
 {
+    return computeFadePoint(CUE_SKIP_SILENT_OCCURRENCE);
+}
+
+QTime PlayerCueManager::computeFadePoint(CueMode mode) const
+{
     if (!m_owner.trackanalyzer || !m_owner.trackanalyzer->finished())
         return QTime();
 
-    QTime beatEnd   = m_owner.trackanalyzer->beatEndPosition();
-    QTime trackEnd  = m_owner.trackanalyzer->endPosition();
+    const QTime beatEnd = m_owner.trackanalyzer->beatEndPosition();
+    const QTime trackEnd = m_owner.trackanalyzer->endPosition();
+
+    if (mode == CUE_SKIP_SILENT)
+        return trackEnd;
+    if (mode == CUE_BEAT_OCCURRENCE)
+        return beatEnd.isValid() && beatEnd > QTime(0, 0) ? beatEnd : trackEnd;
+
     QTime fadePoint;
 
     if (beatEnd.isValid() && beatEnd > QTime(0, 0))
@@ -50,7 +61,7 @@ QTime PlayerCueManager::computeFadePoint() const
             fadePoint = trackEnd;
     }
 
-    return (fadePoint.isValid() && fadePoint > QTime(0, 0)) ? fadePoint : m_owner.trackanalyzer->endPosition();
+    return (fadePoint.isValid() && fadePoint > QTime(0, 0)) ? fadePoint : trackEnd;
 }
 
 long PlayerCueManager::computeRemainCueTime(const QTime& fadePoint) const
@@ -74,7 +85,12 @@ PlayerCueManager::CuePoints PlayerCueManager::computeCuePoints(CueMode mode) con
         // Use beatStartPosition() for beat-based modes.
         const QTime firstBeat = m_owner.trackanalyzer->beatStartPosition();
         const QTime firstEnergy = m_owner.trackanalyzer->startPosition();
-        result.start = (firstBeat.isValid() && firstBeat > QTime(0, 0)
+        const QTime length = m_owner.trackanalyzer->length();
+        const int lengthMs = length.msecsSinceStartOfDay();
+        const int firstBeatMs = firstBeat.msecsSinceStartOfDay();
+        const bool beatIsPlausible = firstBeat.isValid() && firstBeat > QTime(0, 0)
+            && (lengthMs <= 0 || firstBeatMs < lengthMs / 2);
+        result.start = (beatIsPlausible
                         && (!firstEnergy.isValid() || firstEnergy <= QTime(0, 0) || firstBeat >= firstEnergy))
                            ? firstBeat
                            : (firstEnergy > QTime(0, 0) ? firstEnergy : QTime(0, 0));
@@ -83,8 +99,7 @@ PlayerCueManager::CuePoints PlayerCueManager::computeCuePoints(CueMode mode) con
         result.start = m_owner.trackanalyzer->startPosition();
     }
 
-    // All modes share the same end point (fade-room for beat-sync mix-out).
-    result.end       = computeFadePoint();
+    result.end       = computeFadePoint(mode);
     result.valid     = result.start.isValid() && result.start > QTime(0, 0);
     return result;
 }
@@ -97,7 +112,11 @@ QTime PlayerCueManager::calculateCuePosition(CueMode mode) const
         if (m_owner.trackanalyzer && m_owner.trackanalyzer->finished()) {
             const QTime firstBeat = m_owner.trackanalyzer->beatStartPosition();
             const QTime firstEnergy = m_owner.trackanalyzer->startPosition();
-            if (firstBeat.isValid() && firstBeat > QTime(0, 0)
+            const QTime length = m_owner.trackanalyzer->length();
+            const int lengthMs = length.msecsSinceStartOfDay();
+            const bool beatIsPlausible = firstBeat.isValid() && firstBeat > QTime(0, 0)
+                && (lengthMs <= 0 || firstBeat.msecsSinceStartOfDay() < lengthMs / 2);
+            if (beatIsPlausible
                     && (!firstEnergy.isValid() || firstEnergy <= QTime(0, 0) || firstBeat >= firstEnergy)) {
                 return firstBeat;
             }
@@ -162,7 +181,7 @@ void PlayerCueManager::applyAutoCueAfterAnalysis(bool preferBeatCue)
         return;
     }
 
-    CueMode mode = preferBeatCue ? CUE_BEAT_OCCURRENCE : (m_skipSilentEnd ? CUE_SKIP_SILENT : CUE_BEAT_OCCURRENCE);
+    CueMode mode = preferBeatCue ? CUE_BEAT_OCCURRENCE : CUE_SKIP_SILENT;
     QTime cuePosition = calculateCuePosition(mode);
 
     // If analysis isn't ready yet, fall back to first-significant-energy position.

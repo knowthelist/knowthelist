@@ -19,6 +19,7 @@
 #include <juce_audio_basics/juce_audio_basics.h>
 #include <QString>
 #include <cmath>
+#include <mutex>
 #include <vector>
 
 #if defined(KNOWTHELIST_HAVE_SOUNDTOUCH) && KNOWTHELIST_HAVE_SOUNDTOUCH
@@ -160,6 +161,7 @@ public:
 
     void setResamplingRatio(double ratio)
     {
+        const std::lock_guard<std::mutex> lock(stateMutex);
         targetRate.store(juce::jlimit(0.5, 2.0, ratio), std::memory_order_relaxed);
 #if !defined(KNOWTHELIST_HAVE_SOUNDTOUCH) || !KNOWTHELIST_HAVE_SOUNDTOUCH
         // For immediate tempo change without waiting for current buffer to flush,
@@ -179,6 +181,7 @@ public:
 
     void prepareToPlay(int samplesPerBlockExpected, double sampleRate) override
     {
+        const std::lock_guard<std::mutex> lock(stateMutex);
         inputSource->prepareToPlay(samplesPerBlockExpected, sampleRate);
         resampler.prepareToPlay(samplesPerBlockExpected, sampleRate);
 
@@ -202,6 +205,7 @@ public:
 
     void releaseResources() override
     {
+        const std::lock_guard<std::mutex> lock(stateMutex);
         resampler.releaseResources();
         inputSource->releaseResources();
 
@@ -216,6 +220,7 @@ public:
 
     void getNextAudioBlock(const juce::AudioSourceChannelInfo& info) override
     {
+        const std::lock_guard<std::mutex> lock(stateMutex);
 #if defined(KNOWTHELIST_HAVE_SOUNDTOUCH) && KNOWTHELIST_HAVE_SOUNDTOUCH
         if (info.buffer == nullptr || info.numSamples <= 0)
             return;
@@ -312,6 +317,7 @@ public:
 
     void setNextReadPosition(juce::int64 newPosition) override
     {
+        const std::lock_guard<std::mutex> lock(stateMutex);
         inputSource->setNextReadPosition(newPosition);
         resampler.flushBuffers();
 
@@ -324,6 +330,7 @@ public:
 
     juce::int64 getNextReadPosition() const override
     {
+        const std::lock_guard<std::mutex> lock(stateMutex);
 #if defined(KNOWTHELIST_HAVE_SOUNDTOUCH) && KNOWTHELIST_HAVE_SOUNDTOUCH
     return static_cast<juce::int64>(std::llround(smoothedReadPositionSamples.load(std::memory_order_relaxed)));
 #else
@@ -342,6 +349,7 @@ public:
     }
 
 private:
+    mutable std::mutex stateMutex;
     juce::PositionableAudioSource* inputSource;
     juce::ResamplingAudioSource resampler;
     std::atomic<double> targetRate{1.0};

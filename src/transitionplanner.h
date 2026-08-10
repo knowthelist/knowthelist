@@ -14,8 +14,15 @@ enum class TransitionMode {
     HardCut
 };
 
+enum class TransitionCueMode {
+    SkipSilence,
+    BeatOccurrence,
+    SkipSilenceOccurrence
+};
+
 struct TransitionPlan {
     TransitionMode mode{TransitionMode::EqualPower};
+    TransitionCueMode cueMode{TransitionCueMode::SkipSilence};
     int durationSeconds{12};
     bool matchTempo{false};
     double confidence{0.0};

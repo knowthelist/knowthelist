@@ -43,7 +43,8 @@ class PlayerCueManager;
 // ---- Cue mode: two distinct strategies for finding start & end cue points ----
 enum CueMode {
     CUE_SKIP_SILENT,        // skipSilent:   start at first non-silent sample / end at last non-silent beat-activity
-    CUE_BEAT_OCCURRENCE     // beatOccurrence: start at first significant beat / end where enough fade-room remains for beat-sync mix-out
+    CUE_BEAT_OCCURRENCE,    // beatOccurrence: start at first significant beat / end where enough fade-room remains for beat-sync mix-out
+    CUE_SKIP_SILENT_OCCURRENCE // skip-silent start with beat-aware mix-out
 };
 
 // Pair of cue points (start of track + mix-out point near the end)
@@ -216,7 +217,9 @@ public:
 
     // ---- Internal fade-point helpers (replaces duplicated logic) ----
     QTime computeFadePoint() const;
+    QTime computeFadePoint(CueMode mode) const;
     long computeRemainCueTime(const QTime& fadePoint) const;
+    void setTransitionCueMode(CueMode mode);
 
     // Sub-objects can access these shared members via PlayerWidget& or through their own methods.
     // Note: These are accessed by sub-classes during construction before the full class is defined.
@@ -245,6 +248,7 @@ protected:
     bool m_skipSilentBegin;
     bool m_beatSyncEnabled;
     bool m_beatCueEnabled;
+    CueMode m_transitionCueMode{CUE_SKIP_SILENT_OCCURRENCE};
     bool m_beatVisualMode;
     double m_tempoRate;
     bool m_syncAdopting;

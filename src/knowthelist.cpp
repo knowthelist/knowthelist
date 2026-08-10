@@ -37,6 +37,19 @@
 #include <cmath>
 
 namespace {
+CueMode cueModeForTransition(TransitionCueMode mode)
+{
+    switch (mode) {
+    case TransitionCueMode::BeatOccurrence:
+        return CUE_BEAT_OCCURRENCE;
+    case TransitionCueMode::SkipSilenceOccurrence:
+        return CUE_SKIP_SILENT_OCCURRENCE;
+    case TransitionCueMode::SkipSilence:
+    default:
+        return CUE_SKIP_SILENT;
+    }
+}
+
 bool nearBeatBoundary(const QTime& position, const QTime& beatReference, int bpm, double toleranceMs)
 {
     if (bpm <= 0)
@@ -1261,6 +1274,11 @@ void Knowthelist::fadeNow()
         m_transitionPlan = TransitionPlanner::choose(
             outgoingTrack, incomingTrack, outgoingBpm, incomingBpm, mAutofadeLength,
             TransitionPreferences::fromSettings(QSettings()));
+        const CueMode transitionCueMode = cueModeForTransition(m_transitionPlan.cueMode);
+        outgoing->setTransitionCueMode(transitionCueMode);
+        incoming->setTransitionCueMode(transitionCueMode);
+        if (incoming && !incoming->isStarted())
+            incoming->applyCuePoints(incoming->computeCuePoints(transitionCueMode), false);
         m_transitionStartFaderValue = ui->sliFader->value();
         m_transitionActive = true;
         qDebug() << "Selected transition:" << static_cast<int>(m_transitionPlan.mode)
@@ -1948,6 +1966,11 @@ void Knowthelist::refreshTransitionPlan()
     m_transitionPlan = TransitionPlanner::choose(
         outgoingTrack, incomingTrack, outgoingBpm, incomingTrack->bpm(), mAutofadeLength,
         TransitionPreferences::fromSettings(QSettings()));
+    const CueMode transitionCueMode = cueModeForTransition(m_transitionPlan.cueMode);
+    outgoingPlaylist == playList1 ? player1->setTransitionCueMode(transitionCueMode)
+                                  : player2->setTransitionCueMode(transitionCueMode);
+    incomingPlaylist == playList1 ? player1->setTransitionCueMode(transitionCueMode)
+                                  : player2->setTransitionCueMode(transitionCueMode);
 
     qDebug() << "Transition preview updated:" << static_cast<int>(m_transitionPlan.mode)
              << "duration=" << m_transitionPlan.durationSeconds

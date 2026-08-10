@@ -915,7 +915,16 @@ CuePoints PlayerWidget::computeCuePoints(CueMode mode) const
  * Falls back to raw trackanalyzer->endPosition() when neither source is valid.
  */
 QTime PlayerWidget::computeFadePoint() const {
-    return m_cueManager->computeFadePoint();
+    return m_cueManager->computeFadePoint(
+        static_cast<PlayerCueManager::CueMode>(m_transitionCueMode));
+}
+
+QTime PlayerWidget::computeFadePoint(CueMode mode) const {
+    return m_cueManager->computeFadePoint(static_cast<PlayerCueManager::CueMode>(mode));
+}
+
+void PlayerWidget::setTransitionCueMode(CueMode mode) {
+    m_transitionCueMode = mode;
 }
 
 /**
@@ -990,7 +999,7 @@ bool PlayerWidget::seekOvershootsFadePoint(const QTime& targetPos) const
     const int targetMs = qMax(0, QTime(0, 0).msecsTo(targetPos));
 
     if (trackanalyzer->finished() && (m_skipSilentEnd || m_beatCueEnabled)) {
-        const QTime fadePoint = m_cueManager->computeFadePoint();
+        const QTime fadePoint = computeFadePoint();
         if (fadePoint.isValid() && fadePoint > QTime(0, 0)) {
             const int triggerPosMs = qMax(0, QTime(0, 0).msecsTo(fadePoint) - mTrackFinishEmitTime);
             return targetMs >= triggerPosMs;
@@ -1034,7 +1043,7 @@ void PlayerWidget::setPositionMarkers()
 {
     if (trackanalyzer->finished()) {
         if (m_skipSilentEnd || m_beatCueEnabled) {
-            const QTime fadePoint = m_cueManager->computeFadePoint();
+            const QTime fadePoint = computeFadePoint();
             remainCueTime = m_cueManager->computeRemainCueTime(fadePoint);
             if (remainCueTime > 0) {
                 qDebug() << Q_FUNC_INFO << "fadeStartPoint:" << fadePoint;
@@ -1047,7 +1056,7 @@ void PlayerWidget::setPositionMarkers()
         ui->txtCue->setText("-" + QString::number(remainCueTime / 1000));
     }
 
-    m_cueManager->applyAutoCueAfterAnalysis(m_beatVisualMode);
+    m_cueManager->applyAutoCueAfterAnalysis(m_beatCueEnabled);
 }
 
 void PlayerWidget::applyAutoCueAfterAnalysis(bool preferBeatCue)
@@ -1223,7 +1232,7 @@ void PlayerWidget::analyzeTempoFinished()
     if (m_bpm > 0) {
         emit tempoChanged(m_bpm, m_beatPosition);
     }
-    applyAutoCueAfterAnalysis(m_beatVisualMode);
+    applyAutoCueAfterAnalysis(m_beatCueEnabled);
     bpmWidget->setTrackLength(player->length());
     bpmWidget->setState(m_bpm, trackanalyzer->exactBpm(), player->position(), m_beatPosition, m_isStarted, true);
 
@@ -1348,10 +1357,9 @@ void PlayerWidget::timerVisual_timeOut()
     if (!m_isStarted)
         return;
 
-    // Playing: use actual player position
+    // The position timer owns playback-state transitions. A visual refresh can
+    // observe a stopped backend briefly while the audio device is changing state.
     if (!player->isPlaying()) {
-        qDebug() << Q_FUNC_INFO << ": backend stopped, pausing";
-        pause();
         return;
     }
 

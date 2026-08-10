@@ -395,18 +395,16 @@ background-color: #444444;
         <property name="spacing">
          <number>0</number>
         </property>
-        <property name="sizeConstraint">
-         <enum>QLayout::SizeConstraint::SetMaximumSize</enum>
-        </property>
         <item>
          <layout class="QVBoxLayout" name="verticalLayout">
-          <property name="sizeConstraint">
-           <enum>QLayout::SizeConstraint::SetMaximumSize</enum>
+          <property name="stretch">
+           <string>1,1</string>
           </property>
           <item>
            <widget class="PlayerWidget" name="player_L" native="true">
             <property name="sizePolicy">
-             <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+             <sizepolicy hsizetype="Expanding" vsizetype="Expanding">              <horstretch>0</horstretch>
+
               <horstretch>0</horstretch>
               <verstretch>0</verstretch>
              </sizepolicy>
@@ -6065,8 +6063,8 @@ min-height: 16px;
         </item>
         <item>
          <layout class="QVBoxLayout" name="verticalLayout_R">
-          <property name="sizeConstraint">
-           <enum>QLayout::SizeConstraint::SetMaximumSize</enum>
+          <property name="stretch">
+           <string>1,1</string>
           </property>
           <item>
            <widget class="PlayerWidget" name="player_R" native="true">

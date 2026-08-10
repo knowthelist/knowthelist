@@ -60,6 +60,11 @@ TransitionPlan TransitionPlanner::choose(Track* outgoing, Track* incoming,
         if (!enabled)
             return false;
         plan.mode = mode;
+        plan.cueMode = mode == TransitionMode::BeatBlend || mode == TransitionMode::BassSwap
+            ? TransitionCueMode::SkipSilenceOccurrence
+            : mode == TransitionMode::HardCut
+                ? TransitionCueMode::BeatOccurrence
+                : TransitionCueMode::SkipSilence;
         plan.durationSeconds = qBound(preferences.minimumDurationSeconds,
                                       duration, preferences.maximumDurationSeconds);
         plan.confidence = confidence;

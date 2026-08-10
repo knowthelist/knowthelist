@@ -11,7 +11,7 @@
    </rect>
   </property>
   <property name="sizePolicy">
-   <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+    <sizepolicy hsizetype="Preferred" vsizetype="Expanding">
     <horstretch>0</horstretch>
     <verstretch>0</verstretch>
    </sizepolicy>
@@ -209,10 +209,7 @@ QPushButton#butMon:pressed {
       <string notr="true"/>
      </property>
      <property name="frameShape">
-      <enum>QFrame::Shape::StyledPanel</enum>
-     </property>
-     <property name="frameShadow">
-      <enum>QFrame::Shadow::Raised</enum>
+      <enum>QFrame::NoFrame</enum>
      </property>
      <layout class="QHBoxLayout" name="horizontalLayout">
       <property name="spacing">
@@ -233,9 +230,9 @@ QPushButton#butMon:pressed {
       <item>
        <widget class="QFrame" name="frame_3">
         <property name="sizePolicy">
-         <sizepolicy hsizetype="Preferred" vsizetype="Expanding">
+         <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
           <horstretch>4</horstretch>
-          <verstretch>0</verstretch>
+          <verstretch>4</verstretch>
          </sizepolicy>
         </property>
         <property name="minimumSize">
@@ -251,10 +248,7 @@ QPushButton#butMon:pressed {
          </size>
         </property>
         <property name="frameShape">
-         <enum>QFrame::Shape::NoFrame</enum>
-        </property>
-        <property name="frameShadow">
-         <enum>QFrame::Shadow::Raised</enum>
+         <enum>QFrame::NoFrame</enum>
         </property>
         <layout class="QGridLayout" name="gridLayout_3" rowstretch="1,0">
          <property name="leftMargin">
@@ -297,9 +291,6 @@ QPushButton#butMon:pressed {
            <property name="pageStep">
             <number>100</number>
            </property>
-           <property name="orientation">
-            <enum>Qt::Orientation::Horizontal</enum>
-           </property>
            <property name="invertedControls">
             <bool>false</bool>
            </property>
@@ -320,10 +311,7 @@ QPushButton#butMon:pressed {
             </size>
            </property>
            <property name="frameShape">
-            <enum>QFrame::Shape::NoFrame</enum>
-           </property>
-           <property name="frameShadow">
-            <enum>QFrame::Shadow::Raised</enum>
+            <enum>QFrame::NoFrame</enum>
            </property>
            <layout class="QVBoxLayout" name="verticalLayout">
             <property name="spacing">
@@ -810,9 +798,6 @@ QPushButton#butMon:pressed {
               <property name="scaledContents">
                <bool>false</bool>
               </property>
-              <property name="alignment">
-               <set>Qt::AlignmentFlag::AlignLeading|Qt::AlignmentFlag::AlignLeft|Qt::AlignmentFlag::AlignTop</set>
-              </property>
               <property name="wordWrap">
                <bool>true</bool>
               </property>
@@ -842,10 +827,7 @@ QPushButton#butMon:pressed {
                </size>
               </property>
               <property name="frameShape">
-               <enum>QFrame::Shape::NoFrame</enum>
-              </property>
-              <property name="frameShadow">
-               <enum>QFrame::Shadow::Raised</enum>
+               <enum>QFrame::NoFrame</enum>
               </property>
               <layout class="QHBoxLayout" name="horizontalLayout_7">
                <property name="leftMargin">
@@ -888,7 +870,7 @@ QPushButton#butMon:pressed {
             <item>
              <widget class="QFrame" name="fraDigits">
               <property name="sizePolicy">
-                            <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
+               <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
                 <horstretch>0</horstretch>
                 <verstretch>0</verstretch>
                </sizepolicy>
@@ -906,10 +888,7 @@ QPushButton#butMon:pressed {
                </size>
               </property>
               <property name="frameShape">
-               <enum>QFrame::Shape::NoFrame</enum>
-              </property>
-              <property name="frameShadow">
-               <enum>QFrame::Shadow::Raised</enum>
+               <enum>QFrame::NoFrame</enum>
               </property>
               <layout class="QHBoxLayout" name="horizontalLayout_5">
                <property name="spacing">
@@ -1406,9 +1385,6 @@ QPushButton#butMon:pressed {
                  <property name="scaledContents">
                   <bool>false</bool>
                  </property>
-                 <property name="alignment">
-                  <set>Qt::AlignmentFlag::AlignBottom|Qt::AlignmentFlag::AlignLeft|Qt::AlignmentFlag::AlignLeading</set>
-                 </property>
                  <property name="margin">
                   <number>0</number>
                  </property>
@@ -1895,9 +1871,6 @@ QPushButton#butMon:pressed {
                  <property name="scaledContents">
                   <bool>false</bool>
                  </property>
-                 <property name="alignment">
-                  <set>Qt::AlignmentFlag::AlignBottom|Qt::AlignmentFlag::AlignLeading|Qt::AlignmentFlag::AlignLeft</set>
-                 </property>
                  <property name="wordWrap">
                   <bool>false</bool>
                  </property>
@@ -1912,7 +1885,7 @@ QPushButton#butMon:pressed {
                <item>
                 <widget class="QLabel" name="lblInfo">
                  <property name="sizePolicy">
-                                 <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+                  <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
                    <horstretch>0</horstretch>
                    <verstretch>0</verstretch>
                   </sizepolicy>
@@ -1936,9 +1909,6 @@ QPushButton#butMon:pressed {
                  </property>
                  <property name="text">
                   <string>TextLabel</string>
-                 </property>
-                 <property name="alignment">
-                  <set>Qt::AlignmentFlag::AlignBottom|Qt::AlignmentFlag::AlignHCenter</set>
                  </property>
                  <property name="wordWrap">
                   <bool>false</bool>
@@ -2424,9 +2394,6 @@ QPushButton#butMon:pressed {
                  </property>
                  <property name="text">
                   <string>-00:00</string>
-                 </property>
-                 <property name="alignment">
-                  <set>Qt::AlignmentFlag::AlignBottom|Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing</set>
                  </property>
                  <property name="wordWrap">
                   <bool>false</bool>
@@ -2916,9 +2883,6 @@ QPushButton#butMon:pressed {
                  <property name="text">
                   <string>.0</string>
                  </property>
-                 <property name="alignment">
-                  <set>Qt::AlignmentFlag::AlignBottom|Qt::AlignmentFlag::AlignLeading|Qt::AlignmentFlag::AlignLeft</set>
-                 </property>
                  <property name="margin">
                   <number>2</number>
                  </property>
@@ -2953,9 +2917,6 @@ QPushButton#butMon:pressed {
                  </property>
                  <property name="text">
                   <string>-00</string>
-                 </property>
-                 <property name="alignment">
-                  <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
                  </property>
                  <property name="wordWrap">
                   <bool>false</bool>
@@ -2998,26 +2959,23 @@ QPushButton#butMon:pressed {
          </size>
         </property>
         <property name="frameShape">
-         <enum>QFrame::Shape::NoFrame</enum>
-        </property>
-        <property name="frameShadow">
-         <enum>QFrame::Shadow::Raised</enum>
+         <enum>QFrame::NoFrame</enum>
         </property>
         <layout class="QVBoxLayout" name="verticalLayout_2">
          <property name="spacing">
           <number>6</number>
          </property>
          <property name="sizeConstraint">
-          <enum>QLayout::SizeConstraint::SetDefaultConstraint</enum>
+          <enum>QLayout::SetDefaultConstraint</enum>
          </property>
          <property name="leftMargin">
-                   <number>0</number>
+          <number>0</number>
          </property>
          <property name="topMargin">
           <number>6</number>
          </property>
          <property name="rightMargin">
-                   <number>0</number>
+          <number>0</number>
          </property>
          <property name="bottomMargin">
           <number>6</number>
@@ -3037,24 +2995,21 @@ QPushButton#butMon:pressed {
             </size>
            </property>
            <property name="frameShape">
-            <enum>QFrame::Shape::NoFrame</enum>
-           </property>
-           <property name="frameShadow">
-            <enum>QFrame::Shadow::Raised</enum>
+            <enum>QFrame::NoFrame</enum>
            </property>
            <layout class="QHBoxLayout" name="horizontalLayout_4">
-                       <property name="leftMargin">
+            <property name="leftMargin">
              <number>0</number>
             </property>
-                       <property name="topMargin">
+            <property name="topMargin">
              <number>0</number>
             </property>
-                       <property name="rightMargin">
-                        <number>0</number>
-                       </property>
-                       <property name="bottomMargin">
-                        <number>0</number>
-                       </property>
+            <property name="rightMargin">
+             <number>0</number>
+            </property>
+            <property name="bottomMargin">
+             <number>0</number>
+            </property>
             <item>
              <widget class="QPushButton" name="butCue">
               <property name="minimumSize">
@@ -3106,10 +3061,7 @@ QPushButton#butMon:pressed {
             </size>
            </property>
            <property name="frameShape">
-            <enum>QFrame::Shape::NoFrame</enum>
-           </property>
-           <property name="frameShadow">
-            <enum>QFrame::Shadow::Raised</enum>
+            <enum>QFrame::NoFrame</enum>
            </property>
            <layout class="QHBoxLayout" name="horizontalLayout_3">
             <property name="spacing">
@@ -3167,10 +3119,7 @@ QPushButton#butMon:pressed {
             </size>
            </property>
            <property name="frameShape">
-            <enum>QFrame::Shape::NoFrame</enum>
-           </property>
-           <property name="frameShadow">
-            <enum>QFrame::Shadow::Raised</enum>
+            <enum>QFrame::NoFrame</enum>
            </property>
            <property name="lineWidth">
             <number>0</number>
