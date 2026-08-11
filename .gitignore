@@ -36,3 +36,4 @@ dist-*/
 .nanocoder/
 AGENTS.md
 obj-*
+!dist/knowthelist.metainfo.xml

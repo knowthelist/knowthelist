@@ -10,11 +10,11 @@ Build-Depends: debhelper-compat (= 13),
  qt6-tools-dev-tools,
  libtag1-dev,
  libasound2-dev,
- libfreetype6-dev,
- libfontconfig1-dev,
+ libfreetype-dev,
+ libfontconfig-dev,
  libegl1-mesa-dev,
  libxkbcommon-dev,
- libgl1-mesa-dev,
+ libgl-dev,
  libx11-dev,
  libxext-dev,
  libxrandr-dev,
@@ -24,7 +24,7 @@ Build-Depends: debhelper-compat (= 13),
  libxcomposite-dev,
  libx11-xcb-dev,
  libcurl4-openssl-dev
-Standards-Version: 4.7.0
+Standards-Version: 4.7.4
 Homepage: https://knowthelist.github.io/knowthelist
 Vcs-Git: https://github.com/knowthelist/knowthelist.git
 Vcs-Browser: https://github.com/knowthelist/knowthelist

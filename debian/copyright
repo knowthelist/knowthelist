@@ -6,6 +6,10 @@ Files: *
 Copyright: 2014-2026 Mario Stephan<mstephan@shared-files.de>
 License: LGPL-3.0+
 
+Files: dist/knowthelist.metainfo.xml
+Copyright: 2026 Mario Stephan <mstephan@shared-files.de>
+License: CC0-1.0
+
 License: LGPL-3.0+
  This package is free software; you can redistribute it and/or
  modify it under the terms of the GNU Lesser General Public
@@ -22,4 +26,11 @@ License: LGPL-3.0+
  .
  On Debian systems, the complete text of the GNU Lesser General
  Public License can be found in "/usr/share/common-licenses/LGPL-3".
+
+License: CC0-1.0
+ To the extent possible under law, the person who associated CC0 with this
+ work has waived all copyright and related or neighboring rights to this work.
+ .
+ You should have received a copy of the CC0 legal code along with this work.
+ If not, see <https://creativecommons.org/publicdomain/zero/1.0/>.
 

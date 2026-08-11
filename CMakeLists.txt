@@ -413,6 +413,7 @@ if(UNIX AND NOT APPLE)
     install(TARGETS knowthelist DESTINATION ${CMAKE_INSTALL_BINDIR})
     install(FILES dist/knowthelist.png DESTINATION ${CMAKE_INSTALL_DATADIR}/pixmaps)
     install(FILES dist/knowthelist.desktop DESTINATION ${CMAKE_INSTALL_DATADIR}/applications)
+    install(FILES dist/knowthelist.metainfo.xml DESTINATION ${CMAKE_INSTALL_DATADIR}/metainfo)
 endif()
 
 set(CPACK_PACKAGE_NAME "knowthelist")

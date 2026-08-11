@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>knowthelist.desktop</id>
+  <name>Knowthelist</name>
+  <summary>Party music player with two decks and Auto DJ</summary>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>LGPL-3.0-or-later</project_license>
+  <description>
+    <p>Knowthelist is a party music player and DJ mixer for managing requests and mixing music live.</p>
+    <p>It provides two independent decks, collection search, beat synchronization, an Auto DJ, track analysis, and a monitor player for pre-listening.</p>
+  </description>
+  <launchable type="desktop-id">knowthelist.desktop</launchable>
+  <url type="homepage">https://knowthelist.github.io/knowthelist</url>
+  <developer_name>Knowthelist</developer_name>
+  <categories>
+    <category>AudioVideo</category>
+    <category>Player</category>
+  </categories>
+  <icon type="stock">knowthelist</icon>
+</component>
