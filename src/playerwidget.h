@@ -93,18 +93,27 @@ public:
     double exactBpmForSync() const;
     QTime currentPosition() const;
     QTime beatPosition() const { return m_beatPosition; }
+    QTime barAnchorPosition() const { return m_barAnchorPosition; }
+    double barPhaseConfidence() const { return m_barPhaseConfidence; }
     void setTempoRate(double rate);
     double tempoRate() const { return m_tempoRate; }
     void setSyncActive(bool active);
     void setSyncAdopting(bool active);
     bool isSyncAdopting() const { return m_syncAdopting; }
     bool supportsSmoothTempo() const;
+    // referenceBeatAnchor is the reference deck's 4/4 bar anchor when
+    // alignToBar is true; callers may pass the beat anchor for beat-only sync.
     void syncNowToReferenceBeat(double referenceBpm, const QTime& referencePosition,
                                 const QTime& referenceBeatAnchor = QTime(),
                                 bool alignToBar = true,
-                                bool matchTempo = false);
+                                bool matchTempo = false,
+                                const QTime& referenceBeatPosition = QTime());
+    bool correctPhaseToReferenceBeat(double referenceBpm, const QTime& referencePosition,
+                                     const QTime& referenceBeatAnchor,
+                                     int toleranceMs, int maxCorrectionMs);
     void alignCueToReferenceBeat(double referenceBpm, const QTime& referencePosition,
-                                   const QTime& referenceBeatAnchor = QTime(), bool alignToBar = true);
+                                   const QTime& referenceBeatAnchor = QTime(), bool alignToBar = true,
+                                   const QTime& referenceBeatPosition = QTime());
     QPushButton* getSyncButton() { return m_syncButton; }
     void setBeatSyncEnabled(bool enabled) { m_beatSyncEnabled = enabled; }
     void setBeatCueEnabled(bool enabled) { m_beatCueEnabled = enabled; }
@@ -262,6 +271,8 @@ protected:
     int m_bpm;
     QTime m_cuePosition;
     QTime m_beatPosition;
+    QTime m_barAnchorPosition;
+    double m_barPhaseConfidence;
     QString m_infoBaseText;
     bool m_envelopeScrubbing;
     int m_envelopeScrubAnchorMs;

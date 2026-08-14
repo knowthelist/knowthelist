@@ -206,6 +206,10 @@ private:
     int m_Player2Bpm;
     QTime m_Player1BeatPosition;
     QTime m_Player2BeatPosition;
+    QTime m_Player1BarAnchor;
+    QTime m_Player2BarAnchor;
+    double m_Player1BarConfidence{0.0};
+    double m_Player2BarConfidence{0.0};
     QTimer* m_rateRestoreTimer;
     PlayerWidget* m_rateRestorePlayer;
     bool m_autoSyncEnabled;
@@ -215,6 +219,7 @@ private:
     int m_fadeSyncOutgoingBpm;
     int m_fadeSyncIncomingBpm;
     QTime m_fadeSyncOutgoingBeatPosition;
+    QTime m_fadeSyncOutgoingBarAnchor;
     double m_fadeSyncStartTempoBpm;
     double m_fadeSyncTargetTempoBpm;
     int m_fadeSyncStep;
@@ -224,6 +229,8 @@ private:
     int m_fadeSyncTotalSteps;
     bool m_fadeSyncWaitingBeatStart;
     int m_fadeSyncBeatWaitSteps;
+    bool m_fadeSyncNeedsInitialRunningSync;
+    int m_fadeSyncRunningSyncWaitSteps;
 
 protected:
     virtual void closeEvent(QCloseEvent *event) override;

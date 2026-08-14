@@ -22,7 +22,8 @@ public:
     
     void storeCachedTempo(const QUrl& url, int bpm, double exactBpm,
                           int startPositionMs, int endPositionMs,
-                          int beatStartPosMs, int beatPhasePosMs, int beatEndPosMs);
+                          int beatStartPosMs, int beatPhasePosMs, int beatEndPosMs,
+                          int barAnchorPosMs, double barPhaseConfidence);
     
     struct CachedTempo {
         bool valid;
@@ -37,13 +38,16 @@ public:
         int beatStartPositionMs;  // first detected beat in content zone
         int beatPhasePositionMs;  // phase offset within beat period for beatline rendering
         int beatEndPositionMs;    // beat flux drops below + 3s silent window
+        int barAnchorPositionMs;  // absolute 4/4 downbeat anchor, or first beat fallback
+        double barPhaseConfidence; // confidence in the 4/4 downbeat estimate
 
         // File-based invalidation key (path|size|mtime)
         QString analysisCacheKey;
 
         CachedTempo() : valid(false), bpm(0), exactBpm(0.0),
                         startPositionMs(0), endPositionMs(0),
-                        beatStartPositionMs(0), beatPhasePositionMs(0), beatEndPositionMs(0) {}
+                        beatStartPositionMs(0), beatPhasePositionMs(0), beatEndPositionMs(0),
+                        barAnchorPositionMs(0), barPhaseConfidence(0.0) {}
     };
     
     CachedTempo loadCachedTempo(const QUrl& url);

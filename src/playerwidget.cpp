@@ -43,6 +43,7 @@ struct PlayerWidgetPrivate {
 
 namespace {
 constexpr int kEnvelopeAnalysisIntervalMs = 8; // TrackAnalyzer uses 120 fps for envelope analysis.
+constexpr double kMinimumBarPhaseConfidence = 0.58;
 constexpr double kScrubSeekGain = 1.5;
 constexpr int kScrubSeekMinDeltaMs = 10;
 constexpr int kScrubSeekCoalesceMs = 20;
@@ -128,6 +129,8 @@ PlayerWidget::PlayerWidget(QWidget* parent)
     , m_bpmAnalyzed(false)
     , m_bpm(0)
     , m_cuePosition()
+    , m_barAnchorPosition()
+    , m_barPhaseConfidence(0.0)
     , m_infoBaseText("")
     , m_envelopeScrubbing(false)
     , m_envelopeScrubAnchorMs(0)
@@ -1352,8 +1355,17 @@ void PlayerWidget::analyzeTempoFinished()
     m_bpmAnalyzed = true;
     m_bpm = trackanalyzer->bpm();
     m_beatPosition = trackanalyzer->beatPosition();
+    m_barAnchorPosition = trackanalyzer->barAnchorPosition();
+    m_barPhaseConfidence = trackanalyzer->barPhaseConfidence();
 
     if (m_bpm > 0) {
+        qDebug() << "Tempo analysis:"
+                 << objectName()
+                 << "bpm=" << m_bpm
+                 << "exactBpm=" << trackanalyzer->exactBpm()
+                 << "beatPhase=" << m_beatPosition
+                 << "barAnchor=" << m_barAnchorPosition
+                 << "barConfidence=" << m_barPhaseConfidence;
         emit tempoChanged(m_bpm, m_beatPosition);
     }
     applyAutoCueAfterAnalysis(m_beatCueEnabled);
@@ -1589,6 +1601,8 @@ void PlayerWidget::loadTrack(Track* track)
     m_liveEnvelopeStarted = false;
     m_liveEnvelopeSmoothed = 0.0f;
     m_beatPosition = QTime();
+    m_barAnchorPosition = QTime();
+    m_barPhaseConfidence = 0.0;
     bpmWidget->setState(m_bpm, QTime(0, 0), m_beatPosition, false, track == nullptr);
     bpmWidget->setCuePosition(QTime());
     bpmWidget->setTempoInfo(m_tempoRate, m_syncAdopting);
@@ -1984,7 +1998,8 @@ double PlayerWidget::exactBpmForSync() const
 }
 
 void PlayerWidget::alignCueToReferenceBeat(double referenceBpm, const QTime& referencePosition,
-                                            const QTime& referenceBeatAnchor, bool alignToBar)
+                                            const QTime& referenceBeatAnchor, bool alignToBar,
+                                            const QTime& referenceBeatPosition)
 {
     const double ownBpm = normalizeSyncBpm(exactBpmForSync());
     const double refBpm = normalizeSyncBpm(referenceBpm);
@@ -1994,32 +2009,40 @@ void PlayerWidget::alignCueToReferenceBeat(double referenceBpm, const QTime& ref
     const double ownBeatMs = 60000.0 / ownBpm;
     const double refBeatMs = 60000.0 / refBpm;
 
-    // Use a 4-beat bar for bar-level cue alignment
-    const int    BAR_BEATS = 4;
-    const double ownBarMs  = BAR_BEATS * ownBeatMs;
-    const double refBarMs  = BAR_BEATS * refBeatMs;
+    const bool useBarAlignment = alignToBar
+        && m_barPhaseConfidence >= kMinimumBarPhaseConfidence
+        && referenceBeatAnchor.isValid();
+    const int gridBeats = useBarAlignment ? 4 : 1;
+    const double ownGridMs = gridBeats * ownBeatMs;
+    const double refGridMs = gridBeats * refBeatMs;
 
     const qint64 refMs = QTime(0, 0).msecsTo(referencePosition);
-    const qint64 refAnchorMs = referenceBeatAnchor.isValid()
-                                   ? QTime(0, 0).msecsTo(referenceBeatAnchor) : 0LL;
+    const QTime phaseAnchor = useBarAlignment
+        ? referenceBeatAnchor
+        : referenceBeatPosition;
+    const qint64 refAnchorMs = phaseAnchor.isValid()
+                                   ? QTime(0, 0).msecsTo(phaseAnchor) : 0LL;
 
-    double refBarPhase = fmod(static_cast<double>(refMs - refAnchorMs), refBarMs);
-    if (refBarPhase < 0.0) refBarPhase += refBarMs;
+    double refGridPhase = fmod(static_cast<double>(refMs - refAnchorMs), refGridMs);
+    if (refGridPhase < 0.0) refGridPhase += refGridMs;
 
     // Scale to this track's beat period
-    const double targetBarPhase = refBarPhase * (ownBeatMs / refBeatMs);
+    const double targetGridPhase = refGridPhase * (ownBeatMs / refBeatMs);
 
     // Move from the current cue/playhead to the *next* matching bar phase.
     // This keeps pre-roll alignment stable and avoids large absolute jumps.
-    const qint64 anchorMs = m_beatPosition.isValid()
-                                ? QTime(0, 0).msecsTo(m_beatPosition) : 0LL;
+    const QTime ownAnchor = useBarAlignment && m_barAnchorPosition.isValid()
+        ? m_barAnchorPosition
+        : m_beatPosition;
+    const qint64 anchorMs = ownAnchor.isValid()
+        ? QTime(0, 0).msecsTo(ownAnchor) : 0LL;
     const qint64 currentMs = QTime(0, 0).msecsTo(player->position());
 
-    double currentBarPhase = fmod(static_cast<double>(currentMs - anchorMs), ownBarMs);
-    if (currentBarPhase < 0.0) currentBarPhase += ownBarMs;
+    double currentGridPhase = fmod(static_cast<double>(currentMs - anchorMs), ownGridMs);
+    if (currentGridPhase < 0.0) currentGridPhase += ownGridMs;
 
-    double delta = targetBarPhase - currentBarPhase;
-    if (delta < 0.0) delta += ownBarMs;
+    double delta = targetGridPhase - currentGridPhase;
+    if (delta < 0.0) delta += ownGridMs;
 
     qint64 newMs = currentMs + static_cast<qint64>(delta + 0.5);
     const qint64 lengthMs = QTime(0, 0).msecsTo(player->length());
@@ -2033,7 +2056,8 @@ void PlayerWidget::alignCueToReferenceBeat(double referenceBpm, const QTime& ref
 
 void PlayerWidget::syncNowToReferenceBeat(double referenceBpm, const QTime& referencePosition,
                                           const QTime& referenceBeatAnchor, bool alignToBar,
-                                          bool matchTempo)
+                                          bool matchTempo,
+                                          const QTime& referenceBeatPosition)
 {
     // Works while playing: seeks to the nearest bar-aligned position that puts
     // this deck on the same beat-of-the-bar as the reference deck, so both
@@ -2046,47 +2070,77 @@ void PlayerWidget::syncNowToReferenceBeat(double referenceBpm, const QTime& refe
     const double ownBeatMs   = 60000.0 / ownBpm;
     const double refBeatMs   = 60000.0 / refBpm;
 
-    // Use a 4-beat bar so both decks land on the same beat-of-the-bar (beat 1).
-    const int    BAR_BEATS   = 4;
-    const double ownBarMs    = BAR_BEATS * ownBeatMs;
-    const double refBarMs    = BAR_BEATS * refBeatMs;
+    const bool useBarAlignment = alignToBar
+        && m_barPhaseConfidence >= kMinimumBarPhaseConfidence
+        && referenceBeatAnchor.isValid();
+    const int gridBeats = useBarAlignment ? 4 : 1;
+    const double ownGridMs = gridBeats * ownBeatMs;
+    const double refGridMs = gridBeats * refBeatMs;
 
     const qint64 refMs       = QTime(0, 0).msecsTo(referencePosition);
-    const qint64 refAnchorMs = referenceBeatAnchor.isValid()
-                                   ? QTime(0, 0).msecsTo(referenceBeatAnchor) : 0LL;
+    const QTime phaseAnchor = useBarAlignment
+        ? referenceBeatAnchor
+        : referenceBeatPosition;
+    const qint64 refAnchorMs = phaseAnchor.isValid()
+                                   ? QTime(0, 0).msecsTo(phaseAnchor) : 0LL;
 
-    // Phase of reference within one bar (0 .. 4×refBeatMs)
-    double refBarPhase = fmod(static_cast<double>(refMs - refAnchorMs), refBarMs);
-    if (refBarPhase < 0.0) refBarPhase += refBarMs;
+    // Phase of reference within the selected beat/bar grid.
+    double refGridPhase = fmod(static_cast<double>(refMs - refAnchorMs), refGridMs);
+    if (refGridPhase < 0.0) refGridPhase += refGridMs;
 
     // Scale bar phase to this track's beat period (handles tempo differences)
-    const double targetBarPhase = refBarPhase * (ownBeatMs / refBeatMs);
+    const double targetGridPhase = refGridPhase * (ownBeatMs / refBeatMs);
 
     // This track's beat anchor
-    const QTime baseCue   = m_beatPosition.isValid() ? m_beatPosition : trackanalyzer->startPosition();
+    const QTime baseCue = useBarAlignment && m_barAnchorPosition.isValid()
+        ? m_barAnchorPosition
+        : (m_beatPosition.isValid() ? m_beatPosition
+                                    : (trackanalyzer ? trackanalyzer->startPosition() : QTime()));
     const qint64 anchorMs = QTime(0, 0).msecsTo(baseCue);
     const qint64 currentMs = QTime(0, 0).msecsTo(player->position());
 
-    // Bar phase of current position
-    double currentBarPhase = fmod(static_cast<double>(currentMs - anchorMs), ownBarMs);
-    if (currentBarPhase < 0.0) currentBarPhase += ownBarMs;
+    // Phase of current position in the selected beat/bar grid.
+    double currentGridPhase = fmod(static_cast<double>(currentMs - anchorMs), ownGridMs);
+    if (currentGridPhase < 0.0) currentGridPhase += ownGridMs;
 
-    // Smallest delta within ±half a bar (±2 beats) to land on targetBarPhase
-    double delta = targetBarPhase - currentBarPhase;
-    if (delta >  ownBarMs / 2.0) delta -= ownBarMs;
-    if (delta < -ownBarMs / 2.0) delta += ownBarMs;
+    // Smallest delta within half the selected grid to land on target phase.
+    double delta = targetGridPhase - currentGridPhase;
+    if (delta >  ownGridMs / 2.0) delta -= ownGridMs;
+    if (delta < -ownGridMs / 2.0) delta += ownGridMs;
 
     const qint64 newMs = qMax(anchorMs, currentMs + static_cast<qint64>(delta + 0.5));
-    const qint64 maxLocalCorrectionMs = qRound(ownBarMs / 2.0);
+    const qint64 maxLocalCorrectionMs = qRound(ownGridMs / 2.0);
     if (qAbs(newMs - currentMs) > maxLocalCorrectionMs) {
+        qDebug() << "Sync skipped: correction exceeds limit"
+                 << "object=" << objectName()
+                 << "currentMs=" << currentMs
+                 << "targetMs=" << newMs
+                 << "deltaMs=" << delta
+                 << "limitMs=" << maxLocalCorrectionMs
+                 << "gridBeats=" << gridBeats
+                 << "ownBarConfidence=" << m_barPhaseConfidence
+                 << "referenceAnchor=" << referenceBeatAnchor;
         return;
     }
 
     const qint64 lengthMs = QTime(0, 0).msecsTo(player->length());
     if (lengthMs > 0 && (newMs < 0 || newMs >= lengthMs)) {
+        qDebug() << "Sync skipped: target outside track"
+                 << "object=" << objectName()
+                 << "currentMs=" << currentMs
+                 << "targetMs=" << newMs
+                 << "lengthMs=" << lengthMs;
         return;
     }
 
+    qDebug() << "Applying calculated sync:"
+             << "object=" << objectName()
+             << "currentMs=" << currentMs
+             << "targetMs=" << newMs
+             << "deltaMs=" << delta
+             << "gridBeats=" << gridBeats
+             << "ownBarConfidence=" << m_barPhaseConfidence
+             << "referenceAnchor=" << referenceBeatAnchor;
     player->setPosition(QTime(0, 0).addMSecs(static_cast<int>(newMs)));
     bpmWidget->setState(m_bpm, player->position(), m_beatPosition, m_isStarted, m_bpmAnalyzed);
     updateTimeAndPositionDisplay(false);
@@ -2094,6 +2148,55 @@ void PlayerWidget::syncNowToReferenceBeat(double referenceBpm, const QTime& refe
     // Optional: also match tempo rate when requested by caller.
     if (matchTempo && qAbs(referenceBpm - ownBpm) > 1.0e-6)
         setTempoRate(referenceBpm / ownBpm);
+}
+
+bool PlayerWidget::correctPhaseToReferenceBeat(double referenceBpm, const QTime& referencePosition,
+                                               const QTime& referenceBeatAnchor,
+                                               int toleranceMs, int maxCorrectionMs)
+{
+    const double ownBpm = normalizeSyncBpm(exactBpmForSync());
+    const double refBpm = normalizeSyncBpm(referenceBpm);
+    if (!m_isStarted || !referencePosition.isValid() || ownBpm <= 0.0 || refBpm <= 0.0)
+        return false;
+
+    const double ownBeatMs = 60000.0 / ownBpm;
+    const double refBeatMs = 60000.0 / refBpm;
+    const qint64 currentMs = QTime(0, 0).msecsTo(player->position());
+    const QTime ownBeatAnchor = m_beatPosition.isValid()
+        ? m_beatPosition : (trackanalyzer ? trackanalyzer->startPosition() : QTime());
+    const qint64 ownAnchorMs = ownBeatAnchor.isValid()
+        ? QTime(0, 0).msecsTo(ownBeatAnchor) : 0;
+    const qint64 refMs = QTime(0, 0).msecsTo(referencePosition);
+    const qint64 refAnchorMs = referenceBeatAnchor.isValid()
+        ? QTime(0, 0).msecsTo(referenceBeatAnchor) : 0;
+
+    double refPhase = std::fmod(static_cast<double>(refMs - refAnchorMs), refBeatMs);
+    if (refPhase < 0.0)
+        refPhase += refBeatMs;
+    const double targetPhase = refPhase * ownBeatMs / refBeatMs;
+
+    double ownPhase = std::fmod(static_cast<double>(currentMs - ownAnchorMs), ownBeatMs);
+    if (ownPhase < 0.0)
+        ownPhase += ownBeatMs;
+    double correctionMs = targetPhase - ownPhase;
+    if (correctionMs > ownBeatMs * 0.5)
+        correctionMs -= ownBeatMs;
+    else if (correctionMs < -ownBeatMs * 0.5)
+        correctionMs += ownBeatMs;
+
+    if (qAbs(correctionMs) <= qMax(0, toleranceMs)
+        || qAbs(correctionMs) > qMax(0, maxCorrectionMs))
+        return false;
+
+    const qint64 lengthMs = QTime(0, 0).msecsTo(player->length());
+    const qint64 correctedMs = currentMs + qRound64(correctionMs);
+    if (correctedMs < 0 || (lengthMs > 0 && correctedMs >= lengthMs))
+        return false;
+
+    player->setPosition(QTime(0, 0).addMSecs(static_cast<int>(correctedMs)));
+    bpmWidget->setState(m_bpm, player->position(), m_beatPosition, m_isStarted, m_bpmAnalyzed);
+    updateTimeAndPositionDisplay(false);
+    return true;
 }
 
 void PlayerWidget::on_butSync_toggled(bool checked)

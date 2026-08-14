@@ -37,6 +37,8 @@
 #include <cmath>
 
 namespace {
+constexpr double kMinimumBarPhaseConfidence = 0.58;
+
 CueMode cueModeForTransition(TransitionCueMode mode)
 {
     switch (mode) {
@@ -126,6 +128,8 @@ Knowthelist::Knowthelist(QWidget* parent)
     , m_fadeSyncTotalSteps(0)
     , m_fadeSyncWaitingBeatStart(false)
     , m_fadeSyncBeatWaitSteps(0)
+    , m_fadeSyncNeedsInitialRunningSync(false)
+    , m_fadeSyncRunningSyncWaitSteps(0)
 {
     ui->setupUi(this);
     ui->verticalLayout->setStretch(0, 1);
@@ -810,6 +814,14 @@ void Knowthelist::player1_tempoChanged(int bpm, QTime beatPosition)
 {
     m_Player1Bpm = bpm;
     m_Player1BeatPosition = beatPosition;
+    m_Player1BarAnchor = player1->barAnchorPosition();
+    m_Player1BarConfidence = player1->barPhaseConfidence();
+    qDebug() << "Deck tempo state:"
+             << player1->objectName()
+             << "bpm=" << bpm
+             << "beatPhase=" << beatPosition
+             << "barAnchor=" << m_Player1BarAnchor
+             << "barConfidence=" << m_Player1BarConfidence;
 
     // Analysis can change the transition mode and therefore the incoming cue.
     // Recompute before any waiting deck is started.
@@ -823,13 +835,13 @@ void Knowthelist::player1_tempoChanged(int bpm, QTime beatPosition)
         // A running, B waiting → pre-cue B to A
         player2->setTempoRate(1.0);
         player2->setSyncAdopting(false);
-        player2->alignCueToReferenceBeat(bpm, player1->currentPosition(), beatPosition);
+        player2->alignCueToReferenceBeat(bpm, player1->currentPosition(), m_Player1BarAnchor);
     }
     else if (!player1->isStarted() && player2->isStarted() && m_Player2Bpm > 0) {
         // A waiting, B running → pre-cue A to B
         player1->setTempoRate(1.0);
         player1->setSyncAdopting(false);
-        player1->alignCueToReferenceBeat(m_Player2Bpm, player2->currentPosition(), m_Player2BeatPosition);
+        player1->alignCueToReferenceBeat(m_Player2Bpm, player2->currentPosition(), m_Player2BarAnchor);
     }
 }
 
@@ -837,6 +849,14 @@ void Knowthelist::player2_tempoChanged(int bpm, QTime beatPosition)
 {
     m_Player2Bpm = bpm;
     m_Player2BeatPosition = beatPosition;
+    m_Player2BarAnchor = player2->barAnchorPosition();
+    m_Player2BarConfidence = player2->barPhaseConfidence();
+    qDebug() << "Deck tempo state:"
+             << player2->objectName()
+             << "bpm=" << bpm
+             << "beatPhase=" << beatPosition
+             << "barAnchor=" << m_Player2BarAnchor
+             << "barConfidence=" << m_Player2BarConfidence;
 
     // Analysis can change the transition mode and therefore the incoming cue.
     // Recompute before any waiting deck is started.
@@ -850,13 +870,15 @@ void Knowthelist::player2_tempoChanged(int bpm, QTime beatPosition)
         // B running, A waiting → pre-cue A to B
         player1->setTempoRate(1.0);
         player1->setSyncAdopting(false);
-        player1->alignCueToReferenceBeat(bpm, player2->currentPosition(), beatPosition);
+        player1->alignCueToReferenceBeat(bpm, player2->currentPosition(), m_Player2BarAnchor,
+                                         true, m_Player2BeatPosition);
     }
     else if (!player2->isStarted() && player1->isStarted() && m_Player1Bpm > 0) {
         // B waiting, A running → pre-cue B to A
         player2->setTempoRate(1.0);
         player2->setSyncAdopting(false);
-        player2->alignCueToReferenceBeat(m_Player1Bpm, player1->currentPosition(), m_Player1BeatPosition);
+        player2->alignCueToReferenceBeat(m_Player1Bpm, player1->currentPosition(), m_Player1BarAnchor,
+                                         true, m_Player1BeatPosition);
     }
 }
 
@@ -871,7 +893,8 @@ void Knowthelist::player1_syncRequested(bool adoptTempo)
             player1->setSyncActive(false);
         return;
     }
-    player1->syncNowToReferenceBeat(m_Player2Bpm, player2->currentPosition(), m_Player2BeatPosition, true, adoptTempo);
+    player1->syncNowToReferenceBeat(m_Player2Bpm, player2->currentPosition(), m_Player2BarAnchor,
+                                    true, adoptTempo, m_Player2BeatPosition);
 }
 
 void Knowthelist::player2_syncRequested(bool adoptTempo)
@@ -885,7 +908,8 @@ void Knowthelist::player2_syncRequested(bool adoptTempo)
             player2->setSyncActive(false);
         return;
     }
-    player2->syncNowToReferenceBeat(m_Player1Bpm, player1->currentPosition(), m_Player1BeatPosition, true, adoptTempo);
+    player2->syncNowToReferenceBeat(m_Player1Bpm, player1->currentPosition(), m_Player1BarAnchor,
+                                    true, adoptTempo, m_Player1BeatPosition);
 }
 
 void Knowthelist::player_aboutTrackFinished()
@@ -1010,6 +1034,15 @@ void Knowthelist::beginAutoFadeSync(PlayerWidget* outgoing, PlayerWidget* incomi
     m_fadeSyncOutgoingBpm = outgoingBpm;
     m_fadeSyncIncomingBpm = incomingBpm;
     m_fadeSyncOutgoingBeatPosition = outgoingBeatPosition;
+    m_fadeSyncOutgoingBarAnchor = outgoing->barPhaseConfidence() >= kMinimumBarPhaseConfidence
+        ? outgoing->barAnchorPosition() : QTime();
+    configureInterPlayerLatencyCompensation(outgoing, incoming, true);
+    qDebug() << "Auto-fade bar alignment:"
+             << "outgoing=" << outgoing->objectName()
+             << "barAnchor=" << m_fadeSyncOutgoingBarAnchor
+             << "barConfidence=" << outgoing->barPhaseConfidence()
+             << "outgoingLatencyMs=" << outgoing->outputLatencyMs()
+             << "incomingLatencyMs=" << incoming->outputLatencyMs();
     m_fadeSyncStartTempoBpm = qMax(1.0, static_cast<double>(outgoingBpm) * outgoing->tempoRate());
     m_fadeSyncTargetTempoBpm = selectAutoFadeTargetTempo(m_fadeSyncStartTempoBpm, outgoingBpm, incomingBpm);
     m_fadeSyncCrossfadeSteps = qMax(1, qAbs((m_xfadeDir < 0 ? ui->sliFader->minimum() : ui->sliFader->maximum()) - ui->sliFader->value()));
@@ -1019,6 +1052,8 @@ void Knowthelist::beginAutoFadeSync(PlayerWidget* outgoing, PlayerWidget* incomi
     m_fadeSyncStep = 0;
     m_fadeSyncWaitingBeatStart = true;
     m_fadeSyncBeatWaitSteps = 0;
+    m_fadeSyncNeedsInitialRunningSync = false;
+    m_fadeSyncRunningSyncWaitSteps = 0;
 
     outgoing->setSyncAdopting(true);
     incoming->setSyncAdopting(false);
@@ -1096,6 +1131,13 @@ void Knowthelist::applyAutoFadeSharedTempo(double sharedTempoBpm)
 
 void Knowthelist::clearAutoFadeSyncState()
 {
+    if (m_fadeSyncOutgoingPlayer && m_fadeSyncIncomingPlayer) {
+        const bool keepCompensation = m_fadeSyncOutgoingPlayer->getSyncButton()->isChecked()
+            || m_fadeSyncIncomingPlayer->getSyncButton()->isChecked();
+        configureInterPlayerLatencyCompensation(
+            m_fadeSyncOutgoingPlayer, m_fadeSyncIncomingPlayer, keepCompensation);
+    }
+
     if (m_fadeSyncOutgoingPlayer)
         m_fadeSyncOutgoingPlayer->setSyncAdopting(false);
     if (m_fadeSyncIncomingPlayer)
@@ -1116,6 +1158,9 @@ void Knowthelist::clearAutoFadeSyncState()
     m_fadeSyncTotalSteps = 0;
     m_fadeSyncWaitingBeatStart = false;
     m_fadeSyncBeatWaitSteps = 0;
+    m_fadeSyncNeedsInitialRunningSync = false;
+    m_fadeSyncRunningSyncWaitSteps = 0;
+    m_fadeSyncOutgoingBarAnchor = QTime();
 }
 
 double Knowthelist::transitionProgress() const
@@ -1390,13 +1435,42 @@ void Knowthelist::timerAutoFader_timerOut()
                                                  m_fadeSyncOutgoingBeatPosition,
                                                  m_fadeSyncOutgoingBpm,
                                                  toleranceMs);
+            ++m_fadeSyncBeatWaitSteps;
 
-            if (onBeat || !m_fadeSyncWaitingBeatStart) {
-                if (!m_fadeSyncIncomingPlayer->isStarted())
+            constexpr int kMaximumBeatWaitSteps = 16; // 960 ms at the 60 ms fade timer interval.
+            const bool forcedStart = !onBeat && m_fadeSyncBeatWaitSteps >= kMaximumBeatWaitSteps;
+            if (onBeat || !m_fadeSyncWaitingBeatStart || forcedStart) {
+                if (forcedStart) {
+                    qWarning() << "Beat-aligned fade start timed out; starting incoming deck"
+                               << "outgoingPosition=" << m_fadeSyncOutgoingPlayer->currentPosition()
+                               << "beatReference=" << m_fadeSyncOutgoingBeatPosition
+                               << "bpm=" << m_fadeSyncOutgoingBpm;
+                }
+                const bool incomingWasStarted = m_fadeSyncIncomingPlayer->isStarted();
+                if (!incomingWasStarted) {
+                    // Seek while paused so Player's authoritative cue position is
+                    // established before the backend transport starts.
+                    m_fadeSyncIncomingPlayer->syncNowToReferenceBeat(
+                        m_fadeSyncOutgoingBpm,
+                        m_fadeSyncOutgoingPlayer->currentPosition(),
+                        m_fadeSyncOutgoingBarAnchor,
+                        true,
+                        false,
+                        m_fadeSyncOutgoingBeatPosition);
+                    qDebug() << "Starting incoming deck for beat-blend fade:"
+                             << m_fadeSyncIncomingPlayer->objectName();
                     m_fadeSyncIncomingPlayer->play();
-                m_fadeSyncIncomingPlayer->syncNowToReferenceBeat(m_fadeSyncOutgoingBpm,
-                                                                 m_fadeSyncOutgoingPlayer->currentPosition(),
-                                                                 m_fadeSyncOutgoingBeatPosition);
+                    m_fadeSyncNeedsInitialRunningSync = true;
+                    m_fadeSyncRunningSyncWaitSteps = 0;
+                } else {
+                    m_fadeSyncIncomingPlayer->syncNowToReferenceBeat(
+                        m_fadeSyncOutgoingBpm,
+                        m_fadeSyncOutgoingPlayer->currentPosition(),
+                        m_fadeSyncOutgoingBarAnchor,
+                        true,
+                        false,
+                        m_fadeSyncOutgoingBeatPosition);
+                }
                 m_fadeSyncPhase = FadeSyncCrossfade;
                 m_fadeSyncWaitingBeatStart = false;
                 m_fadeSyncBeatWaitSteps = 0;
@@ -1415,26 +1489,51 @@ void Knowthelist::timerAutoFader_timerOut()
 
         if (m_fadeSyncIncomingPlayer && m_fadeSyncOutgoingPlayer
             && m_fadeSyncIncomingPlayer->isStarted() && m_fadeSyncBeatWaitSteps < 4) {
-            const int sharedTempoBpm = qMax(1, qRound(autoFadeSharedTempoForStep(m_fadeSyncStep)));
-            const QTime incomingBeatPosition = (m_fadeSyncIncomingPlayer == player1)
-                                                   ? m_Player1BeatPosition
-                                                   : m_Player2BeatPosition;
-            const double beatMs = 60000.0 / static_cast<double>(sharedTempoBpm);
-            const double toleranceMs = qMin(18.0, beatMs * 0.04);
-            const double phaseDeltaMs = beatPhaseDistanceMs(m_fadeSyncIncomingPlayer->currentPosition(),
-                                                            incomingBeatPosition,
-                                                            m_fadeSyncIncomingBpm,
-                                                            m_fadeSyncOutgoingPlayer->currentPosition(),
-                                                            m_fadeSyncOutgoingBeatPosition,
-                                                            m_fadeSyncOutgoingBpm,
-                                                            sharedTempoBpm);
-            if (phaseDeltaMs > toleranceMs) {
-                m_fadeSyncIncomingPlayer->syncNowToReferenceBeat(m_fadeSyncOutgoingBpm,
-                                                                 m_fadeSyncOutgoingPlayer->currentPosition(),
-                                                                 m_fadeSyncOutgoingBeatPosition);
-                ++m_fadeSyncBeatWaitSteps;
+            if (m_fadeSyncNeedsInitialRunningSync) {
+                ++m_fadeSyncRunningSyncWaitSteps;
+                // Player keeps the requested seek position authoritative for
+                // 250 ms; wait beyond that window before reading live phase.
+                if (m_fadeSyncRunningSyncWaitSteps >= 6) {
+                    const QTime outgoingPosition = m_fadeSyncOutgoingPlayer->currentPosition();
+                    qDebug() << "Applying delayed running fade sync:"
+                             << "incomingPosition=" << m_fadeSyncIncomingPlayer->currentPosition()
+                             << "outgoingPosition=" << outgoingPosition;
+                    m_fadeSyncIncomingPlayer->syncNowToReferenceBeat(
+                        m_fadeSyncOutgoingBpm,
+                        outgoingPosition,
+                        m_fadeSyncOutgoingBarAnchor,
+                        true,
+                        false,
+                        m_fadeSyncOutgoingBeatPosition);
+                    m_fadeSyncNeedsInitialRunningSync = false;
+                    m_fadeSyncBeatWaitSteps = 4;
+                }
             } else {
-                m_fadeSyncBeatWaitSteps = 4;
+                const int sharedTempoBpm = qMax(1, qRound(autoFadeSharedTempoForStep(m_fadeSyncStep)));
+                const QTime incomingBeatPosition = (m_fadeSyncIncomingPlayer == player1)
+                                                       ? m_Player1BeatPosition
+                                                       : m_Player2BeatPosition;
+                const double beatMs = 60000.0 / static_cast<double>(sharedTempoBpm);
+                const double toleranceMs = qMin(18.0, beatMs * 0.04);
+                const double phaseDeltaMs = beatPhaseDistanceMs(m_fadeSyncIncomingPlayer->currentPosition(),
+                                                                incomingBeatPosition,
+                                                                m_fadeSyncIncomingBpm,
+                                                                m_fadeSyncOutgoingPlayer->currentPosition(),
+                                                                m_fadeSyncOutgoingBeatPosition,
+                                                                m_fadeSyncOutgoingBpm,
+                                                                sharedTempoBpm);
+                if (phaseDeltaMs > toleranceMs) {
+                    m_fadeSyncIncomingPlayer->syncNowToReferenceBeat(
+                        m_fadeSyncOutgoingBpm,
+                        m_fadeSyncOutgoingPlayer->currentPosition(),
+                        m_fadeSyncOutgoingBarAnchor,
+                        true,
+                        false,
+                        m_fadeSyncOutgoingBeatPosition);
+                    ++m_fadeSyncBeatWaitSteps;
+                } else {
+                    m_fadeSyncBeatWaitSteps = 4;
+                }
             }
         }
 

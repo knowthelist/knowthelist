@@ -35,6 +35,7 @@ public:
     void setState(int bpm, const QTime& position, const QTime& beatReference, bool running, bool analyzed = true);
     void setState(int bpm, double exactBpm, const QTime& position, const QTime& beatReference, bool running, bool analyzed = true);
     void setExactBpm(double exactBpm);
+    void clearManualBpmAdjustment();
     void setTempoInfo(double tempoRate, bool syncAdjusting, qint64 syncCompleted = 0);
     void setCuePosition(const QTime& position);
     void appendEnvelopeSample(float value);
@@ -56,6 +57,10 @@ protected:
 
 private slots:
     void onUpdateTimer();
+    void decreaseManualBpm();
+    void increaseManualBpm();
+    void decreaseManualPhase();
+    void increaseManualPhase();
 
 Q_SIGNALS:
     void envelopeScrubStarted();
@@ -78,7 +83,13 @@ private:
     int m_windowMs;
     int m_liveSampleIntervalMs;
     double m_exactBpm;
+    double m_manualBpmAdjustment;
+    int m_manualPhaseAdjustmentMs;
     double m_trueSampleIntervalMs;  // Calculated from track length / sample count (not rounded)
+    class QToolButton* m_decreaseBpmButton;
+    class QToolButton* m_increaseBpmButton;
+    class QToolButton* m_decreasePhaseButton;
+    class QToolButton* m_increasePhaseButton;
 
     QFutureWatcher<RebuildResult> m_rebuildWatcher;
     QRect    m_requestedBand;
@@ -113,6 +124,9 @@ private:
     double phase() const;
     void requestEnvelopeRebuild(const QRect& band, int centerY, double halfH);
     void onRebuildFinished();
+    void updateManualBpmButtons();
+    QTime adjustedBeatReference() const;
+    void logManualGridState() const;
 };
 
 #endif // PLAYERBPMWIDGET_H

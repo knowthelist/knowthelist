@@ -45,6 +45,8 @@ public:
     QTime beatPosition();
     QTime beatEndPosition();
     QTime beatStartPosition();
+    QTime barAnchorPosition();
+    double barPhaseConfidence();
     int bpm();
     double exactBpm();
     QVector<float> amplitudeEnvelope() const;
@@ -85,6 +87,8 @@ private:
     // beat-grid phase (output state)
     QTime m_BeatPosition = QTime(0, 0);               // phase offset within detected period
     QTime m_beatStartPosition = QTime(0, 0);          // first detected beat in content zone
+    QTime m_barAnchorPosition = QTime(0, 0);          // 4/4 downbeat anchor, or first beat fallback
+    double m_barPhaseConfidence = 0.0;                // confidence in the downbeat estimate
     QTime m_trackDuration = QTime(0, 0);            // full track length incl. ALL silence from audioBackend
     // scalar analyzer results
     bool m_finished = false;

@@ -43,6 +43,8 @@ struct TempoCacheEntry {
     int bpm = 0;
     int beatPhaseMs = 0;
     int beatStartMs = 0;
+    int barAnchorMs = 0;
+    double barPhaseConfidence = 0.0;
     double exactBpm = 0.0;
 };
 
@@ -84,6 +86,283 @@ static float lowPassStep(float input, float& lowState, float alpha)
 {
     lowState += alpha * (input - lowState);
     return lowState;
+}
+
+struct KickGridFit {
+    double bpm = 0.0;
+    double phaseMs = 0.0;
+    int matchedBeats = 0;
+    double score = 0.0;
+};
+
+struct BarPhaseFit {
+    bool accepted = false;
+    double anchorMs = 0.0;
+    double confidence = 0.0;
+    double score = 0.0;
+    double runnerUpScore = 0.0;
+    int bars = 0;
+    double downbeatMean = 0.0;
+    double otherBeatMean = 0.0;
+};
+
+static double refinedOnsetTimeMs(int onsetFrame, const QList<float>& env, const QList<qint64>& times);
+
+static KickGridFit fitKickGrid(const QVector<int>& onsets,
+                               const QList<float>& envelope,
+                               const QList<qint64>& times,
+                               double seedBpm)
+{
+    KickGridFit best;
+    if (seedBpm <= 0.0 || onsets.size() < 32 || times.isEmpty())
+        return best;
+
+    QVector<int> phaseCandidates = onsets;
+    std::sort(phaseCandidates.begin(), phaseCandidates.end(), [&](int lhs, int rhs) {
+        const float left = lhs >= 0 && lhs < envelope.size() ? envelope.at(lhs) : 0.0f;
+        const float right = rhs >= 0 && rhs < envelope.size() ? envelope.at(rhs) : 0.0f;
+        return left > right;
+    });
+    if (phaseCandidates.size() > 64)
+        phaseCandidates.resize(64);
+
+    const double minBpm = qMax(static_cast<double>(kTempoMinBpm), seedBpm - 0.5);
+    const double maxBpm = qMin(static_cast<double>(kTempoMaxBpm), seedBpm + 0.5);
+    for (double candidateBpm = minBpm; candidateBpm <= maxBpm + 1.0e-9; candidateBpm += 0.01) {
+        const double beatMs = 60000.0 / candidateBpm;
+        const double toleranceMs = qMin(70.0, beatMs * 0.16);
+        const double sigmaMs = qMax(8.0, beatMs * 0.08);
+
+        QVector<double> phases;
+        phases.reserve(phaseCandidates.size());
+        for (const int onset : phaseCandidates) {
+            if (onset < 0 || onset >= times.size())
+                continue;
+            double phase = std::fmod(refinedOnsetTimeMs(onset, envelope, times), beatMs);
+            if (phase < 0.0)
+                phase += beatMs;
+            bool duplicate = false;
+            for (const double existing : phases) {
+                if (qAbs(existing - phase) < 2.0
+                    || qAbs(existing - phase + beatMs) < 2.0
+                    || qAbs(existing - phase - beatMs) < 2.0) {
+                    duplicate = true;
+                    break;
+                }
+            }
+
+            if (!duplicate)
+                phases.append(phase);
+        }
+
+        for (const double phaseMs : phases) {
+            QHash<int, QPair<float, double>> strongestByBeat;
+            for (const int onset : onsets) {
+                if (onset < 0 || onset >= times.size())
+                    continue;
+                const double timeMs = refinedOnsetTimeMs(onset, envelope, times);
+                const int beatIndex = qRound((timeMs - phaseMs) / beatMs);
+                const double predictedMs = phaseMs + beatIndex * beatMs;
+                if (qAbs(timeMs - predictedMs) > toleranceMs)
+                    continue;
+
+                const float strength = onset < envelope.size() ? envelope.at(onset) : 0.0f;
+                const auto existing = strongestByBeat.constFind(beatIndex);
+                if (existing == strongestByBeat.constEnd() || strength > existing.value().first)
+                    strongestByBeat.insert(beatIndex, qMakePair(strength, timeMs));
+            }
+
+            if (strongestByBeat.size() < 32)
+                continue;
+
+            double score = 0.0;
+            double sumI = 0.0;
+            double sumT = 0.0;
+            double sumIT = 0.0;
+            double sumI2 = 0.0;
+            for (auto it = strongestByBeat.constBegin(); it != strongestByBeat.constEnd(); ++it) {
+                const double beatIndex = it.key();
+                const double timeMs = it.value().second;
+                const double distanceMs = timeMs - (phaseMs + beatIndex * beatMs);
+                score += it.value().first
+                        * std::exp(-(distanceMs * distanceMs) / (2.0 * sigmaMs * sigmaMs));
+                sumI += beatIndex;
+                sumT += timeMs;
+                sumIT += beatIndex * timeMs;
+                sumI2 += beatIndex * beatIndex;
+            }
+
+            const double count = static_cast<double>(strongestByBeat.size());
+            const double denom = count * sumI2 - sumI * sumI;
+            if (qAbs(denom) <= 1.0e-9)
+                continue;
+
+            const double fittedPeriodMs = (count * sumIT - sumI * sumT) / denom;
+            if (fittedPeriodMs <= 0.0)
+                continue;
+
+            const double fittedBpm = 60000.0 / fittedPeriodMs;
+            if (qAbs(fittedBpm - seedBpm) > 0.5)
+                continue;
+            const double interceptMs = (sumT - fittedPeriodMs * sumI) / count;
+            double fittedPhaseMs = std::fmod(interceptMs, fittedPeriodMs);
+            if (fittedPhaseMs < 0.0)
+                fittedPhaseMs += fittedPeriodMs;
+
+            const double normalizedScore = score / std::sqrt(count);
+            if (normalizedScore > best.score) {
+                best.bpm = fittedBpm;
+                best.phaseMs = fittedPhaseMs;
+                best.matchedBeats = strongestByBeat.size();
+                best.score = normalizedScore;
+            }
+        }
+    }
+
+    return best;
+}
+
+static BarPhaseFit estimateFourFourBarPhase(const QVector<int>& onsets,
+                                            const QList<float>& envelope,
+                                            const QList<qint64>& times,
+                                            double bpm,
+                                            double beatPhaseMs,
+                                            double firstBeatMs,
+                                            int stableStartFrame,
+                                            int stableEndFrame)
+{
+    BarPhaseFit best;
+    if (bpm <= 0.0 || onsets.isEmpty() || times.size() < 2)
+        return best;
+
+    const double beatMs = 60000.0 / bpm;
+    if (beatMs <= 1.0)
+        return best;
+
+    const int startFrame = qBound(0, stableStartFrame, times.size() - 1);
+    const int endFrame = qBound(startFrame + 1, stableEndFrame, times.size());
+    const double startMs = times.at(startFrame) / 1000000.0;
+    const double endMs = times.at(endFrame - 1) / 1000000.0;
+    if (endMs <= startMs)
+        return best;
+
+    const int firstGridIndex = qRound((firstBeatMs - beatPhaseMs) / beatMs);
+    const int firstIndex = qCeil((startMs - beatPhaseMs) / beatMs);
+    const int lastIndex = qFloor((endMs - beatPhaseMs) / beatMs);
+    if (lastIndex - firstIndex < 31)
+        return best;
+
+    const double toleranceMs = qMin(70.0, beatMs * 0.18);
+    QHash<int, double> beatStrengths;
+    beatStrengths.reserve(lastIndex - firstIndex + 1);
+
+    for (int beatIndex = firstIndex; beatIndex <= lastIndex; ++beatIndex) {
+        const double targetMs = beatPhaseMs + beatIndex * beatMs;
+        double strongest = 0.0;
+        for (const int onset : onsets) {
+            if (onset < 0 || onset >= times.size() || onset >= envelope.size())
+                continue;
+            const double onsetMs = refinedOnsetTimeMs(onset, envelope, times);
+            if (qAbs(onsetMs - targetMs) <= toleranceMs)
+                strongest = qMax(strongest, static_cast<double>(envelope.at(onset)));
+        }
+        beatStrengths.insert(beatIndex, strongest);
+    }
+
+    double totalEnergy = 0.0;
+    int nonZeroBeats = 0;
+    for (auto it = beatStrengths.constBegin(); it != beatStrengths.constEnd(); ++it) {
+        totalEnergy += it.value();
+        if (it.value() > 0.02)
+            ++nonZeroBeats;
+    }
+    const double beatCount = static_cast<double>(beatStrengths.size());
+    const double coverage = beatCount > 0.0 ? nonZeroBeats / beatCount : 0.0;
+    const double averageEnergy = beatCount > 0.0 ? totalEnergy / beatCount : 0.0;
+    // Low-band onset extraction can legitimately retain only the kick/downbeat
+    // in sparse arrangements, so require some repeated support without
+    // demanding a detected onset on every beat.
+    if (coverage < 0.20 || averageEnergy < 0.02)
+        return best;
+
+    for (int offset = 0; offset < 4; ++offset) {
+        double downbeatSum = 0.0;
+        double otherSum = 0.0;
+        int downbeatCount = 0;
+        int otherCount = 0;
+        int bars = 0;
+        int downbeatWins = 0;
+
+        for (int barStart = firstIndex; barStart + 3 <= lastIndex; ++barStart) {
+            if ((barStart - firstGridIndex - offset) % 4 != 0)
+                continue;
+
+            double barDownbeat = 0.0;
+            double barOthers = 0.0;
+            bool complete = true;
+            for (int beatInBar = 0; beatInBar < 4; ++beatInBar) {
+                const auto value = beatStrengths.constFind(barStart + beatInBar);
+                if (value == beatStrengths.constEnd()) {
+                    complete = false;
+                    break;
+                }
+                if (beatInBar == 0) {
+                    barDownbeat = value.value();
+                } else {
+                    barOthers += value.value();
+                }
+            }
+            if (!complete)
+                continue;
+
+            barOthers /= 3.0;
+            downbeatSum += barDownbeat;
+            otherSum += barOthers;
+            ++downbeatCount;
+            ++bars;
+            otherCount += 1;
+            if (barDownbeat > barOthers + 0.02)
+                ++downbeatWins;
+        }
+
+        if (bars < 8 || downbeatCount <= 0 || otherCount <= 0)
+            continue;
+
+        const double downbeatMean = downbeatSum / downbeatCount;
+        const double otherMean = otherSum / otherCount;
+        const double contrast = qBound(0.0,
+            (downbeatMean - otherMean) / qMax(0.05, downbeatMean + otherMean), 1.0);
+        const double consistency = static_cast<double>(downbeatWins) / bars;
+        const double score = 0.65 * contrast + 0.35 * consistency;
+
+        if (score > best.score) {
+            best.runnerUpScore = best.score;
+            best.score = score;
+            best.bars = bars;
+            best.downbeatMean = downbeatMean;
+            best.otherBeatMean = otherMean;
+            const int candidateIndex = firstGridIndex + offset;
+            best.anchorMs = qMax(0.0, beatPhaseMs + candidateIndex * beatMs);
+        } else if (score > best.runnerUpScore) {
+            best.runnerUpScore = score;
+        }
+    }
+
+    const double separation = qBound(0.0,
+        (best.score - best.runnerUpScore) / qMax(0.05, best.score), 1.0);
+    const double contrast = qBound(0.0,
+        (best.downbeatMean - best.otherBeatMean)
+            / qMax(0.05, best.downbeatMean + best.otherBeatMean), 1.0);
+    const double consistency = best.bars > 0
+        ? qBound(0.0, (best.score - 0.65 * contrast) / 0.35, 1.0) : 0.0;
+    best.confidence = qBound(0.0,
+        0.45 * contrast + 0.30 * consistency + 0.15 * coverage + 0.10 * separation, 1.0);
+    best.accepted = best.bars >= 8
+        && contrast >= 0.16
+        && consistency >= 0.55
+        && separation >= 0.08
+        && best.confidence >= 0.58;
+    return best;
 }
 
 /*
@@ -511,6 +790,10 @@ void TrackAnalyzer::asyncOpen(QUrl url)
             m_trackEffectiveEnd    = QTime(0, 0).addMSecs(cached.endPositionMs);
             m_beatStartPosition    = QTime(0, 0).addMSecs(cached.beatStartPositionMs);
             m_beatStopPosition     = QTime(0, 0).addMSecs(cached.beatEndPositionMs);
+            m_barAnchorPosition    = QTime(0, 0).addMSecs(
+                cached.barAnchorPositionMs > 0 ? cached.barAnchorPositionMs
+                                               : cached.beatStartPositionMs);
+            m_barPhaseConfidence   = qBound(0.0, cached.barPhaseConfidence, 1.0);
             if (m_trackEffectiveStart.isValid() && m_trackEffectiveStart > QTime(0, 0)
                     && (!m_beatStartPosition.isValid() || m_beatStartPosition <= QTime(0, 0)
                         || m_beatStartPosition < m_trackEffectiveStart)) {
@@ -537,6 +820,14 @@ void TrackAnalyzer::asyncOpen(QUrl url)
                     }
                 }
             }
+
+            qDebug() << "[tempo cache]"
+                     << "bpm=" << cached.bpm
+                     << "exactBpm=" << cached.exactBpm
+                     << "beatPhase=" << m_BeatPosition
+                     << "beatStart=" << m_beatStartPosition
+                     << "barAnchor=" << m_barAnchorPosition
+                     << "barConfidence=" << m_barPhaseConfidence;
 
             // Load cached envelope if available
             AnalysisCacheManager::CachedEnvelope envCached = loadCachedEnvelope(url);
@@ -565,6 +856,8 @@ void TrackAnalyzer::asyncOpen(QUrl url)
         m_beatStopPosition      = analysis.beatActivityEndPosition;
         m_beatStartPosition     = QTime(0, 0);              // set later in detectTempo()
         m_BeatPosition          = QTime(0, 0);              // set later in detectTempo()
+        m_barAnchorPosition     = QTime(0, 0);              // set later in detectTempo()
+        m_barPhaseConfidence    = 0.0;
         m_trackDuration         = duration;                 // full duration from audioBackend/analysis
 
         m_GainDB              = analysis.gainDb;
@@ -642,6 +935,18 @@ QTime TrackAnalyzer::beatStartPosition()
 {
     QMutexLocker locker(&p->mutex);
     return m_beatStartPosition;
+}
+
+QTime TrackAnalyzer::barAnchorPosition()
+{
+    QMutexLocker locker(&p->mutex);
+    return m_barAnchorPosition;
+}
+
+double TrackAnalyzer::barPhaseConfidence()
+{
+    QMutexLocker locker(&p->mutex);
+    return m_barPhaseConfidence;
 }
 
 int TrackAnalyzer::bpm()
@@ -743,8 +1048,13 @@ void TrackAnalyzer::detectTempo()
         m_ExactBpm = static_cast<double>(preferredBpm);
         m_BeatPosition = m_trackEffectiveStart;
         m_beatStartPosition = m_trackEffectiveStart;
+        m_barAnchorPosition = m_beatStartPosition;
+        m_barPhaseConfidence = 0.0;
         p->bpmDetected = true;
-        qDebug() << Q_FUNC_INFO << "Using supplied cached BPM:" << preferredBpm;
+        qDebug() << Q_FUNC_INFO << "Using supplied cached BPM:" << preferredBpm
+                 << "beatPhase=" << m_BeatPosition
+                 << "barAnchor=" << m_barAnchorPosition
+                 << "barConfidence=" << m_barPhaseConfidence;
         return;
     }
 
@@ -759,6 +1069,10 @@ void TrackAnalyzer::detectTempo()
             m_ExactBpm = (entry.exactBpm > 0.0) ? entry.exactBpm : static_cast<double>(entry.bpm);
             m_BeatPosition = QTime(0, 0).addMSecs(qMax(0, entry.beatPhaseMs));
             m_beatStartPosition = QTime(0, 0).addMSecs(qMax(0, entry.beatStartMs));
+            m_barAnchorPosition = QTime(0, 0).addMSecs(qMax(0, entry.barAnchorMs));
+            m_barPhaseConfidence = qBound(0.0, entry.barPhaseConfidence, 1.0);
+            if (m_barAnchorPosition <= QTime(0, 0))
+                m_barAnchorPosition = m_beatStartPosition;
             if (m_trackEffectiveStart.isValid() && m_trackEffectiveStart > QTime(0, 0)
                     && (!m_beatStartPosition.isValid() || m_beatStartPosition <= QTime(0, 0)
                         || m_beatStartPosition < m_trackEffectiveStart)) {
@@ -766,7 +1080,9 @@ void TrackAnalyzer::detectTempo()
             }
             qDebug() << "[runtime tempo cache hit] bpm=" << p->bpm
                      << "beatPhase=" << m_BeatPosition
-                     << "beatStartPosition=" << m_beatStartPosition;
+                     << "beatStartPosition=" << m_beatStartPosition
+                     << "barAnchor=" << m_barAnchorPosition
+                     << "barConfidence=" << m_barPhaseConfidence;
             p->bpmDetected = true;
             return;
         }
@@ -776,6 +1092,9 @@ void TrackAnalyzer::detectTempo()
         QMutexLocker locker(&p->mutex);
         p->bpm = 0;
         m_BeatPosition = m_trackEffectiveStart;
+        m_beatStartPosition = m_trackEffectiveStart;
+        m_barAnchorPosition = m_beatStartPosition;
+        m_barPhaseConfidence = 0.0;
         return;
     }
 
@@ -1146,8 +1465,16 @@ void TrackAnalyzer::detectTempo()
     const QList<float>& anchorEnv = lowEnv.isEmpty() ? fullEnv : lowEnv;
     const QVector<int>& phaseOnsets = !onsetsLow.isEmpty() ? onsetsLow : onsetsFull;
     int phaseMs = 0;
+    const KickGridFit kickFit = fitKickGrid(phaseOnsets, anchorEnv, spectralFluxTimes, m_ExactBpm);
+    const bool kickFitApplied = kickFit.matchedBeats >= 100
+            && kickFit.bpm > 0.0
+            && qAbs(kickFit.bpm - m_ExactBpm) <= 0.5;
+    if (kickFitApplied) {
+        m_ExactBpm = kickFit.bpm;
+        phaseMs = qRound(kickFit.phaseMs);
+    }
 
-    if (p->bpm > 0 && m_ExactBpm > 0.0 && !phaseOnsets.isEmpty() && !spectralFluxTimes.isEmpty()) {
+    if (!kickFitApplied && p->bpm > 0 && m_ExactBpm > 0.0 && !phaseOnsets.isEmpty() && !spectralFluxTimes.isEmpty()) {
         const double beatMs = 60000.0 / m_ExactBpm;
         if (beatMs > 1.0) {
             // Fit beat phase globally over all onsets instead of anchoring on a single
@@ -1205,20 +1532,20 @@ void TrackAnalyzer::detectTempo()
         }
     } else {
         // Fallback: preserve previous behaviour if onset set is unavailable.
-        int beatAnchorIdx = -1;
+        int phaseAnchorIdx = -1;
         float strongestAnchor = 0.0f;
         for (float value : anchorEnv)
             strongestAnchor = qMax(strongestAnchor, value);
 
         for (int i = 0; i < anchorEnv.size(); ++i) {
             if (anchorEnv.at(i) > strongestAnchor * 0.95f) {
-                beatAnchorIdx = i;
+                phaseAnchorIdx = i;
                 break;
             }
         }
 
-        if (beatAnchorIdx >= 0 && p->bpm > 0 && beatAnchorIdx < spectralFluxTimes.size() && spectralFluxTimes.at(beatAnchorIdx) > 0) {
-            const qint64 anchorMs = spectralFluxTimes.at(beatAnchorIdx) / 1000000LL;
+        if (phaseAnchorIdx >= 0 && p->bpm > 0 && phaseAnchorIdx < spectralFluxTimes.size() && spectralFluxTimes.at(phaseAnchorIdx) > 0) {
+            const qint64 anchorMs = spectralFluxTimes.at(phaseAnchorIdx) / 1000000LL;
             const double beatMs = 60000.0 / qMax(1e-6, m_ExactBpm);
             phaseMs = static_cast<int>(std::fmod(static_cast<double>(anchorMs), beatMs));
             if (phaseMs < 0)
@@ -1262,17 +1589,46 @@ void TrackAnalyzer::detectTempo()
         }
     }
 
+    const BarPhaseFit barFit = estimateFourFourBarPhase(
+        phaseOnsets, anchorEnv, spectralFluxTimes, m_ExactBpm,
+        static_cast<double>(phaseMs),
+        static_cast<double>(QTime(0, 0).msecsTo(m_beatStartPosition)),
+        stableStartFrame, stableEndFrame);
+    if (barFit.accepted) {
+        m_barAnchorPosition = QTime(0, 0).addMSecs(qMax(0, qRound(barFit.anchorMs)));
+        m_barPhaseConfidence = barFit.confidence;
+    } else {
+        // A weak or ambiguous 4/4 accent pattern must not move the grid.
+        // The first detected beat is the conservative, behavior-preserving fallback.
+        m_barAnchorPosition = m_beatStartPosition;
+        m_barPhaseConfidence = 0.0;
+    }
+
     {
         QMutexLocker cacheLocker(&g_tempoCacheMutex);
         TempoCacheEntry entry;
         entry.bpm = qBound(0, finalBpm, kMaxBpm);
         entry.beatPhaseMs = QTime(0, 0).msecsTo(m_BeatPosition);
         entry.beatStartMs = QTime(0, 0).msecsTo(m_beatStartPosition);
+        entry.barAnchorMs = QTime(0, 0).msecsTo(m_barAnchorPosition);
+        entry.barPhaseConfidence = m_barPhaseConfidence;
         entry.exactBpm = m_ExactBpm;
         g_tempoCache.insert(cacheKey, entry);
     }
 
     qDebug() << Q_FUNC_INFO << "Estimated BPM:" << p->bpm << "exactBpm:" << m_ExactBpm
+             << "beatPhase:" << m_BeatPosition
+             << "beatStart:" << m_beatStartPosition
+             << "barAnchor:" << m_barAnchorPosition
+             << "barConfidence:" << m_barPhaseConfidence
+             << "barFitAccepted:" << barFit.accepted
+             << "barFitBars:" << barFit.bars
+             << "barFitScore:" << barFit.score
+             << "barFitRunnerUp:" << barFit.runnerUpScore
+             << "kickFitBpm:" << kickFit.bpm
+             << "kickFitPhaseMs:" << kickFit.phaseMs
+             << "kickFitMatchedBeats:" << kickFit.matchedBeats
+             << "kickFitApplied:" << kickFitApplied
              << "frames:" << spectralFlux.size()
              << "onsetsFull:" << onsetsFull.size() << "onsetsLow:" << onsetsLow.size();
 }
@@ -1329,6 +1685,7 @@ void TrackAnalyzer::storeCachedTempo()
     const int beatStartMs  = m_beatStartPosition.msecsSinceStartOfDay();
     const int beatPhaseMs  = m_BeatPosition.msecsSinceStartOfDay();
     const int beatEndMs    = m_beatStopPosition.msecsSinceStartOfDay();
+    const int barAnchorMs  = m_barAnchorPosition.msecsSinceStartOfDay();
 
     m_analysisCache->storeCachedTempo(
         p->currentUrl,
@@ -1338,7 +1695,9 @@ void TrackAnalyzer::storeCachedTempo()
         endPosMs,
         beatStartMs,
         beatPhaseMs,
-        beatEndMs
+        beatEndMs,
+        barAnchorMs,
+        m_barPhaseConfidence
     );
 
     if (!m_lastCacheKey.isEmpty())

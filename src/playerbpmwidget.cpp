@@ -6,6 +6,7 @@
 #include <QImage>
 #include <QMouseEvent>
 #include <QResizeEvent>
+#include <QToolButton>
 #include <QtConcurrent/QtConcurrent>
 #include <QtMath>
 #include <cmath>
@@ -153,6 +154,8 @@ PlayerBpmWidget::PlayerBpmWidget(QWidget* parent)
     , m_windowMs(6000)
     , m_liveSampleIntervalMs(25)  // Live-only envelope binning; preloaded waveform uses m_trueSampleIntervalMs.
     , m_exactBpm(0.0)
+    , m_manualBpmAdjustment(0.0)
+    , m_manualPhaseAdjustmentMs(0)
     , m_trueSampleIntervalMs(8.0)  // Default to 120fps analyzer rate (1000/120 ≈ 8.333ms)
     , m_rebuildRequested(false)
     , m_envelopeDirty(false)
@@ -165,6 +168,33 @@ PlayerBpmWidget::PlayerBpmWidget(QWidget* parent)
     , m_scrubStartX(0)
 {
     setAutoFillBackground(false);
+
+    m_decreaseBpmButton = new QToolButton(this);
+    m_increaseBpmButton = new QToolButton(this);
+    m_decreasePhaseButton = new QToolButton(this);
+    m_increasePhaseButton = new QToolButton(this);
+    m_decreaseBpmButton->setText(QStringLiteral("-"));
+    m_increaseBpmButton->setText(QStringLiteral("+"));
+    m_decreasePhaseButton->setText(QStringLiteral("P-"));
+    m_increasePhaseButton->setText(QStringLiteral("P+"));
+    m_decreaseBpmButton->setToolTip(QStringLiteral("Decrease displayed BPM by 0.01"));
+    m_increaseBpmButton->setToolTip(QStringLiteral("Increase displayed BPM by 0.01"));
+    m_decreasePhaseButton->setToolTip(QStringLiteral("Move beat phase earlier by 10 ms"));
+    m_increasePhaseButton->setToolTip(QStringLiteral("Move beat phase later by 10 ms"));
+    m_decreaseBpmButton->setAutoRaise(true);
+    m_increaseBpmButton->setAutoRaise(true);
+    m_decreaseBpmButton->setFixedSize(22, 20);
+    m_increaseBpmButton->setFixedSize(22, 20);
+    m_decreasePhaseButton->setFixedSize(26, 20);
+    m_increasePhaseButton->setFixedSize(26, 20);
+    m_decreaseBpmButton->hide();
+    m_increaseBpmButton->hide();
+    m_decreasePhaseButton->hide();
+    m_increasePhaseButton->hide();
+    connect(m_decreaseBpmButton, &QToolButton::clicked, this, &PlayerBpmWidget::decreaseManualBpm);
+    connect(m_increaseBpmButton, &QToolButton::clicked, this, &PlayerBpmWidget::increaseManualBpm);
+    connect(m_decreasePhaseButton, &QToolButton::clicked, this, &PlayerBpmWidget::decreaseManualPhase);
+    connect(m_increasePhaseButton, &QToolButton::clicked, this, &PlayerBpmWidget::increaseManualPhase);
 
     // Throttle envelope repaints to ~30 FPS maximum
     m_updateTimer.setSingleShot(true);
@@ -233,14 +263,24 @@ void PlayerBpmWidget::onUpdateTimer()
 
 void PlayerBpmWidget::setState(int bpm, const QTime& position, const QTime& beatReference, bool running, bool analyzed)
 {
-    setState(bpm, static_cast<double>(bpm), position, beatReference, running, analyzed);
+    const bool preserveExactBpm = analyzed
+            && bpm > 0
+            && m_bpm == bpm
+            && m_exactBpm > 0.0;
+    const double exactBpm = preserveExactBpm
+            ? m_exactBpm - m_manualBpmAdjustment
+            : static_cast<double>(bpm);
+    setState(bpm, exactBpm, position, beatReference, running, analyzed);
 }
 
 void PlayerBpmWidget::setState(int bpm, double exactBpm, const QTime& position, const QTime& beatReference, bool running, bool analyzed)
 {
     const int previousLeftMs = visibleWindowLeftMs();
+    if (!analyzed && bpm <= 0)
+        clearManualBpmAdjustment();
     m_bpm = bpm;
-    m_exactBpm = exactBpm > 0.0 ? exactBpm : static_cast<double>(bpm);
+    const double baseExactBpm = exactBpm > 0.0 ? exactBpm : static_cast<double>(bpm);
+    m_exactBpm = baseExactBpm > 0.0 ? baseExactBpm + m_manualBpmAdjustment : 0.0;
     m_position = position;
     m_beatReference = beatReference;
     m_running = running;
@@ -249,16 +289,115 @@ void PlayerBpmWidget::setState(int bpm, double exactBpm, const QTime& position, 
     // Rebuild the expensive envelope geometry only when the visible window advances.
     if (currentLeftMs != previousLeftMs)
         m_envelopeDirty = true;
+    updateManualBpmButtons();
     update();
 }
 
 void PlayerBpmWidget::setExactBpm(double exactBpm)
 {
     if (exactBpm > 0.0) {
-        m_exactBpm = exactBpm;
+        m_exactBpm = exactBpm + m_manualBpmAdjustment;
         m_envelopeDirty = true;
         update();
     }
+}
+
+void PlayerBpmWidget::clearManualBpmAdjustment()
+{
+    m_manualBpmAdjustment = 0.0;
+    m_manualPhaseAdjustmentMs = 0;
+    updateManualBpmButtons();
+}
+
+QTime PlayerBpmWidget::adjustedBeatReference() const
+{
+    if (!m_beatReference.isValid() || m_exactBpm <= 0.0)
+        return m_beatReference;
+
+    const double beatMs = 60000.0 / m_exactBpm;
+    double phaseMs = std::fmod(
+        static_cast<double>(QTime(0, 0).msecsTo(m_beatReference))
+            + static_cast<double>(m_manualPhaseAdjustmentMs),
+        beatMs);
+    if (phaseMs < 0.0)
+        phaseMs += beatMs;
+    return QTime(0, 0).addMSecs(qRound(phaseMs));
+}
+
+void PlayerBpmWidget::logManualGridState() const
+{
+    if (m_exactBpm <= 0.0)
+        return;
+
+    const QTime phase = adjustedBeatReference();
+    const double beatMs = 60000.0 / m_exactBpm;
+    const qint64 positionMs = QTime(0, 0).msecsTo(m_position);
+    const qint64 referenceMs = phase.isValid() ? QTime(0, 0).msecsTo(phase) : 0;
+    double residualMs = std::fmod(static_cast<double>(positionMs - referenceMs), beatMs);
+    if (residualMs > beatMs * 0.5)
+        residualMs -= beatMs;
+    if (residualMs < -beatMs * 0.5)
+        residualMs += beatMs;
+
+    qDebug() << Q_FUNC_INFO
+             << "manualExactBpm=" << m_exactBpm
+             << "periodMs=" << beatMs
+             << "basePhase=" << m_beatReference
+             << "manualPhaseAdjustmentMs=" << m_manualPhaseAdjustmentMs
+             << "effectivePhase=" << phase
+             << "position=" << m_position
+             << "gridResidualMs=" << residualMs;
+}
+
+void PlayerBpmWidget::decreaseManualBpm()
+{
+    if (m_exactBpm <= 0.0)
+        return;
+    m_manualBpmAdjustment -= 0.01;
+    m_exactBpm -= 0.01;
+    logManualGridState();
+    updateManualBpmButtons();
+    update();
+}
+
+void PlayerBpmWidget::increaseManualBpm()
+{
+    if (m_exactBpm <= 0.0)
+        return;
+    m_manualBpmAdjustment += 0.01;
+    m_exactBpm += 0.01;
+    logManualGridState();
+    updateManualBpmButtons();
+    update();
+}
+
+void PlayerBpmWidget::decreaseManualPhase()
+{
+    if (!m_beatReference.isValid())
+        return;
+    m_manualPhaseAdjustmentMs -= 10;
+    logManualGridState();
+    update();
+}
+
+void PlayerBpmWidget::increaseManualPhase()
+{
+    if (!m_beatReference.isValid())
+        return;
+    m_manualPhaseAdjustmentMs += 10;
+    logManualGridState();
+    update();
+}
+
+void PlayerBpmWidget::updateManualBpmButtons()
+{
+    if (!m_decreaseBpmButton || !m_increaseBpmButton
+            || !m_decreasePhaseButton || !m_increasePhaseButton)
+        return;
+    m_decreaseBpmButton->setEnabled(m_exactBpm > 0.0);
+    m_increaseBpmButton->setEnabled(m_exactBpm > 0.0);
+    m_decreasePhaseButton->setEnabled(m_beatReference.isValid());
+    m_increasePhaseButton->setEnabled(m_beatReference.isValid());
 }
 
 void PlayerBpmWidget::setCuePosition(const QTime& position)
@@ -450,7 +589,7 @@ QTime PlayerBpmWidget::visualBeatReference() const
     if (!m_beatReference.isValid() || m_bpm <= 0)
         return m_beatReference;
 
-    return m_beatReference;
+    return adjustedBeatReference();
 }
 
 void PlayerBpmWidget::rebuildVisibleEnvelope(int bandWidth)
@@ -597,6 +736,18 @@ void PlayerBpmWidget::mouseReleaseEvent(QMouseEvent* event)
 void PlayerBpmWidget::resizeEvent(QResizeEvent* event)
 {
     QWidget::resizeEvent(event);
+    const int right = width() - 4;
+    m_increaseBpmButton->move(right - m_increaseBpmButton->width(), 2);
+    m_decreaseBpmButton->move(right - m_increaseBpmButton->width() - m_decreaseBpmButton->width() - 2, 2);
+    m_increasePhaseButton->move(right - m_increaseBpmButton->width()
+                                - m_decreaseBpmButton->width()
+                                - m_increasePhaseButton->width()
+                                - 2, 2);
+    m_decreasePhaseButton->move(right - m_increaseBpmButton->width()
+                                - m_decreaseBpmButton->width()
+                                - m_increasePhaseButton->width()
+                                - m_decreasePhaseButton->width()
+                                - 4, 2);
     m_envelopeDirty = true; // geometry changed – rebuild paths
     m_waveformLayerDirty = true;
 }
@@ -656,7 +807,8 @@ double PlayerBpmWidget::phase() const
     if (beatMs <= 0.0) return 0.0;
 
     const qint64 posMs    = QTime(0, 0).msecsTo(m_position);
-    const qint64 beatRefMs = m_beatReference.isValid() ? QTime(0, 0).msecsTo(m_beatReference) : 0;
+    const QTime visualReference = adjustedBeatReference();
+    const qint64 beatRefMs = visualReference.isValid() ? QTime(0, 0).msecsTo(visualReference) : 0;
 
     double p = fmod(static_cast<double>(posMs - beatRefMs), beatMs) / beatMs;
     if (p < 0.0) p += 1.0;
@@ -689,7 +841,9 @@ void PlayerBpmWidget::paintEvent(QPaintEvent* event)
     painter.setRenderHint(QPainter::Antialiasing, true);  // on for text
     QString bpmText;
     if (m_bpm > 0) {
-        bpmText = QString::number(m_bpm) + " BPM";
+        bpmText = (m_manualBpmAdjustment != 0.0)
+                ? QString::number(m_exactBpm, 'f', 3) + " BPM"
+                : QString::number(m_bpm) + " BPM";
         const double adjusted = static_cast<double>(m_bpm) * m_tempoRate;
         if (qAbs(adjusted - static_cast<double>(m_bpm)) >= 0.05)
             bpmText += " (" + formatTempoValue(adjusted) + ")";

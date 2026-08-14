@@ -48,7 +48,7 @@ static QSqlDatabase collectionDb()
 }
 
 static constexpr int kEnvelopeCacheVersion = 2;
-static constexpr int kTempoAnalysisVersion = 15;
+static constexpr int kTempoAnalysisVersion = 17;
 
 static AnalysisCacheManager::CachedTempo buildLegacyCachedTempo(const QSqlQuery& query)
 {
@@ -73,6 +73,8 @@ static AnalysisCacheManager::CachedTempo buildLegacyCachedTempo(const QSqlQuery&
     cached.beatStartPositionMs = (legacyCueStartMs > 0) ? legacyCueStartMs : legacyBeatOffsetMs;
     cached.beatPhasePositionMs = legacyBeatOffsetMs;
     cached.beatEndPositionMs = 0;
+    cached.barAnchorPositionMs = cached.beatStartPositionMs;
+    cached.barPhaseConfidence = 0.0;
 
     return cached;
 }
@@ -130,7 +132,7 @@ bool AnalysisCacheManager::ensureTempoCacheTable() const
         return false;
 
     QSqlQuery q(db);
-    // Schema v12: position-based tempo cache (replaces beat_offset_ms / cueStartMs)
+    // Position-based tempo cache with beat and conservative 4/4 bar anchors.
     const QString baseTable = QStringLiteral(
         "CREATE TABLE IF NOT EXISTS analysis_cache ("
         "url VARCHAR(120) PRIMARY KEY,"
@@ -142,8 +144,10 @@ bool AnalysisCacheManager::ensureTempoCacheTable() const
         "beat_start_position_ms INTEGER DEFAULT 0,"
         "beat_phase_position_ms INTEGER DEFAULT 0,"
         "beat_end_position_ms INTEGER DEFAULT 0,"
+        "bar_anchor_position_ms INTEGER DEFAULT 0,"
+        "bar_phase_confidence REAL DEFAULT 0.0,"
         "changedate INTEGER,"
-        "analysis_version INTEGER DEFAULT 15,"
+        "analysis_version INTEGER DEFAULT 17,"
         "envelope_version INTEGER DEFAULT 0,"
         "exact_bpm REAL DEFAULT 0.0,"
         "envelope_data BLOB,"
@@ -154,13 +158,15 @@ bool AnalysisCacheManager::ensureTempoCacheTable() const
         return false;
     }
 
-    // Ensure new v12 columns exist (for existing DBs migrated from older schemas)
+    // Ensure current positional columns exist for databases migrated from older schemas.
     QList<QPair<QString, QString>> colsToAdd = {
         {"start_position_ms",       "ALTER TABLE analysis_cache ADD COLUMN start_position_ms INTEGER DEFAULT 0"},
         {"end_position_ms",         "ALTER TABLE analysis_cache ADD COLUMN end_position_ms INTEGER DEFAULT 0"},
         {"beat_start_position_ms",  "ALTER TABLE analysis_cache ADD COLUMN beat_start_position_ms INTEGER DEFAULT 0"},
         {"beat_phase_position_ms",  "ALTER TABLE analysis_cache ADD COLUMN beat_phase_position_ms INTEGER DEFAULT 0"},
         {"beat_end_position_ms",    "ALTER TABLE analysis_cache ADD COLUMN beat_end_position_ms INTEGER DEFAULT 0"},
+        {"bar_anchor_position_ms",  "ALTER TABLE analysis_cache ADD COLUMN bar_anchor_position_ms INTEGER DEFAULT 0"},
+        {"bar_phase_confidence",    "ALTER TABLE analysis_cache ADD COLUMN bar_phase_confidence REAL DEFAULT 0.0"},
         {"envelope_duration_ms",    "ALTER TABLE analysis_cache ADD COLUMN envelope_duration_ms INTEGER DEFAULT 0"},
         {"exact_bpm",               "ALTER TABLE analysis_cache ADD COLUMN exact_bpm REAL DEFAULT 0.0"},
         {"analysis_cache_key",      "ALTER TABLE analysis_cache ADD COLUMN analysis_cache_key VARCHAR(360) DEFAULT ''"},
@@ -180,9 +186,10 @@ AnalysisCacheManager::CachedTempo AnalysisCacheManager::loadCachedTempo(const QU
         return cached;
 
     QSqlQuery q(collectionDb());
-    // v12 SELECT with new positional fields, plus analysis_cache_key for hasValidCache
+    // Current positional fields, plus the file key used by hasValidCache().
     q.prepare("SELECT bpm, exact_bpm, start_position_ms, end_position_ms, "
-              "beat_start_position_ms, beat_phase_position_ms, beat_offset_ms, beat_end_position_ms, analysis_version, analysis_cache_key "
+              "beat_start_position_ms, beat_phase_position_ms, beat_offset_ms, beat_end_position_ms, "
+              "bar_anchor_position_ms, bar_phase_confidence, analysis_version, analysis_cache_key "
               "FROM analysis_cache WHERE url = :url");
     q.bindValue(":url", url.toLocalFile());
 
@@ -200,12 +207,12 @@ AnalysisCacheManager::CachedTempo AnalysisCacheManager::loadCachedTempo(const QU
         return cached;
 
     const int storedBpm   = q.value(0).toInt();
-    const int version     = q.value(8).toInt();
+    const int version     = q.value(10).toInt();
 
     if (storedBpm <= 0)
         return cached;
 
-    // Schema v12+: new position-based fields
+    // Current position-based fields.
     if (version >= kTempoAnalysisVersion) {
         cached.valid         = true;
         cached.bpm           = storedBpm;
@@ -218,7 +225,11 @@ AnalysisCacheManager::CachedTempo AnalysisCacheManager::loadCachedTempo(const QU
         if (cached.beatPhasePositionMs <= 0)
             cached.beatPhasePositionMs = legacyPhaseMs;
         cached.beatEndPositionMs   = q.value(7).toInt();
-        cached.analysisCacheKey  = q.value(9).toString();
+        cached.barAnchorPositionMs = qMax(0, q.value(8).toInt());
+        cached.barPhaseConfidence = qBound(0.0, q.value(9).toDouble(), 1.0);
+        cached.analysisCacheKey  = q.value(11).toString();
+        if (cached.barAnchorPositionMs <= 0)
+            cached.barAnchorPositionMs = cached.beatStartPositionMs;
         if (cached.startPositionMs > 0 && (cached.beatStartPositionMs <= 0 || cached.beatStartPositionMs < cached.startPositionMs))
             cached.beatStartPositionMs = cached.startPositionMs;
     }
@@ -270,7 +281,8 @@ bool AnalysisCacheManager::removeCachedAnalysis(const QUrl& url)
 
 void AnalysisCacheManager::storeCachedTempo(const QUrl& url, int bpm, double exactBpm,
                                             int startPositionMs, int endPositionMs,
-                                            int beatStartPosMs, int beatPhasePosMs, int beatEndPosMs)
+                                            int beatStartPosMs, int beatPhasePosMs, int beatEndPosMs,
+                                            int barAnchorPosMs, double barPhaseConfidence)
 {
     if (bpm <= 0)
         return;
@@ -283,10 +295,12 @@ void AnalysisCacheManager::storeCachedTempo(const QUrl& url, int bpm, double exa
     q.prepare(
         "INSERT OR REPLACE INTO analysis_cache ("
         "url, bpm, exact_bpm, start_position_ms, end_position_ms, "
-         "beat_start_position_ms, beat_phase_position_ms, beat_offset_ms, beat_end_position_ms, changedate, "
+         "beat_start_position_ms, beat_phase_position_ms, beat_offset_ms, beat_end_position_ms, "
+         "bar_anchor_position_ms, bar_phase_confidence, changedate, "
          "analysis_version, envelope_version) "
         "VALUES (:url, :bpm, :exact_bpm, :start_pos, :end_pos, "
-         ":beat_start, :beat_phase, :beat_phase, :beat_end, strftime('%s','now'), 15, "
+         ":beat_start, :beat_phase, :beat_phase, :beat_end, :bar_anchor, :bar_confidence, "
+         "strftime('%s','now'), 17, "
          "COALESCE((SELECT envelope_version FROM analysis_cache WHERE url = :url), 0))"
     );
     q.bindValue(":url", url.toLocalFile());
@@ -297,6 +311,8 @@ void AnalysisCacheManager::storeCachedTempo(const QUrl& url, int bpm, double exa
     q.bindValue(":beat_start", beatStartPosMs);
     q.bindValue(":beat_phase", beatPhasePosMs);
     q.bindValue(":beat_end", beatEndPosMs);
+    q.bindValue(":bar_anchor", qMax(0, barAnchorPosMs));
+    q.bindValue(":bar_confidence", qBound(0.0, barPhaseConfidence, 1.0));
     q.exec();
 }
 
