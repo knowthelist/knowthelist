@@ -142,7 +142,7 @@ Download the latest installer from the [Releases page](https://github.com/knowth
 
 ## Creating a Release
 
-Pushing a version tag such as `v2.4.0` starts the GitHub Actions release workflow. It builds the macOS and Windows application bundles, Linux `.deb`/`.rpm` packages, and source `.zip` and `.tar.gz` archives on clean runners. Release artifacts are currently unsigned; macOS may require allowing the downloaded app in **System Settings > Privacy & Security**.
+Pushing a version tag such as `v2.4.0` starts the GitHub Actions release workflow. It builds the macOS and Windows application bundles, Linux `.deb`/`.rpm` packages, and source `.zip` and `.tar.gz` archives on clean runners. The macOS bundle is ad-hoc signed after all dependencies are bundled, but it is not notarized with an Apple Developer certificate. The first launch may therefore require opening the app with **Control-click → Open**, or approving it in **System Settings > Privacy & Security**. If macOS reports the app as damaged, download a newly generated release; older bundles may have an invalid signature.
 
 ---
 

@@ -90,6 +90,11 @@ jobs:
               "@loader_path/../Frameworks/$(basename "$TAGLIB_LIB")" \
               "$APP/Contents/MacOS/knowthelist"
           fi
+          # The TagLib copy and install-name rewrite above modify the bundle
+          # after macdeployqt has run. Sign the final bundle so Gatekeeper
+          # does not reject it as damaged.
+          codesign --deep --force --verbose --sign - "$APP"
+          codesign --verify --deep --strict --verbose=2 "$APP"
           VERSION="${{ inputs.tag || github.ref_name }}"
           ditto -c -k --sequesterRsrc --keepParent "$APP" \
             "knowthelist-${VERSION}-macOS.zip"
