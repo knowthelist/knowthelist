@@ -32,7 +32,7 @@ public:
 
         // Track boundaries (ms from T=0)
         int startPositionMs;     // first frame > silence threshold
-        int endPositionMs;       // last significant-beat frame (excludes fadeout tail)
+        int endPositionMs;       // last audible frame, including quiet outros
 
         // Beat-grid phase (ms from T=0)
         int beatStartPositionMs;  // first detected beat in content zone

@@ -17,7 +17,9 @@ enum class TransitionMode {
 enum class TransitionCueMode {
     SkipSilence,
     BeatOccurrence,
-    SkipSilenceOccurrence
+    SkipSilenceOccurrence,
+    BeatStartSilentEnd,
+    HardCut
 };
 
 struct TransitionPlan {

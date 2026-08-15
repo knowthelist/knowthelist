@@ -51,6 +51,10 @@ QTime PlayerCueManager::computeFadePoint(CueMode mode) const
         return trackEnd;
     if (mode == CUE_BEAT_OCCURRENCE)
         return beatEnd.isValid() && beatEnd > QTime(0, 0) ? beatEnd : trackEnd;
+    if (mode == CUE_BEAT_START_SILENT_END)
+        return trackEnd;
+    if (mode == CUE_HARD_CUT)
+        return trackEnd;
 
     QTime fadePoint;
 
@@ -81,7 +85,8 @@ PlayerCueManager::CuePoints PlayerCueManager::computeCuePoints(CueMode mode) con
         return result;
 
     // Determine cue start based on mode semantics.
-    if (mode == CUE_BEAT_OCCURRENCE || mode == CUE_SKIP_SILENT_OCCURRENCE) {
+    if (mode == CUE_BEAT_OCCURRENCE || mode == CUE_SKIP_SILENT_OCCURRENCE
+        || mode == CUE_BEAT_START_SILENT_END || mode == CUE_HARD_CUT) {
         // Use beatStartPosition() for beat-based modes.
         const QTime firstBeat = m_owner.trackanalyzer->beatStartPosition();
         const QTime firstEnergy = m_owner.trackanalyzer->startPosition();
@@ -108,7 +113,8 @@ QTime PlayerCueManager::calculateCuePosition(CueMode mode) const
 {
     // Beat-based modes can return a valid cue position even when the analyzer
     // has not yet finished.
-    if (mode == CUE_BEAT_OCCURRENCE || mode == CUE_SKIP_SILENT_OCCURRENCE) {
+    if (mode == CUE_BEAT_OCCURRENCE || mode == CUE_SKIP_SILENT_OCCURRENCE
+        || mode == CUE_BEAT_START_SILENT_END || mode == CUE_HARD_CUT) {
         if (m_owner.trackanalyzer && m_owner.trackanalyzer->finished()) {
             const QTime firstBeat = m_owner.trackanalyzer->beatStartPosition();
             const QTime firstEnergy = m_owner.trackanalyzer->startPosition();

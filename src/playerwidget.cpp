@@ -1047,6 +1047,13 @@ long PlayerWidget::computeRemainCueTime(const QTime& fadePoint) const {
     return m_cueManager->computeRemainCueTime(fadePoint);
 }
 
+int PlayerWidget::finishTriggerLeadTimeMs() const
+{
+    // A hard cut must be scheduled at the end of the audible material, not
+    // with the normal blend lead time configured for longer fades.
+    return m_transitionCueMode == CUE_HARD_CUT ? 500 : mTrackFinishEmitTime;
+}
+
 // Apply a CuePoints struct to the player: set position, remainCueTime, UI, bpmWidget.
 void PlayerWidget::applyCuePoints(const CuePoints& cue, bool isManual)
 {
@@ -1114,10 +1121,11 @@ bool PlayerWidget::seekOvershootsFadePoint(const QTime& targetPos) const
     // Use the unified computeFadePoint() from CueManager — matches setPositionMarkers() path.
     const int targetMs = qMax(0, QTime(0, 0).msecsTo(targetPos));
 
-    if (trackanalyzer->finished() && (m_skipSilentEnd || m_beatCueEnabled)) {
+    if (trackanalyzer->finished() && (m_skipSilentEnd || m_beatCueEnabled || m_transitionCuePlanned)) {
         const QTime fadePoint = computeFadePoint();
         if (fadePoint.isValid() && fadePoint > QTime(0, 0)) {
-            const int triggerPosMs = qMax(0, QTime(0, 0).msecsTo(fadePoint) - mTrackFinishEmitTime);
+            const int triggerPosMs = qMax(0, QTime(0, 0).msecsTo(fadePoint)
+                                                   - finishTriggerLeadTimeMs());
             return targetMs >= triggerPosMs;
         }
     }
@@ -1127,7 +1135,8 @@ bool PlayerWidget::seekOvershootsFadePoint(const QTime& targetPos) const
     if (lengthMs <= 0)
         return false;
 
-    const int triggerPosMs = qMax(0, lengthMs - static_cast<int>(remainCueTime) - mTrackFinishEmitTime);
+    const int triggerPosMs = qMax(0, lengthMs - static_cast<int>(remainCueTime)
+                                      - finishTriggerLeadTimeMs());
     return targetMs >= triggerPosMs;
 }
 
@@ -1746,16 +1755,17 @@ void PlayerWidget::updateTimeAndPositionDisplay(bool isPassive)
     ui->lblTimeRemainMs->setText("." + QString::number((remainMs < 0 ? -remainMs : remainMs) % 10));
 
     bool nearEndByTime = false;
-    if (trackanalyzer->finished() && (m_skipSilentEnd || m_beatCueEnabled)) {
+    if (trackanalyzer->finished() && (m_skipSilentEnd || m_beatCueEnabled || m_transitionCuePlanned)) {
         const QTime fadePoint = computeFadePoint();
         if (fadePoint.isValid() && fadePoint > QTime(0, 0)) {
-            const int triggerPosMs = qMax(0, QTime(0, 0).msecsTo(fadePoint) - mTrackFinishEmitTime);
+            const int triggerPosMs = qMax(0, QTime(0, 0).msecsTo(fadePoint)
+                                                   - finishTriggerLeadTimeMs());
             const int curMs = QTime(0, 0).msecsTo(curpos);
             nearEndByTime = (curMs >= triggerPosMs) && (remainMs > 0);
         }
     }
     if (!nearEndByTime)
-        nearEndByTime = (remainMs <= mTrackFinishEmitTime && 0 < remainMs);
+        nearEndByTime = (remainMs <= finishTriggerLeadTimeMs() && 0 < remainMs);
     const bool aboutFinishCandidate = (nearEndByTime || m_isHanging) && m_isStarted;
     const qint64 nowMs = m_sessionTimer.isValid() ? m_sessionTimer.elapsed() : 0;
     const bool suppressionActive = nowMs < m_aboutFinishSuppressUntilMs;

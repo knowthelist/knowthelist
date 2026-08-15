@@ -53,7 +53,9 @@ public:
     enum CueMode {
         CUE_SKIP_SILENT,                  // start: first non-silent sample, end: last non-silent beat-activity
         CUE_BEAT_OCCURRENCE,              // start: first significant beat, end: fade-room for beat-sync mix-out
-        CUE_SKIP_SILENT_OCCURRENCE        // combined: skip-silent start + occurrence-style end
+        CUE_SKIP_SILENT_OCCURRENCE,       // combined: skip-silent start + occurrence-style end
+        CUE_BEAT_START_SILENT_END,        // beat-based start, silent/track end mix-out
+        CUE_HARD_CUT                       // beat-based start, late silent/track-end trigger
     };
 
     QTime computeFadePoint(CueMode mode) const;

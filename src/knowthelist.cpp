@@ -39,6 +39,23 @@
 namespace {
 constexpr double kMinimumBarPhaseConfidence = 0.58;
 
+const char* transitionModeName(TransitionMode mode)
+{
+    switch (mode) {
+    case TransitionMode::EqualPower:
+        return "EqualPower";
+    case TransitionMode::BeatBlend:
+        return "BeatBlend";
+    case TransitionMode::BassSwap:
+        return "BassSwap";
+    case TransitionMode::VocalHandoff:
+        return "VocalHandoff";
+    case TransitionMode::HardCut:
+        return "HardCut";
+    }
+    return "Unknown";
+}
+
 CueMode cueModeForTransition(TransitionCueMode mode)
 {
     switch (mode) {
@@ -46,6 +63,10 @@ CueMode cueModeForTransition(TransitionCueMode mode)
         return CUE_BEAT_OCCURRENCE;
     case TransitionCueMode::SkipSilenceOccurrence:
         return CUE_SKIP_SILENT_OCCURRENCE;
+    case TransitionCueMode::BeatStartSilentEnd:
+        return CUE_BEAT_START_SILENT_END;
+    case TransitionCueMode::HardCut:
+        return CUE_HARD_CUT;
     case TransitionCueMode::SkipSilence:
     default:
         return CUE_SKIP_SILENT;
@@ -1340,7 +1361,11 @@ void Knowthelist::fadeNow()
             incoming->applyCuePoints(incoming->computeCuePoints(transitionCueMode), false);
         m_transitionStartFaderValue = ui->sliFader->value();
         m_transitionActive = true;
-        qDebug() << "Selected transition:" << static_cast<int>(m_transitionPlan.mode)
+        qDebug() << "Selected transition:"
+                 << transitionModeName(m_transitionPlan.mode)
+                 << "outgoing=" << (outgoingTrack ? outgoingTrack->prettyTitle() : QStringLiteral("<none>"))
+                 << "incoming=" << (incomingTrack ? incomingTrack->prettyTitle() : QStringLiteral("<none>"))
+                 << "bpm=" << outgoingBpm << "->" << incomingBpm
                  << "duration=" << m_transitionPlan.durationSeconds
                  << "confidence=" << m_transitionPlan.confidence
                  << m_transitionPlan.rationale;
@@ -2093,7 +2118,11 @@ void Knowthelist::refreshTransitionPlan()
             incomingPlayer->applyCuePoints(plannedCue, false);
     }
 
-    qDebug() << "Transition preview updated:" << static_cast<int>(m_transitionPlan.mode)
+    qDebug() << "Transition preview updated:"
+             << transitionModeName(m_transitionPlan.mode)
+             << "outgoing=" << outgoingTrack->prettyTitle()
+             << "incoming=" << incomingTrack->prettyTitle()
+             << "bpm=" << outgoingBpm << "->" << incomingTrack->bpm()
              << "duration=" << m_transitionPlan.durationSeconds
              << "confidence=" << m_transitionPlan.confidence
              << m_transitionPlan.rationale;

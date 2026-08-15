@@ -38,6 +38,11 @@ constexpr int kAnalysisFrameRate = 120;
 constexpr int kTempoMinBpm = 70;
 constexpr int kTempoMaxBpm = 200;
 constexpr float kSilenceRmsThreshold = 0.1f;
+constexpr float kBeatFluxThresholdFraction = 0.05f;
+constexpr float kTrailingSilenceRmsThreshold = 0.001778f; // -55 dBFS
+constexpr float kTrailingSilencePeakFraction = 0.02f;
+constexpr double kTrailingRmsWindowSeconds = 0.3;
+constexpr double kTrailingSilenceHoldSeconds = 1.5;
 
 struct TempoCacheEntry {
     int bpm = 0;
@@ -402,22 +407,36 @@ static TrackAnalysisData scanAudioFile(const QUrl& url)
     double sumRms = 0.0;
     int firstActiveFrame = -1;
     int lastActiveFrame = -1;
+    bool readFailed = false;
+    qint64 firstFailedSample = -1;
 
     for (qint64 samplePos = 0; samplePos < totalSamples; samplePos += frameSize) {
         const int numSamples = static_cast<int>(qMin<qint64>(frameSize, totalSamples - samplePos));
         buffer.clear();
-        reader->read(&buffer, 0, numSamples, samplePos, true, true);
+        if (!reader->read(&buffer, 0, numSamples, samplePos, true, true)) {
+            if (!readFailed) {
+                qWarning() << "TrackAnalyzer: audio reader failed at sample"
+                           << samplePos << "of" << totalSamples
+                           << "for" << url;
+                firstFailedSample = samplePos;
+            }
+            readFailed = true;
+        }
 
         double sumSq = 0.0;
         double lowSumSq = 0.0;
         for (int i = 0; i < numSamples; ++i) {
             float mono = 0.0f;
-            for (int ch = 0; ch < channels; ++ch)
-                mono += buffer.getSample(ch, i);
+            double channelSumSq = 0.0;
+            for (int ch = 0; ch < channels; ++ch) {
+                const float sample = buffer.getSample(ch, i);
+                mono += sample;
+                channelSumSq += static_cast<double>(sample) * static_cast<double>(sample);
+            }
             mono /= static_cast<float>(channels);
 
             const float low = lowPassStep(mono, lowState, lowAlpha);
-            sumSq += static_cast<double>(mono) * static_cast<double>(mono);
+            sumSq += channelSumSq / static_cast<double>(channels);
             lowSumSq += static_cast<double>(low) * static_cast<double>(low);
         }
 
@@ -441,7 +460,6 @@ static TrackAnalysisData scanAudioFile(const QUrl& url)
         if (frameRms >= kSilenceRmsThreshold) {
             if (firstActiveFrame < 0)
                 firstActiveFrame = static_cast<int>(data.frameRms.size()) - 1;
-            lastActiveFrame = static_cast<int>(data.frameRms.size()) - 1;
         }
 
         if ((data.frameRms.size() & 31) == 0) {
@@ -453,6 +471,62 @@ static TrackAnalysisData scanAudioFile(const QUrl& url)
     data.peakRms = peakRms;
     data.averageRms = data.frameRms.isEmpty() ? 0.0 : sumRms / static_cast<double>(data.frameRms.size());
 
+    // Detect only sustained trailing silence. A short sliding RMS window avoids
+    // treating individual quiet frames as the end, while the hold period keeps
+    // pauses and reverb tails inside the audible part of the track.
+    const int trailingWindowFrames = qMax(
+        1, qRound(kAnalysisFrameRate * kTrailingRmsWindowSeconds));
+    const int trailingHoldFrames = qMax(
+        1, qRound(kAnalysisFrameRate * kTrailingSilenceHoldSeconds));
+    const float trailingSilenceThreshold = qMax(
+        kTrailingSilenceRmsThreshold, peakRms * kTrailingSilencePeakFraction);
+    QList<float> trailingRms;
+    trailingRms.reserve(data.frameRms.size());
+    double rollingSquareSum = 0.0;
+    for (int i = 0; i < data.frameRms.size(); ++i) {
+        const double frameSquare = static_cast<double>(data.frameRms.at(i))
+            * static_cast<double>(data.frameRms.at(i));
+        rollingSquareSum += frameSquare;
+        if (i >= trailingWindowFrames) {
+            const double removedSquare = static_cast<double>(data.frameRms.at(i - trailingWindowFrames))
+                * static_cast<double>(data.frameRms.at(i - trailingWindowFrames));
+            rollingSquareSum -= removedSquare;
+        }
+        const int sampleCount = qMin(i + 1, trailingWindowFrames);
+        trailingRms.append(static_cast<float>(
+            std::sqrt(qMax(0.0, rollingSquareSum / static_cast<double>(sampleCount)))));
+    }
+
+    int trailingSilentFrames = 0;
+    if (!readFailed) {
+        for (int i = trailingRms.size() - 1; i >= 0; --i) {
+            if (trailingRms.at(i) >= trailingSilenceThreshold)
+                break;
+            ++trailingSilentFrames;
+        }
+    }
+    if (readFailed) {
+        // A failed decoder read produces cleared frames, which must not be
+        // mistaken for genuine trailing silence.
+        lastActiveFrame = data.frameRms.size() - 1;
+    } else if (trailingSilentFrames >= trailingHoldFrames) {
+        const int firstSilentWindow = trailingRms.size() - trailingSilentFrames;
+        lastActiveFrame = qMax(0, firstSilentWindow - trailingWindowFrames + 1);
+    } else {
+        lastActiveFrame = data.frameRms.size() - 1;
+    }
+    const int diagnosticStartFrame = qMax(0, data.frameRms.size() - kAnalysisFrameRate * 10);
+    float diagnosticTailPeak = 0.0f;
+    for (int i = diagnosticStartFrame; i < data.frameRms.size(); ++i)
+        diagnosticTailPeak = qMax(diagnosticTailPeak, data.frameRms.at(i));
+    qDebug() << "Trailing RMS analysis:" << url.fileName()
+             << "threshold=" << trailingSilenceThreshold
+             << "tailPeak=" << diagnosticTailPeak
+             << "readFailed=" << readFailed
+             << "firstFailedSample=" << firstFailedSample
+             << "lastActiveMs=" << (lastActiveFrame * 1000 / kAnalysisFrameRate)
+             << "durationMs=" << qRound(data.durationMs);
+
     const float envelopePeak = qMax(peakRms, 1e-6f);
     data.envelope.reserve(data.frameRms.size());
     for (float rms : data.frameRms)
@@ -462,16 +536,17 @@ static TrackAnalysisData scanAudioFile(const QUrl& url)
         data.startPosition = QTime(0, 0);
         data.endPosition = QTime(0, 0).addMSecs(static_cast<int>(qRound(data.durationMs)));
     } else {
-        const int frameMs = qMax(1, qRound(1000.0 / kAnalysisFrameRate));
-        data.startPosition = QTime(0, 0).addMSecs(firstActiveFrame * frameMs);
-        data.endPosition = QTime(0, 0).addMSecs(qMin(static_cast<int>(qRound(data.durationMs)), (lastActiveFrame + 1) * frameMs));
+        const double frameMs = 1000.0 * static_cast<double>(frameSize) / data.sampleRate;
+        data.startPosition = QTime(0, 0).addMSecs(qRound(firstActiveFrame * frameMs));
+        data.endPosition = QTime(0, 0).addMSecs(qMin(
+            static_cast<int>(qRound(data.durationMs)), qRound((lastActiveFrame + 1) * frameMs)));
     }
 
     const float lowPeak = std::max_element(data.spectralFluxLow.constBegin(), data.spectralFluxLow.constEnd()) != data.spectralFluxLow.constEnd()
         ? *std::max_element(data.spectralFluxLow.constBegin(), data.spectralFluxLow.constEnd())
         : 0.0f;
     if (lowPeak > 0.0f && !data.spectralFluxLow.isEmpty()) {
-        const float beatThreshold = lowPeak * 0.10f;
+        const float beatThreshold = lowPeak * kBeatFluxThresholdFraction;
         const int minSilentFrames = static_cast<int>(kAnalysisFrameRate * 3.0f);
         int lastBeatFrame = -1;
         for (int i = data.spectralFluxLow.size() - 1; i >= 0; --i) {
@@ -1560,7 +1635,10 @@ void TrackAnalyzer::detectTempo()
     // to the nearest beat using the detected BPM and phase.
     {
         const double significantThreshold = qMax(averageRms * 0.5, kSilenceRmsThreshold * 3);
-        const int frameMs = qMax(1, qRound(1000.0 / kAnalysisFrameRate));
+        const double frameMs = m_trackDuration.msecsSinceStartOfDay() > 0
+            ? static_cast<double>(m_trackDuration.msecsSinceStartOfDay())
+                / static_cast<double>(frameRms.size())
+            : 1000.0 / static_cast<double>(kAnalysisFrameRate);
         int firstSignificantFrame = -1;
 
         for (int i = 0; i < frameRms.size(); ++i) {
@@ -1572,7 +1650,7 @@ void TrackAnalyzer::detectTempo()
 
         if (firstSignificantFrame >= 0 && p->bpm > 0 && m_ExactBpm > 0.0) {
             const double beatMs = 60000.0 / m_ExactBpm;
-            const int energyMs = firstSignificantFrame * frameMs;
+            const int energyMs = qRound(firstSignificantFrame * frameMs);
             // Snap to nearest beat: round((energyMs - phaseMs) / beatMs) * beatMs + phaseMs
             const double beatIndex = std::round((static_cast<double>(energyMs) - static_cast<double>(phaseMs)) / beatMs);
             const int snappedMs = static_cast<int>(qRound(beatIndex * beatMs + phaseMs));

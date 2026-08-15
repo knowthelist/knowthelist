@@ -44,7 +44,9 @@ class PlayerCueManager;
 enum CueMode {
     CUE_SKIP_SILENT,        // skipSilent:   start at first non-silent sample / end at last non-silent beat-activity
     CUE_BEAT_OCCURRENCE,    // beatOccurrence: start at first significant beat / end where enough fade-room remains for beat-sync mix-out
-    CUE_SKIP_SILENT_OCCURRENCE // skip-silent start with beat-aware mix-out
+    CUE_SKIP_SILENT_OCCURRENCE, // skip-silent start with beat-aware mix-out
+    CUE_BEAT_START_SILENT_END,  // beat-based start with the silent/track end as mix-out point
+    CUE_HARD_CUT                 // beat-based start with a late silent/track-end trigger
 };
 
 // Pair of cue points (start of track + mix-out point near the end)
@@ -228,6 +230,7 @@ public:
     QTime computeFadePoint() const;
     QTime computeFadePoint(CueMode mode) const;
     long computeRemainCueTime(const QTime& fadePoint) const;
+    int finishTriggerLeadTimeMs() const;
     void setTransitionCueMode(CueMode mode);
 
     // Sub-objects can access these shared members via PlayerWidget& or through their own methods.
