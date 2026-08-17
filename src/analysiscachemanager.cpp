@@ -47,7 +47,7 @@ static QSqlDatabase collectionDb()
     return QSqlDatabase::database(connName);
 }
 
-static constexpr int kEnvelopeCacheVersion = 2;
+static constexpr int kEnvelopeCacheVersion = 3;
 static constexpr int kTempoAnalysisVersion = 25;
 
 static AnalysisCacheManager::CachedTempo buildLegacyCachedTempo(const QSqlQuery& query)

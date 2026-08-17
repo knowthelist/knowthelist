@@ -457,6 +457,10 @@ void JuceAudioBackend::load(const QUrl& url)
         // and getCurrentPosition() map correctly to file time (not device rate).
         transportSource->setSource(tempoSource.get(), 0, nullptr,
                        sourceSampleRate > 0.0 ? sourceSampleRate : 0.0, 2);
+        // Replacing the source does not guarantee that the transport/source
+        // cursor is reset. Explicitly rewind so a newly loaded track cannot
+        // resume from the previous track's position (including its EOF).
+        transportSource->setPosition(0.0);
         lastError = QString();
     } catch (const std::exception& e) {
         lastError = QString("Load failed: %1").arg(e.what());
@@ -490,7 +494,11 @@ void JuceAudioBackend::seek(const QTime& position)
     if (m_interPlayerDelayCompensation != 0) {
         seconds -= m_interPlayerDelayCompensation / 1000.0;
     }
-    
+
+    // Delay compensation must never move a seek before the start of the file.
+    // Negative positions wrap when converted to QTime and can make playback
+    // appear to start at EOF.
+    seconds = qMax(0.0, seconds);
     transportSource->setPosition(seconds);
 }
 
@@ -505,7 +513,7 @@ QTime JuceAudioBackend::getPosition()
     } else {
         seconds = transportSource->getCurrentPosition();
     }
-    int ms = static_cast<int>(seconds * 1000);
+    int ms = qMax(0, static_cast<int>(seconds * 1000));
     return QTime(0, 0).addMSecs(ms);
 }
 

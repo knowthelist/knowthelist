@@ -91,19 +91,16 @@ bool nearBeatBoundary(const QTime& position, const QTime& beatReference, int bpm
     return distanceToBeat <= toleranceMs;
 }
 
-double beatPhaseDistanceMs(const QTime& lhsPos, const QTime& lhsBeatRef, int lhsBpm,
-                           const QTime& rhsPos, const QTime& rhsBeatRef, int rhsBpm,
-                           int comparisonBpm)
+double signedBeatPhaseDeltaMs(const QTime& lhsPos, const QTime& lhsBeatRef, int lhsBpm,
+                              const QTime& rhsPos, const QTime& rhsBeatRef, int rhsBpm,
+                              double comparisonBpm)
 {
-    if (lhsBpm <= 0 || rhsBpm <= 0 || comparisonBpm <= 0)
+    if (lhsBpm <= 0 || rhsBpm <= 0 || comparisonBpm <= 0.0)
         return 0.0;
 
     const double lhsBeatMs = 60000.0 / static_cast<double>(lhsBpm);
     const double rhsBeatMs = 60000.0 / static_cast<double>(rhsBpm);
-    const double comparisonBeatMs = 60000.0 / static_cast<double>(comparisonBpm);
-    if (lhsBeatMs <= 0.0 || rhsBeatMs <= 0.0 || comparisonBeatMs <= 0.0)
-        return 0.0;
-
+    const double comparisonBeatMs = 60000.0 / comparisonBpm;
     auto phaseFor = [](const QTime& pos, const QTime& beatRef, double beatMs) {
         const qint64 posMs = QTime(0, 0).msecsTo(pos);
         const qint64 beatRefMs = beatRef.isValid() ? QTime(0, 0).msecsTo(beatRef) : 0;
@@ -113,10 +110,13 @@ double beatPhaseDistanceMs(const QTime& lhsPos, const QTime& lhsBeatRef, int lhs
         return phaseMs / beatMs;
     };
 
-    const double lhsPhase = phaseFor(lhsPos, lhsBeatRef, lhsBeatMs);
-    const double rhsPhase = phaseFor(rhsPos, rhsBeatRef, rhsBeatMs);
-    const double rawDelta = qAbs(lhsPhase - rhsPhase);
-    return qMin(rawDelta, 1.0 - rawDelta) * comparisonBeatMs;
+    double delta = phaseFor(lhsPos, lhsBeatRef, lhsBeatMs)
+                 - phaseFor(rhsPos, rhsBeatRef, rhsBeatMs);
+    if (delta > 0.5)
+        delta -= 1.0;
+    else if (delta < -0.5)
+        delta += 1.0;
+    return delta * comparisonBeatMs;
 }
 }
 
@@ -1255,7 +1255,12 @@ void Knowthelist::cancelAutoFadeAtCurrentPosition()
     restoreTransitionEqualizers();
     clearAutoFadeSyncState();
     resetWaitingDeckTempoPreviews();
-    resetAllDecksSyncState();
+
+    // Stopping the crossfader is a manual performance action, not a request
+    // to abandon beat sync. Keep both running decks at the current shared
+    // tempo until the DJ disables sync or a deck leaves the mix.
+    m_rateRestoreTimer->stop();
+    m_rateRestorePlayer = nullptr;
 }
 
 void Knowthelist::resetWaitingDeckTempoPreviews()
@@ -1272,24 +1277,17 @@ void Knowthelist::resetAllDecksSyncState()
 {
     // Use timer-based gradual tempo restoration instead of immediate tempo change
     // to provide smoother listening experience during sync resets
-    
-    // For player1 - set up for gradual tempo restoration if player is running
-    if (player1 && player1->isStarted()) {
-        m_rateRestorePlayer = player1;
-        m_rateRestoreTimer->start();
-    } else if (player1) {
-        // Player not started, reset immediately 
+
+    if (player1 && !player1->isStarted())
         player1->resetSyncState();
-    }
-    
-    // For player2 - set up for gradual tempo restoration if player is running
-    if (player2 && player2->isStarted()) {
-        m_rateRestorePlayer = player2;
-        m_rateRestoreTimer->start();
-    } else if (player2) {
-        // Player not started, reset immediately
+    if (player2 && !player2->isStarted())
         player2->resetSyncState();
-    }
+
+    const bool needsRestore = (player1 && player1->isStarted())
+        || (player2 && player2->isStarted());
+    m_rateRestorePlayer = needsRestore ? player1 : nullptr;
+    if (needsRestore)
+        m_rateRestoreTimer->start();
 }
 
 void Knowthelist::applyBeatVisualMode(bool enabled)
@@ -1534,20 +1532,28 @@ void Knowthelist::timerAutoFader_timerOut()
                     m_fadeSyncBeatWaitSteps = 4;
                 }
             } else {
-                const int sharedTempoBpm = qMax(1, qRound(autoFadeSharedTempoForStep(m_fadeSyncStep)));
+                const double sharedTempoBpm = autoFadeSharedTempoForStep(m_fadeSyncStep);
                 const QTime incomingBeatPosition = (m_fadeSyncIncomingPlayer == player1)
                                                        ? m_Player1BeatPosition
                                                        : m_Player2BeatPosition;
-                const double beatMs = 60000.0 / static_cast<double>(sharedTempoBpm);
+                const double beatMs = 60000.0 / sharedTempoBpm;
                 const double toleranceMs = qMin(18.0, beatMs * 0.04);
-                const double phaseDeltaMs = beatPhaseDistanceMs(m_fadeSyncIncomingPlayer->currentPosition(),
-                                                                incomingBeatPosition,
-                                                                m_fadeSyncIncomingBpm,
-                                                                m_fadeSyncOutgoingPlayer->currentPosition(),
-                                                                m_fadeSyncOutgoingBeatPosition,
-                                                                m_fadeSyncOutgoingBpm,
-                                                                sharedTempoBpm);
-                if (phaseDeltaMs > toleranceMs) {
+                const double phaseDeltaMs = signedBeatPhaseDeltaMs(
+                    m_fadeSyncIncomingPlayer->currentPosition(), incomingBeatPosition,
+                    m_fadeSyncIncomingBpm,
+                    m_fadeSyncOutgoingPlayer->currentPosition(),
+                    m_fadeSyncOutgoingBeatPosition, m_fadeSyncOutgoingBpm,
+                    sharedTempoBpm);
+
+                // Keep the phase locked by making a small, bounded tempo trim.
+                // Repeated hard seeks while the shared tempo is moving create
+                // the audible +/-100-200 ms oscillation seen during fades.
+                const double baseIncomingRate = sharedTempoBpm
+                    / static_cast<double>(m_fadeSyncIncomingBpm);
+                const double phaseTrim = qBound(-0.03, -phaseDeltaMs / (beatMs * 8.0), 0.03);
+                m_fadeSyncIncomingPlayer->setTempoRate(baseIncomingRate * (1.0 + phaseTrim));
+
+                if (qAbs(phaseDeltaMs) > beatMs * 0.35) {
                     m_fadeSyncIncomingPlayer->syncNowToReferenceBeat(
                         m_fadeSyncOutgoingBpm,
                         m_fadeSyncOutgoingPlayer->currentPosition(),
@@ -1556,7 +1562,7 @@ void Knowthelist::timerAutoFader_timerOut()
                         false,
                         m_fadeSyncOutgoingBeatPosition);
                     ++m_fadeSyncBeatWaitSteps;
-                } else {
+                } else if (qAbs(phaseDeltaMs) <= toleranceMs) {
                     m_fadeSyncBeatWaitSteps = 4;
                 }
             }
@@ -1679,29 +1685,32 @@ void Knowthelist::timerAutoFader_timerOut()
 void Knowthelist::timerRateRestore_timeOut()
 {
     qDebug() << Q_FUNC_INFO << "timerRateRestore_timeOut()";
-    if (!m_rateRestorePlayer) {
+    if (!m_rateRestorePlayer || !player1 || !player2) {
         m_rateRestoreTimer->stop();
         return;
     }
 
-    if (!m_rateRestorePlayer->isStarted()) {
-        m_rateRestorePlayer->setTempoRate(1.0);
-        m_rateRestoreTimer->stop();
-        m_rateRestorePlayer = nullptr;
-        return;
+    bool restoring = false;
+    for (PlayerWidget* deck : {player1, player2}) {
+        if (!deck->isStarted()) {
+            deck->resetSyncState();
+            continue;
+        }
+
+        const double current = deck->tempoRate();
+        const double delta = qAbs(current - 1.0);
+        const double step = qBound(0.0005, delta * 0.25, 0.0015);
+        if (delta <= step) {
+            deck->resetSyncState();
+        } else {
+            deck->setTempoRate(current + (current < 1.0 ? step : -step));
+            restoring = true;
+        }
     }
 
-    const double current = m_rateRestorePlayer->tempoRate();
-    const double delta = qAbs(current - 1.0);
-    const double step = qBound(0.0005, delta * 0.25, 0.0015);
-    if (delta <= step) {
-        m_rateRestorePlayer->setTempoRate(1.0);
+    if (!restoring) {
         m_rateRestoreTimer->stop();
-        // Reset the sync state after successful tempo restoration to properly turn off UI elements
-        m_rateRestorePlayer->resetSyncState();
         m_rateRestorePlayer = nullptr;
-    } else {
-        m_rateRestorePlayer->setTempoRate(current + (current < 1.0 ? step : -step));
     }
 }
 

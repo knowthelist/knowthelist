@@ -646,13 +646,6 @@ void PlayerWidget::updateResponsiveLayout()
 
 void PlayerWidget::syncDisplayHeightToControls()
 {
-    qDebug() << Q_FUNC_INFO << "begin"
-             << "widget=" << this
-             << "playerSize=" << size()
-             << "frame3Size=" << (ui && ui->frame_3 ? ui->frame_3->size() : QSize())
-             << "displaySize=" << (ui && ui->fraDisplay ? ui->fraDisplay->size() : QSize())
-             << "scrollbarSize=" << (ui && ui->sliPosition ? ui->sliPosition->size() : QSize());
-
     if (!ui || !ui->frame || !ui->frame_3 || !ui->fraDisplay || !ui->sliPosition) {
         qDebug() << Q_FUNC_INFO << "return: missing UI object";
         return;

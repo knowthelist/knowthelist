@@ -804,6 +804,7 @@ void TrackAnalyzer::open(QUrl url)
     p->currentUrl = url;
     p->finishQueued = false;
     p->bpmDetected = false;
+    m_envelope.clear();
     m_ExactBpm = 0.0;
     locker.unlock();
     QFuture<void> future = QtConcurrent::run(analyzerThreadPool(),
@@ -904,14 +905,15 @@ void TrackAnalyzer::asyncOpen(QUrl url)
                      << "barAnchor=" << m_barAnchorPosition
                      << "barConfidence=" << m_barPhaseConfidence;
 
-            // Load cached envelope if available
+            // A tempo cache hit is only complete when the envelope cache also
+            // matches the current envelope format. Otherwise continue into
+            // the full scan so the waveform cannot retain stale track data.
             AnalysisCacheManager::CachedEnvelope envCached = loadCachedEnvelope(url);
             if (envCached.valid && !envCached.samples.isEmpty()) {
                 m_envelope = envCached.samples;
+                need_finish();
+                return;
             }
-
-            need_finish();   // emits finishGain/Tempo/Envelope
-            return;
         }
     }
 

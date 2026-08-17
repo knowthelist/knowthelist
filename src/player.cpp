@@ -172,6 +172,19 @@ void Player::play()
         qDebug() << Q_FUNC_INFO << ":" << parentWidget()->objectName() << "isLoaded=" << p->isLoaded;
 
     if (p->isLoaded && audioBackend) {
+        // The transport can briefly retain an EOF cursor when a source is
+        // replaced while the audio callback is active. Preserve the position
+        // owned by Player rather than starting from that stale backend EOF.
+        const int lengthMs = p->length;
+        const int requestedMs = qBound(0, p->position, lengthMs > 0 ? lengthMs : p->position);
+        const int backendMs = QTime(0, 0).msecsTo(audioBackend->getPosition());
+        if (lengthMs > 0 && backendMs >= lengthMs - 1 && requestedMs < lengthMs - 1) {
+            qWarning() << Q_FUNC_INFO << "correcting stale EOF before playback:"
+                       << "backendMs=" << backendMs
+                       << "requestedMs=" << requestedMs
+                       << "lengthMs=" << lengthMs;
+            audioBackend->seek(QTime(0, 0).addMSecs(requestedMs));
+        }
         audioBackend->play();
         p->playBasePosition = p->position;
         p->playTimer.restart();
