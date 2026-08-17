@@ -37,6 +37,11 @@ TransitionPreferences TransitionPreferences::fromSettings(const QSettings& setti
     preferences.maximumTempoCorrectionPercent = qBound(
         0, settings.value("Transition/MaximumTempoCorrectionPercent", 12).toInt(), 50);
     preferences.style = settings.value("Transition/Style", "balanced").toString();
+    if (!preferences.beatBlendEnabled && !preferences.bassSwapEnabled
+        && !preferences.vocalHandoffEnabled && !preferences.equalPowerEnabled
+        && !preferences.hardCutEnabled) {
+        preferences.equalPowerEnabled = true;
+    }
     return preferences;
 }
 

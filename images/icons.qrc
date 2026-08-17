@@ -20,5 +20,10 @@
         <file>star-on.png</file>
         <file>star-off.png</file>
         <file>knowthelist.png</file>
+        <file>transition_equalpower.svg</file>
+        <file>transition_beatblend.svg</file>
+        <file>transition_bassswap.svg</file>
+        <file>transition_vocalhandoff.svg</file>
+        <file>transition_hardcut.svg</file>
     </qresource>
 </RCC>

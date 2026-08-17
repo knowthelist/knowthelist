@@ -239,7 +239,7 @@ void Knowthelist::createUI()
 
     m_toggleBeatVisualButton = new QPushButton(ui->frameMixer);
     m_toggleBeatVisualButton->setObjectName("toggleBeatVisual");
-    m_toggleBeatVisualButton->setGeometry(QRect(58, 340, 50, 18));
+    m_toggleBeatVisualButton->setGeometry(QRect(58, 384, 50, 18));
     m_toggleBeatVisualButton->setMinimumSize(QSize(16, 16));
     m_toggleBeatVisualButton->setPalette(ui->toggleAutoFade->palette());
     m_toggleBeatVisualButton->setFont(ui->toggleAutoFade->font());
@@ -257,7 +257,7 @@ void Knowthelist::createUI()
 
     m_toggleBpmVisualButton = new QPushButton(ui->frameMixer);
     m_toggleBpmVisualButton->setObjectName("toggleBpmVisual");
-    m_toggleBpmVisualButton->setGeometry(QRect(116, 340, 50, 18));
+    m_toggleBpmVisualButton->setGeometry(QRect(116, 384, 50, 18));
     m_toggleBpmVisualButton->setMinimumSize(QSize(16, 16));
     m_toggleBpmVisualButton->setPalette(ui->toggleAutoFade->palette());
     m_toggleBpmVisualButton->setFont(ui->toggleAutoFade->font());
@@ -283,19 +283,26 @@ void Knowthelist::createUI()
         led->off();
         return led;
     };
-    m_vuModeLed = createModeLed(QRect(74, 334, 18, 4), QStringLiteral("ledDisplayVu"));
-    m_bpmModeLed = createModeLed(QRect(132, 334, 18, 4), QStringLiteral("ledDisplayBpm"));
+    m_vuModeLed = createModeLed(QRect(74, 378, 18, 4), QStringLiteral("ledDisplayVu"));
+    m_bpmModeLed = createModeLed(QRect(132, 378, 18, 4), QStringLiteral("ledDisplayBpm"));
 
     ui->toggleAutoDJ->setGeometry(QRect(20, 314, 52, 18));
     ui->toggleAutoFade->setGeometry(QRect(76, 314, 70, 18));
     ui->toggleAutoFade->setText(tr("Auto Fader"));
     ui->toggleAutoFade->setToolTip(
-        tr("Enable automatic transitions for Auto DJ and the Fade Now command"));
+        tr("Enable automatic transitions when a track reaches its fade point"));
     ui->cmdOptions->setGeometry(QRect(150, 314, 28, 18));
     ui->cmdOptions->setFixedSize(28, 18);
     ui->cmdOptions->setText(QString());
     ui->cmdOptions->setIcon(QIcon(":settings.png"));
     ui->cmdOptions->setIconSize(QSize(14, 14));
+
+    m_transitionPlannerWidget = new TransitionPlannerWidget(ui->frameMixer);
+    m_transitionPlannerWidget->setGeometry(QRect(10, 338, 180, 42));
+    connect(m_transitionPlannerWidget, &TransitionPlannerWidget::modeOverrideRequested,
+            this, &Knowthelist::onTransitionOverride);
+    connect(m_transitionPlannerWidget, &TransitionPlannerWidget::enabledModesChanged,
+            this, &Knowthelist::onTransitionEnabledModesChanged);
 
     vuMeter2 = new VUMeter(ui->frameMixer);
     vuMeter2->setLinesPerSegment(2);
@@ -1075,6 +1082,16 @@ void Knowthelist::beginAutoFadeSync(PlayerWidget* outgoing, PlayerWidget* incomi
     m_fadeSyncBeatWaitSteps = 0;
     m_fadeSyncNeedsInitialRunningSync = false;
     m_fadeSyncRunningSyncWaitSteps = 0;
+    m_bassSwapPending = m_transitionPlan.mode == TransitionMode::BassSwap;
+    m_bassSwapApplied = false;
+    m_bassSwapStartPosition = QTime();
+
+    if (m_bassSwapPending) {
+        // Layer the incoming track without its low end until the first
+        // phrase boundary after the minimum eight-beat intro.
+        outgoing->setEqualizer(PlayerWidget::EQ_Low, 240);
+        incoming->setEqualizer(PlayerWidget::EQ_Low, 0);
+    }
 
     outgoing->setSyncAdopting(true);
     incoming->setSyncAdopting(false);
@@ -1182,6 +1199,9 @@ void Knowthelist::clearAutoFadeSyncState()
     m_fadeSyncNeedsInitialRunningSync = false;
     m_fadeSyncRunningSyncWaitSteps = 0;
     m_fadeSyncOutgoingBarAnchor = QTime();
+    m_bassSwapPending = false;
+    m_bassSwapApplied = false;
+    m_bassSwapStartPosition = QTime();
 }
 
 double Knowthelist::transitionProgress() const
@@ -1203,7 +1223,11 @@ void Knowthelist::applyTransitionAutomation()
     PlayerWidget* outgoing = m_xfadeDir < 0 ? player2 : player1;
     PlayerWidget* incoming = m_xfadeDir < 0 ? player1 : player2;
 
-    if (m_transitionPlan.mode == TransitionMode::BassSwap) {
+    if (m_transitionPlan.mode == TransitionMode::BassSwap
+        && m_fadeSyncPhase != FadeSyncIdle) {
+        outgoing->setEqualizer(PlayerWidget::EQ_Low, m_bassSwapApplied ? 0 : 240);
+        incoming->setEqualizer(PlayerWidget::EQ_Low, m_bassSwapApplied ? 240 : 0);
+    } else if (m_transitionPlan.mode == TransitionMode::BassSwap) {
         outgoing->setEqualizer(PlayerWidget::EQ_Low,
                                qRound(240.0 - 180.0 * progress));
         incoming->setEqualizer(PlayerWidget::EQ_Low,
@@ -1216,6 +1240,42 @@ void Knowthelist::applyTransitionAutomation()
         incoming->setEqualizer(PlayerWidget::EQ_Mid,
                                240);
     }
+}
+
+bool Knowthelist::tryBassSwapAtPhraseBoundary()
+{
+    if (!m_bassSwapPending || m_bassSwapApplied
+        || m_transitionPlan.mode != TransitionMode::BassSwap
+        || !m_fadeSyncOutgoingPlayer || !m_fadeSyncIncomingPlayer
+        || m_fadeSyncOutgoingBpm <= 0 || !m_bassSwapStartPosition.isValid()) {
+        return false;
+    }
+
+    const QTime position = m_fadeSyncOutgoingPlayer->currentPosition();
+    const double beatMs = 60000.0 / static_cast<double>(m_fadeSyncOutgoingBpm);
+    const int elapsedMs = m_bassSwapStartPosition.msecsTo(position);
+    const bool minimumIntroComplete = elapsedMs >= qRound(8.0 * beatMs);
+    const double toleranceMs = qMin(45.0, beatMs * 0.12);
+    const bool atPhraseBoundary = m_fadeSyncOutgoingBarAnchor.isValid()
+        ? nearBeatBoundary(position, m_fadeSyncOutgoingBarAnchor,
+                           m_fadeSyncOutgoingBpm, toleranceMs)
+        : nearBeatBoundary(position, m_fadeSyncOutgoingBeatPosition,
+                           m_fadeSyncOutgoingBpm, toleranceMs)
+            && qRound(elapsedMs / beatMs) % 4 == 0;
+
+    if (!minimumIntroComplete || !atPhraseBoundary)
+        return false;
+
+    // Exchange the low bands together on the phrase downbeat. The shared
+    // tempo/phase sync has already aligned both decks before this point.
+    m_fadeSyncOutgoingPlayer->setEqualizer(PlayerWidget::EQ_Low, 0);
+    m_fadeSyncIncomingPlayer->setEqualizer(PlayerWidget::EQ_Low, 240);
+    m_bassSwapApplied = true;
+    qDebug() << "BassSwap low-band exchange at phrase boundary:"
+             << "position=" << position
+             << "elapsedMs=" << elapsedMs
+             << "bpm=" << m_fadeSyncOutgoingBpm;
+    return true;
 }
 
 void Knowthelist::restoreTransitionEqualizers()
@@ -1352,6 +1412,8 @@ void Knowthelist::fadeNow()
         m_transitionPlan = TransitionPlanner::choose(
             outgoingTrack, incomingTrack, outgoingBpm, incomingBpm, mAutofadeLength,
             TransitionPreferences::fromSettings(QSettings()));
+        m_transitionPlannerWidget->setPlannedMode(m_transitionPlan.mode);
+        applyTransitionModeOverride();
         const CueMode transitionCueMode = cueModeForTransition(m_transitionPlan.cueMode);
         outgoing->setTransitionCueMode(transitionCueMode);
         incoming->setTransitionCueMode(transitionCueMode);
@@ -1368,8 +1430,8 @@ void Knowthelist::fadeNow()
                  << "confidence=" << m_transitionPlan.confidence
                  << m_transitionPlan.rationale;
 
-        const bool useAutoSync = m_transitionPlan.mode == TransitionMode::BeatBlend
-            && ui->toggleAutoFade->isChecked()
+        const bool useAutoSync = (m_transitionPlan.mode == TransitionMode::BeatBlend
+            || m_transitionPlan.mode == TransitionMode::BassSwap)
             && m_autoSyncEnabled
             && outgoing && incoming
             && outgoing->isStarted()
@@ -1483,6 +1545,8 @@ void Knowthelist::timerAutoFader_timerOut()
                     qDebug() << "Starting incoming deck for beat-blend fade:"
                              << m_fadeSyncIncomingPlayer->objectName();
                     m_fadeSyncIncomingPlayer->play();
+                    if (m_bassSwapPending)
+                        m_bassSwapStartPosition = m_fadeSyncOutgoingPlayer->currentPosition();
                     m_fadeSyncNeedsInitialRunningSync = true;
                     m_fadeSyncRunningSyncWaitSteps = 0;
                 } else {
@@ -1494,6 +1558,8 @@ void Knowthelist::timerAutoFader_timerOut()
                         false,
                         m_fadeSyncOutgoingBeatPosition);
                 }
+                if (m_bassSwapPending && !m_bassSwapStartPosition.isValid())
+                    m_bassSwapStartPosition = m_fadeSyncOutgoingPlayer->currentPosition();
                 m_fadeSyncPhase = FadeSyncCrossfade;
                 m_fadeSyncWaitingBeatStart = false;
                 m_fadeSyncBeatWaitSteps = 0;
@@ -1503,6 +1569,7 @@ void Knowthelist::timerAutoFader_timerOut()
     }
 
     if (m_fadeSyncPhase == FadeSyncCrossfade) {
+        tryBassSwapAtPhraseBoundary();
         {
             QSignalBlocker blocker(ui->sliFader);
             ui->sliFader->setValue(ui->sliFader->value() + m_xfadeDir);
@@ -2012,12 +2079,6 @@ void Knowthelist::on_toggleAutoFade_toggled(bool checked)
 {
     ui->ledFade->setState(checked ? QLed::On : QLed::Off);
     autoFadeOn = checked;
-    if (!checked) {
-        m_transitionActive = false;
-        restoreTransitionEqualizers();
-        clearAutoFadeSyncState();
-        resetWaitingDeckTempoPreviews();
-    }
     setFaderModeToPlayer();
 }
 
@@ -2072,13 +2133,46 @@ void Knowthelist::updatePlayerMonitorRouting()
 void Knowthelist::playlist1_currentTrackChanged(Track* track)
 {
     Q_UNUSED(track)
+    if (m_transitionPlannerWidget)
+        m_transitionPlannerWidget->clearOverride();
     resetWaitingDeckTempoPreviews();
 }
 
 void Knowthelist::playlist2_currentTrackChanged(Track* track)
 {
     Q_UNUSED(track)
+    if (m_transitionPlannerWidget)
+        m_transitionPlannerWidget->clearOverride();
     resetWaitingDeckTempoPreviews();
+}
+
+void Knowthelist::onTransitionOverride(TransitionMode mode)
+{
+    m_transitionPlan.mode = mode;
+    m_transitionPlan.cueMode = mode == TransitionMode::BeatBlend || mode == TransitionMode::BassSwap
+        ? TransitionCueMode::BeatStartSilentEnd
+        : mode == TransitionMode::HardCut ? TransitionCueMode::HardCut
+                                           : TransitionCueMode::SkipSilence;
+    if (!isFading) {
+        const CueMode cueMode = cueModeForTransition(m_transitionPlan.cueMode);
+        player1->setTransitionCueMode(cueMode);
+        player2->setTransitionCueMode(cueMode);
+    }
+}
+
+void Knowthelist::onTransitionEnabledModesChanged()
+{
+    refreshTransitionPlan();
+}
+
+void Knowthelist::applyTransitionModeOverride()
+{
+    if (!m_transitionPlannerWidget)
+        return;
+    const TransitionMode mode = m_transitionPlannerWidget->effectiveMode();
+    if (mode == m_transitionPlan.mode)
+        return;
+    onTransitionOverride(mode);
 }
 
 void Knowthelist::refreshTransitionPlan()
@@ -2113,6 +2207,8 @@ void Knowthelist::refreshTransitionPlan()
     m_transitionPlan = TransitionPlanner::choose(
         outgoingTrack, incomingTrack, outgoingBpm, incomingTrack->bpm(), mAutofadeLength,
         TransitionPreferences::fromSettings(QSettings()));
+    m_transitionPlannerWidget->setPlannedMode(m_transitionPlan.mode);
+    applyTransitionModeOverride();
     const CueMode transitionCueMode = cueModeForTransition(m_transitionPlan.cueMode);
     PlayerWidget* outgoingPlayer = outgoingPlaylist == playList1 ? player1 : player2;
     PlayerWidget* incomingPlayer = incomingPlaylist == playList1 ? player1 : player2;

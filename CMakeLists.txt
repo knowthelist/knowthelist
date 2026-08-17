@@ -206,6 +206,7 @@ set(SOURCES
     src/customdial.cpp
     src/analysiscachemanager.cpp
     src/transitionplanner.cpp
+    src/transitionplannerwidget.cpp
 )
 
 set(HEADERS
@@ -246,6 +247,7 @@ set(HEADERS
     src/customdial.h
     src/analysiscachemanager.h
     src/transitionplanner.h
+    src/transitionplannerwidget.h
 )
 
 set(FORMS

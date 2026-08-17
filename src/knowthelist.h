@@ -30,6 +30,7 @@
 #include "settingsdialog.h"
 #include "vumeter.h"
 #include "transitionplanner.h"
+#include "transitionplannerwidget.h"
 
 #include <QMainWindow>
 #include <QButtonGroup>
@@ -89,6 +90,8 @@ private Q_SLOTS:
     void playlist1_currentTrackChanged(Track* track);
     void playlist2_currentTrackChanged(Track* track);
     void refreshTransitionPlan();
+    void onTransitionOverride(TransitionMode mode);
+    void onTransitionEnabledModesChanged();
     void on_toggleBeatVisual_toggled(bool checked);
 
     void slider1_valueChanged(int);
@@ -150,6 +153,8 @@ private:
     void applyAutoSyncEnabled(bool enabled);
     void updatePlayerMonitorRouting();
     void applyTransitionAutomation();
+    bool tryBassSwapAtPhraseBoundary();
+    void applyTransitionModeOverride();
     void restoreTransitionEqualizers();
     double transitionProgress() const;
     double selectAutoFadeTargetTempo(double startTempoBpm, int outgoingBpm, int incomingBpm) const;
@@ -193,6 +198,7 @@ private:
 
     bool autoFadeOn;
     TransitionPlan m_transitionPlan;
+    TransitionPlannerWidget* m_transitionPlannerWidget{nullptr};
     bool m_transitionActive{false};
     int m_transitionStartFaderValue{100};
 
@@ -231,6 +237,9 @@ private:
     int m_fadeSyncBeatWaitSteps;
     bool m_fadeSyncNeedsInitialRunningSync;
     int m_fadeSyncRunningSyncWaitSteps;
+    bool m_bassSwapPending{false};
+    bool m_bassSwapApplied{false};
+    QTime m_bassSwapStartPosition;
 
 protected:
     virtual void closeEvent(QCloseEvent *event) override;
