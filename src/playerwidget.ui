@@ -2846,7 +2846,7 @@ QPushButton#butMon:pressed {
                  <property name="font">
                   <font>
                    <family>Monospace</family>
-                   <pointsize>10</pointsize>
+                   <pointsize>12</pointsize>
                   </font>
                  </property>
                  <property name="styleSheet">

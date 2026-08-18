@@ -282,11 +282,11 @@ PlayerWidget::PlayerWidget(QWidget* parent)
     // Force monospace family on all time labels to prevent digit width jitter.
 #if defined(Q_OS_DARWIN)
     int newSize = font.pointSize();
-    fonttime.setPointSize(std::max(14, fonttime.pointSize() - 2));
-    fonttime.setWeight(QFont::Light); // thinner
+    fonttime.setPointSize(std::max(14, fonttime.pointSize() + 4));
+    fonttime.setWeight(QFont::ExtraLight); // thinner
 #else
     int newSize = font.pointSize();
-    fonttime.setPointSize(std::max(14, fonttime.pointSize() - 2));
+    fonttime.setPointSize(std::max(14, fonttime.pointSize() + 2));
 #endif
     font.setPointSize(newSize);
     fonttime.setLetterSpacing(QFont::PercentageSpacing, 96);
@@ -303,7 +303,7 @@ PlayerWidget::PlayerWidget(QWidget* parent)
     // Keep these labels width-elastic so changing text never expands layouts.
     ui->lblTitle->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Preferred);
     ui->lblTitle->setMinimumWidth(0);
-    ui->lblTitle->setMinimumHeight(20);
+    ui->lblTitle->setMinimumHeight(10);
     ui->lblTitle->setWordWrap(false);
     // Let the playlist summary use the space left between the two time displays.
     ui->lblInfo->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Preferred);
@@ -547,7 +547,7 @@ void PlayerWidget::applyBeatVisualLayout(bool enabled)
 
     ui->fraDisplay->setMaximumWidth(QWIDGETSIZE_MAX);
     ui->fraVuMeter->setMaximumWidth(QWIDGETSIZE_MAX);
-    ui->fraVuMeter->setMinimumHeight(100);
+    ui->fraVuMeter->setMinimumHeight(110);
     ui->fraDigits->setMaximumWidth(QWIDGETSIZE_MAX);
     ui->vuMeter->setMaximumWidth(QWIDGETSIZE_MAX);
     if (enabled) {
@@ -590,7 +590,7 @@ void PlayerWidget::updateResponsiveLayout()
         controlsLayout->setSpacing(compact ? 2 : 4);
     }
 
-    ui->fraVuMeter->setMinimumHeight(100);
+    ui->fraVuMeter->setMinimumHeight(110);
     ui->fraDigits->setMinimumHeight(20);
     ui->fraDisplay->setMaximumHeight(QWIDGETSIZE_MAX);
     ui->fraDisplay->setMinimumHeight(0);
@@ -1691,21 +1691,12 @@ bool PlayerWidget::eventFilter(QObject* obj, QEvent* event)
 void PlayerWidget::drawTitle()
 {
     int width = ui->lblTitle->width() - 2;
-    if (m_beatVisualMode) {
-        if (width < 300)
-            ui->lblTitle->setStyleSheet("* { font-size: 13pt; }");
-        else if (width < 400)
-            ui->lblTitle->setStyleSheet("* { font-size: 14pt; }");
-        else
-            ui->lblTitle->setStyleSheet("* { font-size: 16pt; }");
-    } else {
-        if (width < 300)
-            ui->lblTitle->setStyleSheet("* { font-size: 16pt; }");
-        else if (width < 400)
-            ui->lblTitle->setStyleSheet("* { font-size: 17pt; }");
-        else
-            ui->lblTitle->setStyleSheet("* { font-size: 19pt; }");
-    }
+    if (width < 300)
+        ui->lblTitle->setStyleSheet("* { font-size: 13pt; }");
+    else if (width < 400)
+        ui->lblTitle->setStyleSheet("* { font-size: 14pt; }");
+    else
+        ui->lblTitle->setStyleSheet("* { font-size: 21pt; }");
 
     QFontMetrics metrix(ui->lblTitle->font());
 
