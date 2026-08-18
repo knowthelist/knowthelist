@@ -218,6 +218,9 @@ void Knowthelist::createUI()
     ui->slider2->setMinimum(0.0);
     ui->slider1->setMaximum(100.0);
     ui->slider2->setMaximum(100.0);
+    ui->slider1->move(ui->slider1->x(), ui->slider1->y() + 6);
+    ui->slider2->move(ui->slider2->x(), ui->slider2->y() + 6);
+    ui->sliFader->move(ui->sliFader->x(), ui->sliFader->y() + 6);
     connect(ui->slider1, SIGNAL(valueChanged(int)), this, SLOT(slider1_valueChanged(int)));
     connect(ui->slider2, SIGNAL(valueChanged(int)), this, SLOT(slider2_valueChanged(int)));
     connect(ui->sliFader, SIGNAL(valueChanged(int)), this, SLOT(sliFader_valueChanged(int)));
