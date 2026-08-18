@@ -477,7 +477,7 @@ background-color: #444444;
            <property name="geometry">
             <rect>
              <x>71</x>
-             <y>135</y>
+             <y>140</y>
              <width>21</width>
               <height>84</height>
             </rect>
@@ -493,7 +493,7 @@ background-color: #444444;
            <property name="geometry">
             <rect>
              <x>105</x>
-             <y>135</y>
+             <y>148</y>
              <width>21</width>
               <height>84</height>
             </rect>
@@ -509,7 +509,7 @@ background-color: #444444;
            <property name="geometry">
             <rect>
              <x>35</x>
-             <y>253</y>
+             <y>279</y>
              <width>6</width>
              <height>26</height>
             </rect>
@@ -535,7 +535,7 @@ background-color: #444444;
            <property name="geometry">
             <rect>
              <x>72</x>
-             <y>288</y>
+             <y>308</y>
              <width>51</width>
              <height>18</height>
             </rect>
@@ -1205,7 +1205,7 @@ background-color: #444444;
            <property name="geometry">
             <rect>
              <x>49</x>
-             <y>281</y>
+             <y>301</y>
              <width>12</width>
              <height>7</height>
             </rect>
@@ -1231,7 +1231,7 @@ background-color: #444444;
            <property name="geometry">
             <rect>
              <x>91</x>
-             <y>281</y>
+             <y>301</y>
              <width>12</width>
              <height>7</height>
             </rect>
@@ -1257,7 +1257,7 @@ background-color: #444444;
            <property name="geometry">
             <rect>
              <x>32</x>
-             <y>288</y>
+             <y>308</y>
              <width>40</width>
              <height>18</height>
             </rect>
@@ -1920,10 +1920,10 @@ background-color: #444444;
           <widget class="QLed" name="ledFadeRight" native="true">
            <property name="geometry">
             <rect>
-             <x>156</x>
-             <y>253</y>
+             <x>158</x>
+             <y>279</y>
              <width>6</width>
-             <height>26</height>
+             <height>24</height>
             </rect>
            </property>
            <property name="sizePolicy">
@@ -4297,7 +4297,7 @@ background-color: #444444;
            <property name="geometry">
             <rect>
              <x>40</x>
-             <y>253</y>
+             <y>279</y>
              <width>117</width>
              <height>26</height>
             </rect>

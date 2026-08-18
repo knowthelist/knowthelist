@@ -200,10 +200,12 @@ void VUMeter::setMargin(int i)
 
 void VUMeter::paintEvent(QPaintEvent*)
 {
-    QStyleOption opt;
-    opt.initFrom(this);
-    QPainter p(this);
-    style()->drawPrimitive(QStyle::PE_Widget, &opt, &p, this);
+    {
+        QStyleOption opt;
+        opt.initFrom(this);
+        QPainter p(this);
+        style()->drawPrimitive(QStyle::PE_Widget, &opt, &p, this);
+    }
     drawMeter();
 }
 
