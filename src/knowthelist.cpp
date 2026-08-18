@@ -1411,7 +1411,8 @@ void Knowthelist::fadeNow()
                 : nullptr;
         m_transitionPlan = TransitionPlanner::choose(
             outgoingTrack, incomingTrack, outgoingBpm, incomingBpm, mAutofadeLength,
-            TransitionPreferences::fromSettings(QSettings()));
+            TransitionPreferences::fromSettings(QSettings()),
+            outgoing->lowEndConfidence(), incoming->lowEndConfidence());
         m_transitionPlannerWidget->setPlannedMode(m_transitionPlan.mode);
         applyTransitionModeOverride();
         const CueMode transitionCueMode = cueModeForTransition(m_transitionPlan.cueMode);
@@ -2204,14 +2205,15 @@ void Knowthelist::refreshTransitionPlan()
     if (outgoingBpm <= 0)
         outgoingBpm = outgoingTrack->bpm();
 
+    PlayerWidget* outgoingPlayer = outgoingPlaylist == playList1 ? player1 : player2;
+    PlayerWidget* incomingPlayer = incomingPlaylist == playList1 ? player1 : player2;
     m_transitionPlan = TransitionPlanner::choose(
         outgoingTrack, incomingTrack, outgoingBpm, incomingTrack->bpm(), mAutofadeLength,
-        TransitionPreferences::fromSettings(QSettings()));
+        TransitionPreferences::fromSettings(QSettings()),
+        outgoingPlayer->lowEndConfidence(), incomingPlayer->lowEndConfidence());
     m_transitionPlannerWidget->setPlannedMode(m_transitionPlan.mode);
     applyTransitionModeOverride();
     const CueMode transitionCueMode = cueModeForTransition(m_transitionPlan.cueMode);
-    PlayerWidget* outgoingPlayer = outgoingPlaylist == playList1 ? player1 : player2;
-    PlayerWidget* incomingPlayer = incomingPlaylist == playList1 ? player1 : player2;
     outgoingPlayer->setTransitionCueMode(transitionCueMode);
     incomingPlayer->setTransitionCueMode(transitionCueMode);
 

@@ -49,6 +49,7 @@ public:
     double barPhaseConfidence();
     int bpm();
     double exactBpm();
+    double lowEndConfidence();
     QVector<float> amplitudeEnvelope() const;
     bool finished() { return m_finished; }
     void setPosition(QTime position);
@@ -80,6 +81,7 @@ private:
 
     double m_GainDB = GAIN_INVALID;
     double m_ExactBpm = 0.0;
+    double m_lowEndConfidence = 0.0;
     // track-level temporal boundaries (output state — one source of truth)
     QTime m_trackEffectiveStart = QTime(0, 0);      // first frame > silence threshold (excludes intro)
     QTime m_trackEffectiveEnd = QTime(0, 0);         // last frame before trailing silence (excludes fadeout tail)

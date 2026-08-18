@@ -1997,7 +1997,13 @@ double PlayerWidget::exactBpmForSync() const
         if (exact > 0.0)
             return exact;
     }
+
     return (m_bpm > 0) ? static_cast<double>(m_bpm) : 0.0;
+}
+
+double PlayerWidget::lowEndConfidence() const
+{
+    return trackanalyzer ? trackanalyzer->lowEndConfidence() : 0.0;
 }
 
 void PlayerWidget::alignCueToReferenceBeat(double referenceBpm, const QTime& referencePosition,

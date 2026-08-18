@@ -50,7 +50,9 @@ public:
     static TransitionPlan choose(Track* outgoing, Track* incoming,
                                  int outgoingBpm, int incomingBpm,
                                  int defaultDurationSeconds,
-                                 const TransitionPreferences& preferences);
+                                 const TransitionPreferences& preferences,
+                                 double outgoingLowEndConfidence = -1.0,
+                                 double incomingLowEndConfidence = -1.0);
 };
 
 #endif

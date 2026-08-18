@@ -48,7 +48,9 @@ TransitionPreferences TransitionPreferences::fromSettings(const QSettings& setti
 TransitionPlan TransitionPlanner::choose(Track* outgoing, Track* incoming,
                                           int outgoingBpm, int incomingBpm,
                                           int defaultDurationSeconds,
-                                          const TransitionPreferences& preferences)
+                                          const TransitionPreferences& preferences,
+                                          double outgoingLowEndConfidence,
+                                          double incomingLowEndConfidence)
 {
     TransitionPlan plan;
     plan.durationSeconds = qBound(preferences.minimumDurationSeconds,
@@ -101,6 +103,15 @@ TransitionPlan TransitionPlanner::choose(Track* outgoing, Track* incoming,
             return plan;
     }
 
+    const bool heavyLowEndPair = outgoingLowEndConfidence >= 0.62
+        && incomingLowEndConfidence >= 0.62;
+    if (heavyLowEndPair && tempoCorrectionPercent <= preferences.maximumTempoCorrectionPercent
+        && setMode(TransitionMode::BassSwap, qBound(8, defaultDurationSeconds, 20), 0.84,
+                   QStringLiteral("Both tracks have sustained heavy low-end; swap bass on a phrase downbeat."))) {
+        plan.matchTempo = true;
+        return plan;
+    }
+
     // A matching tempo is the strongest reliable signal that a phrase-aligned
     // blend will work, even when genre metadata is missing or inconsistent.
     if (bpmDistance <= 3
@@ -115,12 +126,6 @@ TransitionPlan TransitionPlanner::choose(Track* outgoing, Track* incoming,
         && setMode(TransitionMode::BeatBlend, qBound(8, defaultDurationSeconds, 24), 0.78,
                    QStringLiteral("Tempo-compatible dance profile; blend on beats and phrases."))) {
         plan.matchTempo = true;
-        return plan;
-    }
-
-    if (dancePair && setMode(TransitionMode::BassSwap, qBound(6, defaultDurationSeconds, 18), 0.68,
-                             QStringLiteral("Dance pair; hand off the low end during the blend."))) {
-        plan.matchTempo = tempoCorrectionPercent <= preferences.maximumTempoCorrectionPercent;
         return plan;
     }
 

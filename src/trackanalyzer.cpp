@@ -68,6 +68,7 @@ struct TrackAnalysisData {
     QTime endPosition = QTime(0, 0);
     QTime beatActivityEndPosition = QTime(0, 0);
     double gainDb = 0.0;
+    double lowEndConfidence = 0.0;
 };
 
 static QMutex g_scanCacheMutex;
@@ -362,11 +363,20 @@ static BarPhaseFit estimateFourFourBarPhase(const QVector<int>& onsets,
         ? qBound(0.0, (best.score - 0.65 * contrast) / 0.35, 1.0) : 0.0;
     best.confidence = qBound(0.0,
         0.45 * contrast + 0.30 * consistency + 0.15 * coverage + 0.10 * separation, 1.0);
+    // Sparse arrangements often do not produce a separate onset on every
+    // downbeat.  A clearly stronger and well-separated downbeat candidate is
+    // still useful for beat-one synchronization, even when the strict
+    // per-bar consistency test is inconclusive.
+    const bool strongSparseDownbeat = best.bars >= 8
+        && contrast >= 0.35
+        && separation >= 0.10;
     best.accepted = best.bars >= 8
         && contrast >= 0.16
-        && consistency >= 0.55
+        && (consistency >= 0.55 || strongSparseDownbeat)
         && separation >= 0.08
-        && best.confidence >= 0.58;
+        && (best.confidence >= 0.58 || strongSparseDownbeat);
+    if (strongSparseDownbeat)
+        best.confidence = qMax(best.confidence, 0.60);
     return best;
 }
 
@@ -470,6 +480,38 @@ static TrackAnalysisData scanAudioFile(const QUrl& url)
 
     data.peakRms = peakRms;
     data.averageRms = data.frameRms.isEmpty() ? 0.0 : sumRms / static_cast<double>(data.frameRms.size());
+
+    // Estimate low-end presence from the existing per-frame low-pass RMS.
+    // The confidence combines low-frequency energy share with persistence,
+    // avoiding a high score from an isolated kick or a quiet intro.
+    double lowRatioSum = 0.0;
+    int activeFrames = 0;
+    int lowActiveFrames = 0;
+    float lowPeakRms = 0.0f;
+    for (int i = 0; i < data.frameRms.size(); ++i) {
+        lowPeakRms = qMax(lowPeakRms, data.frameLowRms.at(i));
+        if (data.frameRms.at(i) < kSilenceRmsThreshold)
+            continue;
+        const double full = data.frameRms.at(i);
+        const double low = data.frameLowRms.at(i);
+        lowRatioSum += qBound(0.0, low / qMax(full, 1.0e-6), 1.0);
+        ++activeFrames;
+    }
+    if (activeFrames > 0) {
+        const double meanLowRatio = lowRatioSum / activeFrames;
+        const double lowActivityThreshold = qMax(0.02f, lowPeakRms * 0.12f);
+        for (int i = 0; i < data.frameLowRms.size(); ++i) {
+            if (data.frameRms.at(i) >= kSilenceRmsThreshold
+                && data.frameLowRms.at(i) >= lowActivityThreshold) {
+                ++lowActiveFrames;
+            }
+        }
+        const double persistence = static_cast<double>(lowActiveFrames) / activeFrames;
+        const double energyScore = qBound(0.0, (meanLowRatio - 0.18) / 0.32, 1.0);
+        const double persistenceScore = qBound(0.0, (persistence - 0.35) / 0.45, 1.0);
+        data.lowEndConfidence = qBound(0.0,
+            0.70 * energyScore + 0.30 * persistenceScore, 1.0);
+    }
 
     // Detect only sustained trailing silence. A short sliding RMS window avoids
     // treating individual quiet frames as the end, while the hold period keeps
@@ -806,6 +848,7 @@ void TrackAnalyzer::open(QUrl url)
     p->bpmDetected = false;
     m_envelope.clear();
     m_ExactBpm = 0.0;
+    m_lowEndConfidence = 0.0;
     locker.unlock();
     QFuture<void> future = QtConcurrent::run(analyzerThreadPool(),
                                              [this, url]() { asyncOpen(url); });
@@ -870,6 +913,7 @@ void TrackAnalyzer::asyncOpen(QUrl url)
                 cached.barAnchorPositionMs > 0 ? cached.barAnchorPositionMs
                                                : cached.beatStartPositionMs);
             m_barPhaseConfidence   = qBound(0.0, cached.barPhaseConfidence, 1.0);
+            m_lowEndConfidence     = qBound(0.0, cached.lowEndConfidence, 1.0);
             if (m_trackEffectiveStart.isValid() && m_trackEffectiveStart > QTime(0, 0)
                     && (!m_beatStartPosition.isValid() || m_beatStartPosition <= QTime(0, 0)
                         || m_beatStartPosition < m_trackEffectiveStart)) {
@@ -938,6 +982,7 @@ void TrackAnalyzer::asyncOpen(QUrl url)
         m_trackDuration         = duration;                 // full duration from audioBackend/analysis
 
         m_GainDB              = analysis.gainDb;
+        m_lowEndConfidence   = analysis.lowEndConfidence;
         m_envelope            = analysis.envelope;           // live array for amplitudeEnvelope() callers
 
         // ── Intermediate workspace → p- fields (detectTempo only) ──
@@ -954,6 +999,7 @@ void TrackAnalyzer::asyncOpen(QUrl url)
              << "effectiveEnd=" << m_trackEffectiveEnd
              << "beatStop=" << m_beatStopPosition
              << "trackDuration=" << duration << "gainDb=" << analysis.gainDb;
+    qDebug() << "TrackAnalyzer low-end confidence:" << m_lowEndConfidence;
 
     // Keep autocorrelation and cache preparation off the GUI thread. The
     // queued finalizeAnalysis() call below is the only GUI-thread handoff.
@@ -979,6 +1025,12 @@ double TrackAnalyzer::gainFactor()
     if (gainDb == GAIN_INVALID)
         return 1.0;
     return std::pow(10.0, gainDb / 20.0);
+}
+
+double TrackAnalyzer::lowEndConfidence()
+{
+    QMutexLocker locker(&p->mutex);
+    return m_lowEndConfidence;
 }
 
 QTime TrackAnalyzer::startPosition()
@@ -1101,8 +1153,6 @@ void TrackAnalyzer::detectTempo()
     QList<float> spectralFlux;
     QList<float> spectralFluxLow;
     QList<qint64> spectralFluxTimes;
-    QList<float> frameRms;
-    double averageRms = 0.0;
     QUrl currentUrl;
     int preferredBpm = 0;
     {
@@ -1113,8 +1163,6 @@ void TrackAnalyzer::detectTempo()
         spectralFlux = p->spectralFlux;
         spectralFluxLow = p->spectralFluxLow;
         spectralFluxTimes = p->spectralFluxTimes;
-        frameRms = p->frameRms;
-        averageRms = p->averageRms;
         currentUrl = p->currentUrl;
         preferredBpm = p->preferredBpm;
     }
@@ -1632,40 +1680,99 @@ void TrackAnalyzer::detectTempo()
 
     m_BeatPosition = QTime(0, 0).addMSecs(qMax(0, phaseMs));
 
-    // Compute first significant energy position, snapped to the beat grid.
-    // Find the first frame where RMS crosses a significant threshold, then snap
-    // to the nearest beat using the detected BPM and phase.
+    // A beat cue must begin in a sustained rhythmic section.  The first loud
+    // frame is not sufficient: intros commonly contain isolated notes or
+    // percussion before the kick pattern starts.  Measure support on the
+    // detected beat grid and require most beats in a short rolling window.
     {
-        const double significantThreshold = qMax(averageRms * 0.5, kSilenceRmsThreshold * 3);
-        const double frameMs = m_trackDuration.msecsSinceStartOfDay() > 0
-            ? static_cast<double>(m_trackDuration.msecsSinceStartOfDay())
-                / static_cast<double>(frameRms.size())
-            : 1000.0 / static_cast<double>(kAnalysisFrameRate);
-        int firstSignificantFrame = -1;
+        const int firstEnergyMs = m_trackEffectiveStart.msecsSinceStartOfDay();
+        const int lastEnergyMs = m_trackEffectiveEnd.msecsSinceStartOfDay();
 
-        for (int i = 0; i < frameRms.size(); ++i) {
-            if (frameRms.at(i) >= significantThreshold) {
-                firstSignificantFrame = i;
-                break;
-            }
-        }
-
-        if (firstSignificantFrame >= 0 && p->bpm > 0 && m_ExactBpm > 0.0) {
+        if (p->bpm > 0 && m_ExactBpm > 0.0 && !phaseOnsets.isEmpty()) {
             const double beatMs = 60000.0 / m_ExactBpm;
-            const int energyMs = qRound(firstSignificantFrame * frameMs);
-            // Snap to nearest beat: round((energyMs - phaseMs) / beatMs) * beatMs + phaseMs
-            const double beatIndex = std::round((static_cast<double>(energyMs) - static_cast<double>(phaseMs)) / beatMs);
-            const int snappedMs = static_cast<int>(qRound(beatIndex * beatMs + phaseMs));
-            m_beatStartPosition = QTime(0, 0).addMSecs(qMax(0, snappedMs));
-            qDebug() << Q_FUNC_INFO << "[m_beatStartPosition]:" << m_beatStartPosition << "Snapped to nearest beat from first significant energy position";
-        } else if (firstSignificantFrame >= 0) {
-            // No BPM detected - use the raw position
-            m_beatStartPosition = QTime(0, 0).addMSecs(firstSignificantFrame * frameMs);
-            qDebug() << Q_FUNC_INFO << "[m_beatStartPosition]:" << m_beatStartPosition << "No BPM detected, using first significant energy position";
+            const float onsetPeak = anchorEnv.isEmpty()
+                ? 0.0f
+                : *std::max_element(anchorEnv.constBegin(), anchorEnv.constEnd());
+            const double supportThreshold = qMax(0.02, static_cast<double>(onsetPeak) * 0.08);
+            const double toleranceMs = qMin(70.0, beatMs * 0.16);
+            const int windowBeats = 8;
+
+            auto gridSupport = [&](int beatIndex) {
+                const double targetMs = static_cast<double>(phaseMs) + beatIndex * beatMs;
+                double strongest = 0.0;
+                for (const int onset : phaseOnsets) {
+                    if (onset < 0 || onset >= spectralFluxTimes.size()
+                        || onset >= anchorEnv.size())
+                        continue;
+                    const double onsetMs = refinedOnsetTimeMs(onset, anchorEnv, spectralFluxTimes);
+                    if (qAbs(onsetMs - targetMs) <= toleranceMs)
+                        strongest = qMax(strongest, static_cast<double>(anchorEnv.at(onset)));
+                }
+                return strongest;
+            };
+
+            const int firstGridIndex = qCeil(
+                (static_cast<double>(firstEnergyMs) - phaseMs) / beatMs);
+            const int lastGridIndex = qFloor(
+                (static_cast<double>(lastEnergyMs) - phaseMs) / beatMs);
+            int sustainedStartIndex = -1;
+            for (int beatIndex = firstGridIndex; beatIndex <= lastGridIndex - windowBeats + 1; ++beatIndex) {
+                int supported = 0;
+                for (int offset = 0; offset < windowBeats; ++offset) {
+                    if (gridSupport(beatIndex + offset) >= supportThreshold)
+                        ++supported;
+                }
+                if (supported >= 6) {
+                    // The long window validates that a section is rhythmic,
+                    // but its first beat may still be an isolated pickup.
+                    // Start at the first locally supported 4-beat run inside
+                    // that window so the cue lands on an audible beat.
+                    for (int localIndex = beatIndex; localIndex <= beatIndex + 4; ++localIndex) {
+                        int localSupported = 0;
+                        for (int offset = 0; offset < 4; ++offset) {
+                            if (gridSupport(localIndex + offset) >= supportThreshold)
+                                ++localSupported;
+                        }
+                        if (localSupported >= 3) {
+                            sustainedStartIndex = localIndex;
+                            break;
+                        }
+                    }
+                    if (sustainedStartIndex < 0)
+                        sustainedStartIndex = beatIndex;
+                    break;
+                }
+            }
+
+            if (sustainedStartIndex >= 0) {
+                m_beatStartPosition = QTime(0, 0).addMSecs(qMax(
+                    0, qRound(phaseMs + sustainedStartIndex * beatMs)));
+            } else {
+                m_beatStartPosition = m_trackEffectiveStart;
+            }
+
+            int lastSupportedIndex = -1;
+            for (int beatIndex = firstGridIndex; beatIndex <= lastGridIndex; ++beatIndex) {
+                if (gridSupport(beatIndex) >= supportThreshold)
+                    lastSupportedIndex = beatIndex;
+            }
+            if (lastSupportedIndex >= 0) {
+                const int detectedBeatEnd = qRound(phaseMs + lastSupportedIndex * beatMs);
+                const int existingBeatEnd = m_beatStopPosition.msecsSinceStartOfDay();
+                if (existingBeatEnd <= 0 || detectedBeatEnd < existingBeatEnd)
+                    m_beatStopPosition = QTime(0, 0).addMSecs(qMax(0, detectedBeatEnd));
+            }
+
+            qDebug() << Q_FUNC_INFO << "Rhythmic cue boundaries:"
+                     << "beatStart=" << m_beatStartPosition
+                     << "beatStop=" << m_beatStopPosition
+                     << "supportThreshold=" << supportThreshold
+                     << "sustainedStartIndex=" << sustainedStartIndex
+                     << "lastSupportedIndex=" << lastSupportedIndex;
         } else {
-            // No significant energy found - fallback to beat position
-            m_beatStartPosition = m_BeatPosition;
-            qDebug() << Q_FUNC_INFO << "[m_beatStartPosition]:" << m_beatStartPosition << "No significant energy found, falling back to beat position";
+            m_beatStartPosition = m_trackEffectiveStart;
+            qDebug() << Q_FUNC_INFO << "[m_beatStartPosition]:"
+                     << m_beatStartPosition << "No usable beat grid";
         }
     }
 
@@ -1777,7 +1884,8 @@ void TrackAnalyzer::storeCachedTempo()
         beatPhaseMs,
         beatEndMs,
         barAnchorMs,
-        m_barPhaseConfidence
+        m_barPhaseConfidence,
+        m_lowEndConfidence
     );
 
     if (!m_lastCacheKey.isEmpty())

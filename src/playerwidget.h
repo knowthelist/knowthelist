@@ -93,6 +93,7 @@ public:
     void setGain(double gain);
     int currentBpm() const { return m_bpm; }
     double exactBpmForSync() const;
+    double lowEndConfidence() const;
     QTime currentPosition() const;
     QTime beatPosition() const { return m_beatPosition; }
     QTime barAnchorPosition() const { return m_barAnchorPosition; }
