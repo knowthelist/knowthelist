@@ -694,10 +694,9 @@ void Knowthelist::loadCurrentSettings()
     applyAutoSyncEnabled(m_autoSyncEnabled);
     if (m_toggleBpmVisualButton)
         m_toggleBpmVisualButton->setChecked(beatVisualMode);
-    else if (m_toggleBeatVisualButton)
+    if (m_toggleBeatVisualButton)
         m_toggleBeatVisualButton->setChecked(!beatVisualMode);
-    else
-        applyBeatVisualMode(beatVisualMode);
+    applyBeatVisualMode(beatVisualMode);
 
     // Beat visual mode affects deck widgets only.
     vuMeter1->show();
@@ -1101,6 +1100,7 @@ void Knowthelist::beginAutoFadeSync(PlayerWidget* outgoing, PlayerWidget* incomi
     m_fadeSyncRunningSyncWaitSteps = 0;
     m_bassSwapPending = m_transitionPlan.mode == TransitionMode::BassSwap;
     m_bassSwapApplied = false;
+    m_bassSwapRampStep = 0;
     m_bassSwapStartPosition = QTime();
 
     if (m_bassSwapPending) {
@@ -1218,6 +1218,7 @@ void Knowthelist::clearAutoFadeSyncState()
     m_fadeSyncOutgoingBarAnchor = QTime();
     m_bassSwapPending = false;
     m_bassSwapApplied = false;
+    m_bassSwapRampStep = 0;
     m_bassSwapStartPosition = QTime();
 }
 
@@ -1242,8 +1243,14 @@ void Knowthelist::applyTransitionAutomation()
 
     if (m_transitionPlan.mode == TransitionMode::BassSwap
         && m_fadeSyncPhase != FadeSyncIdle) {
-        outgoing->setEqualizer(PlayerWidget::EQ_Low, m_bassSwapApplied ? 0 : 240);
-        incoming->setEqualizer(PlayerWidget::EQ_Low, m_bassSwapApplied ? 240 : 0);
+        constexpr int kBassSwapRampSteps = 8;
+        const double ramp = m_bassSwapApplied
+            ? qMin(1.0, m_bassSwapRampStep / static_cast<double>(kBassSwapRampSteps))
+            : 0.0;
+        outgoing->setEqualizer(PlayerWidget::EQ_Low, qRound(240.0 * (1.0 - ramp)));
+        incoming->setEqualizer(PlayerWidget::EQ_Low, qRound(240.0 * ramp));
+        if (m_bassSwapApplied)
+            m_bassSwapRampStep = qMin(kBassSwapRampSteps, m_bassSwapRampStep + 1);
     } else if (m_transitionPlan.mode == TransitionMode::BassSwap) {
         outgoing->setEqualizer(PlayerWidget::EQ_Low,
                                qRound(240.0 - 180.0 * progress));
@@ -1252,10 +1259,12 @@ void Knowthelist::applyTransitionAutomation()
     } else if (m_transitionPlan.mode == TransitionMode::VocalHandoff) {
         // Keep the incoming vocal path neutral and move the mid-band reduction
         // onto the outgoing deck so both voices do not occupy the same space.
+        const int outgoingStart = m_xfadeDir < 0 ? ui->potMid_2->value() : ui->potMid_1->value();
+        const int incomingStart = m_xfadeDir < 0 ? ui->potMid_1->value() : ui->potMid_2->value();
         outgoing->setEqualizer(PlayerWidget::EQ_Mid,
-                               qRound(120.0 - 60.0 * progress));
+                               qRound(outgoingStart + (120.0 - outgoingStart) * progress));
         incoming->setEqualizer(PlayerWidget::EQ_Mid,
-                               240);
+                               qRound(incomingStart + (240.0 - incomingStart) * progress));
     }
 }
 
@@ -1284,10 +1293,10 @@ bool Knowthelist::tryBassSwapAtPhraseBoundary()
         return false;
 
     // Exchange the low bands together on the phrase downbeat. The shared
-    // tempo/phase sync has already aligned both decks before this point.
-    m_fadeSyncOutgoingPlayer->setEqualizer(PlayerWidget::EQ_Low, 0);
-    m_fadeSyncIncomingPlayer->setEqualizer(PlayerWidget::EQ_Low, 240);
+    // tempo/phase sync has already aligned both decks before this point. The
+    // actual exchange is ramped by applyTransitionAutomation().
     m_bassSwapApplied = true;
+    m_bassSwapRampStep = 0;
     qDebug() << "BassSwap low-band exchange at phrase boundary:"
              << "position=" << position
              << "elapsedMs=" << elapsedMs

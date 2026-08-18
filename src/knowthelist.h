@@ -239,6 +239,7 @@ private:
     int m_fadeSyncRunningSyncWaitSteps;
     bool m_bassSwapPending{false};
     bool m_bassSwapApplied{false};
+    int m_bassSwapRampStep{0};
     QTime m_bassSwapStartPosition;
 
 protected:

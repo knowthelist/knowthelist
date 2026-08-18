@@ -264,7 +264,7 @@ PlayerWidget::PlayerWidget(QWidget* parent)
     ui->lblInfo->setText("");
 
     QFont font = ui->lblInfo->font();
-    font.setPointSize(std::max(8, font.pointSize() - 2));
+    font.setPointSize(std::max(8, font.pointSize()));
     font.setLetterSpacing(QFont::PercentageSpacing, 95);
 
     // Force concrete monospace fonts to prevent digit width jitter on time labels.
@@ -296,7 +296,7 @@ PlayerWidget::PlayerWidget(QWidget* parent)
 
     //.ms labels use a smaller font, aligned bottom with time labels
     QFont fonttimems = fonttime;
-    fonttimems.setPointSize(std::max(10, fonttimems.pointSize() - 3));
+    fonttimems.setPointSize(std::max(10, fonttimems.pointSize() - 4));
     ui->lblTimeMs->setFont(fonttimems);
     ui->lblTimeRemainMs->setFont(fonttimems);
 
@@ -346,8 +346,11 @@ PlayerWidget::PlayerWidget(QWidget* parent)
             return;
         label->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Preferred);
         const QFontMetrics metrics(label->font());
-        label->setFixedWidth(metrics.horizontalAdvance(sampleText) + 4);
+        label->setFixedWidth(metrics.horizontalAdvance(sampleText) + 2.5 );
         label->setMinimumHeight(metrics.height() + 2);
+        QFont f = label->font();
+        f.setLetterSpacing(QFont::PercentageSpacing, 85);
+        label->setFont(f);
     };
 
     fixTimeLabelGeometry(ui->lblTime, "00:00");
@@ -1146,10 +1149,20 @@ void PlayerWidget::armImmediateAboutFinish()
 void PlayerWidget::setInfo(QPair<int, int> info)
 {
     QString strTrack = (info.first > 1) ? tr("Tracks") : tr("Track");
-    m_infoBaseText = QString("%1 %2 | %3h")
+    const int totalSeconds = qMax(0, info.second);
+    QString duration;
+    if (totalSeconds < 60 * 60) {
+        duration = QStringLiteral("%1m").arg(Track::prettyTime(totalSeconds, false));
+    } else if (totalSeconds < 24 * 60 * 60) {
+        duration = QStringLiteral("%1h").arg(Track::prettyTime(totalSeconds, true));
+    } else {
+        duration = QStringLiteral("%1d").arg(totalSeconds / (24.0 * 60.0 * 60.0), 0, 'f', 1);
+    }
+
+    m_infoBaseText = QString("%1 %2 | %3")
                          .arg(info.first)
                          .arg(strTrack)
-                         .arg(Track::prettyTime(info.second, false));
+                         .arg(duration);
     setElidedLabelText(ui->lblInfo, m_infoBaseText);
 }
 
