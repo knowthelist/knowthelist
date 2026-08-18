@@ -239,7 +239,7 @@ void Knowthelist::createUI()
 
     m_toggleBeatVisualButton = new QPushButton(ui->frameMixer);
     m_toggleBeatVisualButton->setObjectName("toggleBeatVisual");
-    m_toggleBeatVisualButton->setGeometry(QRect(58, 384, 50, 18));
+    m_toggleBeatVisualButton->setGeometry(QRect(58, 358, 50, 18));
     m_toggleBeatVisualButton->setMinimumSize(QSize(16, 16));
     m_toggleBeatVisualButton->setPalette(ui->toggleAutoFade->palette());
     m_toggleBeatVisualButton->setFont(ui->toggleAutoFade->font());
@@ -257,7 +257,7 @@ void Knowthelist::createUI()
 
     m_toggleBpmVisualButton = new QPushButton(ui->frameMixer);
     m_toggleBpmVisualButton->setObjectName("toggleBpmVisual");
-    m_toggleBpmVisualButton->setGeometry(QRect(116, 384, 50, 18));
+    m_toggleBpmVisualButton->setGeometry(QRect(116, 358, 50, 18));
     m_toggleBpmVisualButton->setMinimumSize(QSize(16, 16));
     m_toggleBpmVisualButton->setPalette(ui->toggleAutoFade->palette());
     m_toggleBpmVisualButton->setFont(ui->toggleAutoFade->font());
@@ -283,22 +283,22 @@ void Knowthelist::createUI()
         led->off();
         return led;
     };
-    m_vuModeLed = createModeLed(QRect(74, 378, 18, 4), QStringLiteral("ledDisplayVu"));
-    m_bpmModeLed = createModeLed(QRect(132, 378, 18, 4), QStringLiteral("ledDisplayBpm"));
+    m_vuModeLed = createModeLed(QRect(74, 352, 18, 4), QStringLiteral("ledDisplayVu"));
+    m_bpmModeLed = createModeLed(QRect(132, 352, 18, 4), QStringLiteral("ledDisplayBpm"));
 
-    ui->toggleAutoDJ->setGeometry(QRect(20, 314, 52, 18));
-    ui->toggleAutoFade->setGeometry(QRect(76, 314, 70, 18));
+    ui->toggleAutoDJ->setGeometry(QRect(20, 288, 52, 18));
+    ui->toggleAutoFade->setGeometry(QRect(76, 288, 70, 18));
     ui->toggleAutoFade->setText(tr("Auto Fader"));
     ui->toggleAutoFade->setToolTip(
         tr("Enable automatic transitions when a track reaches its fade point"));
-    ui->cmdOptions->setGeometry(QRect(150, 314, 28, 18));
+    ui->cmdOptions->setGeometry(QRect(150, 288, 28, 18));
     ui->cmdOptions->setFixedSize(28, 18);
     ui->cmdOptions->setText(QString());
     ui->cmdOptions->setIcon(QIcon(":settings.png"));
     ui->cmdOptions->setIconSize(QSize(14, 14));
 
     m_transitionPlannerWidget = new TransitionPlannerWidget(ui->frameMixer);
-    m_transitionPlannerWidget->setGeometry(QRect(10, 338, 180, 42));
+    m_transitionPlannerWidget->setGeometry(QRect(10, 312, 180, 42));
     connect(m_transitionPlannerWidget, &TransitionPlannerWidget::modeOverrideRequested,
             this, &Knowthelist::onTransitionOverride);
     connect(m_transitionPlannerWidget, &TransitionPlannerWidget::enabledModesChanged,
@@ -328,6 +328,15 @@ void Knowthelist::createUI()
     vuMeter1->setGeometry(ui->phVU1->geometry());
     vuMeter2->setGeometry(ui->phVU2->geometry());
     monitorMeter->setGeometry(ui->phVUMeter->geometry());
+
+    ui->lblDjName->setAttribute(Qt::WA_TransparentForMouseEvents);
+    ui->toggleAutoDJ->raise();
+    ui->toggleAutoFade->raise();
+    ui->cmdOptions->raise();
+    ui->cmdFade->raise();
+    m_transitionPlannerWidget->raise();
+    m_toggleBeatVisualButton->raise();
+    m_toggleBpmVisualButton->raise();
 
     m_monitorSettingsButton = new QToolButton(ui->fraMonitorTop);
     m_monitorSettingsButton->setObjectName("cmdMonitorSettings");

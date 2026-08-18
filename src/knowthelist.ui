@@ -479,7 +479,7 @@ background-color: #444444;
              <x>71</x>
              <y>135</y>
              <width>21</width>
-             <height>108</height>
+              <height>84</height>
             </rect>
            </property>
            <property name="frameShape">
@@ -495,7 +495,7 @@ background-color: #444444;
              <x>105</x>
              <y>135</y>
              <width>21</width>
-             <height>108</height>
+              <height>84</height>
             </rect>
            </property>
            <property name="frameShape">
@@ -509,7 +509,7 @@ background-color: #444444;
            <property name="geometry">
             <rect>
              <x>35</x>
-             <y>279</y>
+             <y>253</y>
              <width>6</width>
              <height>26</height>
             </rect>
@@ -535,7 +535,7 @@ background-color: #444444;
            <property name="geometry">
             <rect>
              <x>72</x>
-             <y>314</y>
+             <y>288</y>
              <width>51</width>
              <height>18</height>
             </rect>
@@ -1205,7 +1205,7 @@ background-color: #444444;
            <property name="geometry">
             <rect>
              <x>49</x>
-             <y>307</y>
+             <y>281</y>
              <width>12</width>
              <height>7</height>
             </rect>
@@ -1231,7 +1231,7 @@ background-color: #444444;
            <property name="geometry">
             <rect>
              <x>91</x>
-             <y>307</y>
+             <y>281</y>
              <width>12</width>
              <height>7</height>
             </rect>
@@ -1257,7 +1257,7 @@ background-color: #444444;
            <property name="geometry">
             <rect>
              <x>32</x>
-             <y>314</y>
+             <y>288</y>
              <width>40</width>
              <height>18</height>
             </rect>
@@ -1921,7 +1921,7 @@ background-color: #444444;
            <property name="geometry">
             <rect>
              <x>156</x>
-             <y>279</y>
+             <y>253</y>
              <width>6</width>
              <height>26</height>
             </rect>
@@ -1947,7 +1947,7 @@ background-color: #444444;
            <property name="geometry">
             <rect>
              <x>25</x>
-             <y>336</y>
+             <y>310</y>
              <width>184</width>
              <height>18</height>
             </rect>
@@ -2607,7 +2607,7 @@ background-color: #444444;
              <x>29</x>
              <y>132</y>
              <width>31</width>
-             <height>110</height>
+              <height>84</height>
             </rect>
            </property>
            <property name="palette">
@@ -3171,7 +3171,7 @@ background-color: #444444;
            <property name="geometry">
             <rect>
              <x>34</x>
-             <y>247</y>
+             <y>221</y>
              <width>125</width>
              <height>30</height>
             </rect>
@@ -3736,7 +3736,7 @@ background-color: #444444;
              <x>136</x>
              <y>132</y>
              <width>31</width>
-             <height>110</height>
+              <height>84</height>
             </rect>
            </property>
            <property name="palette">
@@ -4297,7 +4297,7 @@ background-color: #444444;
            <property name="geometry">
             <rect>
              <x>40</x>
-             <y>279</y>
+             <y>253</y>
              <width>117</width>
              <height>26</height>
             </rect>

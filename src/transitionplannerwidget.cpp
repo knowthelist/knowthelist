@@ -41,13 +41,12 @@ TransitionPlannerWidget::TransitionPlannerWidget(QWidget* parent)
         m_enabledLeds[i]->setColor(kWaveformBlue);
         m_enabledLeds[i]->installEventFilter(this);
         tileLayout->addWidget(m_enabledLeds[i], 0, Qt::AlignHCenter);
-        m_buttons[i] = new QToolButton(this);
+        m_buttons[i] = new QToolButton(tile);
         m_buttons[i]->setObjectName(QStringLiteral("transition_%1").arg(labelForMode(mode)));
         m_buttons[i]->setCheckable(false);
         m_buttons[i]->setIcon(iconForMode(mode));
         m_buttons[i]->setIconSize(QSize(24, 24));
         m_buttons[i]->setFixedSize(30, 30);
-        m_buttons[i]->installEventFilter(this);
         tileLayout->addWidget(m_buttons[i]);
         layout->addWidget(tile);
         connect(m_buttons[i], &QToolButton::clicked, this, [this, mode]() {
@@ -193,6 +192,6 @@ void TransitionPlannerWidget::updateButtonStyles()
         m_buttons[i]->setIcon(iconForMode(mode));
         m_enabledLeds[i]->setState(enabled ? QLed::On : QLed::Off);
         m_enabledLeds[i]->setColor(kWaveformBlue);
-        m_buttons[i]->setEnabled(enabled);
+        m_buttons[i]->setEnabled(true);
     }
 }

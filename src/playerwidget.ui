@@ -85,60 +85,32 @@ QPushButton#butCue:checked {
  );
  color: black;
 }
-QScrollBar:horizontal {
-         border: 2px solid grey;
-          background: qlineargradient(
-   x1:0, y1:0, x2:0, y2:1,
-   stop:0.1 #505050,
-   stop:1 gray
- );
-         height: 15px;
-         margin: 0px 20px 0 20px;
+QSlider#sliPosition:horizontal {
+         background: transparent;
+         min-height: 14px;
      }
-     QScrollBar::handle:horizontal {
-                   background: qlineargradient(
-   x1:0, y1:0, x2:0, y2:1,
-   stop:0.1 white,
-   stop:1 gray
- );
-         min-width: 20px;
+QSlider#sliPosition::groove:horizontal {
+         height: 6px;
+         background: #1b1f27;
+         border: 1px solid #59636e;
+         border-radius: 2px;
      }
-     QScrollBar::add-line:horizontal {
-         border: 2px solid grey;
-                   background: qlineargradient(
-   x1:0, y1:0, x2:0, y2:1,
-   stop:0.1 #505050,
-   stop:1 black
- );
-         width: 20px;
-         subcontrol-position: right;
-         subcontrol-origin: margin;
+QSlider#sliPosition::sub-page:horizontal {
+         background: #7189a7;
+         border: 1px solid #4d6075;
+         border-radius: 2px;
      }
-
-     QScrollBar::sub-line:horizontal {
-         border: 2px solid grey;
-                   background: qlineargradient(
-   x1:0, y1:0, x2:0, y2:1,
-   stop:0.1 #505050,
-   stop:1 black
- );
-         width: 20px;
-         subcontrol-position: left;
-         subcontrol-origin: margin;
+QSlider#sliPosition::add-page:horizontal {
+         background: #2d333b;
+         border: 1px solid #3d444d;
+         border-radius: 2px;
      }
-QScrollBar:left-arrow:horizontal, QScrollBar::right-arrow:horizontal {
-         border: 2px solid grey;
-         width: 3px;
-         height: 3px;
-         background: white;
-     }
-
-     QScrollBar::add-page:horizontal, QScrollBar::sub-page:horizontal {
-       background: qlineargradient(
-     x1:0, y1:0, x2:0, y2:1,
-     stop:0.1 #303030,
-     stop:1 #141414
-   );
+QSlider#sliPosition::handle:horizontal {
+         width: 12px;
+         margin: -5px 0;
+         background: #d3d8de;
+         border: 1px solid #4d5966;
+         border-radius: 2px;
      }
 QFrame#fraDisplay{
  border: 1px solid #a2a2a2;
@@ -270,7 +242,7 @@ QPushButton#butMon:pressed {
           <number>4</number>
          </property>
          <item row="1" column="0">
-          <widget class="QScrollBar" name="sliPosition">
+          <widget class="QSlider" name="sliPosition">
            <property name="sizePolicy">
             <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
              <horstretch>0</horstretch>
@@ -282,9 +254,6 @@ QPushButton#butMon:pressed {
              <pointsize>18</pointsize>
             </font>
            </property>
-           <property name="styleSheet">
-            <string notr="true"/>
-           </property>
            <property name="maximum">
             <number>1000</number>
            </property>
@@ -293,6 +262,9 @@ QPushButton#butMon:pressed {
            </property>
            <property name="invertedControls">
             <bool>false</bool>
+           </property>
+           <property name="orientation">
+            <enum>Qt::Horizontal</enum>
            </property>
           </widget>
          </item>
@@ -2983,7 +2955,7 @@ QPushButton#butMon:pressed {
          <item>
           <widget class="QFrame" name="frame_6">
            <property name="sizePolicy">
-            <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+            <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
              <horstretch>0</horstretch>
              <verstretch>0</verstretch>
             </sizepolicy>
@@ -3014,14 +2986,14 @@ QPushButton#butMon:pressed {
              <widget class="QPushButton" name="butCue">
               <property name="minimumSize">
                <size>
-                <width>59</width>
+                <width>60</width>
                 <height>16</height>
                </size>
               </property>
               <property name="maximumSize">
                <size>
-                <width>59</width>
-                <height>35</height>
+                <width>16777215</width>
+                <height>38</height>
                </size>
               </property>
               <property name="font">
@@ -3049,7 +3021,7 @@ QPushButton#butMon:pressed {
          <item>
           <widget class="QFrame" name="frame_5">
            <property name="sizePolicy">
-            <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+            <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
              <horstretch>0</horstretch>
              <verstretch>0</verstretch>
             </sizepolicy>
@@ -3065,7 +3037,13 @@ QPushButton#butMon:pressed {
            </property>
            <layout class="QHBoxLayout" name="horizontalLayout_3">
             <property name="spacing">
-             <number>6</number>
+             <number>0</number>
+            </property>
+            <property name="leftMargin">
+             <number>0</number>
+            </property>
+            <property name="rightMargin">
+             <number>0</number>
             </property>
             <property name="topMargin">
              <number>0</number>
@@ -3076,7 +3054,7 @@ QPushButton#butMon:pressed {
             <item>
              <widget class="QPushButton" name="butPlay">
               <property name="sizePolicy">
-               <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+               <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
                 <horstretch>1</horstretch>
                 <verstretch>1</verstretch>
                </sizepolicy>
@@ -3089,7 +3067,7 @@ QPushButton#butMon:pressed {
               </property>
               <property name="maximumSize">
                <size>
-                <width>60</width>
+                <width>16777215</width>
                 <height>38</height>
                </size>
               </property>
@@ -3107,7 +3085,7 @@ QPushButton#butMon:pressed {
          <item>
           <widget class="QFrame" name="frame_4">
            <property name="sizePolicy">
-            <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+            <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
              <horstretch>0</horstretch>
              <verstretch>0</verstretch>
             </sizepolicy>

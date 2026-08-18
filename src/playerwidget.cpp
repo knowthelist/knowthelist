@@ -193,9 +193,9 @@ PlayerWidget::PlayerWidget(QWidget* parent)
     // Track fraVuMeter's own resize so bpmWidget geometry stays in sync
     ui->fraVuMeter->installEventFilter(this);
 
-    ui->frame_4->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
-    ui->frame_5->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
-    ui->frame_6->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
+    ui->frame_4->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+    ui->frame_5->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+    ui->frame_6->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
     ui->frame_4->setMinimumWidth(0);
     ui->frame_5->setMinimumWidth(0);
     ui->frame_6->setMinimumWidth(0);
@@ -209,6 +209,8 @@ PlayerWidget::PlayerWidget(QWidget* parent)
     ui->butCue->setMaximumWidth(QWIDGETSIZE_MAX);
     ui->butRew->setMaximumWidth(QWIDGETSIZE_MAX);
     ui->butFwd->setMaximumWidth(QWIDGETSIZE_MAX);
+
+    ui->sliPosition->setFixedHeight(14);
 
     vuMeter = ui->vuMeter;
     vuMeter->setOrientation(Qt::Horizontal);
@@ -605,14 +607,15 @@ void PlayerWidget::updateResponsiveLayout()
     const int smallButtonHeight = veryCompact ? 16 : (compact ? 18 : 22);
     const int playButtonHeight = veryCompact ? 28 : (compact ? 34 : 38);
     const int playButtonWidth = veryCompact ? 40 : (compact ? 48 : 60);
-    const int cueButtonWidth = veryCompact ? 40 : (compact ? 48 : 59);
     const int smallButtonWidth = veryCompact ? 18 : (compact ? 24 : 36);
     const int iconSize = veryCompact ? 18 : (compact ? 22 : 26);
 
-    ui->butPlay->setMinimumSize(QSize(playButtonWidth, playButtonHeight));
+    ui->butPlay->setMinimumSize(playButtonWidth, playButtonHeight);
     ui->butPlay->setMaximumHeight(playButtonHeight);
-    ui->butCue->setMinimumSize(QSize(cueButtonWidth, smallButtonHeight));
+    ui->butCue->setMinimumSize(playButtonWidth, smallButtonHeight);
     ui->butCue->setMaximumHeight(playButtonHeight);
+    ui->butPlay->setMaximumWidth(QWIDGETSIZE_MAX);
+    ui->butCue->setMaximumWidth(QWIDGETSIZE_MAX);
     ui->butRew->setMinimumSize(QSize(smallButtonWidth, smallButtonHeight));
     ui->butRew->setMaximumHeight(smallButtonHeight);
     ui->butFwd->setMinimumSize(QSize(smallButtonWidth, smallButtonHeight));
