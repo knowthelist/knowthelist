@@ -213,6 +213,7 @@ public:
     void syncDisplayHeightToControls();
     void createPerformanceControls();
     void jumpByBeats(int beatCount);
+    void applyBeatJump(int beatCount, int basePositionMs);
     QString currentTrackKey() const;
 
     // ---- Unified cue-point helpers (delegated to PlayerCueManager) ----

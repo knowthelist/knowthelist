@@ -2032,15 +2032,12 @@ void Knowthelist::on_cmdMonitorSettings_clicked()
 
 void Knowthelist::monitorPlayer_trackTimeChanged(qint64 time, qint64 totalTime)
 {
-    //ToDo: delete this function: Why?
-    if (ui->sliMonitor->maximum() != totalTime) {
-        if (totalTime == 0)
-            ui->sliMonitor->setMaximum(100);
-        else
-            ui->sliMonitor->setMaximum(totalTime);
-    }
-
-    ui->sliMonitor->setValue(time);
+    constexpr int seekSliderMaximum = 1000;
+    ui->sliMonitor->setMaximum(seekSliderMaximum);
+    ui->sliMonitor->setValue(totalTime > 0
+                                 ? qBound(0, qRound(static_cast<double>(time) / totalTime * seekSliderMaximum),
+                                          seekSliderMaximum)
+                                 : 0);
 
     QTime displayTime(0, (time / 60000) % 60, (time / 1000) % 60);
     QTime displayTotalTime(0, (totalTime / 60000) % 60, (totalTime / 1000) % 60);
@@ -2070,10 +2067,17 @@ void Knowthelist::timerMonitor_timeOut()
     ui->lblMonitorLength->setText(length.toString("mm:ss"));
 
     //update position slider
-    if (length != QTime(0, 0))
-        ui->sliMonitor->setValue(curpos.msecsTo(QTime(0, 0, 0)) * 1000 / length.msecsTo(QTime(0, 0, 0)));
-    else
+    if (length != QTime(0, 0)) {
+        constexpr int seekSliderMaximum = 1000;
+        const int lengthMs = QTime(0, 0).msecsTo(length);
+        const int positionMs = QTime(0, 0).msecsTo(curpos);
+        ui->sliMonitor->setMaximum(seekSliderMaximum);
+        ui->sliMonitor->setValue(qBound(0, qRound(static_cast<double>(positionMs) / lengthMs
+                                                   * seekSliderMaximum),
+                                         seekSliderMaximum));
+    } else {
         ui->sliMonitor->setValue(0);
+    }
 
     monitorMeter->setValueLeft(monitorPlayer->levelLeft() * 1.0);
     monitorMeter->setValueRight(monitorPlayer->levelRight() * 1.0);

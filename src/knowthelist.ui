@@ -7404,7 +7404,7 @@ min-height: 16px;
                <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
               </property>
              </widget>
-             <widget class="QScrollBar" name="sliMonitor">
+             <widget class="QSlider" name="sliMonitor">
               <property name="geometry">
                <rect>
                 <x>4</x>
@@ -7414,7 +7414,7 @@ min-height: 16px;
                </rect>
               </property>
               <property name="sizePolicy">
-               <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
+               <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
                 <horstretch>0</horstretch>
                 <verstretch>0</verstretch>
                </sizepolicy>
@@ -7437,7 +7437,7 @@ min-height: 16px;
                <enum>Qt::Orientation::Horizontal</enum>
               </property>
               <property name="invertedControls">
-               <bool>true</bool>
+               <bool>false</bool>
               </property>
              </widget>
              <widget class="QToolButton" name="cmdMonitorStop">

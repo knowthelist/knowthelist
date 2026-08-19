@@ -835,38 +835,43 @@ void PlayerWidget::jumpByBeats(int beatCount)
     if (!m_CurrentTrack || beatCount == 0)
         return;
     const int curMs = QTime(0, 0).msecsTo(player->position());
-    const int lenMs = QTime(0, 0).msecsTo(player->length());
     const int fallbackBeatMs = (m_bpm > 0) ? qRound(60000.0 / static_cast<double>(m_bpm)) : 500;
-
-    int targetMs = curMs;
 
     const double exactBpm = trackanalyzer ? trackanalyzer->exactBpm() : 0.0;
     if (m_bpm > 0 && exactBpm > 0.0 && m_beatPosition.isValid()) {
         const double beatMs = 60000.0 / exactBpm;
-        const qint64 anchorMs = QTime(0, 0).msecsTo(m_beatPosition);
-        const double beatIndex = (static_cast<double>(curMs) - static_cast<double>(anchorMs)) / beatMs;
-        const qint64 baseBeatIndex = (beatCount < 0)
-                ? static_cast<qint64>(qFloor(beatIndex))
-                : static_cast<qint64>(qCeil(beatIndex));
-        const qint64 targetBeatIndex = baseBeatIndex + static_cast<qint64>(beatCount);
-        targetMs = static_cast<int>(qRound(static_cast<double>(anchorMs) + static_cast<double>(targetBeatIndex) * beatMs));
+        if (m_isStarted) {
+            const int anchorMs = QTime(0, 0).msecsTo(m_beatPosition);
+            const double beatIndex = (static_cast<double>(curMs) - anchorMs) / beatMs;
+            qint64 nextBeatMs = qRound(anchorMs + qCeil(beatIndex) * beatMs);
+            if (nextBeatMs <= curMs)
+                nextBeatMs = qRound(nextBeatMs + beatMs);
 
-        if (beatCount < 0 && targetMs >= curMs)
-            targetMs -= qMax(1, qRound(beatMs));
-        else if (beatCount > 0 && targetMs <= curMs)
-            targetMs += qMax(1, qRound(beatMs));
-    } else {
-        targetMs = curMs + beatCount * fallbackBeatMs;
+            const int delayMs = qBound(0, static_cast<int>(nextBeatMs - curMs), 2000);
+            const QString trackKey = currentTrackKey();
+            QTimer::singleShot(delayMs, this, [this, beatCount, trackKey, nextBeatMs]() {
+                if (m_isStarted && currentTrackKey() == trackKey) {
+                    applyBeatJump(beatCount, static_cast<int>(nextBeatMs));
+                    Q_EMIT syncRequested(false);
+                }
+            });
+            return;
+        }
     }
 
-    // Final semantic guard.
-    if (beatCount < 0 && targetMs >= curMs)
-        targetMs = curMs - qMax(1, qAbs(beatCount) * fallbackBeatMs);
-    else if (beatCount > 0 && targetMs <= curMs)
-        targetMs = curMs + qMax(1, qAbs(beatCount) * fallbackBeatMs);
+    applyBeatJump(beatCount, curMs);
+    Q_EMIT syncRequested(false);
+}
 
-    if (targetMs < 0)
-        targetMs = 0;
+void PlayerWidget::applyBeatJump(int beatCount, int basePositionMs)
+{
+    const int lenMs = QTime(0, 0).msecsTo(player->length());
+    const double exactBpm = trackanalyzer ? trackanalyzer->exactBpm() : 0.0;
+    const int fallbackBeatMs = (m_bpm > 0) ? qRound(60000.0 / static_cast<double>(m_bpm)) : 500;
+    const double beatMs = exactBpm > 0.0 ? 60000.0 / exactBpm : fallbackBeatMs;
+    int targetMs = qRound(static_cast<double>(basePositionMs) + beatCount * beatMs);
+
+    targetMs = qMax(0, targetMs);
     if (lenMs > 0)
         targetMs = qMin(targetMs, lenMs);
 
@@ -897,8 +902,6 @@ void PlayerWidget::onBeatJumpButtonClicked()
     if (beats == 0)
         return;
     jumpByBeats(beats);
-    
-    Q_EMIT syncRequested(false);
 }
 
 void PlayerWidget::onEnvelopeScrubStarted()
