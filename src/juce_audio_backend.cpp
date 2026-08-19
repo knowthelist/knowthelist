@@ -503,6 +503,7 @@ void JuceAudioBackend::seek(const QTime& position)
     const int deviceLatencySamples = qRound(sampleRate * outputLatencyMs() / 1000.0);
     const int safetySamples = qRound(sampleRate * 0.015);
     seekMuteSamples.store(qMax(1, deviceLatencySamples + safetySamples));
+    seekFadeOutSamples.store(qMax(1, qRound(sampleRate * 0.005)));
     seekFadeInSamples.store(qMax(1, qRound(sampleRate * 0.008)));
     transportSource->setPosition(seconds);
 }
@@ -744,10 +745,24 @@ void JuceAudioBackend::audioDeviceIOCallbackWithContext(const float* const* inpu
     const int requestedMuteSamples = seekMuteSamples.exchange(0);
     if (requestedMuteSamples > 0) {
         const int mutedSamples = juce::jmin(requestedMuteSamples, numSamples);
-        if (requestedMuteSamples >= numSamples)
-            buffer.clear();
-        else
+        if (requestedMuteSamples >= numSamples) {
+            const int fadeOutSamples = juce::jmin(
+                seekFadeOutSamples.exchange(0),
+                numSamples);
+            if (fadeOutSamples > 0) {
+                for (int channel = 0; channel < buffer.getNumChannels(); ++channel) {
+                    buffer.applyGainRamp(channel,
+                                         0,
+                                         fadeOutSamples,
+                                         1.0f,
+                                         0.0f);
+                }
+            }
+            if (fadeOutSamples < numSamples)
+                buffer.clear(fadeOutSamples, numSamples - fadeOutSamples);
+        } else {
             buffer.clear(0, mutedSamples);
+        }
 
         if (requestedMuteSamples > mutedSamples)
             seekMuteSamples.fetch_add(requestedMuteSamples - mutedSamples);
