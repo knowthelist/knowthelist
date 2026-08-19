@@ -392,8 +392,8 @@ void Knowthelist::createUI()
     connect(playList1, SIGNAL(trackPropertyChanged(Track*)), djSession, SLOT(onTrackPropertyChanged(Track*)));
     connect(playList2, SIGNAL(trackPropertyChanged(Track*)), djSession, SLOT(onTrackPropertyChanged(Track*)));
 
-    connect(player1, SIGNAL(forwardPressed()), playList1, SLOT(skipForward()));
-    connect(player2, SIGNAL(forwardPressed()), playList2, SLOT(skipForward()));
+    connect(player1, SIGNAL(forwardPressed()), SLOT(player1_skipForward()));
+    connect(player2, SIGNAL(forwardPressed()), SLOT(player2_skipForward()));
 
     connect(player1, SIGNAL(rewindPressed()), playList1, SLOT(skipRewind()));
     connect(player2, SIGNAL(rewindPressed()), playList2, SLOT(skipRewind()));
@@ -989,6 +989,20 @@ void Knowthelist::player_aboutTrackFinished()
         fadeNow();
 }
 
+void Knowthelist::player1_skipForward()
+{
+    playList1->skipForward();
+    if (ui->toggleAutoDJ->isChecked())
+        djSession->updatePlaylists();
+}
+
+void Knowthelist::player2_skipForward()
+{
+    playList2->skipForward();
+    if (ui->toggleAutoDJ->isChecked())
+        djSession->updatePlaylists();
+}
+
 void Knowthelist::on_playerSyncButtonToggled(bool checked)
 {
     // Handle mutual exclusion between player sync buttons
@@ -1033,6 +1047,8 @@ void Knowthelist::player1_trackFinished()
     if (isFading)
         player1->stop();
     playList1->skipForward();
+    if (ui->toggleAutoDJ->isChecked())
+        djSession->updatePlaylists();
 }
 
 void Knowthelist::player2_trackFinished()
@@ -1040,6 +1056,8 @@ void Knowthelist::player2_trackFinished()
     if (isFading)
         player2->stop();
     playList2->skipForward();
+    if (ui->toggleAutoDJ->isChecked())
+        djSession->updatePlaylists();
 }
 
 void Knowthelist::player1_gainChanged(double gainValue)

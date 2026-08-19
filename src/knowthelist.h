@@ -74,6 +74,8 @@ private Q_SLOTS:
     void timerAutoFader_timerOut();
 
     void player_aboutTrackFinished();
+    void player1_skipForward();
+    void player2_skipForward();
     void player1_gainChanged(double newGain);
     void player2_gainChanged(double gainValue);
     void player1_trackFinished();
