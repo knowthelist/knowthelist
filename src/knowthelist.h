@@ -198,6 +198,8 @@ private:
 
     bool autoFadeOn;
     TransitionPlan m_transitionPlan;
+    Track* m_plannedOutgoingTrack{nullptr};
+    Track* m_plannedIncomingTrack{nullptr};
     TransitionPlannerWidget* m_transitionPlannerWidget{nullptr};
     bool m_transitionActive{false};
     int m_transitionStartFaderValue{100};

@@ -1365,6 +1365,7 @@ void Knowthelist::cancelAutoFadeAtCurrentPosition()
     restoreTransitionEqualizers();
     clearAutoFadeSyncState();
     resetWaitingDeckTempoPreviews();
+    refreshTransitionPlan();
 
     // Stopping the crossfader is a manual performance action, not a request
     // to abandon beat sync. Keep both running decks at the current shared
@@ -1459,12 +1460,13 @@ void Knowthelist::fadeNow()
             : incoming == player2 && playList2->currentTrack()
                 ? playList2->currentTrack()->track()
                 : nullptr;
-        m_transitionPlan = TransitionPlanner::choose(
-            outgoingTrack, incomingTrack, outgoingBpm, incomingBpm, mAutofadeLength,
-            TransitionPreferences::fromSettings(QSettings()),
-            outgoing->lowEndConfidence(), incoming->lowEndConfidence());
-        m_transitionPlannerWidget->setPlannedMode(m_transitionPlan.mode);
-        applyTransitionModeOverride();
+        // Execute the plan already shown in the preview. Recomputing here can
+        // produce a different result if analysis or metadata changed between
+        // preview and fade start.
+        if (m_plannedOutgoingTrack != outgoingTrack
+            || m_plannedIncomingTrack != incomingTrack) {
+            refreshTransitionPlan();
+        }
         const CueMode transitionCueMode = cueModeForTransition(m_transitionPlan.cueMode);
         outgoing->setTransitionCueMode(transitionCueMode);
         incoming->setTransitionCueMode(transitionCueMode);
@@ -1726,6 +1728,7 @@ void Knowthelist::timerAutoFader_timerOut()
                 resetWaitingDeckTempoPreviews();
                 clearAutoFadeSyncState();
                 isFading = false;
+                refreshTransitionPlan();
             }
         }
         changeVolumes();
@@ -1745,6 +1748,7 @@ void Knowthelist::timerAutoFader_timerOut()
             resetWaitingDeckTempoPreviews();
             clearAutoFadeSyncState();
             isFading = false;
+            refreshTransitionPlan();
         }
         return;
     }
@@ -1786,6 +1790,7 @@ void Knowthelist::timerAutoFader_timerOut()
             djSession->updatePlaylists();
 
         resetAllDecksSyncState();
+        refreshTransitionPlan();
     }
     if (ui->sliFader->value() >= ui->sliFader->maximum()) {
         timerAutoFader->stop();
@@ -1801,6 +1806,7 @@ void Knowthelist::timerAutoFader_timerOut()
             djSession->updatePlaylists();
 
         resetAllDecksSyncState();
+        refreshTransitionPlan();
     }
     changeVolumes();
 }
@@ -2271,6 +2277,8 @@ void Knowthelist::refreshTransitionPlan()
         outgoingTrack, incomingTrack, outgoingBpm, incomingTrack->bpm(), mAutofadeLength,
         TransitionPreferences::fromSettings(QSettings()),
         outgoingPlayer->lowEndConfidence(), incomingPlayer->lowEndConfidence());
+    m_plannedOutgoingTrack = outgoingTrack;
+    m_plannedIncomingTrack = incomingTrack;
     m_transitionPlannerWidget->setPlannedMode(m_transitionPlan.mode);
     applyTransitionModeOverride();
     const CueMode transitionCueMode = cueModeForTransition(m_transitionPlan.cueMode);
