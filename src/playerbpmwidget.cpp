@@ -1014,8 +1014,9 @@ void PlayerBpmWidget::paintEvent(QPaintEvent* event)
         const double deltaMs = anchorTimeMs - nearestBeatTime;
 
         // ON every time a beat crosses the reference marker.
-        // Window is wide enough to survive UI/frame jitter, but still beat-tight.
-        const double flashWindowMs = qMin(120.0, beatMs * 0.28);
+        // Keep the flash centered on the beat rather than lighting a broad
+        // region around it; visual position already compensates output latency.
+        const double flashWindowMs = qMin(45.0, beatMs * 0.10);
         const bool beatAtMarker = (qAbs(deltaMs) <= flashWindowMs);
         const bool flashOn = m_running && beatAtMarker;
 
