@@ -24,6 +24,7 @@
 #include <QDir>
 #include <QFileInfo>
 #include <QCoreApplication>
+#include <QDateTime>
 #include <QMutex>
 #include <QRandomGenerator>
 #include <QStandardPaths>
@@ -183,8 +184,13 @@ bool CollectionDB::isEmpty()
 void CollectionDB::incSongCounter(const QString url)
 {
     QSqlQuery query(currentThreadCollectionDb());
-    query.prepare("UPDATE statistics SET playcounter = playcounter + 1 WHERE url = ?");
+    query.prepare("INSERT INTO statistics (url, playcounter, rating, lastplayed) "
+                  "VALUES (?, 1, 0, ?) "
+                  "ON CONFLICT(url) DO UPDATE SET "
+                  "playcounter = statistics.playcounter + 1, "
+                  "lastplayed = excluded.lastplayed");
     query.addBindValue(url);
+    query.addBindValue(QDateTime::currentSecsSinceEpoch());
     query.exec();
 }
 
@@ -502,6 +508,8 @@ void CollectionDB::createTables(const bool temporary)
     migrateAnalysisCache();
     executeSql("CREATE TABLE IF NOT EXISTS playlists (url VARCHAR(1024), name VARCHAR(255), length INTEGER DEFAULT 0, flags INTEGER DEFAULT 0, norder INTEGER DEFAULT 0, changedate INTEGER DEFAULT 0);");
     executeSql("CREATE TABLE IF NOT EXISTS playlisttracks (id INTEGER PRIMARY KEY AUTOINCREMENT, playlist VARCHAR(255), url VARCHAR(1024));");
+    executeSql("INSERT OR IGNORE INTO statistics (url, playcounter, rating, lastplayed) "
+               "SELECT url, 0, 0, 0 FROM tags;");
 }
 
 bool CollectionDB::migrateAnalysisCache()
@@ -583,6 +591,8 @@ void CollectionDB::moveTempTables()
                "LEFT JOIN album al ON al.name IS alt.name "
                "LEFT JOIN year y ON y.name IS yt.name "
                "LEFT JOIN genre g ON g.name IS gt.name;");
+    executeSql("INSERT OR IGNORE INTO statistics (url, playcounter, rating, lastplayed) "
+               "SELECT url, 0, 0, 0 FROM tags;");
 }
 
 void CollectionDB::createStatsTable()
@@ -782,9 +792,9 @@ QList<QStringList> CollectionDB::selectFavoritesTracks()
                   " INNER JOIN album ON tags.album = album.id "
                   " INNER JOIN year ON tags.year = year.id "
                   " INNER JOIN genre ON tags.genre = genre.id "
-                  " INNER JOIN favorites ON tags.url = favorites.url "
-                  " LEFT OUTER JOIN statistics ON tags.url = statistics.url "
-                  " LEFT OUTER JOIN analysis_cache ON tags.url = analysis_cache.url";
+                  " INNER JOIN statistics ON tags.url = statistics.url "
+                  " LEFT OUTER JOIN analysis_cache ON tags.url = analysis_cache.url "
+                  " WHERE statistics.rating > 0 ORDER BY statistics.rating DESC";
     
     return selectSql(sql);
 }

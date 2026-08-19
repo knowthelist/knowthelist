@@ -1495,7 +1495,7 @@ void PlayerWidget::timerPosition_timeOut()
     if (m_isStarted) {
         // Use backend running state for end detection. Position can lead audible
         // output due buffering/read-ahead and would stop playback prematurely.
-        if (!player->isPlaying()) {
+        if (player->isLoaded() && !player->isPlaying()) {
             qDebug() << Q_FUNC_INFO << ": backend stopped, pausing";
             pause();
             return;
@@ -1648,6 +1648,12 @@ void PlayerWidget::loadTrack(Track* track)
     drawTitle();
 
     bool doPlay = m_isStarted;
+    // Replacing a playing track stops the backend while the new file loads
+    // asynchronously. Suspend the old track's timers so that transient stop
+    // is not mistaken for a user pause.
+    timerLevel->stop();
+    timerPosition->stop();
+    timerVisual->stop();
     player->stop();
 
     // Playlist items already carry the integer BPM from analysis_cache. Reuse it

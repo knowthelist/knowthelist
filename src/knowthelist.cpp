@@ -29,6 +29,7 @@
 #include <QAbstractSlider>
 #include <QSettings>
 #include <QResizeEvent>
+#include <QSlider>
 #include <QToolButton>
 #include <QMessageBox>
 #include <QtConcurrent/QtConcurrent>
@@ -556,6 +557,10 @@ QString sliderStyle = QString(
 
     ui->frameMixer->setStyleSheet(sliderStyle);
     ui->MonitorPlayer->setStyleSheet(sliderStyle);
+    if (QSlider* pitchSlider = player1->findChild<QSlider*>("sliPitch"))
+        pitchSlider->setStyleSheet(sliderStyle);
+    if (QSlider* pitchSlider = player2->findChild<QSlider*>("sliPitch"))
+        pitchSlider->setStyleSheet(sliderStyle);
 #endif
 
     //Add the AutoDJ Browser
@@ -991,6 +996,8 @@ void Knowthelist::player_aboutTrackFinished()
 
 void Knowthelist::player1_skipForward()
 {
+    if (player1->isStarted() && playList1->currentTrack())
+        djSession->onTrackFinished(playList1->currentTrack()->track());
     playList1->skipForward();
     if (ui->toggleAutoDJ->isChecked())
         djSession->updatePlaylists();
@@ -998,6 +1005,8 @@ void Knowthelist::player1_skipForward()
 
 void Knowthelist::player2_skipForward()
 {
+    if (player2->isStarted() && playList2->currentTrack())
+        djSession->onTrackFinished(playList2->currentTrack()->track());
     playList2->skipForward();
     if (ui->toggleAutoDJ->isChecked())
         djSession->updatePlaylists();
