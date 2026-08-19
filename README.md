@@ -48,6 +48,24 @@ The planner also respects duration limits, maximum tempo correction, and the sel
 
 ---
 
+## Using the Latest Pre-built Version
+
+The latest release provides ready-to-use packages for each supported desktop
+platform. Download the appropriate asset from the
+[latest GitHub release](https://github.com/knowthelist/knowthelist/releases/latest):
+
+| Platform | Download |
+|----------|----------|
+| Debian/Ubuntu | `.deb` package |
+| Fedora/RPM-based Linux | `.rpm` package |
+| macOS | `knowthelist-*-macOS.zip` |
+| Windows | `knowthelist-*-Windows.zip` |
+
+Linux packages can be installed with the distribution's package manager. For
+macOS and Windows, extract the downloaded archive and launch the application.
+
+---
+
 ## Building from Source
 
 ### Prerequisites
