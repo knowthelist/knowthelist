@@ -35,12 +35,12 @@ TransitionPlannerWidget::TransitionPlannerWidget(QWidget* parent)
         tileLayout->setSpacing(1);
         m_enabledLeds[i] = new QLed(tile);
         m_enabledLeds[i]->setObjectName(QStringLiteral("transition_enabled_%1").arg(labelForMode(mode)));
-        m_enabledLeds[i]->setFixedSize(30, 7);
+        m_enabledLeds[i]->setFixedSize(30, 6);
         m_enabledLeds[i]->setLook(QLed::Flat);
         m_enabledLeds[i]->setShape(QLed::Rectangular);
         m_enabledLeds[i]->setColor(kWaveformBlue);
         m_enabledLeds[i]->installEventFilter(this);
-        tileLayout->addWidget(m_enabledLeds[i], 0, Qt::AlignHCenter);
+        tileLayout->addWidget(m_enabledLeds[i], 0, Qt::AlignLeft);
         m_buttons[i] = new QToolButton(tile);
         m_buttons[i]->setObjectName(QStringLiteral("transition_%1").arg(labelForMode(mode)));
         m_buttons[i]->setCheckable(false);

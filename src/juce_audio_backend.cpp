@@ -499,6 +499,8 @@ void JuceAudioBackend::seek(const QTime& position)
     // Negative positions wrap when converted to QTime and can make playback
     // appear to start at EOF.
     seconds = qMax(0.0, seconds);
+    const double sampleRate = currentSampleRate > 0.0 ? currentSampleRate : 44100.0;
+    seekMuteSamples.store(qMax(1, qRound(sampleRate * 0.008)));
     transportSource->setPosition(seconds);
 }
 
@@ -735,6 +737,14 @@ void JuceAudioBackend::audioDeviceIOCallbackWithContext(const float* const* inpu
     juce::AudioBuffer<float> buffer(outputChannelData, numOutputChannels, numSamples);
     juce::AudioSourceChannelInfo info(&buffer, 0, numSamples);
     transportSource->getNextAudioBlock(info);
+
+    const int requestedMuteSamples = seekMuteSamples.exchange(0);
+    if (requestedMuteSamples > 0) {
+        const int mutedSamples = juce::jmin(requestedMuteSamples, numSamples);
+        buffer.clear(0, mutedSamples);
+        if (requestedMuteSamples > mutedSamples)
+            seekMuteSamples.store(requestedMuteSamples - mutedSamples);
+    }
 
     // TEE: duplicate raw deck signal before deck fader/gain/EQ processing.
     if (useMonitor && monitorTeeCallback)

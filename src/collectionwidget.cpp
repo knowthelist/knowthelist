@@ -25,6 +25,7 @@
 #include <QDropEvent>
 #include <QLabel>
 #include <QMenu>
+#include <QPainter>
 #include <QPixmap>
 #include <QPushButton>
 #include <QTimerEvent>
@@ -234,6 +235,11 @@ SearchEdit::SearchEdit(QWidget* parent)
                   "}");
 
     QPixmap searchIcon(":search.png");
+    {
+        QPainter painter(&searchIcon);
+        painter.setCompositionMode(QPainter::CompositionMode_SourceIn);
+        painter.fillRect(searchIcon.rect(), QColor("#d8d8d8"));
+    }
     QLabel* lbl = new QLabel(this);
     lbl->setScaledContents(true);
     lbl->setPixmap(searchIcon);
