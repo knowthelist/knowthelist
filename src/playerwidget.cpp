@@ -345,16 +345,16 @@ PlayerWidget::PlayerWidget(QWidget* parent)
         if (!label)
             return;
         label->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Preferred);
-        const QFontMetrics metrics(label->font());
-        label->setFixedWidth(metrics.horizontalAdvance(sampleText) + 2.5 );
-        label->setMinimumHeight(metrics.height() + 2);
         QFont f = label->font();
         f.setLetterSpacing(QFont::PercentageSpacing, 85);
         label->setFont(f);
+        const QFontMetrics metrics(label->font());
+        label->setFixedWidth(metrics.horizontalAdvance(sampleText));
+        label->setMinimumHeight(metrics.height() + 2);
     };
 
     fixTimeLabelGeometry(ui->lblTime, "00:00");
-    fixTimeLabelGeometry(ui->lblTimeMs, ".8");
+    fixTimeLabelGeometry(ui->lblTimeMs, ".8 ");
     fixTimeLabelGeometry(ui->lblTimeRemain, "-00:00");
     fixTimeLabelGeometry(ui->lblTimeRemainMs, ".8");
 
