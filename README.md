@@ -157,6 +157,8 @@ Pre-built Linux packages are also available on the [Releases page](https://githu
 ### macOS & Windows
 
 Download the latest installer from the [Releases page](https://github.com/knowthelist/knowthelist/releases).
+Windows releases include a one-click installer (`*-Windows-Setup.exe`) with
+the required Qt, TagLib, and Microsoft Visual C++ runtime files bundled.
 
 If macOS blocks the application after downloading it from the official releases page, remove the quarantine flag:
 

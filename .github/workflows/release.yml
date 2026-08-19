@@ -145,11 +145,41 @@ jobs:
           & "$env:QT_ROOT_DIR/bin/windeployqt.exe" `
             --release `
             --no-translations `
+            --compiler-runtime `
             "$bundle/knowthelist.exe"
 
           Copy-Item `
             "$env:VCPKG_INSTALLATION_ROOT/installed/x64-windows/bin/tag.dll" `
             $bundle
+
+          # Keep the MSVC runtime beside the executable so the bundle works
+          # on Windows installations without Visual Studio.
+          $runtimeDlls = @(
+            "VCRUNTIME140.dll",
+            "VCRUNTIME140_1.dll",
+            "MSVCP140.dll",
+            "MSVCP140_1.dll"
+          )
+          $redistRoot = Join-Path ${env:ProgramFiles} "Microsoft Visual Studio\2022"
+          foreach ($dll in $runtimeDlls) {
+            if (-not (Test-Path (Join-Path $bundle $dll))) {
+              $runtime = Get-ChildItem $redistRoot -Recurse -File -Filter $dll `
+                -ErrorAction SilentlyContinue |
+                Where-Object { $_.FullName -match "\\x64\\Microsoft\.VC\d+\.CRT\\" } |
+                Select-Object -First 1
+              if ($null -eq $runtime) {
+                throw "Required MSVC runtime was not found: $dll"
+              }
+              Copy-Item $runtime.FullName $bundle
+            }
+          }
+
+          foreach ($dll in $runtimeDlls) {
+            if (-not (Test-Path (Join-Path $bundle $dll))) {
+              throw "Windows bundle is missing required runtime: $dll"
+            }
+          }
+
           Compress-Archive -Path "$bundle/*" -DestinationPath "$bundle.zip"
 
       - name: Upload Windows bundle
@@ -157,6 +187,20 @@ jobs:
         with:
           name: windows-bundle
           path: knowthelist-*-Windows.zip
+
+      - name: Build Windows installer
+        shell: pwsh
+        run: |
+          choco install innosetup --no-progress --yes
+          $version = "${{ inputs.tag || github.ref_name }}".TrimStart("v")
+          $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+          & $iscc "/DAppVersion=$version" installer/knowthelist.iss
+
+      - name: Upload Windows installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-installer
+          path: knowthelist-*-Windows-Setup.exe
 
   release:
     name: Publish GitHub release
@@ -184,6 +228,12 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: windows-bundle
+          path: release-assets
+
+      - name: Download Windows installer
+        uses: actions/download-artifact@v4
+        with:
+          name: windows-installer
           path: release-assets
 
       - name: Create source archives
