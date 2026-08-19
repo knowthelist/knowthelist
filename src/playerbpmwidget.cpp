@@ -899,7 +899,9 @@ void PlayerBpmWidget::paintEvent(QPaintEvent* event)
 
         // Collect all beat lines into one vector, then draw in one call
         QVector<QLineF> beatLines;
+        QVector<QLineF> barLines;
         beatLines.reserve(32);
+        barLines.reserve(8);
         const double firstBeatIndex = qFloor(static_cast<double>(leftMs - beatRefMs) / beatMs);
         for (int i = 0; i < 128; ++i) {
             const double beatTime = static_cast<double>(beatRefMs) + (firstBeatIndex + static_cast<double>(i)) * beatMs;
@@ -908,10 +910,17 @@ void PlayerBpmWidget::paintEvent(QPaintEvent* event)
             
             const double norm = (beatTime - static_cast<double>(leftMs)) / static_cast<double>(visibleWindowMs);
             const int x = phaseBand.left() + qRound(norm * phaseBand.width());
-            beatLines.append(QLineF(x, phaseBand.top() + 1, x, phaseBand.bottom() - 1));
+            const QLineF line(x, phaseBand.top() + 1, x, phaseBand.bottom() - 1);
+            const qint64 beatIndex = static_cast<qint64>(qRound(firstBeatIndex)) + i;
+            if ((beatIndex % 4 + 4) % 4 == 0)
+                barLines.append(line);
+            else
+                beatLines.append(line);
         }
         painter.setPen(QPen(QColor(102, 128, 161, 140), 1));
         painter.drawLines(beatLines);
+        painter.setPen(QPen(QColor(102, 128, 161, 240), 2));
+        painter.drawLines(barLines);
     }
 
     // ── Envelope waveform (cached paths) ──────────────────────────────────────
