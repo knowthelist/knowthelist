@@ -130,6 +130,7 @@ private:
     std::atomic<double> outputLevelLeft{0.0};
     std::atomic<double> outputLevelRight{0.0};
     std::atomic<int> seekMuteSamples{0};
+    std::atomic<int> seekFadeInSamples{0};
 
     // Metering (monitor output)
     std::atomic<double> monitorLevelLeft{0.0};

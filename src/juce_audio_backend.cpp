@@ -500,7 +500,10 @@ void JuceAudioBackend::seek(const QTime& position)
     // appear to start at EOF.
     seconds = qMax(0.0, seconds);
     const double sampleRate = currentSampleRate > 0.0 ? currentSampleRate : 44100.0;
-    seekMuteSamples.store(qMax(1, qRound(sampleRate * 0.008)));
+    const int deviceLatencySamples = qRound(sampleRate * outputLatencyMs() / 1000.0);
+    const int safetySamples = qRound(sampleRate * 0.015);
+    seekMuteSamples.store(qMax(1, deviceLatencySamples + safetySamples));
+    seekFadeInSamples.store(qMax(1, qRound(sampleRate * 0.008)));
     transportSource->setPosition(seconds);
 }
 
@@ -741,9 +744,34 @@ void JuceAudioBackend::audioDeviceIOCallbackWithContext(const float* const* inpu
     const int requestedMuteSamples = seekMuteSamples.exchange(0);
     if (requestedMuteSamples > 0) {
         const int mutedSamples = juce::jmin(requestedMuteSamples, numSamples);
-        buffer.clear(0, mutedSamples);
+        if (requestedMuteSamples >= numSamples)
+            buffer.clear();
+        else
+            buffer.clear(0, mutedSamples);
+
         if (requestedMuteSamples > mutedSamples)
-            seekMuteSamples.store(requestedMuteSamples - mutedSamples);
+            seekMuteSamples.fetch_add(requestedMuteSamples - mutedSamples);
+
+        if (requestedMuteSamples <= numSamples) {
+            const int fadeSamples = juce::jmin(
+                seekFadeInSamples.load(),
+                numSamples - mutedSamples);
+            if (fadeSamples > 0) {
+                for (int channel = 0; channel < buffer.getNumChannels(); ++channel) {
+                    buffer.applyGainRamp(channel,
+                                         mutedSamples,
+                                         fadeSamples,
+                                         0.0f,
+                                         1.0f);
+                }
+            }
+            seekFadeInSamples.store(0);
+        }
+
+        for (auto* filterGroup : { &lowEqFilters, &midEqFilters, &highEqFilters }) {
+            for (auto& filter : *filterGroup)
+                filter.reset();
+        }
     }
 
     // TEE: duplicate raw deck signal before deck fader/gain/EQ processing.
