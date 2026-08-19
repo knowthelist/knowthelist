@@ -1,3 +1,23 @@
+knowthelist (2.4.1-1) unstable; urgency=medium
+
+  * New features:
+    - Transition planner widget, bass-swap functionality, transition modes,
+      track-state tracking, and transition refresh during fades.
+    - Improved tempo accuracy, bar-phase estimation, low-end confidence
+      handling, cue-mode support, analysis cache versioning, and waveform
+      beat bar lines.
+    - Seek muting, improved beat-jump and slider controls, refined skip-forward
+      playlist handling, and last-played timestamps.
+  * Bug fixes and behavior corrections:
+    - Corrected playback-position handling and skip-forward playlist behavior.
+    - Improved transition planning refresh and refined bass-swap and cue
+      behavior.
+  * UI improvements:
+    - Refreshed player and main layouts, controls, fonts, faders, and slider
+      styling.
+
+ -- Mario Stephan <mstephan@shared-files.de>  Wed, 19 Aug 2026 21:02:35 +0200
+
 knowthelist (2.4.0-1) unstable; urgency=medium
 
   * New release with QT6, JUCE audio backend, BPM
