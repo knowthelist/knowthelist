@@ -242,7 +242,7 @@ void Knowthelist::createUI()
 
     m_toggleBeatVisualButton = new QPushButton(ui->frameMixer);
     m_toggleBeatVisualButton->setObjectName("toggleBeatVisual");
-    m_toggleBeatVisualButton->setGeometry(QRect(58, 374, 50, 18));
+    m_toggleBeatVisualButton->setGeometry(QRect(58, 372, 50, 18));
     m_toggleBeatVisualButton->setMinimumSize(QSize(16, 16));
     m_toggleBeatVisualButton->setPalette(ui->toggleAutoFade->palette());
     m_toggleBeatVisualButton->setFont(ui->toggleAutoFade->font());
@@ -260,7 +260,7 @@ void Knowthelist::createUI()
 
     m_toggleBpmVisualButton = new QPushButton(ui->frameMixer);
     m_toggleBpmVisualButton->setObjectName("toggleBpmVisual");
-    m_toggleBpmVisualButton->setGeometry(QRect(116, 374, 50, 18));
+    m_toggleBpmVisualButton->setGeometry(QRect(116, 372, 50, 18));
     m_toggleBpmVisualButton->setMinimumSize(QSize(16, 16));
     m_toggleBpmVisualButton->setPalette(ui->toggleAutoFade->palette());
     m_toggleBpmVisualButton->setFont(ui->toggleAutoFade->font());
@@ -286,11 +286,8 @@ void Knowthelist::createUI()
         led->off();
         return led;
     };
-    m_vuModeLed = createModeLed(QRect(74, 368, 18, 4), QStringLiteral("ledDisplayVu"));
-    m_bpmModeLed = createModeLed(QRect(132, 368, 18, 4), QStringLiteral("ledDisplayBpm"));
-
-    //ui->toggleAutoDJ->setGeometry(QRect(20, 317, 52, 18));
-    //ui->toggleAutoFade->setGeometry(QRect(76, 317, 70, 18));
+    m_vuModeLed = createModeLed(QRect(74, 366, 18, 4), QStringLiteral("ledDisplayVu"));
+    m_bpmModeLed = createModeLed(QRect(132, 366, 18, 4), QStringLiteral("ledDisplayBpm"));
 
     ui->toggleAutoFade->setText(tr("Auto Fader"));
     ui->toggleAutoFade->setToolTip(
@@ -315,14 +312,14 @@ void Knowthelist::createUI()
     vuMeter2->setSpacesBetweenSegments(1);
     vuMeter2->setSegmentsPerPeak(1);
     vuMeter2->setMargin(2);
-    vuMeter2->LevelColorOff.setRgb(20, 20, 20);
+    vuMeter2->LevelColorOff.setRgb(30, 30, 30);
 
     vuMeter1 = new VUMeter(ui->frameMixer);
     vuMeter1->setLinesPerSegment(2);
     vuMeter1->setSpacesBetweenSegments(1);
     vuMeter1->setSegmentsPerPeak(1);
     vuMeter1->setMargin(2);
-    vuMeter1->LevelColorOff.setRgb(20, 20, 20);
+    vuMeter1->LevelColorOff.setRgb(30, 30, 30);
 
     monitorMeter = new VUMeter(ui->fraMonitorTop);
     monitorMeter->setSpacesBetweenSegments(1);
@@ -501,45 +498,60 @@ void Knowthelist::createUI()
 
     // Keep mixer/monitor sliders neutral and avoid platform accent color stripes.
 #if defined(Q_OS_LINUX) || defined(Q_OS_DARWIN)
-    QString panelBg = "#4a4a4a"; 
+QString panelBg = "#4a4a4a"; 
 
-    QString sliderStyle = QString(
-        "QSlider { background: transparent; }"
-        
-        // --- HORIZONTAL HANDLE ---
-        "QSlider::handle:horizontal {"
-        " background: qlineargradient(x1:0, y1:0, x2:1, y2:0,"
-        " stop: 0 #000, stop: 0.1 #222, stop: 0.38 #444, stop:0.5 #ccc,"
-        " stop:0.6 #444, stop:0.9 #222, stop:1 #000 );"
-        " border: 1px solid #5c5c5c; width: 18px; margin: 1px 0; border-radius: 3px; }"
-        
-        // --- VERTICAL HANDLE ---
-        "QSlider::handle:vertical {"
-        " background: qlineargradient(x1:0, y1:0, x2:0, y2:1,"
-        " stop: 0 #000, stop: 0.1 #222, stop: 0.38 #444, stop:0.5 #ccc,"
-        " stop:0.6 #444, stop:0.9 #222, stop:1 #000 );"
-        " border: 1px solid #5c5c5c; width: 12px; min-height: 15px; margin: 0 2px; border-radius: 3px; }"
-        
-        // --- VERTICAL TRACKS (Sub & Add Pages) ---
-        // Uses a solid border matching the background to force a thin 4px inner channel
-        "QSlider::sub-page:vertical {"
-        " background: qlineargradient(x1: 0, y1: 0, x2:1, y2: 0, stop: 0.4 #666, stop: 0 #111111 );"
-        " border-left: 14px solid %1; border-right: 14px solid %1; }"
-        
-        "QSlider::add-page:vertical {"
-        " background: qlineargradient(x1: 0, y1: 0, x2:1, y2: 0, stop: 0 #111, stop: 0.4 #666);"
-        " border-left: 14px solid %1; border-right: 14px solid %1; }"
-        
-        // --- HORIZONTAL TRACKS (Sub & Add Pages) ---
-        // Uses a solid border matching the background to force a thin 4px inner channel
-        "QSlider::sub-page:horizontal {"
-        " background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 #111, stop: 0.6 #666 );"
-        " border-top: 14px solid %1; border-bottom: 14px solid %1; }"
-        
-        "QSlider::add-page:horizontal {"
-        " background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 #111, stop: 0.6 #666 );"
-        " border-top: 14px solid %1; border-bottom: 14px solid %1; }"
-    ).arg(panelBg);
+QString sliderStyle = QString(
+    "QSlider { background: transparent; }"
+
+    // --- HORIZONTAL GROOVE  ---
+    "QSlider::groove:horizontal {"
+    " background: #333;"
+    " height: 4px;"
+    " border: 1px solid #2a2a2a;"
+    " border-radius: 1px;"
+    "}"
+
+    // --- VERTICAL GROOVE  ---
+    "QSlider::groove:vertical {"
+    " background: #333;"
+    " width: 4px;"
+    " border: 1px solid #2a2a2a;"
+    " border-radius: 1px;"
+    "}"
+
+    // --- HORIZONTAL HANDLE ---
+    "QSlider::handle:horizontal {"
+    " background: qlineargradient(x1:0, y1:0, x2:1, y2:0,"
+    " stop: 0 #000, stop: 0.1 #222, stop: 0.38 #444, stop:0.5 #ccc,"
+    " stop:0.6 #444, stop:0.9 #222, stop:1 #000 );"
+    " border: 1px solid #222;"
+    " width: 18px;"
+    " height: 26px;" 
+    " margin: -11px 0;"
+    " border-radius: 2px;"
+    "}"
+
+    // --- VERTICAL HANDLE ---
+    "QSlider::handle:vertical {"
+    " background: qlineargradient(x1:0, y1:0, x2:0, y2:1,"
+    " stop: 0 #000, stop: 0.1 #222, stop: 0.38 #444, stop:0.5 #ccc,"
+    " stop:0.6 #444, stop:0.9 #222, stop:1 #000 );"
+    " border: 1px solid #222;"
+    " width: 26px;"
+    " height: 16px;"
+    " margin: 0 -11px;"
+    " border-radius: 2px;"
+    "}"
+
+    // --- TRACKS  ---
+    "QSlider::sub-page:vertical, QSlider::add-page:vertical {"
+    " background: transparent;"
+    "}"
+    "QSlider::sub-page:horizontal, QSlider::add-page:horizontal {"
+    " background: transparent;"
+    "}"
+).arg(panelBg);
+
 
     ui->frameMixer->setStyleSheet(sliderStyle);
     ui->MonitorPlayer->setStyleSheet(sliderStyle);
