@@ -242,7 +242,7 @@ void Knowthelist::createUI()
 
     m_toggleBeatVisualButton = new QPushButton(ui->frameMixer);
     m_toggleBeatVisualButton->setObjectName("toggleBeatVisual");
-    m_toggleBeatVisualButton->setGeometry(QRect(58, 384, 50, 18));
+    m_toggleBeatVisualButton->setGeometry(QRect(58, 374, 50, 18));
     m_toggleBeatVisualButton->setMinimumSize(QSize(16, 16));
     m_toggleBeatVisualButton->setPalette(ui->toggleAutoFade->palette());
     m_toggleBeatVisualButton->setFont(ui->toggleAutoFade->font());
@@ -260,7 +260,7 @@ void Knowthelist::createUI()
 
     m_toggleBpmVisualButton = new QPushButton(ui->frameMixer);
     m_toggleBpmVisualButton->setObjectName("toggleBpmVisual");
-    m_toggleBpmVisualButton->setGeometry(QRect(116, 384, 50, 18));
+    m_toggleBpmVisualButton->setGeometry(QRect(116, 374, 50, 18));
     m_toggleBpmVisualButton->setMinimumSize(QSize(16, 16));
     m_toggleBpmVisualButton->setPalette(ui->toggleAutoFade->palette());
     m_toggleBpmVisualButton->setFont(ui->toggleAutoFade->font());
@@ -286,16 +286,16 @@ void Knowthelist::createUI()
         led->off();
         return led;
     };
-    m_vuModeLed = createModeLed(QRect(74, 378, 18, 4), QStringLiteral("ledDisplayVu"));
-    m_bpmModeLed = createModeLed(QRect(132, 378, 18, 4), QStringLiteral("ledDisplayBpm"));
+    m_vuModeLed = createModeLed(QRect(74, 368, 18, 4), QStringLiteral("ledDisplayVu"));
+    m_bpmModeLed = createModeLed(QRect(132, 368, 18, 4), QStringLiteral("ledDisplayBpm"));
 
-    ui->toggleAutoDJ->setGeometry(QRect(20, 317, 52, 18));
-    ui->toggleAutoFade->setGeometry(QRect(76, 317, 70, 18));
-    ui->cmdFade->setGeometry(QRect(40, 284, 117, 26));
+    //ui->toggleAutoDJ->setGeometry(QRect(20, 317, 52, 18));
+    //ui->toggleAutoFade->setGeometry(QRect(76, 317, 70, 18));
+
     ui->toggleAutoFade->setText(tr("Auto Fader"));
     ui->toggleAutoFade->setToolTip(
         tr("Enable automatic transitions when a track reaches its fade point"));
-    ui->cmdOptions->setGeometry(QRect(150, 317, 28, 18));
+    //ui->cmdOptions->setGeometry(QRect(150, 317, 28, 18));
     ui->cmdOptions->setFixedSize(28, 18);
     ui->cmdOptions->setText(QString());
     ui->cmdOptions->setIcon(QIcon(":settings.png"));
@@ -304,7 +304,7 @@ void Knowthelist::createUI()
     ui->sliFader->setFixedHeight(30);
 
     m_transitionPlannerWidget = new TransitionPlannerWidget(ui->frameMixer);
-    m_transitionPlannerWidget->setGeometry(QRect(10, 335, 180, 42));
+    m_transitionPlannerWidget->setGeometry(QRect(10, 320, 180, 42));
     connect(m_transitionPlannerWidget, &TransitionPlannerWidget::modeOverrideRequested,
             this, &Knowthelist::onTransitionOverride);
     connect(m_transitionPlannerWidget, &TransitionPlannerWidget::enabledModesChanged,
@@ -491,43 +491,55 @@ void Knowthelist::createUI()
     ui->ledDJ->setColor(QColor(35, 119, 246));
     ui->ledAGC->setColor(QColor(35, 119, 246));
     ui->ledFade->off();
-    ui->ledFade->setGeometry(QRect(104, 310, 12, 7));
     ui->ledFadeRight->off();
     ui->ledFadeLeft->off();
-    ui->ledFadeRight->setGeometry(QRect(156, 284, 6, 24));
-    ui->ledFadeLeft->setGeometry(QRect(35, 284, 6, 24));
     ui->ledAGC->off();
     ui->ledDJ->off();
-    ui->ledDJ->setGeometry(QRect(43, 310, 12, 7));
 
     //MonitorPlayer
     initMonitorPlayer();
 
     // Keep mixer/monitor sliders neutral and avoid platform accent color stripes.
 #if defined(Q_OS_LINUX) || defined(Q_OS_DARWIN)
+    QString panelBg = "#4a4a4a"; 
+
     QString sliderStyle = QString(
         "QSlider { background: transparent; }"
+        
+        // --- HORIZONTAL HANDLE ---
         "QSlider::handle:horizontal {"
-        "   background: qlineargradient(x1:0, y1:0, x2:1, y2:0,"
-        "      stop: 0 #000, stop: 0.1 #222, stop: 0.38 #444, stop:0.5 #ccc,"
-        "      stop:0.6 #444, stop:0.9 #222, stop:1 #000 );"
-        "   border: 1px solid #5c5c5c; width: 18px; margin: 1px 0; border-radius: 3px; }"
+        " background: qlineargradient(x1:0, y1:0, x2:1, y2:0,"
+        " stop: 0 #000, stop: 0.1 #222, stop: 0.38 #444, stop:0.5 #ccc,"
+        " stop:0.6 #444, stop:0.9 #222, stop:1 #000 );"
+        " border: 1px solid #5c5c5c; width: 18px; margin: 1px 0; border-radius: 3px; }"
+        
+        // --- VERTICAL HANDLE ---
         "QSlider::handle:vertical {"
-        "   background: qlineargradient(x1:0, y1:0, x2:0, y2:1,"
-        "      stop: 0 #000, stop: 0.1 #222, stop: 0.38 #444, stop:0.5 #ccc,"
-        "      stop:0.6 #444, stop:0.9 #222, stop:1 #000 );"
-        "   border: 1px solid #5c5c5c; width: 12px; min-height: 15px; margin: 0 2px; border-radius: 3px; }"
-        "QSlider::sub-page:vertical { background: qlineargradient(x1: 0, y1: 0, x2:1, y2: 0,"
-        "   stop: 0.4 #666, stop: 0 #111111 ); border: 1px solid #444; border-radius: 2px;}"
-        "QSlider::add-page:vertical {background: qlineargradient(x1: 0, y1: 0, x2:1, y2: 0,"
-        "   stop: 0 #111,stop: 0.4 #666); border: 1px solid #333; border-radius: 2px;}"
-        "QSlider::sub-page:horizontal,QSlider::add-page:horizontal  {"
-        "   background: qlineargradient(x1: 0, y1: 0,    x2: 0, y2: 1,"
-        "   stop: 0 #111, stop: 0.6 #666 ); border: 1px solid #222; border-radius: 2px;}");
-        // Note: QSlider::groove must NOT be styled here. Styling the groove puts Qt into its
-        // full CSS rendering path which disables native tick-mark drawing. The sliders have
-        // tickPosition=TicksBothSides set in the .ui file; tick rendering requires the native
-        // (non-groove-CSS) path. Handle + page colours are safe to style without breaking ticks.
+        " background: qlineargradient(x1:0, y1:0, x2:0, y2:1,"
+        " stop: 0 #000, stop: 0.1 #222, stop: 0.38 #444, stop:0.5 #ccc,"
+        " stop:0.6 #444, stop:0.9 #222, stop:1 #000 );"
+        " border: 1px solid #5c5c5c; width: 12px; min-height: 15px; margin: 0 2px; border-radius: 3px; }"
+        
+        // --- VERTICAL TRACKS (Sub & Add Pages) ---
+        // Uses a solid border matching the background to force a thin 4px inner channel
+        "QSlider::sub-page:vertical {"
+        " background: qlineargradient(x1: 0, y1: 0, x2:1, y2: 0, stop: 0.4 #666, stop: 0 #111111 );"
+        " border-left: 14px solid %1; border-right: 14px solid %1; }"
+        
+        "QSlider::add-page:vertical {"
+        " background: qlineargradient(x1: 0, y1: 0, x2:1, y2: 0, stop: 0 #111, stop: 0.4 #666);"
+        " border-left: 14px solid %1; border-right: 14px solid %1; }"
+        
+        // --- HORIZONTAL TRACKS (Sub & Add Pages) ---
+        // Uses a solid border matching the background to force a thin 4px inner channel
+        "QSlider::sub-page:horizontal {"
+        " background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 #111, stop: 0.6 #666 );"
+        " border-top: 14px solid %1; border-bottom: 14px solid %1; }"
+        
+        "QSlider::add-page:horizontal {"
+        " background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 #111, stop: 0.6 #666 );"
+        " border-top: 14px solid %1; border-bottom: 14px solid %1; }"
+    ).arg(panelBg);
 
     ui->frameMixer->setStyleSheet(sliderStyle);
     ui->MonitorPlayer->setStyleSheet(sliderStyle);

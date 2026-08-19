@@ -400,8 +400,7 @@ background-color: #444444;
           <item>
            <widget class="PlayerWidget" name="player_L" native="true">
             <property name="sizePolicy">
-             <sizepolicy hsizetype="Expanding" vsizetype="Expanding">              <horstretch>0</horstretch>
-
+             <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
               <horstretch>0</horstretch>
               <verstretch>0</verstretch>
              </sizepolicy>
@@ -479,7 +478,7 @@ background-color: #444444;
              <x>71</x>
              <y>140</y>
              <width>21</width>
-              <height>84</height>
+             <height>84</height>
             </rect>
            </property>
            <property name="frameShape">
@@ -492,10 +491,10 @@ background-color: #444444;
           <widget class="QFrame" name="phVU2">
            <property name="geometry">
             <rect>
-             <x>105</x>
-             <y>148</y>
+             <x>110</x>
+             <y>140</y>
              <width>21</width>
-              <height>84</height>
+             <height>84</height>
             </rect>
            </property>
            <property name="frameShape">
@@ -509,7 +508,7 @@ background-color: #444444;
            <property name="geometry">
             <rect>
              <x>35</x>
-             <y>279</y>
+             <y>262</y>
              <width>6</width>
              <height>26</height>
             </rect>
@@ -535,7 +534,7 @@ background-color: #444444;
            <property name="geometry">
             <rect>
              <x>72</x>
-             <y>308</y>
+             <y>300</y>
              <width>51</width>
              <height>18</height>
             </rect>
@@ -1204,8 +1203,8 @@ background-color: #444444;
           <widget class="QLed" name="ledDJ" native="true">
            <property name="geometry">
             <rect>
-             <x>49</x>
-             <y>301</y>
+             <x>45</x>
+             <y>291</y>
              <width>12</width>
              <height>7</height>
             </rect>
@@ -1231,7 +1230,7 @@ background-color: #444444;
            <property name="geometry">
             <rect>
              <x>91</x>
-             <y>301</y>
+             <y>290</y>
              <width>12</width>
              <height>7</height>
             </rect>
@@ -1257,7 +1256,7 @@ background-color: #444444;
            <property name="geometry">
             <rect>
              <x>32</x>
-             <y>308</y>
+             <y>300</y>
              <width>40</width>
              <height>18</height>
             </rect>
@@ -1921,7 +1920,7 @@ background-color: #444444;
            <property name="geometry">
             <rect>
              <x>158</x>
-             <y>279</y>
+             <y>262</y>
              <width>6</width>
              <height>24</height>
             </rect>
@@ -1946,16 +1945,28 @@ background-color: #444444;
           <widget class="QPushButton" name="cmdOptions">
            <property name="geometry">
             <rect>
-             <x>25</x>
-             <y>310</y>
-             <width>184</width>
+             <x>138</x>
+             <y>300</y>
+             <width>18</width>
              <height>18</height>
             </rect>
            </property>
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
            <property name="minimumSize">
             <size>
-             <width>184</width>
+             <width>18</width>
              <height>16</height>
+            </size>
+           </property>
+           <property name="maximumSize">
+            <size>
+             <width>18</width>
+             <height>22</height>
             </size>
            </property>
            <property name="palette">
@@ -2607,7 +2618,7 @@ background-color: #444444;
              <x>29</x>
              <y>132</y>
              <width>31</width>
-              <height>84</height>
+             <height>84</height>
             </rect>
            </property>
            <property name="palette">
@@ -3171,7 +3182,7 @@ background-color: #444444;
            <property name="geometry">
             <rect>
              <x>34</x>
-             <y>221</y>
+             <y>222</y>
              <width>125</width>
              <height>30</height>
             </rect>
@@ -3736,7 +3747,7 @@ background-color: #444444;
              <x>136</x>
              <y>132</y>
              <width>31</width>
-              <height>84</height>
+             <height>84</height>
             </rect>
            </property>
            <property name="palette">
@@ -4297,7 +4308,7 @@ background-color: #444444;
            <property name="geometry">
             <rect>
              <x>40</x>
-             <y>279</y>
+             <y>262</y>
              <width>117</width>
              <height>26</height>
             </rect>
@@ -5649,11 +5660,11 @@ min-height: 16px;
            <property name="text">
             <string>AGC</string>
            </property>
-           <property name="checkable">
-            <bool>true</bool>
-           </property>
            <property name="shortcut">
             <string>Alt+J</string>
+           </property>
+           <property name="checkable">
+            <bool>true</bool>
            </property>
            <property name="flat">
             <bool>false</bool>
