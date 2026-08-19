@@ -1938,6 +1938,9 @@ void PlayerWidget::on_sliPosition_actionTriggered(int action)
     case 2:
         posi = ui->sliPosition->value() - 10;
         break;
+    case QAbstractSlider::SliderMove:
+        posi = ui->sliPosition->sliderPosition();
+        break;
     default:
         return;
         break;

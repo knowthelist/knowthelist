@@ -194,10 +194,12 @@ bool MonitorPlayer::close()
 
 void MonitorPlayer::setPosition(QTime position)
 {
-    if (audioBackend) {
-        audioBackend->seek(position);
-        p->position = QTime(0, 0).msecsTo(position);
-    }
+    QMutexLocker locker(&p->mutex);
+    if (!audioBackend || !p->isLoaded)
+        return;
+
+    audioBackend->seek(position);
+    p->position = QTime(0, 0).msecsTo(position);
 }
 
 QTime MonitorPlayer::position()

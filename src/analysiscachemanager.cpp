@@ -48,7 +48,7 @@ static QSqlDatabase collectionDb()
 }
 
 static constexpr int kEnvelopeCacheVersion = 3;
-static constexpr int kTempoAnalysisVersion = 28;
+static constexpr int kTempoAnalysisVersion = 31;
 
 static AnalysisCacheManager::CachedTempo buildLegacyCachedTempo(const QSqlQuery& query)
 {
@@ -148,7 +148,7 @@ bool AnalysisCacheManager::ensureTempoCacheTable() const
         "bar_phase_confidence REAL DEFAULT 0.0,"
         "low_end_confidence REAL DEFAULT 0.0,"
         "changedate INTEGER,"
-        "analysis_version INTEGER DEFAULT 28,"
+        "analysis_version INTEGER DEFAULT 31,"
         "envelope_version INTEGER DEFAULT 0,"
         "exact_bpm REAL DEFAULT 0.0,"
         "envelope_data BLOB,"
@@ -304,7 +304,7 @@ void AnalysisCacheManager::storeCachedTempo(const QUrl& url, int bpm, double exa
          "analysis_version, envelope_version) "
         "VALUES (:url, :bpm, :exact_bpm, :start_pos, :end_pos, "
          ":beat_start, :beat_phase, :beat_phase, :beat_end, :bar_anchor, :bar_confidence, :low_end_confidence, "
-         "strftime('%s','now'), 28, "
+         "strftime('%s','now'), 31, "
          "COALESCE((SELECT envelope_version FROM analysis_cache WHERE url = :url), 0))"
     );
     q.bindValue(":url", url.toLocalFile());

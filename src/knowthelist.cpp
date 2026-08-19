@@ -26,6 +26,7 @@
 #include "transitionplanner.h"
 
 #include <QBoxLayout>
+#include <QAbstractSlider>
 #include <QSettings>
 #include <QResizeEvent>
 #include <QToolButton>
@@ -2026,6 +2027,8 @@ void Knowthelist::monitorPlayer_trackTimeChanged(qint64 time, qint64 totalTime)
 
 void Knowthelist::timerMonitor_timeOut()
 {
+    if (!monitorPlayer)
+        return;
 
     QTime length = monitorPlayer->length();
     QTime curpos = monitorPlayer->position();
@@ -2033,7 +2036,7 @@ void Knowthelist::timerMonitor_timeOut()
     long remainMs;
 
     //Some tracks deliver no length in state pause
-    if (length == QTime(0, 0))
+    if (length == QTime(0, 0) && m_MonitorTrack)
         length = QTime(0, 0, 0).addSecs(m_MonitorTrack->length());
 
     remainMs = curpos.msecsTo(length);
@@ -2054,10 +2057,13 @@ void Knowthelist::timerMonitor_timeOut()
 
 void Knowthelist::on_sliMonitor_sliderMoved(int value)
 {
+    if (!monitorPlayer || !monitorPlayer->mediaPlayable())
+        return;
+
     uint length = -monitorPlayer->length().msecsTo(QTime(0, 0, 0));
 
     //Some tracks deliver no length in state pause
-    if (length == 0)
+    if (length == 0 && m_MonitorTrack)
         length = m_MonitorTrack->length() * 1000;
 
     if (length != 0 && value > 0) {
@@ -2324,6 +2330,7 @@ void Knowthelist::on_lblSoundcard_linkActivated(const QString& link)
 void Knowthelist::on_sliMonitor_actionTriggered(int action)
 {
     //a workaround for page moving
+    qDebug() << Q_FUNC_INFO << "action=" << action;
     int posi;
     switch (action) {
     case 3:
@@ -2339,6 +2346,9 @@ void Knowthelist::on_sliMonitor_actionTriggered(int action)
         break;
     case 2:
         posi = ui->sliMonitor->value() - 10;
+        break;
+    case QAbstractSlider::SliderMove:
+        posi = ui->sliMonitor->sliderPosition();
         break;
     default:
         return;

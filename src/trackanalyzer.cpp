@@ -88,17 +88,47 @@ static QThreadPool* analyzerThreadPool()
     return &pool;
 }
 
-static float lowPassStep(float input, float& lowState, float alpha)
+class KickBandPass
 {
-    lowState += alpha * (input - lowState);
-    return lowState;
-}
+public:
+    explicit KickBandPass(double sampleRate)
+    {
+        constexpr double pi = 3.14159265358979323846;
+        const double safeRate = qMax(1.0, sampleRate);
+        const double highPassRc = 1.0 / (2.0 * pi * 40.0);
+        const double lowPassRc = 1.0 / (2.0 * pi * 90.0);
+        const double dt = 1.0 / safeRate;
+        m_highPassAlpha = static_cast<float>(highPassRc / (highPassRc + dt));
+        m_lowPassAlpha = static_cast<float>(dt / (lowPassRc + dt));
+    }
+
+    float process(float input)
+    {
+        // Cascading stable one-pole high- and low-pass stages isolates the
+        // 40-90 Hz kick band without the low-pass leakage of melodic attacks.
+        m_highPassState = m_highPassAlpha * (m_highPassState + input - m_previousInput);
+        m_previousInput = input;
+        m_lowPassState += m_lowPassAlpha * (m_highPassState - m_lowPassState);
+        return m_lowPassState;
+    }
+
+private:
+    float m_highPassAlpha = 0.0f;
+    float m_lowPassAlpha = 0.0f;
+    float m_previousInput = 0.0f;
+    float m_highPassState = 0.0f;
+    float m_lowPassState = 0.0f;
+};
 
 struct KickGridFit {
     double bpm = 0.0;
     double phaseMs = 0.0;
     int matchedBeats = 0;
     double score = 0.0;
+    int bpmCandidateCount = 0;
+    int phaseCandidateCount = 0;
+    int localWindows = 0;
+    double medianLocalBpm = 0.0;
 };
 
 struct BarPhaseFit {
@@ -114,122 +144,398 @@ struct BarPhaseFit {
 
 static double refinedOnsetTimeMs(int onsetFrame, const QList<float>& env, const QList<qint64>& times);
 
-static KickGridFit fitKickGrid(const QVector<int>& onsets,
-                               const QList<float>& envelope,
+struct WeightedOnset {
+    double timeMs = 0.0;
+    double weight = 0.0;
+};
+
+static double robustOnsetReference(const QVector<int>& onsets, const QList<float>& envelope)
+{
+    QVector<double> values;
+    values.reserve(onsets.size());
+    for (const int onset : onsets) {
+        if (onset >= 0 && onset < envelope.size())
+            values.append(qMax(0.0, static_cast<double>(envelope.at(onset))));
+    }
+    if (values.isEmpty())
+        return 1.0;
+
+    std::sort(values.begin(), values.end());
+    return qMax(0.01, values.at((values.size() - 1) * 4 / 5));
+}
+
+static double normalizedOnsetWeight(float value, double reference)
+{
+    return std::sqrt(qBound(0.0, static_cast<double>(value) / reference, 2.0));
+}
+
+static QVector<WeightedOnset> combinedOnsetEvidence(const QVector<int>& lowOnsets,
+                                                     const QList<float>& lowEnvelope,
+                                                     const QVector<int>& fullOnsets,
+                                                     const QList<float>& fullEnvelope,
+                                                     const QList<qint64>& times)
+{
+    QVector<WeightedOnset> points;
+    points.reserve(lowOnsets.size() + fullOnsets.size());
+    const double lowReference = robustOnsetReference(lowOnsets, lowEnvelope);
+    const double fullReference = robustOnsetReference(fullOnsets, fullEnvelope);
+
+    auto append = [&](const QVector<int>& onsets, const QList<float>& envelope,
+                      double reference, double sourceWeight) {
+        for (const int onset : onsets) {
+            if (onset < 0 || onset >= envelope.size() || onset >= times.size())
+                continue;
+            points.append({refinedOnsetTimeMs(onset, envelope, times),
+                           sourceWeight * normalizedOnsetWeight(envelope.at(onset), reference)});
+        }
+    };
+    // The narrow kick band remains useful, while the full-band envelope keeps
+    // a regular offbeat bass transient from becoming the sole phase evidence.
+    append(lowOnsets, lowEnvelope, lowReference, 0.60);
+    append(fullOnsets, fullEnvelope, fullReference, 0.75);
+    std::sort(points.begin(), points.end(), [](const WeightedOnset& left, const WeightedOnset& right) {
+        return left.timeMs < right.timeMs;
+    });
+
+    QVector<WeightedOnset> merged;
+    merged.reserve(points.size());
+    for (const WeightedOnset& point : points) {
+        if (!merged.isEmpty() && point.timeMs - merged.last().timeMs <= 12.0) {
+            WeightedOnset& existing = merged.last();
+            existing.timeMs = (existing.timeMs * existing.weight + point.timeMs * point.weight)
+                / (existing.weight + point.weight);
+            existing.weight += point.weight;
+        } else {
+            merged.append(point);
+        }
+    }
+    return merged;
+}
+
+static bool fitWeightedGridLine(const QVector<int>& beatIndices,
+                                const QVector<double>& timesMs,
+                                const QVector<double>& baseWeights,
+                                double& periodMs,
+                                double& interceptMs)
+{
+    if (beatIndices.size() < 8 || beatIndices.size() != timesMs.size()
+        || timesMs.size() != baseWeights.size()) {
+        return false;
+    }
+
+    QVector<double> weights = baseWeights;
+    for (int pass = 0; pass < 3; ++pass) {
+        double sumW = 0.0;
+        double sumI = 0.0;
+        double sumT = 0.0;
+        double sumII = 0.0;
+        double sumIT = 0.0;
+        for (int i = 0; i < beatIndices.size(); ++i) {
+            const double weight = weights.at(i);
+            const double beat = beatIndices.at(i);
+            sumW += weight;
+            sumI += weight * beat;
+            sumT += weight * timesMs.at(i);
+            sumII += weight * beat * beat;
+            sumIT += weight * beat * timesMs.at(i);
+        }
+        const double denominator = sumW * sumII - sumI * sumI;
+        if (sumW <= 0.0 || qAbs(denominator) < 1.0e-9)
+            return false;
+
+        periodMs = (sumW * sumIT - sumI * sumT) / denominator;
+        interceptMs = (sumT - periodMs * sumI) / sumW;
+
+        QVector<double> absoluteResiduals;
+        absoluteResiduals.reserve(beatIndices.size());
+        for (int i = 0; i < beatIndices.size(); ++i)
+            absoluteResiduals.append(qAbs(timesMs.at(i) - interceptMs - periodMs * beatIndices.at(i)));
+        std::sort(absoluteResiduals.begin(), absoluteResiduals.end());
+        const double median = absoluteResiduals.at(absoluteResiduals.size() / 2);
+        const double robustScale = qMax(8.0, 1.4826 * median);
+        const double cutoff = qMax(16.0, qMin(70.0, 3.5 * robustScale));
+        for (int i = 0; i < weights.size(); ++i) {
+            const double residual = qAbs(timesMs.at(i) - interceptMs - periodMs * beatIndices.at(i));
+            const double normalized = residual / cutoff;
+            const double robustWeight = normalized < 1.0
+                ? std::pow(1.0 - normalized * normalized, 2.0) : 0.0;
+            weights[i] = baseWeights.at(i) * robustWeight;
+        }
+    }
+    return periodMs > 0.0;
+}
+
+static KickGridFit evaluateKickGrid(const QVector<WeightedOnset>& points,
+                                    double candidateBpm,
+                                    double phaseMs)
+{
+    KickGridFit fit;
+    if (candidateBpm < kTempoMinBpm || candidateBpm > kTempoMaxBpm)
+        return fit;
+
+    const double initialPeriodMs = 60000.0 / candidateBpm;
+    const double toleranceMs = qMin(65.0, initialPeriodMs * 0.13);
+    QHash<int, WeightedOnset> strongestByBeat;
+    for (const WeightedOnset& point : points) {
+        const int beat = qRound((point.timeMs - phaseMs) / initialPeriodMs);
+        const double distance = qAbs(point.timeMs - (phaseMs + beat * initialPeriodMs));
+        if (distance > toleranceMs)
+            continue;
+        const auto existing = strongestByBeat.constFind(beat);
+        if (existing == strongestByBeat.constEnd() || point.weight > existing.value().weight)
+            strongestByBeat.insert(beat, point);
+    }
+    if (strongestByBeat.size() < 12)
+        return fit;
+
+    QVector<int> beatIndices;
+    QVector<double> timesMs;
+    QVector<double> weights;
+    beatIndices.reserve(strongestByBeat.size());
+    timesMs.reserve(strongestByBeat.size());
+    weights.reserve(strongestByBeat.size());
+    for (auto it = strongestByBeat.constBegin(); it != strongestByBeat.constEnd(); ++it) {
+        beatIndices.append(it.key());
+        timesMs.append(it.value().timeMs);
+        weights.append(qMax(0.01, it.value().weight));
+    }
+
+    double periodMs = initialPeriodMs;
+    double interceptMs = phaseMs;
+    if (!fitWeightedGridLine(beatIndices, timesMs, weights, periodMs, interceptMs))
+        return fit;
+
+    const double bpm = 60000.0 / periodMs;
+    if (bpm < kTempoMinBpm || bpm > kTempoMaxBpm)
+        return fit;
+
+    const double refinedToleranceMs = qMin(65.0, periodMs * 0.13);
+    const double sigmaMs = qMax(8.0, periodMs * 0.07);
+    double score = 0.0;
+    int inliers = 0;
+    for (int i = 0; i < beatIndices.size(); ++i) {
+        const double residual = qAbs(timesMs.at(i) - interceptMs - periodMs * beatIndices.at(i));
+        if (residual > refinedToleranceMs)
+            continue;
+        score += qMin(1.5, weights.at(i))
+            * std::exp(-(residual * residual) / (2.0 * sigmaMs * sigmaMs));
+        ++inliers;
+    }
+    if (inliers < 12)
+        return fit;
+
+    const int firstBeat = *std::min_element(beatIndices.constBegin(), beatIndices.constEnd());
+    const int lastBeat = *std::max_element(beatIndices.constBegin(), beatIndices.constEnd());
+    const double coveredBeats = qMax(1, lastBeat - firstBeat + 1);
+    const double coverage = static_cast<double>(inliers) / coveredBeats;
+    fit.bpm = bpm;
+    fit.phaseMs = std::fmod(interceptMs, periodMs);
+    if (fit.phaseMs < 0.0)
+        fit.phaseMs += periodMs;
+    fit.matchedBeats = inliers;
+    fit.score = score / coveredBeats + 0.25 * coverage;
+    return fit;
+}
+
+static KickGridFit trackKickGridSections(const QVector<WeightedOnset>& points, KickGridFit grid)
+{
+    if (grid.bpm <= 0.0 || points.size() < 24)
+        return grid;
+
+    const double globalPeriodMs = 60000.0 / grid.bpm;
+    const double toleranceMs = qMin(65.0, globalPeriodMs * 0.13);
+    const double windowMs = 16000.0;
+    const double stepMs = 8000.0;
+    QVector<double> localPeriods;
+    QVector<double> localPhaseOffsets;
+    const double firstMs = points.first().timeMs;
+    const double lastMs = points.last().timeMs;
+
+    for (double windowStart = firstMs; windowStart < lastMs; windowStart += stepMs) {
+        QHash<int, WeightedOnset> strongestByBeat;
+        for (const WeightedOnset& point : points) {
+            if (point.timeMs < windowStart || point.timeMs >= windowStart + windowMs)
+                continue;
+            const int beat = qRound((point.timeMs - grid.phaseMs) / globalPeriodMs);
+            const double residual = qAbs(point.timeMs - grid.phaseMs - beat * globalPeriodMs);
+            if (residual > toleranceMs)
+                continue;
+            const auto existing = strongestByBeat.constFind(beat);
+            if (existing == strongestByBeat.constEnd() || point.weight > existing.value().weight)
+                strongestByBeat.insert(beat, point);
+        }
+        if (strongestByBeat.size() < 8)
+            continue;
+
+        QVector<int> beatIndices;
+        QVector<double> timesMs;
+        QVector<double> weights;
+        for (auto it = strongestByBeat.constBegin(); it != strongestByBeat.constEnd(); ++it) {
+            beatIndices.append(it.key());
+            timesMs.append(it.value().timeMs);
+            weights.append(qMax(0.01, it.value().weight));
+        }
+        double localPeriodMs = globalPeriodMs;
+        double localInterceptMs = grid.phaseMs;
+        if (!fitWeightedGridLine(beatIndices, timesMs, weights, localPeriodMs, localInterceptMs))
+            continue;
+
+        const double localBpm = 60000.0 / localPeriodMs;
+        const double windowCenter = windowStart + windowMs * 0.5;
+        const int centerBeat = qRound((windowCenter - grid.phaseMs) / globalPeriodMs);
+        const double phaseOffsetMs = (localInterceptMs + centerBeat * localPeriodMs)
+            - (grid.phaseMs + centerBeat * globalPeriodMs);
+        if (qAbs(localBpm - grid.bpm) > qMax(1.5, grid.bpm * 0.02)
+            || qAbs(phaseOffsetMs) > toleranceMs) {
+            continue;
+        }
+        localPeriods.append(localPeriodMs);
+        localPhaseOffsets.append(phaseOffsetMs);
+    }
+
+    if (localPeriods.size() < 2)
+        return grid;
+
+    std::sort(localPeriods.begin(), localPeriods.end());
+    std::sort(localPhaseOffsets.begin(), localPhaseOffsets.end());
+    const double medianPeriodMs = localPeriods.at(localPeriods.size() / 2);
+    const double medianPhaseOffsetMs = localPhaseOffsets.at(localPhaseOffsets.size() / 2);
+    const double adjustedPeriodMs = globalPeriodMs + 0.35 * (medianPeriodMs - globalPeriodMs);
+    const double adjustedPhaseMs = grid.phaseMs + qBound(-15.0, medianPhaseOffsetMs, 15.0);
+
+    grid.bpm = 60000.0 / adjustedPeriodMs;
+    grid.phaseMs = std::fmod(adjustedPhaseMs, adjustedPeriodMs);
+    if (grid.phaseMs < 0.0)
+        grid.phaseMs += adjustedPeriodMs;
+    grid.localWindows = localPeriods.size();
+    grid.medianLocalBpm = 60000.0 / medianPeriodMs;
+    return grid;
+}
+
+static KickGridFit fitKickGrid(const QVector<int>& lowOnsets,
+                               const QList<float>& lowEnvelope,
+                               const QVector<int>& fullOnsets,
+                               const QList<float>& fullEnvelope,
                                const QList<qint64>& times,
                                double seedBpm)
 {
     KickGridFit best;
-    if (seedBpm <= 0.0 || onsets.size() < 32 || times.isEmpty())
+    const QVector<WeightedOnset> points = combinedOnsetEvidence(
+        lowOnsets, lowEnvelope, fullOnsets, fullEnvelope, times);
+    if (points.size() < 24)
         return best;
 
-    QVector<int> phaseCandidates = onsets;
-    std::sort(phaseCandidates.begin(), phaseCandidates.end(), [&](int lhs, int rhs) {
-        const float left = lhs >= 0 && lhs < envelope.size() ? envelope.at(lhs) : 0.0f;
-        const float right = rhs >= 0 && rhs < envelope.size() ? envelope.at(rhs) : 0.0f;
-        return left > right;
-    });
-    if (phaseCandidates.size() > 64)
-        phaseCandidates.resize(64);
-
-    const double minBpm = qMax(static_cast<double>(kTempoMinBpm), seedBpm - 0.5);
-    const double maxBpm = qMin(static_cast<double>(kTempoMaxBpm), seedBpm + 0.5);
-    for (double candidateBpm = minBpm; candidateBpm <= maxBpm + 1.0e-9; candidateBpm += 0.01) {
-        const double beatMs = 60000.0 / candidateBpm;
-        const double toleranceMs = qMin(70.0, beatMs * 0.16);
-        const double sigmaMs = qMax(8.0, beatMs * 0.08);
-
-        QVector<double> phases;
-        phases.reserve(phaseCandidates.size());
-        for (const int onset : phaseCandidates) {
-            if (onset < 0 || onset >= times.size())
-                continue;
-            double phase = std::fmod(refinedOnsetTimeMs(onset, envelope, times), beatMs);
-            if (phase < 0.0)
-                phase += beatMs;
-            bool duplicate = false;
-            for (const double existing : phases) {
-                if (qAbs(existing - phase) < 2.0
-                    || qAbs(existing - phase + beatMs) < 2.0
-                    || qAbs(existing - phase - beatMs) < 2.0) {
-                    duplicate = true;
-                    break;
-                }
-            }
-
-            if (!duplicate)
-                phases.append(phase);
-        }
-
-        for (const double phaseMs : phases) {
-            QHash<int, QPair<float, double>> strongestByBeat;
-            for (const int onset : onsets) {
-                if (onset < 0 || onset >= times.size())
+    constexpr double kCandidateBinWidth = 0.25;
+    const int binCount = qRound((kTempoMaxBpm - kTempoMinBpm) / kCandidateBinWidth) + 1;
+    QVector<double> votes(binCount, 0.0);
+    const double minPeriodMs = 60000.0 / kTempoMaxBpm;
+    const double maxPeriodMs = 60000.0 / kTempoMinBpm;
+    for (int i = 0; i < points.size(); ++i) {
+        const int upper = qMin(points.size(), i + 25);
+        for (int j = i + 1; j < upper; ++j) {
+            const double elapsedMs = points.at(j).timeMs - points.at(i).timeMs;
+            const int minBeats = qMax(1, qCeil(elapsedMs / maxPeriodMs));
+            const int maxBeats = qFloor(elapsedMs / minPeriodMs);
+            for (int beats = minBeats; beats <= maxBeats; ++beats) {
+                const double bpm = 60000.0 * beats / elapsedMs;
+                if (bpm < kTempoMinBpm || bpm > kTempoMaxBpm)
                     continue;
-                const double timeMs = refinedOnsetTimeMs(onset, envelope, times);
-                const int beatIndex = qRound((timeMs - phaseMs) / beatMs);
-                const double predictedMs = phaseMs + beatIndex * beatMs;
-                if (qAbs(timeMs - predictedMs) > toleranceMs)
-                    continue;
-
-                const float strength = onset < envelope.size() ? envelope.at(onset) : 0.0f;
-                const auto existing = strongestByBeat.constFind(beatIndex);
-                if (existing == strongestByBeat.constEnd() || strength > existing.value().first)
-                    strongestByBeat.insert(beatIndex, qMakePair(strength, timeMs));
-            }
-
-            if (strongestByBeat.size() < 32)
-                continue;
-
-            double score = 0.0;
-            double sumI = 0.0;
-            double sumT = 0.0;
-            double sumIT = 0.0;
-            double sumI2 = 0.0;
-            for (auto it = strongestByBeat.constBegin(); it != strongestByBeat.constEnd(); ++it) {
-                const double beatIndex = it.key();
-                const double timeMs = it.value().second;
-                const double distanceMs = timeMs - (phaseMs + beatIndex * beatMs);
-                score += it.value().first
-                        * std::exp(-(distanceMs * distanceMs) / (2.0 * sigmaMs * sigmaMs));
-                sumI += beatIndex;
-                sumT += timeMs;
-                sumIT += beatIndex * timeMs;
-                sumI2 += beatIndex * beatIndex;
-            }
-
-            const double count = static_cast<double>(strongestByBeat.size());
-            const double denom = count * sumI2 - sumI * sumI;
-            if (qAbs(denom) <= 1.0e-9)
-                continue;
-
-            const double fittedPeriodMs = (count * sumIT - sumI * sumT) / denom;
-            if (fittedPeriodMs <= 0.0)
-                continue;
-
-            const double fittedBpm = 60000.0 / fittedPeriodMs;
-            if (qAbs(fittedBpm - seedBpm) > 0.5)
-                continue;
-            const double interceptMs = (sumT - fittedPeriodMs * sumI) / count;
-            double fittedPhaseMs = std::fmod(interceptMs, fittedPeriodMs);
-            if (fittedPhaseMs < 0.0)
-                fittedPhaseMs += fittedPeriodMs;
-
-            const double normalizedScore = score / std::sqrt(count);
-            if (normalizedScore > best.score) {
-                best.bpm = fittedBpm;
-                best.phaseMs = fittedPhaseMs;
-                best.matchedBeats = strongestByBeat.size();
-                best.score = normalizedScore;
+                const int bin = qBound(0, qRound((bpm - kTempoMinBpm) / kCandidateBinWidth), binCount - 1);
+                votes[bin] += std::sqrt(points.at(i).weight * points.at(j).weight)
+                    / std::sqrt(static_cast<double>(beats));
             }
         }
     }
 
-    return best;
+    QVector<int> rankedBins;
+    rankedBins.reserve(binCount);
+    for (int bin = 0; bin < binCount; ++bin)
+        rankedBins.append(bin);
+    std::sort(rankedBins.begin(), rankedBins.end(), [&](int left, int right) {
+        return votes.at(left) > votes.at(right);
+    });
+
+    QVector<double> candidates;
+    auto addCandidate = [&candidates](double bpm) {
+        if (bpm < kTempoMinBpm || bpm > kTempoMaxBpm)
+            return;
+        for (const double existing : candidates) {
+            if (qAbs(existing - bpm) < 0.05)
+                return;
+        }
+        candidates.append(bpm);
+    };
+    for (int rank = 0; rank < rankedBins.size() && candidates.size() < 20; ++rank) {
+        const int bin = rankedBins.at(rank);
+        if (votes.at(bin) <= 0.0)
+            break;
+        const double bpm = kTempoMinBpm + bin * kCandidateBinWidth;
+        bool separated = true;
+        for (const double existing : candidates) {
+            if (qAbs(existing - bpm) < 0.75) {
+                separated = false;
+                break;
+            }
+        }
+        if (separated)
+            addCandidate(bpm);
+    }
+    addCandidate(seedBpm);
+    addCandidate(seedBpm * 0.5);
+    addCandidate(seedBpm * 2.0);
+
+    int bpmCandidateCount = 0;
+    int phaseCandidateCount = 0;
+    // The independent tempo consensus is more reliable for selecting the
+    // beat period than phase fitting over percussion-rich material. Keep
+    // phase fitting flexible within a musical tempo neighborhood, but do not
+    // allow a subharmonic to replace the established tempo.
+    const double tempoNeighborhood = qMax(8.0, seedBpm * 0.08);
+    for (const double baseBpm : candidates) {
+        for (double candidateBpm = baseBpm - 0.35; candidateBpm <= baseBpm + 0.35; candidateBpm += 0.05) {
+            if (candidateBpm < kTempoMinBpm || candidateBpm > kTempoMaxBpm)
+                continue;
+            if (qAbs(candidateBpm - seedBpm) > tempoNeighborhood)
+                continue;
+            ++bpmCandidateCount;
+            const double periodMs = 60000.0 / candidateBpm;
+            const int phaseBins = qMax(1, qRound(periodMs / 5.0));
+            KickGridFit bestForBpm;
+            for (int bin = 0; bin < phaseBins; ++bin) {
+                const double phaseMs = (bin + 0.5) * periodMs / phaseBins;
+                const KickGridFit candidate = evaluateKickGrid(points, candidateBpm, phaseMs);
+                ++phaseCandidateCount;
+                if (candidate.score > bestForBpm.score)
+                    bestForBpm = candidate;
+            }
+
+            // A coarse 5 ms sweep makes every phase plausible; retest the
+            // winning neighborhood at 1 ms resolution before fitting it.
+            const int refineRadiusMs = 5;
+            for (int deltaMs = -refineRadiusMs; deltaMs <= refineRadiusMs; ++deltaMs) {
+                double phaseMs = bestForBpm.phaseMs + deltaMs;
+                phaseMs = std::fmod(phaseMs, periodMs);
+                if (phaseMs < 0.0)
+                    phaseMs += periodMs;
+                const KickGridFit candidate = evaluateKickGrid(points, candidateBpm, phaseMs);
+                ++phaseCandidateCount;
+                if (candidate.score > bestForBpm.score)
+                    bestForBpm = candidate;
+            }
+            if (bestForBpm.score > best.score)
+                best = bestForBpm;
+        }
+    }
+
+    best.bpmCandidateCount = bpmCandidateCount;
+    best.phaseCandidateCount = phaseCandidateCount;
+    return trackKickGridSections(points, best);
 }
 
-static BarPhaseFit estimateFourFourBarPhase(const QVector<int>& onsets,
-                                            const QList<float>& envelope,
+static BarPhaseFit estimateFourFourBarPhase(const QVector<int>& lowOnsets,
+                                            const QList<float>& lowEnvelope,
+                                            const QVector<int>& fullOnsets,
+                                            const QList<float>& fullEnvelope,
                                             const QList<qint64>& times,
                                             double bpm,
                                             double beatPhaseMs,
@@ -238,7 +544,7 @@ static BarPhaseFit estimateFourFourBarPhase(const QVector<int>& onsets,
                                             int stableEndFrame)
 {
     BarPhaseFit best;
-    if (bpm <= 0.0 || onsets.isEmpty() || times.size() < 2)
+    if (bpm <= 0.0 || times.size() < 2 || (lowOnsets.isEmpty() && fullOnsets.isEmpty()))
         return best;
 
     const double beatMs = 60000.0 / bpm;
@@ -261,25 +567,34 @@ static BarPhaseFit estimateFourFourBarPhase(const QVector<int>& onsets,
     const double toleranceMs = qMin(70.0, beatMs * 0.18);
     QHash<int, double> beatStrengths;
     beatStrengths.reserve(lastIndex - firstIndex + 1);
+    const double lowReference = robustOnsetReference(lowOnsets, lowEnvelope);
+    const double fullReference = robustOnsetReference(fullOnsets, fullEnvelope);
 
     for (int beatIndex = firstIndex; beatIndex <= lastIndex; ++beatIndex) {
         const double targetMs = beatPhaseMs + beatIndex * beatMs;
-        double strongest = 0.0;
-        for (const int onset : onsets) {
-            if (onset < 0 || onset >= times.size() || onset >= envelope.size())
-                continue;
-            const double onsetMs = refinedOnsetTimeMs(onset, envelope, times);
-            if (qAbs(onsetMs - targetMs) <= toleranceMs)
-                strongest = qMax(strongest, static_cast<double>(envelope.at(onset)));
-        }
-        beatStrengths.insert(beatIndex, strongest);
+        auto strongest = [&](const QVector<int>& onsets, const QList<float>& envelope,
+                             double reference) {
+            double result = 0.0;
+            for (const int onset : onsets) {
+                if (onset < 0 || onset >= times.size() || onset >= envelope.size())
+                    continue;
+                const double onsetMs = refinedOnsetTimeMs(onset, envelope, times);
+                if (qAbs(onsetMs - targetMs) <= toleranceMs) {
+                    result = qMax(result, normalizedOnsetWeight(envelope.at(onset), reference));
+                }
+            }
+            return result;
+        };
+        const double lowStrength = strongest(lowOnsets, lowEnvelope, lowReference);
+        const double fullStrength = strongest(fullOnsets, fullEnvelope, fullReference);
+        beatStrengths.insert(beatIndex, 0.55 * lowStrength + 0.45 * fullStrength);
     }
 
     double totalEnergy = 0.0;
     int nonZeroBeats = 0;
     for (auto it = beatStrengths.constBegin(); it != beatStrengths.constEnd(); ++it) {
         totalEnergy += it.value();
-        if (it.value() > 0.02)
+        if (it.value() > 0.20)
             ++nonZeroBeats;
     }
     const double beatCount = static_cast<double>(beatStrengths.size());
@@ -288,7 +603,7 @@ static BarPhaseFit estimateFourFourBarPhase(const QVector<int>& onsets,
     // Low-band onset extraction can legitimately retain only the kick/downbeat
     // in sparse arrangements, so require some repeated support without
     // demanding a detected onset on every beat.
-    if (coverage < 0.20 || averageEnergy < 0.02)
+    if (coverage < 0.20 || averageEnergy < 0.12)
         return best;
 
     for (int offset = 0; offset < 4; ++offset) {
@@ -327,7 +642,7 @@ static BarPhaseFit estimateFourFourBarPhase(const QVector<int>& onsets,
             ++downbeatCount;
             ++bars;
             otherCount += 1;
-            if (barDownbeat > barOthers + 0.02)
+            if (barDownbeat > barOthers + 0.08)
                 ++downbeatWins;
         }
 
@@ -370,12 +685,18 @@ static BarPhaseFit estimateFourFourBarPhase(const QVector<int>& onsets,
     const bool strongSparseDownbeat = best.bars >= 8
         && contrast >= 0.35
         && separation >= 0.10;
+    const bool clearRepeatedBar = best.bars >= 12
+        && best.score >= 0.32
+        && contrast >= 0.10
+        && consistency >= 0.55
+        && coverage >= 0.20
+        && separation >= 0.25;
     best.accepted = best.bars >= 8
         && contrast >= 0.16
         && (consistency >= 0.55 || strongSparseDownbeat)
         && separation >= 0.08
-        && (best.confidence >= 0.58 || strongSparseDownbeat);
-    if (strongSparseDownbeat)
+        && (best.confidence >= 0.58 || strongSparseDownbeat || clearRepeatedBar);
+    if (strongSparseDownbeat || clearRepeatedBar)
         best.confidence = qMax(best.confidence, 0.60);
     return best;
 }
@@ -406,11 +727,9 @@ static TrackAnalysisData scanAudioFile(const QUrl& url)
     juce::AudioBuffer<float> buffer(channels, frameSize);
     buffer.clear();
 
-    // Keep the phase detector focused on kick and bass transients. At 44.1 kHz
-    // alpha 0.12 reaches far into the midrange, where piano and percussion
-    // attacks can pull the grid away from the rhythmic pulse.
-    const float lowAlpha = 0.02f;
-    float lowState = 0.0f;
+    // Tempo/phase evidence uses a true 40-90 Hz kick band. The filter state is
+    // local to this background scan and never reaches the audio callback.
+    KickBandPass kickBandPass(data.sampleRate);
     float prevRms = 0.0f;
     float prevLowRms = 0.0f;
     float peakRms = 0.0f;
@@ -445,9 +764,9 @@ static TrackAnalysisData scanAudioFile(const QUrl& url)
             }
             mono /= static_cast<float>(channels);
 
-            const float low = lowPassStep(mono, lowState, lowAlpha);
+            const float kickBand = kickBandPass.process(mono);
             sumSq += channelSumSq / static_cast<double>(channels);
-            lowSumSq += static_cast<double>(low) * static_cast<double>(low);
+            lowSumSq += static_cast<double>(kickBand) * static_cast<double>(kickBand);
         }
 
         const float frameRms = static_cast<float>(std::sqrt(sumSq / qMax(1, numSamples)));
@@ -1265,9 +1584,6 @@ void TrackAnalyzer::detectTempo()
 
     const QVector<int> tempoOnsetsFull = stableOnsetsOnly(onsetsFull);
     const QVector<int> tempoOnsetsLow = stableOnsetsOnly(onsetsLow);
-    const QVector<int>& selectedTempoOnsets = tempoOnsetsLow.isEmpty() ? tempoOnsetsFull : tempoOnsetsLow;
-    const QList<float>& selectedTempoEnv = tempoOnsetsLow.isEmpty() ? fullEnv : lowEnv;
-
     QVector<double> score(kMaxBpm + 1, 0.0);
     QVector<double> exactBpmSum(kMaxBpm + 1, 0.0);
     QVector<double> exactBpmWeight(kMaxBpm + 1, 0.0);
@@ -1533,51 +1849,15 @@ void TrackAnalyzer::detectTempo()
     if (finalBpm >= kMinBpm && finalBpm <= kMaxBpm && exactBpmWeight[finalBpm] > 0.0)
         finalExactBpm = exactBpmSum[finalBpm] / exactBpmWeight[finalBpm];
 
-    // Refine exact BPM using least-squares linear regression over all detected onsets.
-    // This is the standard approach used by aubio, librosa, and Essentia:
-    //   Model: t_beat[k] = t0 + beatNumber[k] * T    (T = beat period in seconds)
-    //   Solve for T using OLS over all N onsets -> precision ~T^2 / (track_duration * sqrt(N))
-    // For 128 BPM over 5 min with ~500 onsets: precision < 0.001 BPM (vs 0.26 BPM from frame voting).
-    if (finalBpm > 0 && !spectralFluxTimes.isEmpty()) {
-        const QVector<int>& onsets = selectedTempoOnsets;
-        const int N = onsets.size();
-        if (N >= 8) {
-            const double estimatedPeriodS = 60.0 / static_cast<double>(finalBpm);
-            const double t0ms = refinedOnsetTimeMs(onsets.first(), selectedTempoEnv, spectralFluxTimes);
-
-            // Assign beat number to each onset by rounding to nearest beat.
-            QVector<double> beatNum(N), tSec(N);
-            for (int k = 0; k < N; ++k) {
-                const int frame = onsets.at(k);
-                const double onsetMs = refinedOnsetTimeMs(frame, selectedTempoEnv, spectralFluxTimes);
-                const double tS = (frame < spectralFluxTimes.size())
-                    ? (onsetMs - t0ms) * 1.0e-3
-                        : static_cast<double>(frame) / actualFps;
-                tSec[k]    = tS;
-                beatNum[k] = qRound(tS / estimatedPeriodS);
-            }
-
-            // OLS: minimize sum((tSec[k] - t0 - beatNum[k]*T)^2) w.r.t. T and t0.
-            double sumI = 0.0, sumT = 0.0, sumIT = 0.0, sumI2 = 0.0;
-            for (int k = 0; k < N; ++k) {
-                const double i = beatNum.at(k);
-                const double t = tSec.at(k);
-                sumI  += i;
-                sumT  += t;
-                sumIT += i * t;
-                sumI2 += i * i;
-            }
-            const double denom = static_cast<double>(N) * sumI2 - sumI * sumI;
-            if (qAbs(denom) > 1e-12) {
-                const double T = (static_cast<double>(N) * sumIT - sumI * sumT) / denom;
-                if (T > 0.0) {
-                    const double refinedBpm = 60.0 / T;
-                    // Accept only if within 0.5 BPM of the integer estimate.
-                    if (qAbs(refinedBpm - static_cast<double>(finalBpm)) < 0.5)
-                        finalExactBpm = refinedBpm;
-                }
-            }
-        }
+    // A weighted all-onset consensus searches the full allowed BPM range,
+    // then robustly fits one onset per beat. It rejects off-grid percussion
+    // instead of allowing it to bias a final global OLS pass.
+    const KickGridFit kickFit = fitKickGrid(
+        tempoOnsetsLow, lowEnv, tempoOnsetsFull, fullEnv, spectralFluxTimes, finalExactBpm);
+    const bool kickFitApplied = kickFit.matchedBeats >= 24 && kickFit.score > 0.0;
+    if (kickFitApplied) {
+        finalExactBpm = kickFit.bpm;
+        finalBpm = qBound(kMinBpm, qRound(finalExactBpm), kMaxBpm);
     }
 
     {
@@ -1590,16 +1870,11 @@ void TrackAnalyzer::detectTempo()
     const QList<float>& anchorEnv = lowEnv.isEmpty() ? fullEnv : lowEnv;
     const QVector<int>& phaseOnsets = !onsetsLow.isEmpty() ? onsetsLow : onsetsFull;
     int phaseMs = 0;
-    const KickGridFit kickFit = fitKickGrid(phaseOnsets, anchorEnv, spectralFluxTimes, m_ExactBpm);
-    const bool kickFitApplied = kickFit.matchedBeats >= 100
-            && kickFit.bpm > 0.0
-            && qAbs(kickFit.bpm - m_ExactBpm) <= 0.5;
     if (kickFitApplied) {
-        m_ExactBpm = kickFit.bpm;
         phaseMs = qRound(kickFit.phaseMs);
     }
 
-    if (!kickFitApplied && p->bpm > 0 && m_ExactBpm > 0.0 && !phaseOnsets.isEmpty() && !spectralFluxTimes.isEmpty()) {
+    else if (p->bpm > 0 && m_ExactBpm > 0.0 && !phaseOnsets.isEmpty() && !spectralFluxTimes.isEmpty()) {
         const double beatMs = 60000.0 / m_ExactBpm;
         if (beatMs > 1.0) {
             // Fit beat phase globally over all onsets instead of anchoring on a single
@@ -1777,7 +2052,7 @@ void TrackAnalyzer::detectTempo()
     }
 
     const BarPhaseFit barFit = estimateFourFourBarPhase(
-        phaseOnsets, anchorEnv, spectralFluxTimes, m_ExactBpm,
+        onsetsLow, lowEnv, onsetsFull, fullEnv, spectralFluxTimes, m_ExactBpm,
         static_cast<double>(phaseMs),
         static_cast<double>(QTime(0, 0).msecsTo(m_beatStartPosition)),
         stableStartFrame, stableEndFrame);
@@ -1815,6 +2090,10 @@ void TrackAnalyzer::detectTempo()
              << "kickFitBpm:" << kickFit.bpm
              << "kickFitPhaseMs:" << kickFit.phaseMs
              << "kickFitMatchedBeats:" << kickFit.matchedBeats
+             << "kickFitBpmCandidates:" << kickFit.bpmCandidateCount
+             << "kickFitPhaseCandidates:" << kickFit.phaseCandidateCount
+             << "kickFitLocalWindows:" << kickFit.localWindows
+             << "kickFitMedianLocalBpm:" << kickFit.medianLocalBpm
              << "kickFitApplied:" << kickFitApplied
              << "frames:" << spectralFlux.size()
              << "onsetsFull:" << onsetsFull.size() << "onsetsLow:" << onsetsLow.size();
