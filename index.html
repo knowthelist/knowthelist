@@ -1,109 +1,122 @@
 <!DOCTYPE html>
-<html>
-
+<html lang="en">
   <head>
-    <meta charset='utf-8' />
-    <meta http-equiv="X-UA-Compatible" content="chrome=1" />
-    <meta name="description" content="Knowthelist : Knowthelist - the awesome party music player" />
-
-    <link rel="stylesheet" type="text/css" media="screen" href="stylesheets/stylesheet.css">
-
-    <title>Knowthelist</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="Knowthelist is a cross-platform DJ mixer with beat sync, intelligent transitions, and real-time request queuing.">
+    <title>Knowthelist - The Ultimate Party DJ Mixer</title>
+    <link rel="stylesheet" href="stylesheets/stylesheet.css">
   </head>
-
   <body>
+    <header class="site-header">
+      <nav class="nav shell" aria-label="Primary navigation">
+        <a class="brand" href="#"><span class="brand-mark">K</span> knowthelist</a>
+        <div class="nav-links">
+          <a href="#features">Features</a>
+          <a href="#transitions">Transitions</a>
+          <a href="https://github.com/knowthelist/knowthelist">GitHub</a>
+          <a class="nav-download" href="https://github.com/knowthelist/knowthelist/releases/tag/v2.4.1">Download v2.4.1</a>
+        </div>
+      </nav>
+    </header>
 
-    <!-- HEADER -->
-    <div id="header_wrap" class="outer">
-        <header class="inner">
-          <a id="forkme_banner" href="https://github.com/knowthelist/knowthelist">View on GitHub</a>
-
-          <h1 id="project_title">Knowthelist</h1>
-          <h2 id="project_tagline">Knowthelist - the awesome party music player (v2.4.1)</h2>
-
-            <section id="binaries">
-	      <a class="btn btn-primary btn-large" href="https://github.com/knowthelist/knowthelist/releases/download/v2.4.1/knowthelist-2.4.1-Windows.zip">Download for Windows</a>
-	      <a class="btn btn-primary btn-large" href="https://github.com/knowthelist/knowthelist/releases/download/v2.4.1/knowthelist-v2.4.1-macOS.zip">Download for macOS</a>
-          <a class="btn btn-primary btn-large" href="https://github.com/knowthelist/knowthelist/releases/download/v2.4.1/knowthelist-2.4.0-Linux-x86_64.deb">Download for Linux</a>
-
-            </section>
-
-            <section id="downloads">
-              <a class="zip_download_link" href="https://github.com/knowthelist/knowthelist/zipball/master">Download this project as a .zip file</a>
-              <a class="tar_download_link" href="https://github.com/knowthelist/knowthelist/tarball/master">Download this project as a tar.gz file</a>
-            </section>
-        </header>
-    </div>
-    <div id="donate">
-    <form action="https://www.paypal.com/cgi-bin/webscr" method="post" target="_top">
-<input type="hidden" name="cmd" value="_s-xclick">
-<input type="hidden" name="hosted_button_id" value="3BB2MP3FCQVFW">
-<input type="image" src="https://www.paypalobjects.com/en_US/i/btn/btn_donateCC_LG.gif" border="0" name="submit" alt="PayPal - The safer, easier way to pay online!">
-<img alt="" border="0" src="https://www.paypalobjects.com/de_DE/i/scr/pixel.gif" width="1" height="1">
-</form>
-</div>
-
-    <!-- MAIN CONTENT -->
-    <div id="main_content_wrap" class="outer">
-      <section id="main_content" class="inner">
-        <h1>
-<a name="knowthelist" class="anchor" href="#knowthelist"></a>knowthelist</h1>
-
-<h2>The Ultimate Party DJ Mixer</h2>
-
-<p><strong>Knowthelist</strong> is a feature-packed, cross-platform DJ mixer and music player built for DJs and party hosts who need to react instantly while mixing. Queue up requests in real time, beat-sync two decks, set Auto DJ filters, and deliver smooth transitions.</p>
-
-<h2>Features</h2>
-
-<ul>
-<li><strong>Dual Decks:</strong> Two independent players with separate playlists for seamless mixing</li>
-<li><strong>Live Collection Search:</strong> Find tracks instantly while music plays</li>
-<li><strong>Full Mixer:</strong> Crossfader, 3-band EQ per deck, and per-channel gain control</li>
-<li><strong>Adaptive Transition Planner:</strong> Automatically chooses the best transition for each song pair</li>
-<li><strong>Beat Sync:</strong> Visual sync support with gradual tempo restoration and latency compensation</li>
-<li><strong>Auto DJ:</strong> Smart random play with powerful filters</li>
-<li><strong>Track Analysis:</strong> Automatic BPM detection, loudness mapping, cue points and beat-phase visualization</li>
-<li><strong>Monitor Player:</strong> Pre-listen on a secondary audio device</li>
-<li><strong>Pitch-Preserving Time Stretch:</strong> DJ-style tempo changes with pitch preservation</li>
-<li><strong>Auto Gain Control:</strong> Keep energy levels consistent across a set</li>
-<li><strong>Modern UI:</strong> Fancy tabs, custom VU meters, progress bars and rating widgets</li>
-</ul>
-
-<h2>Adaptive Auto DJ transitions</h2>
-
-<p>The Auto DJ transition planner reevaluates the upcoming pair whenever the current or waiting track changes, then selects an explainable transition profile based on BPM and musical style hints. Matching BPMs prioritize beat and phrase alignment, even when genre metadata is missing or inconsistent.</p>
-
-<ul>
-<li>Beat and phrase blend for compatible dance tracks</li>
-<li>Bass swap to prevent kick and bass masking</li>
-<li>Vocal and mid handoff so the incoming lead remains dominant</li>
-<li>Equal-power blend as the neutral, smooth fallback</li>
-<li>Hard cut for large tempo or style changes</li>
-</ul>
-
-<p>Transitions respect duration limits, maximum tempo correction and the selected style bias. All transition modes are enabled by default and can be adjusted under Settings and Transitions.</p>
-
-<h2>Platforms</h2>
-
-<p>Runs natively on Linux, macOS and Windows.</p>
-
-<h2>Screenshot</h2>
-
-<p><img src="images/Knowthelist_UI.png" alt="Knowthelist user interface"></p>
-
-<p>Get the latest Windows, macOS and Linux packages from the <a href="https://github.com/knowthelist/knowthelist/releases/tag/v2.4.1">v2.4.1 GitHub release</a>.</p>
+    <main>
+      <section class="hero shell">
+        <div class="hero-copy">
+          <span class="eyebrow">v2.4.1 is live</span>
+          <h1>Know your list.<br><span>Own the night.</span></h1>
+          <p class="hero-lede">The open-source DJ mixer built for real-time requests, effortless transitions, and rooms that never lose the rhythm.</p>
+          <div class="hero-actions">
+            <a class="button button-primary" href="https://github.com/knowthelist/knowthelist/releases/tag/v2.4.1">Download latest <span>&rarr;</span></a>
+            <a class="button button-secondary" href="https://github.com/knowthelist/knowthelist">Explore on GitHub</a>
+          </div>
+          <p class="platform-note">Linux &middot; macOS &middot; Windows <span class="dot"></span> LGPL-3.0 open source</p>
+        </div>
+        <div class="hero-visual">
+          <div class="glow"></div>
+          <div class="window-bar"><span></span><span></span><span></span><b>KNOWTHELIST</b></div>
+          <img src="images/Knowthelist_UI.png" alt="Knowthelist DJ mixer interface">
+          <div class="tempo-badge"><strong>128</strong><small>BPM</small></div>
+        </div>
       </section>
-    </div>
 
-    <!-- FOOTER  -->
-    <div id="footer_wrap" class="outer">
-      <footer class="inner">
-        <p class="copyright">Knowthelist maintained by <a href="https://github.com/knowthelist">knowthelist</a></p>
-        <p>Published with <a href="http://pages.github.com">GitHub Pages</a></p>
-      </footer>
-    </div>
+      <section id="features" class="section shell">
+        <div class="section-heading">
+          <span class="eyebrow">Everything in sync</span>
+          <h2>More control.<br><span>Less guesswork.</span></h2>
+          <p>Designed for DJs who need to react instantly while the room is moving.</p>
+        </div>
+        <div class="feature-grid">
+          <article class="feature-card feature-wide">
+            <span class="card-icon">01</span>
+            <h3>Adaptive transitions</h3>
+            <p>Knowthelist reads the moment and chooses a smooth beat blend, bass swap, vocal handoff, equal-power mix, or hard cut for every track pair.</p>
+            <div class="mini-wave"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+          </article>
+          <article class="feature-card">
+            <span class="card-icon">02</span>
+            <h3>Beat-perfect decks</h3>
+            <p>Visual beat phase, gradual tempo restoration, cue points, and pitch-preserving time stretch keep both decks locked.</p>
+          </article>
+          <article class="feature-card">
+            <span class="card-icon">03</span>
+            <h3>Requests at speed</h3>
+            <p>Search your collection live, queue tracks instantly, and let Auto DJ keep the set moving while you work the room.</p>
+          </article>
+          <article class="feature-card">
+            <span class="card-icon">04</span>
+            <h3>Hear every detail</h3>
+            <p>Monitor a secondary audio device, shape the mix with three-band EQ, and keep energy consistent with automatic gain control.</p>
+          </article>
+        </div>
+      </section>
 
-    
+      <section id="transitions" class="section transition-section">
+        <div class="shell">
+          <div class="section-heading centered">
+            <span class="eyebrow">The transition planner</span>
+            <h2>Your mix, <span>always one step ahead.</span></h2>
+            <p>Pick a transition profile to see how Knowthelist moves energy between decks.</p>
+          </div>
+          <div class="transition-panel">
+            <div class="transition-tabs" role="tablist" aria-label="Transition modes">
+              <button class="transition-tab active" role="tab" aria-selected="true" data-mode="bass">Bass swap</button>
+              <button class="transition-tab" role="tab" aria-selected="false" data-mode="vocal">Vocal handoff</button>
+              <button class="transition-tab" role="tab" aria-selected="false" data-mode="hard">Hard cut</button>
+            </div>
+            <div class="transition-content">
+              <div>
+                <span class="mode-label">AUTO DJ / <span id="mode-name">BASS SWAP</span></span>
+                <h3 id="mode-title">Make room for the next kick.</h3>
+                <p id="mode-description">The outgoing low end fades as the incoming track takes the floor, keeping the groove clear and powerful.</p>
+              </div>
+              <div class="deck-visual" aria-hidden="true">
+                <div class="deck-row"><span>A</span><div class="meter meter-a"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div></div>
+                <div class="deck-row"><span>B</span><div class="meter meter-b"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
 
+      <section class="final-cta shell">
+        <span class="eyebrow">Ready when you are</span>
+        <h2>Bring the room<br><span>to life.</span></h2>
+        <p>Download the latest build or help shape the next release.</p>
+        <div class="hero-actions">
+          <a class="button button-primary" href="https://github.com/knowthelist/knowthelist/releases/tag/v2.4.1">Get Knowthelist <span>&rarr;</span></a>
+          <a class="button button-secondary" href="https://github.com/knowthelist/knowthelist#building-from-source">Build from source</a>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <div class="shell footer-inner">
+        <a class="brand" href="#"><span class="brand-mark">K</span> knowthelist</a>
+        <span>Open source DJ software for the people who keep the party moving.</span>
+        <a href="https://github.com/knowthelist/knowthelist">GitHub &rarr;</a>
+      </div>
+    </footer>
+    <script src="javascripts/main.js"></script>
   </body>
 </html>
