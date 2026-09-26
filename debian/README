@@ -13,3 +13,27 @@ Knowthelist - the awesome party music player
 - Auto DJ with multiple filters and smart random play
 - Monitor player for pre-listening on a second sound device
 - ... more https://github.com/knowthelist/knowthelist/wiki
+
+Source package workflow
+-----------------------
+
+To build and sign a source package using the version already at the top of
+debian/changelog, run this from the repository root:
+
+	./debian/build-source-package.sh
+
+The script uses the current changelog version unchanged, downloads the
+matching upstream source only if its orig tarball is missing, builds a
+source-only package, runs lintian, and signs the source changes. It does not
+modify debian/changelog or upload anything. The upstream archive's debian/
+directory is excluded when uscan repacks it; the resulting orig tarball keeps
+the upstream version from the changelog, without a +ds suffix. The script
+prints the dupload command for you to run manually.
+
+The build is staged from that orig tarball plus the current debian/ directory.
+Commits in the checkout newer than the upstream version are not included.
+
+Because this script only builds a source package, it skips the build-dependency
+check and does not compile the application. For a binary build, use a Debian
+build environment that provides all dependencies in debian/control. debsign
+uses the maintainer's configured signing key.
