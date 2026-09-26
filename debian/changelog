@@ -1,29 +1,61 @@
+knowthelist (2.4.1-2) unstable; urgency=medium
+
+  * Restore the changelog entries for the 2.3.1-1.1 and 2.3.1-1.2 NMUs.
+  * Build against TagLib 2.x and add the Qt LinguistTools and localization
+    tool build dependencies required to generate translations.
+  * Clarify the 2.4.1 feature summary below.
+
+ -- Mario Stephan <mstephan@shared-files.de>  Sat, 26 Sep 2026 20:59:50 +0200
+
 knowthelist (2.4.1-1) unstable; urgency=medium
 
-  * New features:
-    - Transition planner widget, bass-swap functionality, transition modes,
-      track-state tracking, and transition refresh during fades.
-    - Improved tempo accuracy, bar-phase estimation, low-end confidence
-      handling, cue-mode support, analysis cache versioning, and waveform
-      beat bar lines.
-    - Seek muting, improved beat-jump and slider controls, refined skip-forward
-      playlist handling, and last-played timestamps.
-  * Bug fixes and behavior corrections:
-    - Corrected playback-position handling and skip-forward playlist behavior.
-    - Improved transition planning refresh and refined bass-swap and cue
-      behavior.
-  * UI improvements:
-    - Refreshed player and main layouts, controls, fonts, faders, and slider
-      styling.
+  * Audio and Auto-DJ:
+    - Introduced the JUCE-based audio backend, replacing GStreamer-based
+      playback.
+    - Added an adaptive transition planner that selects a suitable transition
+      for each track pair, including beat/phrase blend, bass swap, vocal/mid
+      handoff, equal-power blend, and hard cut. Plans refresh when track state
+      changes and during fades.
+  * Continued improvements to BPM and beat analysis:
+    - Improved tempo accuracy and beat/bar-phase estimation, added low-end
+      confidence handling and transition cue modes, and updated analysis cache
+      versioning.
+    - Added beat/bar markers to waveform displays and improved beat-jump
+      controls.
+  * Playback, usability, and interface:
+    - Added seek muting and improved playback-position handling; refined
+      skip-forward playlist behavior and slider controls.
+    - Added last-played timestamps and refreshed player and main-window
+      layouts, controls, fonts, faders, and styling.
 
  -- Mario Stephan <mstephan@shared-files.de>  Wed, 19 Aug 2026 21:02:35 +0200
 
 knowthelist (2.4.0-1) unstable; urgency=medium
 
-  * New release with QT6, JUCE audio backend, BPM
-    snchronization and UI improvements.
+  * Migrated the application to Qt 6 and the JUCE audio backend, replacing the
+    previous GStreamer-based playback path.
+  * Added BPM synchronization and related user-interface improvements.
 
  -- Mario Stephan <mstephan@shared-files.de>  Mon, 10 Aug 2026 22:16:28 +0200
+
+knowthelist (2.3.1-1.2) unstable; urgency=medium
+
+  * Non-maintainer upload.
+  * Import on Salsa.
+  * Reformat debian/control with debputy.
+  * Replace deprecated CDBS build with DebHelper.
+
+ -- Alexandre Detiste <tchet@debian.org>  Sun, 09 Mar 2025 15:44:09 +0100
+
+knowthelist (2.3.1-1.1) unstable; urgency=medium
+
+  * Non-maintainer upload.
+  * Drop all Qt4-related build dependencies.
+  * Update the TagLib build dependency for TagLib 2.x (libtag1-dev to
+    libtag-dev).
+  * Add a patch for TagLib 2.x compatibility.
+
+ -- Boyuan Yang <byang@debian.org>  Sat, 11 Jan 2025 13:52:46 -0500
 
 knowthelist (2.3.1-1) unstable; urgency=medium
 
