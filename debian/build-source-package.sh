@@ -77,5 +77,5 @@ for artifact in \
     mv -f "$artifact" "$PARENT_DIR/"
 done
 
-CHANGES_FILE="../${SOURCE_PACKAGE}_${PACKAGE_VERSION}_source.changes"
-printf '\nSource package is signed. Upload manually with:\n  dput mentors %s\n' "$CHANGES_FILE"
+CHANGES_FILE="$PARENT_DIR/${SOURCE_PACKAGE}_${PACKAGE_VERSION}_source.changes"
+printf '\nSource package is signed. Upload manually with:\n  dput mentors "%s"\n' "$CHANGES_FILE"
