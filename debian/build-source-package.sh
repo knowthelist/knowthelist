@@ -63,7 +63,7 @@ cp -a "$REPOSITORY_ROOT/debian" "$SOURCE_DIR/debian"
 rm -f "$SOURCE_DIR/debian/files"
 
 printf 'Building source package %s from matching upstream source\n' "$PACKAGE_VERSION"
-(cd "$SOURCE_DIR" && dpkg-buildpackage -S -d -us -uc)
+(cd "$SOURCE_DIR" && dpkg-buildpackage -S -sa -d -us -uc)
 
 CHANGES_FILE="$BUILD_DIR/${SOURCE_PACKAGE}_${PACKAGE_VERSION}_source.changes"
 lintian --profile debian "$CHANGES_FILE"

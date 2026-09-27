@@ -24,7 +24,9 @@ debian/changelog, run this from the repository root:
 
 The script uses the current changelog version unchanged, downloads the
 matching upstream source only if its orig tarball is missing, builds a
-source-only package, runs lintian, and signs the source changes. It does not
+source-only package including the upstream orig tarball (`-sa`), runs lintian,
+and signs the source changes. Including the orig tarball is required when
+uploading a new upstream version to mentors.debian.net. It does not
 modify debian/changelog or upload anything. The upstream archive's debian/
 directory is excluded when uscan repacks it; the resulting orig tarball keeps
 the upstream version from the changelog, without a +ds suffix. The script
