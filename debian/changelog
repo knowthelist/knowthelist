@@ -1,29 +1,13 @@
-knowthelist (2.4.1-5) unstable; urgency=medium
+knowthelist (2.4.2-1) unstable; urgency=medium
 
-  * Link JUCE's FLAC and Vorbis audio codecs explicitly when using Debian's
-    packaged JUCE modules.
-  * Add the corresponding FLAC and Vorbis development package dependencies.
+  * New upstream release with offline Debian builds using packaged JUCE and
+    explicit FLAC/Vorbis codec linking.
+  * Require SoundTouch for pitch-preserving tempo changes and Qt SVG plugins
+    for transition icons.
+  * Update Debian build dependencies and ensure source uploads include the
+    upstream orig tarball.
 
- -- Mario Stephan <mstephan@shared-files.de>  Sun, 27 Sep 2026 12:36:06 +0200
-
-knowthelist (2.4.1-4) unstable; urgency=medium
-
-  * Include the upstream orig tarball in the source upload; otherwise
-    mentors.debian.net tries to fetch an unpublished archive from the Debian
-    pool.
-
- -- Mario Stephan <mstephan@shared-files.de>  Sun, 27 Sep 2026 12:11:47 +0200
-
-knowthelist (2.4.1-3) unstable; urgency=medium
-
-  * Build against Debian's packaged JUCE modules from juce-modules-source.
-  * Build pitch-preserving tempo changes with SoundTouch
-    (libsoundtouch-dev).
-  * Depend on Qt's SVG plugins to render the bundled transition icons.
-  * Require system JUCE and disable FetchContent for Debian builds so isolated
-    sbuild builds do not attempt to access the network.
-
- -- Mario Stephan <mstephan@shared-files.de>  Sun, 27 Sep 2026 09:36:47 +0200
+ -- Mario Stephan <mstephan@shared-files.de>  Sun, 27 Sep 2026 13:28:46 +0200
 
 knowthelist (2.4.1-2) unstable; urgency=medium
 

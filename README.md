@@ -197,6 +197,7 @@ qmake6 knowthelist.pro && make clean && make -j$(nproc)
 
 | Version | Date | Highlights |
 |---------|------|------------|
+| 2.4.2 | 2026-09 | Debian offline builds use packaged JUCE with explicit FLAC/Vorbis codec linking |
 | 2.4 | 2026 | Qt 6, BPM mode detection, pure JUCE audio backend, beat-phase visualizer |
 | 2.3 | 2014-09 | Qt 5 compatibility, GStreamer 1.x |
 | 2.2 | 2014-08 | Stored playlists support |

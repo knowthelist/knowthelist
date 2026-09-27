@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.16)
 
-project(knowthelist VERSION 2.4.0 LANGUAGES C CXX)
+project(knowthelist VERSION 2.4.2 LANGUAGES C CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -398,7 +398,7 @@ if(UNIX AND NOT APPLE)
         CURL::libcurl
     )
 
-    if(KNOWTHELIST_USE_SYSTEM_JUCE)
+    if(JUCE_FOUND)
         pkg_check_modules(FLAC REQUIRED IMPORTED_TARGET flac)
         pkg_check_modules(VORBISFILE REQUIRED IMPORTED_TARGET vorbisfile)
         pkg_check_modules(VORBISENC REQUIRED IMPORTED_TARGET vorbisenc)

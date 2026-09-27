@@ -4,7 +4,7 @@
 # License: LGPL-3.0+
 #
 
-DEFINES += APP_VERSION="\\\"2.4.0\\\""
+DEFINES += APP_VERSION="\\\"2.4.2\\\""
 
 QT += core \
     gui \
