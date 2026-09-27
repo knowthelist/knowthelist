@@ -402,10 +402,12 @@ if(UNIX AND NOT APPLE)
         pkg_check_modules(FLAC REQUIRED IMPORTED_TARGET flac)
         pkg_check_modules(VORBISFILE REQUIRED IMPORTED_TARGET vorbisfile)
         pkg_check_modules(VORBISENC REQUIRED IMPORTED_TARGET vorbisenc)
+        pkg_check_modules(OGG REQUIRED IMPORTED_TARGET ogg)
         target_link_libraries(knowthelist PRIVATE
             PkgConfig::FLAC
             PkgConfig::VORBISFILE
             PkgConfig::VORBISENC
+            PkgConfig::OGG
         )
     endif()
 endif()

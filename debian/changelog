@@ -2,12 +2,14 @@ knowthelist (2.4.2-1) unstable; urgency=medium
 
   * New upstream release with offline Debian builds using packaged JUCE and
     explicit FLAC/Vorbis codec linking.
+  * Link libogg explicitly to resolve JUCE Vorbis codec symbols when using
+    Debian's packaged JUCE modules, and add libogg-dev to Build-Depends.
   * Require SoundTouch for pitch-preserving tempo changes and Qt SVG plugins
     for transition icons.
   * Update Debian build dependencies and ensure source uploads include the
     upstream orig tarball.
 
- -- Mario Stephan <mstephan@shared-files.de>  Sun, 27 Sep 2026 13:28:46 +0200
+ -- Mario Stephan <mstephan@shared-files.de>  Sun, 27 Sep 2026 13:57:32 +0200
 
 knowthelist (2.4.1-2) unstable; urgency=medium
 
