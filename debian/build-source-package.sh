@@ -78,4 +78,4 @@ for artifact in \
 done
 
 CHANGES_FILE="../${SOURCE_PACKAGE}_${PACKAGE_VERSION}_source.changes"
-printf '\nSource package is signed. Upload manually with:\n  dupload --to mentors %s\n' "$CHANGES_FILE"
+printf '\nSource package is signed. Upload manually with:\n  dput mentors %s\n' "$CHANGES_FILE"

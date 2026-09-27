@@ -28,7 +28,8 @@ source-only package, runs lintian, and signs the source changes. It does not
 modify debian/changelog or upload anything. The upstream archive's debian/
 directory is excluded when uscan repacks it; the resulting orig tarball keeps
 the upstream version from the changelog, without a +ds suffix. The script
-prints the dupload command for you to run manually.
+prints the dput command for you to run manually. Configure a `mentors` target
+in your dput configuration before uploading.
 
 The build is staged from that orig tarball plus the current debian/ directory.
 Commits in the checkout newer than the upstream version are not included.
