@@ -23,14 +23,26 @@ PACKAGE_VERSION=$(dpkg-parsechangelog --show-field Version)
 UPSTREAM_VERSION=${PACKAGE_VERSION#*:}
 UPSTREAM_VERSION=${UPSTREAM_VERSION%-*}
 PARENT_DIR=$(dirname -- "$REPOSITORY_ROOT")
-ORIG_TARBALL="../${SOURCE_PACKAGE}_${UPSTREAM_VERSION}.orig.tar.gz"
+ORIG_TARBALL=
 
-if [ ! -f "$ORIG_TARBALL" ]; then
+find_orig_tarball() {
+    for compression in xz gz bz2; do
+        candidate="../${SOURCE_PACKAGE}_${UPSTREAM_VERSION}.orig.tar.${compression}"
+        if [ -f "$candidate" ]; then
+            ORIG_TARBALL=$candidate
+            return 0
+        fi
+    done
+    return 1
+}
+
+if ! find_orig_tarball; then
     uscan --download-current-version --force-download
 fi
 
-if [ ! -f "$ORIG_TARBALL" ]; then
-    printf 'Expected orig tarball not found: %s\n' "$ORIG_TARBALL" >&2
+if ! find_orig_tarball; then
+    printf 'Expected orig tarball not found: ../%s_%s.orig.tar.{xz,gz,bz2}\n' \
+        "$SOURCE_PACKAGE" "$UPSTREAM_VERSION" >&2
     exit 1
 fi
 
