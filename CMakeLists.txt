@@ -97,24 +97,29 @@ if(NOT DEFINED CMAKE_JOB_POOL_COMPILE)
 endif()
 set_property(GLOBAL PROPERTY JOB_POOLS compile=1)
 
-# Try to find JUCE installed system-wide first
-find_package(JUCE QUIET CONFIG)
+# Debian builds use the JUCE modules and CMake package installed by
+# juce-modules-source. Keep the source and FetchContent paths for other builds.
+option(KNOWTHELIST_USE_SYSTEM_JUCE "Require an installed JUCE package" OFF)
+if(KNOWTHELIST_USE_SYSTEM_JUCE)
+    find_package(JUCE CONFIG REQUIRED)
+else()
+    find_package(JUCE QUIET CONFIG)
 
-if(NOT JUCE_FOUND)
-    if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/external/JUCE/CMakeLists.txt")
-        message(STATUS "Using JUCE from the repository submodule")
-        add_subdirectory(external/JUCE "${CMAKE_BINARY_DIR}/juce" EXCLUDE_FROM_ALL)
-    else()
-        # Fetch JUCE from GitHub when the repository submodule is unavailable.
-        message(STATUS "JUCE submodule not found; fetching from GitHub...")
-        FetchContent_Declare(
-            JUCE
-            GIT_REPOSITORY https://github.com/juce-framework/JUCE.git
-            GIT_TAG 8.0.14
-            GIT_SHALLOW TRUE
-            GIT_PROGRESS ON
-        )
-        FetchContent_MakeAvailable(JUCE)
+    if(NOT JUCE_FOUND)
+        if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/external/JUCE/CMakeLists.txt")
+            message(STATUS "Using JUCE from the repository submodule")
+            add_subdirectory(external/JUCE "${CMAKE_BINARY_DIR}/juce" EXCLUDE_FROM_ALL)
+        else()
+            message(STATUS "JUCE submodule not found; fetching JUCE from GitHub...")
+            FetchContent_Declare(
+                JUCE
+                GIT_REPOSITORY https://github.com/juce-framework/JUCE.git
+                GIT_TAG 8.0.14
+                GIT_SHALLOW TRUE
+                GIT_PROGRESS ON
+            )
+            FetchContent_MakeAvailable(JUCE)
+        endif()
     endif()
 endif()
 
@@ -342,6 +347,9 @@ find_library(SOUNDTOUCH_LIBRARY
 if(SOUNDTOUCH_INCLUDE_DIR AND SOUNDTOUCH_LIBRARY)
     set(KNOWTHELIST_HAVE_SOUNDTOUCH 1)
     message(STATUS "SoundTouch found: enabling pitch-preserving time-stretch")
+elseif(KNOWTHELIST_USE_SYSTEM_JUCE)
+    message(FATAL_ERROR
+        "SoundTouch is required for pitch-preserving tempo changes. Install libsoundtouch-dev.")
 endif()
 
 target_compile_definitions(knowthelist PRIVATE

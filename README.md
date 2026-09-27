@@ -75,7 +75,7 @@ macOS and Windows, extract the downloaded archive and launch the application.
 | [Qt 6](https://www.qt.io/) (Core + GUI + SVG) | UI framework |
 | [CMake ≥ 3.16](https://cmake.org/) | Build system |
 | [taglib](http://taglib.github.io) | Audio metadata |
-| **JUCE** (auto-fetched by CMake) | Pure JUCE audio backend |
+| **JUCE** (packaged modules on Debian; submodule or FetchContent elsewhere) | Pure JUCE audio backend |
 | **soundtouch** | Pitch-preserving tempo |
 | **FreeType** and **Fontconfig** development files | JUCE graphics and font support |
 
@@ -85,8 +85,8 @@ macOS and Windows, extract the downloaded archive and launch the application.
 
 ```bash
 # 1. Install system dependencies
-sudo apt install build-essential cmake qt6-base-dev qt6-base-dev-tools qt6-tools-dev qt6-l10n-tools \
-    libtag1-dev libasound2-dev libsoundtouch-dev \
+sudo apt install build-essential cmake juce-modules-source qt6-base-dev qt6-base-dev-tools qt6-tools-dev qt6-l10n-tools \
+    libtag-dev libasound2-dev libsoundtouch-dev \
     libfreetype6-dev libfontconfig1-dev libegl1-mesa-dev libxkbcommon-dev \
     libgl1-mesa-dev libx11-dev libxext-dev libxrandr-dev libxinerama-dev \
     libxcursor-dev libxi-dev libxcomposite-dev libx11-xcb-dev \
@@ -105,6 +105,12 @@ cmake --build build -j$(nproc)
 ```
 
 `qt6-tools-dev` provides the `Qt6LinguistTools` CMake component required by the project. If CMake reports that `Qt6LinguistToolsConfig.cmake` is missing, install this package and rerun the configure command.
+
+Debian package builds use the `juce-modules-source` package and require its
+installed JUCE CMake configuration. This lets `sbuild` build without accessing
+the network. For a manual offline Debian build, configure with
+`-DKNOWTHELIST_USE_SYSTEM_JUCE=ON`; CMake then fails clearly if packaged JUCE
+is unavailable instead of fetching it.
 
 > **JUCE cache:** JUCE is cached outside `build/` (default: `~/.cache/knowthelist/fetchcontent` on Linux/macOS). Running `rm -rf build` won't re-download it. Override with `-DKNOWTHELIST_FETCHCONTENT_DIR=/path/to/cache`.
 
@@ -148,7 +154,7 @@ The app compiles to a `.app` bundle — drop it into `/Applications`. An icon wi
 
 ### Linux (via `apt`)
 
-```bash
+```bashff
 sudo apt install knowthelist
 ```
 
