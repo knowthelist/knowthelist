@@ -1,3 +1,11 @@
+knowthelist (2.4.2-2) unstable; urgency=medium
+
+  * Disable JUCE's optional Opus integration when building against Debian's
+    system JUCE; the application does not use Opus and the build dependencies
+    do not provide the opusenc.h header.
+
+ -- Mario Stephan <mstephan@shared-files.de>  Fri, 02 Oct 2026 23:45:32 +0200
+
 knowthelist (2.4.2-1) unstable; urgency=medium
 
   * New upstream release with offline Debian builds using packaged JUCE and

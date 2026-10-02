@@ -355,6 +355,7 @@ endif()
 target_compile_definitions(knowthelist PRIVATE
     KNOWTHELIST_HAVE_SOUNDTOUCH=${KNOWTHELIST_HAVE_SOUNDTOUCH}
     JUCE_USE_MP3AUDIOFORMAT=1
+    JUCE_USE_OPUS=0
 )
 
 target_include_directories(knowthelist PRIVATE
