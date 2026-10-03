@@ -46,11 +46,11 @@ Description: awesome party music player
  Easy to use for all party guests.
  .
  Featuring:
-    - Fast collection search while tracks are playing.
+  - Fast collection search while tracks are playing.
   - Two players with separate playlists.
-    - Mixer with crossfader, 3-band EQ and gain per deck.
-    - Auto fade and auto gain control.
-    - Track analysis for cue points, loudness and BPM.
-    - Beat-synced transitions with visual sync support.
-    - Auto DJ with multiple filters and smart random play.
-    - Monitor player for pre-listening on a second sound device.
+  - Mixer with crossfader, 3-band EQ and gain per deck.
+  - Auto fade and auto gain control.
+  - Track analysis for cue points, loudness and BPM.
+  - Beat-synced transitions with visual sync support.
+  - Auto DJ with multiple filters and smart random play.
+  - Monitor player for pre-listening on a second sound device.
