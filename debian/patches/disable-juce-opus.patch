@@ -1,0 +1,20 @@
+Description: Disable JUCE's unused optional Opus integration
+ The application does not use Opus, and Debian's system JUCE build does not
+ provide the opusenc.h header required by the optional integration.
+Author: Mario Stephan <mstephan@shared-files.de>
+Forwarded: not-needed
+---
+ CMakeLists.txt | 1 +
+ 1 file changed, 1 insertion(+)
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index a48a63f..9ca22f0 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -355,6 +355,7 @@ endif()
+ target_compile_definitions(knowthelist PRIVATE
+     KNOWTHELIST_HAVE_SOUNDTOUCH=${KNOWTHELIST_HAVE_SOUNDTOUCH}
+     JUCE_USE_MP3AUDIOFORMAT=1
++    JUCE_USE_OPUS=0
+ )
+ 
+ target_include_directories(knowthelist PRIVATE
