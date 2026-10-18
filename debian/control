@@ -39,8 +39,7 @@ Package: knowthelist
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends},
  libqt6sql6-sqlite,
- qt6-svg-plugins,
- libasound2
+ qt6-svg-plugins
 Description: awesome party music player
  Easy to use for all party guests.
  .
