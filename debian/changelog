@@ -107,9 +107,9 @@ knowthelist (2.3.0-2) unstable; urgency=medium
  -- Mario Stephan <mstephan@shared-files.de>  Sun, 11 Jan 2015 20:01:11 +0100
 
 knowthelist (2.3.0-1) unstable; urgency=medium
- 
+
   * Made all compatible with Qt5 and Gstreamer-1.0.
-  * Add an ALL node to filter results 
+  * Add an ALL node to filter results
   * Changed ModeSelector style and moved to tree header
   * Included 'year' tag into quick search
 
@@ -124,9 +124,9 @@ knowthelist (2.2.4-1) unstable; urgency=medium
   * Added a mutex to get more thread safety for database access
 
  -- Mario Stephan <mstephan@shared-files.de>  Sun, 14 Sep 2014 01:18:00 +0200
- 
+
 knowthelist (2.2.3-1) unstable; urgency=medium
 
   * Initial Release (Closes: #751350).
- 
+
  -- Mario Stephan <mstephan@shared-files.de>  Tue, 26 Aug 2014 07:06:00 +0200

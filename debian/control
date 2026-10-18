@@ -1,6 +1,5 @@
 Source: knowthelist
 Section: sound
-Priority: optional
 Maintainer: Mario Stephan <mstephan@shared-files.de>
 Build-Depends: debhelper-compat (= 13),
  cmake,

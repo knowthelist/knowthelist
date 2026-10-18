@@ -11,4 +11,3 @@ export DEB_BUILD_MAINT_OPTIONS=hardening=+all
 
 override_dh_auto_configure:
 	dh_auto_configure -- -DCMAKE_BUILD_TYPE=Release -DKNOWTHELIST_USE_SYSTEM_JUCE=ON -DFETCHCONTENT_FULLY_DISCONNECTED=ON
-
