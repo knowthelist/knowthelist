@@ -138,7 +138,7 @@
     <message>
         <location filename="../src/djfilterwidget.ui" line="214"></location>
         <source>Record Case</source>
-        <translation>Kayıt Kutusu</translation>
+        <translation>Plak Kutusu</translation>
     </message>
     <message>
         <location filename="../src/djfilterwidget.ui" line="320"></location>
@@ -764,7 +764,7 @@ p, li { white-space: pre-wrap; }
     <message>
         <location filename="../src/playlistwidget.ui" line="209"></location>
         <source>Load all tracks of this list directly into player playlists</source>
-        <translation>Bu listenin tüm parçalarını doğrudan çalar çalma listelerine yükle</translation>
+        <translation>Bu listenin tüm parçalarını doğrudan oynatıcının çalma listelerine yükle</translation>
     </message>
     <message>
         <location filename="../src/playlistwidget.ui" line="236"></location>
