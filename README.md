@@ -101,7 +101,7 @@ cmake -S . -B build
 cmake --build build -j$(nproc)
 
 # 4. Run
-./build/knowthelist
+open build/knowthelist.app
 ```
 
 `qt6-tools-dev` provides the `Qt6LinguistTools` CMake component required by the project. If CMake reports that `Qt6LinguistToolsConfig.cmake` is missing, install this package and rerun the configure command.
